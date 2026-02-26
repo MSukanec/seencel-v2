@@ -6,6 +6,7 @@ import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { LazyDonutChart } from "@/components/charts/lazy-charts";
 import { PieChart, BarChart3, TrendingUp } from "lucide-react";
 import { useMoney } from "@/hooks/use-money";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import {
     SettingsSection,
     SettingsSectionContainer,
@@ -33,6 +34,12 @@ export function QuoteAnalyticsView({ quote, contractSummary, items = [] }: Quote
     const isContract = quote.quote_type === "contract";
     const money = useMoney();
 
+    // Helper: compute item subtotal with markup from effective price
+    const getSubtotal = (item: QuoteItemView) => {
+        const base = item.quantity * (item.effective_unit_price || 0);
+        return base * (1 + (item.markup_pct || 0) / 100);
+    };
+
     // ── Donut: Composición del contrato ──────────────────────────────────────
     const compositionData = useMemo(() => {
         if (!contractSummary) return [];
@@ -54,7 +61,7 @@ export function QuoteAnalyticsView({ quote, contractSummary, items = [] }: Quote
         const byDivision: Record<string, number> = {};
         items.forEach((item) => {
             const div = item.division_name || "Sin Rubro";
-            byDivision[div] = (byDivision[div] || 0) + (item.subtotal_with_markup || 0);
+            byDivision[div] = (byDivision[div] || 0) + getSubtotal(item);
         });
         return Object.entries(byDivision)
             .map(([name, value], index) => ({ name, value, fill: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }))
@@ -66,7 +73,7 @@ export function QuoteAnalyticsView({ quote, contractSummary, items = [] }: Quote
     const topItems = useMemo(() => {
         if (!items || items.length === 0) return [];
         return [...items]
-            .sort((a, b) => (b.subtotal_with_markup || 0) - (a.subtotal_with_markup || 0))
+            .sort((a, b) => getSubtotal(b) - getSubtotal(a))
             .slice(0, 5);
     }, [items]);
 
@@ -75,8 +82,13 @@ export function QuoteAnalyticsView({ quote, contractSummary, items = [] }: Quote
 
     if (!hasCharts && !hasItems) {
         return (
-            <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
-                Aún no hay datos suficientes para mostrar analíticas.
+            <div className="h-full flex items-center justify-center">
+                <ViewEmptyState
+                    mode="empty"
+                    icon={BarChart3}
+                    viewName="Analítica del Presupuesto"
+                    featureDescription="Agregá ítems al presupuesto para ver gráficos de distribución por rubro, composición del contrato y estadísticas detalladas."
+                />
             </div>
         );
     }
@@ -149,15 +161,15 @@ export function QuoteAnalyticsView({ quote, contractSummary, items = [] }: Quote
                     >
                         <div className="space-y-3">
                             {topItems.map((item, index) => {
-                                const total = items.reduce((sum, i) => sum + (i.subtotal_with_markup || 0), 0);
-                                const pct = total > 0 ? ((item.subtotal_with_markup || 0) / total) * 100 : 0;
+                                const total = items.reduce((sum, i) => sum + getSubtotal(i), 0);
+                                const pct = total > 0 ? (getSubtotal(item) / total) * 100 : 0;
                                 const name = item.task_name || item.custom_name || item.description || `Ítem ${index + 1}`;
 
                                 return (
                                     <div key={item.id} className="space-y-1">
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-foreground font-medium truncate max-w-[60%]">{name}</span>
-                                            <span className="text-muted-foreground tabular-nums text-xs">{money.format(item.subtotal_with_markup || 0)}</span>
+                                            <span className="text-muted-foreground tabular-nums text-xs">{money.format(getSubtotal(item))}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
@@ -195,7 +207,7 @@ export function QuoteAnalyticsView({ quote, contractSummary, items = [] }: Quote
                                 <p className="text-xs text-muted-foreground">Valor promedio por ítem</p>
                                 <p className="text-2xl font-bold tabular-nums">
                                     {items.length > 0
-                                        ? money.format(items.reduce((s, i) => s + (i.subtotal_with_markup || 0), 0) / items.length)
+                                        ? money.format(items.reduce((s, i) => s + getSubtotal(i), 0) / items.length)
                                         : "—"}
                                 </p>
                             </div>

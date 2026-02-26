@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-25T18:05:07.898Z
+> Generated: 2026-02-26T15:52:15.290Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -138,6 +138,10 @@
 | updated_by | uuid | ✓ |  |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
+| recipe_id | uuid | ✓ |  |  |
+| snapshot_mat_cost | numeric | ✗ | 0 |  |
+| snapshot_lab_cost | numeric | ✗ | 0 |  |
+| snapshot_ext_cost | numeric | ✗ | 0 |  |
 
 ### `finance.quotes`
 

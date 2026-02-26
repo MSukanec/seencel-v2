@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-25T18:05:07.898Z
+> Generated: 2026-02-26T15:52:15.290Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -112,6 +112,7 @@ SELECT li.id,
 
 ```sql
 SELECT ctms.project_id,
+    p.name AS project_name,
     ctms.organization_id,
     ctms.material_id,
     m.name AS material_name,
@@ -120,12 +121,24 @@ SELECT ctms.project_id,
     mc.name AS category_name,
     (sum(ctms.quantity_planned))::numeric(20,4) AS total_required,
     count(DISTINCT ctms.construction_task_id) AS task_count,
-    array_agg(DISTINCT ctms.construction_task_id) AS construction_task_ids
-   FROM ((((construction.construction_task_material_snapshots ctms
+    array_agg(DISTINCT ctms.construction_task_id) AS construction_task_ids,
+    (COALESCE(ordered.total_ordered, (0)::numeric))::numeric(20,4) AS total_ordered,
+    (GREATEST(((sum(ctms.quantity_planned))::numeric(20,4) - COALESCE(ordered.total_ordered, (0)::numeric)), (0)::numeric))::numeric(20,4) AS total_pending,
+        CASE
+            WHEN (COALESCE(ordered.total_ordered, (0)::numeric) = (0)::numeric) THEN 'none'::text
+            WHEN (COALESCE(ordered.total_ordered, (0)::numeric) >= (sum(ctms.quantity_planned))::numeric(20,4)) THEN 'covered'::text
+            ELSE 'partial'::text
+        END AS coverage_status
+   FROM ((((((construction.construction_task_material_snapshots ctms
      JOIN construction.construction_tasks ct ON ((ct.id = ctms.construction_task_id)))
+     JOIN projects.projects p ON ((p.id = ctms.project_id)))
      JOIN catalog.materials m ON ((m.id = ctms.material_id)))
      LEFT JOIN catalog.units u ON ((u.id = m.unit_id)))
      LEFT JOIN catalog.material_categories mc ON ((mc.id = m.category_id)))
+     LEFT JOIN LATERAL ( SELECT COALESCE(sum(poi.quantity), (0)::numeric) AS total_ordered
+           FROM (finance.material_purchase_order_items poi
+             JOIN finance.material_purchase_orders po ON ((po.id = poi.purchase_order_id)))
+          WHERE ((poi.material_id = ctms.material_id) AND (poi.project_id = ctms.project_id) AND (po.is_deleted = false) AND (po.status <> 'rejected'::text))) ordered ON (true))
   WHERE ((ct.is_deleted = false) AND (ct.status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'paused'::text])))
-  GROUP BY ctms.project_id, ctms.organization_id, ctms.material_id, m.name, u.name, m.category_id, mc.name;
+  GROUP BY ctms.project_id, p.name, ctms.organization_id, ctms.material_id, m.name, u.name, m.category_id, mc.name, ordered.total_ordered;
 ```

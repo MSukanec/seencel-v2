@@ -1,23 +1,25 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { usePanel } from "@/stores/panel-store";
 import { toast } from "sonner";
+import { CreditCard } from "lucide-react";
 
-import { FormGroup } from "@/components/ui/form-group";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { CalendarIcon, CreditCard } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { formatDateForDB } from "@/lib/timezone-data";
+import {
+    DateField,
+    SelectField,
+    WalletField,
+    AmountField,
+    CurrencyField,
+    ExchangeRateField,
+    NotesField,
+    ReferenceField,
+    UploadField,
+} from "@/components/shared/forms/fields";
+import type { UploadedFile } from "@/hooks/use-file-upload";
+
+import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import { createMaterialPaymentAction, updateMaterialPaymentAction } from "@/features/materials/actions";
-import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/components/shared/multi-file-upload";
 import { OrganizationFinancialData, MaterialPurchase, MaterialType } from "@/features/materials/types";
 
 interface MaterialPaymentFormProps {
@@ -46,7 +48,7 @@ export function MaterialPaymentForm({
 
     const isEditing = !!initialData?.id;
 
-    // Self-describe
+    // 🚨 Self-describe (SKILL: seencel-panel-forms)
     useEffect(() => {
         setPanelMeta({
             icon: CreditCard,
@@ -60,48 +62,55 @@ export function MaterialPaymentForm({
             }
         });
     }, [isEditing, setPanelMeta]);
-    const uploadRef = useRef<MultiFileUploadRef>(null);
 
     const { wallets, currencies, defaultWalletId, defaultCurrencyId } = financialData;
 
-    // Form State
+    // ========================================
+    // FORM STATE
+    // ========================================
+
+    // Según dates-and-timezones.md: SIEMPRE usar parseDateFromDB()
     const [date, setDate] = useState<Date | undefined>(
-        initialData?.payment_date ? new Date(initialData.payment_date) : new Date()
+        parseDateFromDB(initialData?.payment_date) ?? new Date()
     );
     const [purchaseId, setPurchaseId] = useState(initialData?.purchase_id || "");
     const [walletId, setWalletId] = useState(initialData?.wallet_id || defaultWalletId || "");
-    const [amount, setAmount] = useState(initialData?.amount || "");
+    const [amount, setAmount] = useState(initialData?.amount?.toString() || "");
     const [currencyId, setCurrencyId] = useState(initialData?.currency_id || defaultCurrencyId || "");
-    const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate || "");
+    const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate?.toString() || "");
     const [status, setStatus] = useState(initialData?.status || "confirmed");
     const [notes, setNotes] = useState(initialData?.notes || "");
     const [reference, setReference] = useState(initialData?.reference || "");
     const [materialTypeId, setMaterialTypeId] = useState(initialData?.material_type_id || "");
 
-    // File Upload State
-    const [files, setFiles] = useState<UploadedFile[]>(
-        (initialData?.attachments && initialData.attachments.length > 0)
-            ? initialData.attachments.map((att: any) => ({
+    // File Upload State — UploadField auto-uploads, files are already UploadedFile[]
+    const [files, setFiles] = useState<UploadedFile[]>(() => {
+        if (initialData?.attachments && initialData.attachments.length > 0) {
+            return initialData.attachments.map((att: any) => ({
                 id: att.id || `existing-${Math.random()}`,
                 url: att.url,
                 name: att.name || 'Adjunto',
                 type: att.mime || 'application/octet-stream',
                 size: att.size || 0,
-                path: '',
-                bucket: ''
-            }))
-            : initialData?.image_url ? [{
+                path: att.path || '',
+                bucket: att.bucket || 'private-assets'
+            }));
+        }
+        if (initialData?.image_url) {
+            return [{
                 id: 'existing-legacy',
                 url: initialData.image_url,
                 name: initialData.media_name || 'Comprobante adjunto',
                 type: initialData.media_mime || 'application/octet-stream',
                 size: initialData.media_size || 0,
                 path: '',
-                bucket: ''
-            }] : []
-    );
+                bucket: 'private-assets'
+            }];
+        }
+        return [];
+    });
 
-    // Auto-select currency if wallet changes and has a currency
+    // Auto-select currency when wallet changes
     useEffect(() => {
         if (walletId) {
             const wallet = wallets.find((w: any) => w.id === walletId);
@@ -114,18 +123,15 @@ export function MaterialPaymentForm({
         }
     }, [walletId, wallets, currencies]);
 
+    // ========================================
+    // SUBMIT
+    // ========================================
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
         try {
-            // 1. Upload pending files first
-            let finalFiles = files;
-            if (uploadRef.current) {
-                const uploaded = await uploadRef.current.startUpload();
-                if (uploaded) finalFiles = uploaded;
-            }
-
             const formData = new FormData();
             formData.append('project_id', projectId || "");
             formData.append('organization_id', organizationId);
@@ -146,12 +152,11 @@ export function MaterialPaymentForm({
                 formData.append('currency_code', selectedCurrency.code);
             }
 
-            // Append media_files JSON
-            if (finalFiles && finalFiles.length > 0) {
-                formData.append('media_files', JSON.stringify(finalFiles));
+            // Files already uploaded by UploadField — just pass JSON
+            if (files && files.length > 0) {
+                formData.append('media_files', JSON.stringify(files));
             }
 
-            // Check if we are editing or creating
             if (initialData?.id) {
                 formData.append('id', initialData.id);
                 await updateMaterialPaymentAction(formData as any);
@@ -171,175 +176,131 @@ export function MaterialPaymentForm({
         }
     };
 
+    // ========================================
+    // SELECT OPTIONS
+    // ========================================
+
+    const purchaseOptions = [
+        { value: "__none__", label: "Sin vincular" },
+        ...purchases.map((p) => ({
+            value: p.id,
+            label: p.reference || p.concept || "Compra sin referencia",
+        })),
+    ];
+
+    const materialTypeOptions = [
+        { value: "__none__", label: "Sin tipo" },
+        ...materialTypes.map((t) => ({
+            value: t.id,
+            label: t.name,
+        })),
+    ];
+
+    const statusOptions = [
+        { value: "confirmed", label: "Confirmado" },
+        { value: "pending", label: "Pendiente" },
+        { value: "rejected", label: "Rechazado" },
+        { value: "void", label: "Anulado" },
+    ];
+
+    // ========================================
+    // RENDER
+    // ========================================
+
     return (
         <form id={formId} onSubmit={handleSubmit} className="flex flex-col h-full w-full min-h-0">
             <div className="flex-1 overflow-y-auto space-y-4">
                 {/* Row 1: Date & Purchase */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Fecha de Pago" required>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !date && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date ? format(date, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={date}
-                                    onSelect={setDate}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </FormGroup>
+                    <DateField
+                        label="Fecha de Pago"
+                        value={date}
+                        onChange={setDate}
+                        required
+                    />
 
-                    <FormGroup label="Orden de Compra">
-                        <Select value={purchaseId || "none"} onValueChange={(val) => setPurchaseId(val === "none" ? "" : val)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar compra (opcional)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">Sin vincular</SelectItem>
-                                {purchases.map((purchase) => (
-                                    <SelectItem key={purchase.id} value={purchase.id}>
-                                        {purchase.reference || purchase.concept || "Compra sin referencia"}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    <SelectField
+                        label="Orden de Compra"
+                        value={purchaseId || "__none__"}
+                        onChange={(val) => setPurchaseId(val === "__none__" ? "" : val)}
+                        options={purchaseOptions}
+                        placeholder="Seleccionar compra (opcional)"
+                    />
                 </div>
 
                 {/* Row 1.5: Material Type */}
-                <FormGroup label="Tipo de Material">
-                    <Select value={materialTypeId || "none"} onValueChange={(val) => setMaterialTypeId(val === "none" ? "" : val)}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar tipo (opcional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="none">Sin tipo</SelectItem>
-                            {materialTypes.map((type) => (
-                                <SelectItem key={type.id} value={type.id}>
-                                    {type.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </FormGroup>
+                <SelectField
+                    label="Tipo de Material"
+                    value={materialTypeId || "__none__"}
+                    onChange={(val) => setMaterialTypeId(val === "__none__" ? "" : val)}
+                    options={materialTypeOptions}
+                    placeholder="Seleccionar tipo (opcional)"
+                />
 
                 {/* Row 2: Wallet & Amount */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Billetera" required>
-                        <Select value={walletId} onValueChange={setWalletId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar billetera" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {wallets.map((wallet: any) => (
-                                    <SelectItem key={wallet.id} value={wallet.id}>
-                                        {wallet.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    <WalletField
+                        value={walletId}
+                        onChange={setWalletId}
+                        wallets={wallets}
+                        required
+                    />
 
-                    <FormGroup label="Monto" required>
-                        <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                        />
-                    </FormGroup>
+                    <AmountField
+                        value={amount}
+                        onChange={setAmount}
+                        required
+                    />
                 </div>
 
                 {/* Row 3: Currency & Exchange Rate */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Moneda" required>
-                        <Select value={currencyId} onValueChange={setCurrencyId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar moneda" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {currencies.map((curr: any) => (
-                                    <SelectItem key={curr.id} value={curr.id}>
-                                        {curr.name} ({curr.symbol})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    <CurrencyField
+                        value={currencyId}
+                        onChange={setCurrencyId}
+                        currencies={currencies}
+                        required
+                    />
 
-                    <FormGroup label="Tipo de Cambio (opcional)">
-                        <Input
-                            type="number"
-                            step="0.0001"
-                            placeholder="1.0000"
-                            value={exchangeRate}
-                            onChange={(e) => setExchangeRate(e.target.value)}
-                        />
-                    </FormGroup>
+                    <ExchangeRateField
+                        value={exchangeRate}
+                        onChange={setExchangeRate}
+                    />
                 </div>
 
                 {/* Row 4: Status */}
-                <FormGroup label="Estado" required>
-                    <Select value={status} onValueChange={setStatus}>
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="confirmed">Confirmado</SelectItem>
-                            <SelectItem value="pending">Pendiente</SelectItem>
-                            <SelectItem value="rejected">Rechazado</SelectItem>
-                            <SelectItem value="void">Anulado</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </FormGroup>
+                <SelectField
+                    label="Estado"
+                    value={status}
+                    onChange={setStatus}
+                    options={statusOptions}
+                    required
+                />
 
                 {/* Notes */}
-                <FormGroup label="Notas (opcional)">
-                    <Textarea
-                        placeholder="Agregar notas adicionales sobre el pago..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        className="min-h-[80px]"
-                    />
-                </FormGroup>
+                <NotesField
+                    value={notes}
+                    onChange={setNotes}
+                    placeholder="Agregar notas adicionales sobre el pago..."
+                />
 
                 {/* Reference */}
-                <FormGroup label="Referencia (opcional)">
-                    <Input
-                        placeholder="Ej: TRX-12345"
-                        value={reference}
-                        onChange={(e) => setReference(e.target.value)}
-                    />
-                </FormGroup>
+                <ReferenceField
+                    value={reference}
+                    onChange={setReference}
+                />
 
-                {/* File Upload (Receipt) */}
-                <FormGroup label="Comprobante (opcional)">
-                    <MultiFileUpload
-                        ref={uploadRef}
-                        folderPath={`organizations/${organizationId}/finance/material-payments`}
-                        onUploadComplete={setFiles}
-                        initialFiles={files}
-                        autoUpload={false}
-                        maxSizeMB={5}
-                        className="w-full"
-                    />
-                </FormGroup>
+                {/* File Upload (Receipt) — UploadField auto-uploads on drop */}
+                <UploadField
+                    label="Comprobante"
+                    mode="gallery"
+                    value={files}
+                    onChange={(val) => setFiles(val as UploadedFile[])}
+                    folderPath={`organizations/${organizationId}/finance/material-payments`}
+                    maxSizeMB={5}
+                />
 
             </div>
         </form>
     );
 }
-

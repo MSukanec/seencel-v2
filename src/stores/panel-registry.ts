@@ -62,4 +62,16 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
         component: dynamic(() => import('@/features/projects/forms/projects-modality-form').then(mod => ({ default: mod.ProjectsModalityForm }))),
         defaultOptions: { size: 'sm' },
     },
+
+    // ========================================================================
+    // Quotes Feature
+    // ========================================================================
+    'quote-form': {
+        component: dynamic(() => import('@/features/quotes/forms/quote-form').then(mod => ({ default: mod.QuoteForm }))),
+        defaultOptions: { size: 'md' },
+    },
+    'quote-item-form': {
+        component: dynamic(() => import('@/features/quotes/forms/quote-item-form').then(mod => ({ default: mod.QuoteItemForm }))),
+        defaultOptions: { size: 'md' },
+    },
 };

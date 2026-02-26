@@ -153,7 +153,7 @@ export default async function QuoteDetailAppPage({
                         value="overview"
                         className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden"
                     >
-                        <ContentLayout variant="wide" className="h-full overflow-y-auto">
+                        <ContentLayout variant="settings" className="h-full overflow-y-auto">
                             <QuoteOverviewView
                                 quote={quote}
                                 contractSummary={contractSummary}

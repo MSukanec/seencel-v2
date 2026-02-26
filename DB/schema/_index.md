@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-25T18:05:07.898Z
+> Generated: 2026-02-26T15:52:15.290Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -23,8 +23,8 @@
 - `can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(public/functions_1.md)*
-- `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
+- `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_project(p_project_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `cleanup_media_file_storage()` → trigger 🔐 *(public/functions_1.md)*
 - `current_user_id()` → uuid 🔐 *(public/functions_1.md)*
@@ -243,7 +243,7 @@
 - **`finance.pdf`** (7 cols)
 - **`finance.pdf_templates`** (29 cols)
 - **`finance.personnel_rates`** (15 cols | FK: currency_id → currencies)
-- **`finance.quote_items`** (19 cols | FK: currency_id → currencies, quote_id → quotes)
+- **`finance.quote_items`** (23 cols | FK: currency_id → currencies, quote_id → quotes)
 - **`finance.quotes`** (27 cols | FK: parent_quote_id → quotes, currency_id → currencies)
 - **`finance.subcontract_bid_tasks`** (10 cols | FK: subcontract_bid_id → subcontract_bids, subcontract_task_id → subcontract_tasks)
 - **`finance.subcontract_bids`** (12 cols | FK: currency_id → currencies, subcontract_id → subcontracts)
@@ -253,11 +253,12 @@
 - **`finance.tax_labels`** (5 cols)
 - **`finance.wallets`** (5 cols)
 
-### Functions (7)
+### Functions (8)
 
 - `finance.budget_item_move(p_budget_id uuid, p_item_id uuid, p_prev_item_id uuid, p_next_item_id uuid)` → void 🔐 *(finance/functions_1.md)*
 - `finance.budget_item_set_default_sort_key()` → trigger 🔐 *(finance/functions_1.md)*
 - `finance.fn_financial_kpi_summary(p_org_id uuid, p_project_id uuid DEFAULT NULL::uuid)` → TABLE(income numeric, expenses numeric, balance numeric, currency_symbol text, currency_code text) 🔐 *(finance/functions_1.md)*
+- `finance.freeze_quote_prices(p_quote_id uuid)` → void 🔐 *(finance/functions_1.md)*
 - `finance.generate_po_order_number()` → trigger *(finance/functions_1.md)*
 - `finance.quote_item_set_default_sort_key()` → trigger *(finance/functions_1.md)*
 - `finance.recalculate_po_totals()` → trigger 🔐 *(finance/functions_1.md)*

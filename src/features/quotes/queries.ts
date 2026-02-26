@@ -14,9 +14,9 @@ export async function getOrganizationQuotes(organizationId: string): Promise<Quo
         .select("*")
         .eq("organization_id", organizationId)
         .eq("is_deleted", false)
-        // Hide Change Orders from main list (they appear inside contracts)
         .neq("quote_type", "change_order")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
     if (error) {
         console.error("Error fetching quotes:", error);
@@ -37,9 +37,9 @@ export async function getProjectQuotes(projectId: string): Promise<QuoteView[]> 
         .select("*")
         .eq("project_id", projectId)
         .eq("is_deleted", false)
-        // Hide Change Orders from main list
         .neq("quote_type", "change_order")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
     if (error) {
         console.error("Error fetching project quotes:", error);
@@ -63,7 +63,7 @@ export async function getQuote(quoteId: string): Promise<QuoteView | null> {
         .single();
 
     if (error) {
-        console.error("Error fetching quote:", error);
+        console.error("Error fetching quote:", JSON.stringify(error, null, 2));
         return null;
     }
 
@@ -76,59 +76,24 @@ export async function getQuote(quoteId: string): Promise<QuoteView | null> {
 export async function getQuoteItems(quoteId: string) {
     const supabase = await createClient();
 
-    // Query 1: quote_items desde construction schema (sin joins cross-schema)
+    // Use quotes_items_view which includes:
+    // - Task info (task_name, custom_name, division_name, unit)
+    // - Live costs from recipe (live_mat_cost, live_lab_cost, live_ext_cost, live_unit_price)
+    // - Snapshot costs (snapshot_mat_cost, snapshot_lab_cost, snapshot_ext_cost)
+    // - effective_unit_price (live if draft, snapshot if sent/approved)
     const { data: items, error } = await supabase
-        .schema("finance").from("quote_items")
+        .schema("finance").from("quotes_items_view")
         .select("*")
-        .eq("quote_id", quoteId)
-        .eq("is_deleted", false)
-        .order("sort_key", { ascending: true });
+        .eq("budget_id", quoteId)
+        .order("position", { ascending: true })
+        .limit(500);
 
     if (error) {
         console.error("Error fetching quote items:", error);
         return [];
     }
 
-    if (!items || items.length === 0) return [];
-
-    // Query 2: enriquecer con datos de tasks desde public schema
-    const taskIds = [...new Set(items.map(i => i.task_id).filter(Boolean))];
-
-    let tasksMap: Record<string, { name: string | null; custom_name: string | null; division_name: string | null; unit: string | null }> = {};
-
-    if (taskIds.length > 0) {
-        const { data: tasks } = await supabase
-            .schema('catalog').from("tasks")
-            .select(`
-                id,
-                name,
-                custom_name,
-                task_divisions:task_division_id (name),
-                units:unit_id (symbol)
-            `)
-            .in("id", taskIds);
-
-        if (tasks) {
-            tasksMap = Object.fromEntries(tasks.map(t => [t.id, {
-                name: t.name || null,
-                custom_name: t.custom_name || null,
-                division_name: (t.task_divisions as unknown as { name: string } | null)?.name || null,
-                unit: (t.units as unknown as { symbol: string } | null)?.symbol || null,
-            }]));
-        }
-    }
-
-    return items.map(item => ({
-        ...item,
-        task_name: tasksMap[item.task_id]?.name || null,
-        custom_name: tasksMap[item.task_id]?.custom_name || null,
-        division_name: tasksMap[item.task_id]?.division_name || null,
-        unit: tasksMap[item.task_id]?.unit || null,
-        position: item.sort_key,
-        subtotal: item.quantity * item.unit_price,
-        subtotal_with_markup: item.quantity * item.unit_price * (1 + (item.markup_pct || 0) / 100),
-    }));
-
+    return (items || []) as any[];
 }
 
 // ============================================
@@ -147,7 +112,8 @@ export async function getChangeOrdersByContract(contractId: string): Promise<Quo
         .eq("parent_quote_id", contractId)
         .eq("quote_type", "change_order")
         .eq("is_deleted", false)
-        .order("change_order_number", { ascending: true });
+        .order("change_order_number", { ascending: true })
+        .limit(100);
 
     if (error) {
         console.error("Error fetching change orders:", error);

@@ -1,47 +1,64 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { useRouter } from "@/i18n/routing";
 import { QuoteView, ContractSummary, QuoteItemView } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+    TextField,
+    AmountField,
+    NotesField,
+    SelectField,
+    DateField,
+    ContactField,
+    ProjectField,
+    type SelectOption,
+} from "@/components/shared/forms/fields";
 import {
     FileText,
     Building2,
-    FileSignature,
     Calendar,
     Clock,
     CheckCircle2,
     AlertCircle,
     DollarSign,
-    Hash,
     Calculator,
-    Pencil,
-    Check,
-    X,
     Receipt,
-    Percent,
     ArrowLeftRight,
     TrendingUp,
+    Send,
+    XCircle,
+    Loader2,
+    FileCheck,
+    FileSignature,
+    Settings2,
+    Lock,
+    ShieldAlert,
+    Info,
 } from "lucide-react";
 import { useMoney } from "@/hooks/use-money";
-import { updateQuoteDocumentTerms } from "../actions";
+import { useAutoSave } from "@/hooks/use-auto-save";
+import { updateQuoteDocumentTerms, updateQuoteStatus, approveQuote, convertQuoteToContract } from "../actions";
 import { toast } from "sonner";
 import { parseDateFromDB, formatDateForDB } from "@/lib/timezone-data";
-import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import {
     SettingsSection,
     SettingsSectionContainer,
 } from "@/components/shared/settings-section";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface QuoteOverviewViewProps {
     quote: QuoteView;
@@ -62,273 +79,17 @@ const STATUS_MAP: Record<string, {
     expired: { label: "Vencido", variant: "destructive", icon: <AlertCircle className="h-3.5 w-3.5" /> },
 };
 
-// ── Helper: formatear fecha para display ─────────────────────────────────────
-function formatDateDisplay(dateStr: string | null | undefined): string {
-    if (!dateStr) return "—";
-    const d = parseDateFromDB(dateStr);
-    if (!d) return "—";
-    return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
-}
+// ── Tax Label Options ─────────────────────────────────────────────────────────
+const TAX_LABEL_OPTIONS: SelectOption[] = [
+    { value: "IVA", label: "IVA" },
+    { value: "VAT", label: "VAT" },
+    { value: "Sales Tax", label: "Sales Tax" },
+    { value: "GST", label: "GST" },
+    { value: "ICMS", label: "ICMS" },
+    { value: "Tax", label: "Tax" },
+];
 
-// ── InlineField ───────────────────────────────────────────────────────────────
-interface InlineFieldProps {
-    label: string;
-    icon?: React.ReactNode;
-    value: string;
-    displayValue?: string;
-    onSave: (value: string) => Promise<void>;
-    type?: "text" | "number";
-    step?: string;
-    min?: string;
-    max?: string;
-    suffix?: string;
-    className?: string;
-}
-
-function InlineField({
-    label, icon, value, displayValue, onSave,
-    type = "text", step, min, max, suffix, className
-}: InlineFieldProps) {
-    const [editing, setEditing] = useState(false);
-    const [local, setLocal] = useState(value);
-    const [saving, setSaving] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    const startEdit = () => {
-        setLocal(value);
-        setEditing(true);
-        setTimeout(() => inputRef.current?.focus(), 0);
-    };
-
-    const cancel = () => {
-        setLocal(value);
-        setEditing(false);
-    };
-
-    const save = async () => {
-        if (local === value) { setEditing(false); return; }
-        setSaving(true);
-        try {
-            await onSave(local);
-            setEditing(false);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter") save();
-        if (e.key === "Escape") cancel();
-    };
-
-    return (
-        <div className={cn("space-y-1", className)}>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                {icon}
-                {label}
-            </p>
-            {editing ? (
-                <div className="flex items-center gap-1">
-                    <Input
-                        ref={inputRef}
-                        type={type}
-                        step={step}
-                        min={min}
-                        max={max}
-                        value={local}
-                        onChange={(e) => setLocal(e.target.value)}
-                        onBlur={save}
-                        onKeyDown={handleKeyDown}
-                        className="h-7 text-sm py-0"
-                        disabled={saving}
-                    />
-                    {suffix && <span className="text-xs text-muted-foreground shrink-0">{suffix}</span>}
-                    <button onClick={save} disabled={saving} className="text-[#758a57] hover:opacity-70">
-                        <Check className="h-4 w-4" />
-                    </button>
-                    <button onClick={cancel} className="text-muted-foreground hover:opacity-70">
-                        <X className="h-4 w-4" />
-                    </button>
-                </div>
-            ) : (
-                <button
-                    onClick={startEdit}
-                    className="group flex items-center gap-1.5 text-sm font-medium hover:text-foreground/70 transition-colors text-left w-full"
-                >
-                    <span>{(displayValue ?? value) || "—"}</span>
-                    {suffix && <span className="text-xs text-muted-foreground">{suffix}</span>}
-                    <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity shrink-0" />
-                </button>
-            )}
-        </div>
-    );
-}
-
-// ── InlineDateField ───────────────────────────────────────────────────────────
-interface InlineDateFieldProps {
-    label: string;
-    icon?: React.ReactNode;
-    value: string | null | undefined;
-    onSave: (value: string | null) => Promise<void>;
-    minDate?: Date;
-    className?: string;
-}
-
-function InlineDateField({ label, icon, value, onSave, minDate, className }: InlineDateFieldProps) {
-    const [editing, setEditing] = useState(false);
-    const [local, setLocal] = useState<Date | undefined>(
-        value ? (parseDateFromDB(value) ?? undefined) : undefined
-    );
-    const [saving, setSaving] = useState(false);
-
-    const save = async (date: Date | undefined) => {
-        setLocal(date);
-        setSaving(true);
-        try {
-            await onSave(date ? formatDateForDB(date) : null);
-        } finally {
-            setSaving(false);
-            setEditing(false);
-        }
-    };
-
-    return (
-        <div className={cn("space-y-1", className)}>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                {icon}
-                {label}
-            </p>
-            {editing ? (
-                <DatePicker
-                    value={local}
-                    onChange={save}
-                    minDate={minDate}
-                    placeholder="Sin fecha"
-                    className="h-7 text-sm"
-                />
-            ) : (
-                <button
-                    onClick={() => setEditing(true)}
-                    className="group flex items-center gap-1.5 text-sm font-medium hover:text-foreground/70 transition-colors text-left"
-                    disabled={saving}
-                >
-                    <span>{formatDateDisplay(value)}</span>
-                    <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity shrink-0" />
-                </button>
-            )}
-        </div>
-    );
-}
-
-// ── InlineTextarea ────────────────────────────────────────────────────────────
-interface InlineTextareaProps {
-    value: string | null | undefined;
-    onSave: (value: string | null) => Promise<void>;
-    placeholder?: string;
-}
-
-function InlineTextarea({ value, onSave, placeholder }: InlineTextareaProps) {
-    const [editing, setEditing] = useState(false);
-    const [local, setLocal] = useState(value || "");
-    const [saving, setSaving] = useState(false);
-
-    const save = async () => {
-        setSaving(true);
-        try {
-            await onSave(local.trim() || null);
-            setEditing(false);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const cancel = () => {
-        setLocal(value || "");
-        setEditing(false);
-    };
-
-    if (editing) {
-        return (
-            <div className="space-y-2">
-                <Textarea
-                    value={local}
-                    onChange={(e) => setLocal(e.target.value)}
-                    rows={4}
-                    autoFocus
-                    className="text-sm resize-none"
-                    disabled={saving}
-                    onKeyDown={(e) => {
-                        if (e.key === "Escape") cancel();
-                        if (e.key === "Enter" && e.metaKey) save();
-                    }}
-                />
-                <div className="flex gap-2">
-                    <Button size="sm" onClick={save} disabled={saving} className="h-7 text-xs">
-                        <Check className="h-3 w-3 mr-1" /> Guardar
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={cancel} className="h-7 text-xs">
-                        Cancelar
-                    </Button>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <button onClick={() => setEditing(true)} className="group w-full text-left">
-            {value ? (
-                <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4 group-hover:text-muted-foreground/70 transition-colors">
-                    {value}
-                    <Pencil className="inline h-3 w-3 opacity-0 group-hover:opacity-40 ml-1 transition-opacity" />
-                </p>
-            ) : (
-                <p className="text-sm text-muted-foreground/40 italic flex items-center gap-1">
-                    {placeholder || "Sin descripción"}
-                    <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
-                </p>
-            )}
-        </button>
-    );
-}
-
-// ── InlineTaxLabel ────────────────────────────────────────────────────────────
-const TAX_LABELS = ["IVA", "VAT", "Sales Tax", "GST", "ICMS", "Tax"];
-
-interface InlineTaxLabelProps {
-    value: string | null | undefined;
-    onSave: (value: string) => Promise<void>;
-    className?: string;
-}
-
-function InlineTaxLabel({ value, onSave, className }: InlineTaxLabelProps) {
-    const [saving, setSaving] = useState(false);
-
-    const handleChange = async (newVal: string) => {
-        setSaving(true);
-        try { await onSave(newVal); } finally { setSaving(false); }
-    };
-
-    return (
-        <div className={cn("space-y-1", className)}>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Receipt className="h-3 w-3" />
-                Tipo de impuesto
-            </p>
-            <Select value={value || "IVA"} onValueChange={handleChange} disabled={saving}>
-                <SelectTrigger className="h-7 text-sm border-transparent bg-transparent hover:bg-muted/50 transition-colors px-1 w-auto gap-1 [&>*:last-child]:hidden">
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    {TAX_LABELS.map((label) => (
-                        <SelectItem key={label} value={label}>{label}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
-}
-
-// ── KPI Row: fila de valores clave ────────────────────────────────────────────
+// ── KPI Row ───────────────────────────────────────────────────────────────────
 function KpiRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
     return (
         <div className={cn(
@@ -341,23 +102,343 @@ function KpiRow({ label, value, highlight }: { label: string; value: string; hig
     );
 }
 
-// ── Vista Principal ───────────────────────────────────────────────────────────
+// ── Confirmation dialog config ────────────────────────────────────────────────
+interface StatusTransitionConfig {
+    title: string;
+    description: string;
+    consequences: string[];
+    confirmLabel: string;
+    confirmVariant?: "default" | "destructive";
+}
+
+function getTransitionConfig(
+    currentStatus: string,
+    targetStatus: string,
+    quoteType: string,
+    money: ReturnType<typeof useMoney>,
+    quote: QuoteView,
+    items: QuoteItemView[],
+): StatusTransitionConfig {
+    const itemCount = items.length;
+    const total = money.format(quote.total_with_tax || 0);
+    const symbol = quote.currency_symbol || "$";
+
+    if (targetStatus === "sent") {
+        return {
+            title: "Marcar como Enviado",
+            description: `Estás a punto de enviar este ${quoteType === "contract" ? "contrato" : "presupuesto"} al cliente.`,
+            consequences: [
+                `Los precios de los ${itemCount} ítems se congelarán con los costos actuales del catálogo.`,
+                "Los campos del documento (nombre, condiciones, ítems) se bloquearán para edición.",
+                "Los costos del catálogo ya no afectarán este documento.",
+                `El valor total congelado será: ${total}`,
+                "Podrás volver a Borrador si necesitás hacer cambios.",
+            ],
+            confirmLabel: "Enviar al cliente",
+        };
+    }
+
+    if (targetStatus === "approved" && currentStatus === "draft") {
+        return {
+            title: "Aprobar Presupuesto",
+            description: "Estás a punto de aprobar este presupuesto directamente desde borrador.",
+            consequences: [
+                `Se crearán ${itemCount} tareas de obra en el proyecto vinculado.`,
+                "Los precios se congelarán con los costos actuales.",
+                "El documento quedará bloqueado permanentemente.",
+                `El valor total del presupuesto es: ${total}`,
+                "Esta acción no se puede deshacer.",
+            ],
+            confirmLabel: "Aprobar y crear tareas",
+            confirmVariant: "default",
+        };
+    }
+
+    if (targetStatus === "approved" && currentStatus === "sent") {
+        return {
+            title: "Aprobar Presupuesto",
+            description: "El cliente aceptó — estás a punto de aprobar este presupuesto.",
+            consequences: [
+                `Se crearán ${itemCount} tareas de obra en el proyecto vinculado.`,
+                "Los precios ya están congelados desde el envío.",
+                "El documento quedará bloqueado permanentemente.",
+                `El valor total aprobado será: ${total}`,
+                "Esta acción no se puede deshacer.",
+            ],
+            confirmLabel: "Aprobar y crear tareas",
+            confirmVariant: "default",
+        };
+    }
+
+    if (targetStatus === "rejected") {
+        return {
+            title: "Rechazar Presupuesto",
+            description: "Estás a punto de rechazar este presupuesto.",
+            consequences: [
+                "El presupuesto se marcará como rechazado.",
+                "No se crearán tareas de obra.",
+                "El documento quedará bloqueado para edición.",
+                "Podrás volver a Borrador si el cliente cambia de opinión.",
+            ],
+            confirmLabel: "Rechazar",
+            confirmVariant: "destructive",
+        };
+    }
+
+    if (targetStatus === "draft") {
+        return {
+            title: "Volver a Borrador",
+            description: "Estás a punto de revertir este presupuesto a borrador.",
+            consequences: [
+                "Los campos se desbloquearán para edición.",
+                "Los precios volverán a calcularse en vivo desde el catálogo.",
+                "Los snapshots de costos se perderán y se recalcularán al re-enviar.",
+                `El valor puede cambiar si los costos del catálogo cambiaron.`,
+            ],
+            confirmLabel: "Volver a borrador",
+        };
+    }
+
+    if (targetStatus === "contract") {
+        return {
+            title: "Convertir a Contrato",
+            description: "Estás a punto de convertir este presupuesto aprobado en un contrato formal.",
+            consequences: [
+                "El tipo de documento cambiará de Cotización a Contrato.",
+                `El valor original del contrato se congelará en: ${total}`,
+                "Podrás crear Adicionales (Change Orders) vinculados.",
+                "El valor revisado del contrato se calculará automáticamente.",
+                "Esta acción no se puede deshacer.",
+            ],
+            confirmLabel: "Convertir a contrato",
+        };
+    }
+
+    // Fallback
+    return {
+        title: "Cambiar Estado",
+        description: `Cambiar a "${STATUS_MAP[targetStatus]?.label || targetStatus}".`,
+        consequences: [],
+        confirmLabel: "Confirmar",
+    };
+}
+
+// ============================================================================
+// Component
+// ============================================================================
+
 export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteOverviewViewProps) {
     const isContract = quote.quote_type === "contract";
     const money = useMoney();
+    const router = useRouter();
     const statusInfo = STATUS_MAP[quote.status] || { label: quote.status, variant: "secondary" as const, icon: null };
     const showExchangeRate = !!quote.exchange_rate && quote.exchange_rate !== 1;
+    const [statusLoading, setStatusLoading] = useState(false);
 
-    const saveField = useCallback(
-        async (field: Parameters<typeof updateQuoteDocumentTerms>[1]) => {
-            const result = await updateQuoteDocumentTerms(quote.id, field);
-            if (result.error) toast.error("Error al guardar: " + result.error);
-        },
-        [quote.id]
+    // ── Read-only enforcement ─────────────────────────────────────────────────
+    const isReadOnly = quote.status !== "draft";
+
+    // ── Confirmation dialog state ─────────────────────────────────────────────
+    const [confirmDialog, setConfirmDialog] = useState<{
+        open: boolean;
+        config: StatusTransitionConfig;
+        onConfirm: () => void;
+    }>({ open: false, config: { title: "", description: "", consequences: [], confirmLabel: "" }, onConfirm: () => { } });
+
+    // ── Editable State ────────────────────────────────────────────────────────
+    const [name, setName] = useState(quote.name || "");
+    const [description, setDescription] = useState(quote.description || "");
+    const [clientId, setClientId] = useState(quote.client_id || "");
+    const [projectId, setProjectId] = useState(quote.project_id || "");
+    const [quoteDate, setQuoteDate] = useState<Date | undefined>(
+        parseDateFromDB(quote.quote_date) ?? undefined
     );
+    const [validUntil, setValidUntil] = useState<Date | undefined>(
+        parseDateFromDB(quote.valid_until) ?? undefined
+    );
+    const [taxPct, setTaxPct] = useState(String(quote.tax_pct ?? 0));
+    const [discountPct, setDiscountPct] = useState(String(quote.discount_pct ?? 0));
+    const [taxLabel, setTaxLabel] = useState(quote.tax_label || "IVA");
+    const [exchangeRate, setExchangeRate] = useState(String(quote.exchange_rate ?? 1));
+
+    // ── Auto-save via useAutoSave ─────────────────────────────────────────────
+    const { triggerAutoSave } = useAutoSave<Record<string, any>>({
+        saveFn: async (data) => {
+            const result = await updateQuoteDocumentTerms(quote.id, data);
+            if (result.error) throw new Error(result.error);
+        },
+        delay: 800,
+        successMessage: "¡Cambios guardados!",
+        errorMessage: "Error al guardar los cambios.",
+    });
+
+    // ── Field change handlers (only active in draft) ──────────────────────────
+    const handleNameChange = (v: string) => {
+        if (isReadOnly) return;
+        setName(v);
+        triggerAutoSave({ name: v.trim() });
+    };
+
+    const handleDescriptionChange = (v: string) => {
+        if (isReadOnly) return;
+        setDescription(v);
+        triggerAutoSave({ description: v.trim() || null });
+    };
+
+    const handleClientChange = (v: string) => {
+        if (isReadOnly) return;
+        setClientId(v);
+        triggerAutoSave({ client_id: v || null });
+    };
+
+    const handleProjectChange = (v: string) => {
+        if (isReadOnly) return;
+        setProjectId(v);
+        triggerAutoSave({ project_id: v || null });
+    };
+
+    const handleQuoteDateChange = (d: Date | undefined) => {
+        if (isReadOnly) return;
+        setQuoteDate(d);
+        triggerAutoSave({ quote_date: d ? formatDateForDB(d) : null });
+    };
+
+    const handleValidUntilChange = (d: Date | undefined) => {
+        if (isReadOnly) return;
+        setValidUntil(d);
+        triggerAutoSave({ valid_until: d ? formatDateForDB(d) : null });
+    };
+
+    const handleTaxPctChange = (v: string) => {
+        if (isReadOnly) return;
+        setTaxPct(v);
+        triggerAutoSave({ tax_pct: parseFloat(v) || 0 });
+    };
+
+    const handleDiscountPctChange = (v: string) => {
+        if (isReadOnly) return;
+        setDiscountPct(v);
+        triggerAutoSave({ discount_pct: parseFloat(v) || 0 });
+    };
+
+    const handleTaxLabelChange = (v: string) => {
+        if (isReadOnly) return;
+        setTaxLabel(v);
+        triggerAutoSave({ tax_label: v });
+    };
+
+    const handleExchangeRateChange = (v: string) => {
+        if (isReadOnly) return;
+        setExchangeRate(v);
+        triggerAutoSave({ exchange_rate: parseFloat(v) || 1 });
+    };
+
+    // ── Status transition handlers ────────────────────────────────────────────
+    const handleStatusChange = async (newStatus: string) => {
+        setStatusLoading(true);
+        try {
+            const result = await updateQuoteStatus(quote.id, newStatus);
+            if (result.error) {
+                toast.error(result.error);
+            } else {
+                toast.success(`Estado cambiado a "${STATUS_MAP[newStatus]?.label || newStatus}"`);
+                router.refresh();
+            }
+        } finally {
+            setStatusLoading(false);
+        }
+    };
+
+    const handleApprove = async () => {
+        setStatusLoading(true);
+        try {
+            const result = await approveQuote(quote.id);
+            if (!result.success) {
+                toast.error(result.error || "Error al aprobar");
+            } else {
+                toast.success(`Aprobado. ${result.tasksCreated ? `${result.tasksCreated} tareas creadas.` : ""}`);
+                router.refresh();
+            }
+        } finally {
+            setStatusLoading(false);
+        }
+    };
+
+    const handleConvertToContract = async () => {
+        setStatusLoading(true);
+        try {
+            const result = await convertQuoteToContract(quote.id);
+            if (result.error) {
+                toast.error(result.error);
+            } else {
+                toast.success("Convertido a contrato");
+                router.refresh();
+            }
+        } finally {
+            setStatusLoading(false);
+        }
+    };
+
+    // ── Show confirmation dialog before executing ─────────────────────────────
+    const requestTransition = (targetStatus: string, onConfirm: () => void) => {
+        const config = getTransitionConfig(quote.status, targetStatus, quote.quote_type, money, quote, items);
+        setConfirmDialog({ open: true, config, onConfirm });
+    };
+
+    // ── Toolbar actions (status transitions) ──────────────────────────────────
+    const buildToolbarActions = () => {
+        const actions: { label: string; icon: any; onClick: () => void; disabled?: boolean }[] = [];
+
+        if (quote.status === "draft") {
+            actions.push({ label: "Marcar como Enviado", icon: Send, onClick: () => requestTransition("sent", () => handleStatusChange("sent")), disabled: statusLoading });
+            actions.push({ label: "Aprobar", icon: CheckCircle2, onClick: () => requestTransition(quote.status === "draft" ? "approved" : "approved", handleApprove), disabled: statusLoading });
+            actions.push({ label: "Rechazar", icon: XCircle, onClick: () => requestTransition("rejected", () => handleStatusChange("rejected")), disabled: statusLoading });
+        } else if (quote.status === "sent") {
+            actions.push({ label: "Aprobar", icon: CheckCircle2, onClick: () => requestTransition("approved", handleApprove), disabled: statusLoading });
+            actions.push({ label: "Rechazar", icon: XCircle, onClick: () => requestTransition("rejected", () => handleStatusChange("rejected")), disabled: statusLoading });
+            actions.push({ label: "Volver a Borrador", icon: FileText, onClick: () => requestTransition("draft", () => handleStatusChange("draft")), disabled: statusLoading });
+        } else if (quote.status === "approved" && quote.quote_type === "quote" && quote.project_id) {
+            actions.push({ label: "Convertir a Contrato", icon: FileCheck, onClick: () => requestTransition("contract", handleConvertToContract), disabled: statusLoading });
+        } else if (quote.status === "rejected") {
+            actions.push({ label: "Volver a Borrador", icon: FileText, onClick: () => requestTransition("draft", () => handleStatusChange("draft")), disabled: statusLoading });
+        }
+
+        return actions;
+    };
+
+    const toolbarActions = buildToolbarActions();
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+            {/* ── Toolbar: acciones de estado en el header ────────────── */}
+            {toolbarActions.length > 0 && (
+                <Toolbar
+                    portalToHeader
+                    actions={toolbarActions}
+                    actionsMode="dropdown"
+                    actionsLabel={statusInfo.label}
+                />
+            )}
+
+            {/* ── Read-only banner ─────────────────────────────────────── */}
+            {isReadOnly && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex items-center gap-3 mb-2">
+                    <div className="bg-amber-500/15 p-2 rounded-full shrink-0">
+                        <Lock className="h-4 w-4 text-amber-500" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-amber-200">
+                            Documento bloqueado — Estado: {statusInfo.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {quote.status === "sent" && "Los campos están bloqueados porque el presupuesto fue enviado al cliente. Volvé a Borrador para editarlo."}
+                            {quote.status === "approved" && "Los campos están bloqueados porque el presupuesto fue aprobado. Las tareas de obra ya fueron creadas."}
+                            {quote.status === "rejected" && "Los campos están bloqueados porque el presupuesto fue rechazado. Volvé a Borrador para editarlo."}
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Banner: Adicional (Change Order) */}
             {quote.quote_type === "change_order" && quote.parent_quote_id && (
@@ -379,124 +460,189 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
 
             <SettingsSectionContainer>
 
-                {/* ── Identificación ────────────────────────────────────────── */}
+                {/* ══════════════════════════════════════════════════════════ */}
+                {/* SECCIÓN 1: Identificación                               */}
+                {/* ¿Qué es? Nombre, descripción, cliente, proyecto          */}
+                {/* ══════════════════════════════════════════════════════════ */}
                 <SettingsSection
                     icon={Building2}
                     title="Identificación"
-                    description="Cliente, proyecto y estado del documento."
+                    description="Información general del documento."
                 >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        {/* Cliente */}
-                        <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground">Cliente</p>
-                            <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-xs shrink-0">
-                                    {(quote.client_name || "SC").substring(0, 2).toUpperCase()}
-                                </div>
-                                <p className="text-sm font-medium truncate">{quote.client_name || "Sin cliente"}</p>
-                            </div>
-                        </div>
-
-                        {/* Proyecto */}
-                        {quote.project_name && (
-                            <div className="space-y-2">
-                                <p className="text-xs text-muted-foreground">Proyecto</p>
-                                <p className="text-sm font-medium">{quote.project_name}</p>
-                            </div>
-                        )}
-
-                        {/* Estado */}
-                        <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground">Estado</p>
-                            <Badge variant={statusInfo.variant} className="gap-1">
-                                {statusInfo.icon}
-                                {statusInfo.label}
-                            </Badge>
-                        </div>
-
-                        {/* Versión */}
-                        <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground">Versión</p>
-                            <p className="text-sm font-medium">v{quote.version}</p>
-                        </div>
-                    </div>
-                </SettingsSection>
-
-                {/* ── Descripción / Alcance ─────────────────────────────────── */}
-                <SettingsSection
-                    icon={FileText}
-                    title={isContract ? "Alcance del Contrato" : "Descripción"}
-                    description="Hacé click en el texto para editar."
-                >
-                    <InlineTextarea
-                        value={quote.description}
-                        onSave={(description) => saveField({ description })}
-                        placeholder="Agregar descripción del alcance..."
-                    />
-                </SettingsSection>
-
-                {/* ── Términos del Documento ────────────────────────────────── */}
-                <SettingsSection
-                    icon={Receipt}
-                    title="Términos del Documento"
-                    description="Fechas, impuesto, descuento y tipo de cambio. Hacé click para editar."
-                >
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
-                        <InlineDateField
-                            label="Fecha del documento"
-                            icon={<Calendar className="h-3 w-3" />}
-                            value={quote.quote_date}
-                            onSave={(quote_date) => saveField({ quote_date })}
+                    <div className="space-y-4">
+                        {/* Fila 1: Nombre (full width) */}
+                        <TextField
+                            value={name}
+                            onChange={handleNameChange}
+                            label="Nombre"
+                            placeholder="Nombre del presupuesto"
+                            required
+                            disabled={isReadOnly}
                         />
-                        <InlineDateField
-                            label="Válido hasta"
-                            icon={<Clock className="h-3 w-3" />}
-                            value={quote.valid_until}
-                            onSave={(valid_until) => saveField({ valid_until })}
-                            minDate={quote.quote_date ? (parseDateFromDB(quote.quote_date) ?? undefined) : undefined}
-                        />
-                        <InlineField
-                            label="Impuesto %"
-                            icon={<Percent className="h-3 w-3" />}
-                            value={String(quote.tax_pct ?? 0)}
-                            displayValue={`${quote.tax_pct ?? 0}%`}
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="100"
-                            onSave={(v) => saveField({ tax_pct: parseFloat(v) || 0 })}
-                        />
-                        <InlineField
-                            label="Descuento %"
-                            icon={<Percent className="h-3 w-3" />}
-                            value={String(quote.discount_pct ?? 0)}
-                            displayValue={`${quote.discount_pct ?? 0}%`}
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="100"
-                            onSave={(v) => saveField({ discount_pct: parseFloat(v) || 0 })}
-                        />
-                        <InlineTaxLabel
-                            value={quote.tax_label}
-                            onSave={(tax_label) => saveField({ tax_label })}
-                        />
-                        {showExchangeRate && (
-                            <InlineField
-                                label="Tipo de cambio"
-                                icon={<ArrowLeftRight className="h-3 w-3" />}
-                                value={String(quote.exchange_rate ?? 1)}
-                                displayValue={String(quote.exchange_rate ?? 1)}
-                                type="number"
-                                step="0.000001"
-                                min="0"
-                                onSave={(v) => saveField({ exchange_rate: parseFloat(v) || 1 })}
+
+                        {/* Fila 2: Proyecto / Cliente (2 columnas) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <ProjectField
+                                value={projectId}
+                                onChange={handleProjectChange}
+                                label="Proyecto"
+                                disabled={isReadOnly}
                             />
-                        )}
+                            <ContactField
+                                value={clientId}
+                                onChange={handleClientChange}
+                                label="Cliente"
+                                disabled={isReadOnly}
+                            />
+                        </div>
+
+                        {/* Fila 3: Descripción */}
+                        <NotesField
+                            value={description}
+                            onChange={handleDescriptionChange}
+                            label={isContract ? "Alcance del Contrato" : "Descripción"}
+                            placeholder="Agregar descripción del alcance..."
+                            required={false}
+                            disabled={isReadOnly}
+                        />
                     </div>
                 </SettingsSection>
 
-                {/* ── Financiero: Contrato ──────────────────────────────────── */}
+                {/* ══════════════════════════════════════════════════════════ */}
+                {/* SECCIÓN 2: Estado y Fechas                               */}
+                {/* ══════════════════════════════════════════════════════════ */}
+                <SettingsSection
+                    icon={Calendar}
+                    title="Estado y Fechas"
+                    description="Estado actual, versión y fechas del documento."
+                >
+                    <div className="space-y-4">
+                        {/* Fila 1: Estado / Versión (2 columnas) */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <SelectField
+                                value={quote.status}
+                                onChange={(newStatus) => {
+                                    if (newStatus === quote.status) return;
+                                    // Find the matching action and trigger its confirmation
+                                    const action = toolbarActions.find(a => {
+                                        if (newStatus === "sent") return a.label === "Marcar como Enviado";
+                                        if (newStatus === "approved") return a.label === "Aprobar";
+                                        if (newStatus === "rejected") return a.label === "Rechazar";
+                                        if (newStatus === "draft") return a.label === "Volver a Borrador";
+                                        return false;
+                                    });
+                                    if (action) action.onClick();
+                                }}
+                                options={[
+                                    { value: quote.status, label: statusInfo.label },
+                                    ...toolbarActions.map(a => ({
+                                        value: a.label === "Marcar como Enviado" ? "sent"
+                                            : a.label === "Aprobar" ? "approved"
+                                                : a.label === "Rechazar" ? "rejected"
+                                                    : a.label === "Volver a Borrador" ? "draft"
+                                                        : a.label === "Convertir a Contrato" ? "contract"
+                                                            : "",
+                                        label: a.label,
+                                    })),
+                                ]}
+                                label="Estado"
+                                disabled={statusLoading || toolbarActions.length === 0}
+                            />
+                            <TextField
+                                value={`v${quote.version}`}
+                                onChange={() => { }}
+                                label="Versión"
+                                disabled
+                            />
+                        </div>
+
+                        {/* Fila 2: Fechas (2 columnas) */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <DateField
+                                value={quoteDate}
+                                onChange={handleQuoteDateChange}
+                                label="Fecha del documento"
+                                required={false}
+                                placeholder="Sin fecha"
+                                disabled={isReadOnly}
+                            />
+                            <DateField
+                                value={validUntil}
+                                onChange={handleValidUntilChange}
+                                label="Válido hasta"
+                                required={false}
+                                placeholder="Sin fecha"
+                                startMonth={quoteDate}
+                                disabled={isReadOnly}
+                            />
+                        </div>
+                    </div>
+                </SettingsSection>
+
+                {/* ══════════════════════════════════════════════════════════ */}
+                {/* SECCIÓN 3: Condiciones                                   */}
+                {/* ══════════════════════════════════════════════════════════ */}
+                <SettingsSection
+                    icon={Settings2}
+                    title="Condiciones"
+                    description="Impuesto, descuento y tipo de cambio aplicados al documento."
+                >
+                    <div className="space-y-4">
+                        {/* Fila 1: Tipo de impuesto / Impuesto % (2 columnas) */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <SelectField
+                                value={taxLabel}
+                                onChange={handleTaxLabelChange}
+                                options={TAX_LABEL_OPTIONS}
+                                label="Tipo de impuesto"
+                                required={false}
+                                disabled={isReadOnly}
+                            />
+                            <AmountField
+                                value={taxPct}
+                                onChange={handleTaxPctChange}
+                                label="Impuesto %"
+                                placeholder="21"
+                                min={0}
+                                step={0.01}
+                                suffix="%"
+                                disabled={isReadOnly}
+                            />
+                        </div>
+
+                        {/* Fila 2: Descuento / Tipo de cambio (2 columnas) */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <AmountField
+                                value={discountPct}
+                                onChange={handleDiscountPctChange}
+                                label="Descuento %"
+                                placeholder="0"
+                                min={0}
+                                step={0.01}
+                                suffix="%"
+                                disabled={isReadOnly}
+                            />
+                            {showExchangeRate && (
+                                <AmountField
+                                    value={exchangeRate}
+                                    onChange={handleExchangeRateChange}
+                                    label="Tipo de cambio"
+                                    placeholder="1"
+                                    min={0}
+                                    step={0.000001}
+                                    disabled={isReadOnly}
+                                />
+                            )}
+                        </div>
+                    </div>
+                </SettingsSection>
+
+                {/* ══════════════════════════════════════════════════════════ */}
+                {/* SECCIÓN 4: Resumen Financiero                            */}
+                {/* ¿Cuánto sale?                                            */}
+                {/* ══════════════════════════════════════════════════════════ */}
+
+                {/* Financiero: Contrato */}
                 {isContract && contractSummary && (
                     <SettingsSection
                         icon={DollarSign}
@@ -505,7 +651,7 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                             <>
                                 <span>Contrato original congelado al momento de la aprobación.</span>
                                 {contractSummary.change_order_count > 0 && (
-                                    <span>{contractSummary.change_order_count} orden{contractSummary.change_order_count !== 1 ? "es" : ""} de cambio registrada{contractSummary.change_order_count !== 1 ? "s" : ""}.</span>
+                                    <span> {contractSummary.change_order_count} orden{contractSummary.change_order_count !== 1 ? "es" : ""} de cambio registrada{contractSummary.change_order_count !== 1 ? "s" : ""}.</span>
                                 )}
                             </>
                         }
@@ -542,7 +688,7 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                     </SettingsSection>
                 )}
 
-                {/* ── Financiero: Cotización / Adicional ───────────────────── */}
+                {/* Financiero: Cotización / Adicional */}
                 {!isContract && (
                     <SettingsSection
                         icon={Calculator}
@@ -573,7 +719,7 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                     </SettingsSection>
                 )}
 
-                {/* ── Financiero: Adicional (change_order) extra info ───────── */}
+                {/* Financiero: Contrato sin summary */}
                 {quote.quote_type === "contract" && !contractSummary && (
                     <SettingsSection
                         icon={TrendingUp}
@@ -599,6 +745,55 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                 )}
 
             </SettingsSectionContainer>
+
+            {/* ── Confirmation Dialog ──────────────────────────────────── */}
+            <AlertDialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}>
+                <AlertDialogContent className="max-w-lg">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <ShieldAlert className="h-5 w-5 text-primary" />
+                            {confirmDialog.config.title}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base">
+                            {confirmDialog.config.description}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    {confirmDialog.config.consequences.length > 0 && (
+                        <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                            <p className="text-sm font-medium flex items-center gap-1.5">
+                                <Info className="h-4 w-4 text-muted-foreground" />
+                                ¿Qué va a pasar?
+                            </p>
+                            <ul className="space-y-1.5">
+                                {confirmDialog.config.consequences.map((c, i) => (
+                                    <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                                        <span className="text-primary mt-0.5">•</span>
+                                        <span>{c}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                confirmDialog.onConfirm();
+                                setConfirmDialog(prev => ({ ...prev, open: false }));
+                            }}
+                            className={cn(
+                                confirmDialog.config.confirmVariant === "destructive" &&
+                                "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            )}
+                        >
+                            {statusLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {confirmDialog.config.confirmLabel}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

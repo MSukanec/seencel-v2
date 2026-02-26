@@ -153,4 +153,58 @@ function ToolbarSplitButton({
     )
 }
 
-export { ToolbarButton, ToolbarSplitButton }
+// --- ToolbarDropdownButton (All Actions Equal in a Dropdown) ---
+
+interface ToolbarDropdownButtonProps {
+    actions: ToolbarAction[]
+    /** Label for the trigger button. Default: "Acciones" */
+    label?: string
+    /** Variant for the trigger button. Default: "default" */
+    variant?: VariantProps<typeof buttonVariants>["variant"]
+    /** Icon for the trigger button (optional) */
+    icon?: React.ComponentType<{ className?: string }>
+    className?: string
+}
+
+function ToolbarDropdownButton({
+    actions,
+    label = "Acciones",
+    variant = "default",
+    icon: TriggerIcon,
+    className,
+}: ToolbarDropdownButtonProps) {
+    if (!actions || actions.length === 0) return null
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <ToolbarButton
+                    variant={variant}
+                    className={cn("gap-2", className)}
+                >
+                    {TriggerIcon && <TriggerIcon className="h-4 w-4" />}
+                    {label}
+                    <ChevronDown className="h-4 w-4 opacity-60" />
+                </ToolbarButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+                {actions.map((action, index) => {
+                    const ActionIcon = action.icon
+                    return (
+                        <DropdownMenuItem
+                            key={index}
+                            onClick={action.onClick}
+                            disabled={action.disabled}
+                            className="cursor-pointer"
+                        >
+                            {ActionIcon && <ActionIcon className="mr-2 h-4 w-4 text-muted-foreground" />}
+                            {action.label}
+                        </DropdownMenuItem>
+                    )
+                })}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+}
+
+export { ToolbarButton, ToolbarSplitButton, ToolbarDropdownButton }

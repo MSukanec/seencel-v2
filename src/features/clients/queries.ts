@@ -113,6 +113,28 @@ export async function getOrganizationContacts(organizationId: string) {
     return { data: data || [], error: null };
 }
 
+/**
+ * Get all contracts and change orders for an organization (from quotes_view)
+ * Used in the "Contratos" tab of Cobros page
+ */
+export async function getOrganizationContracts(organizationId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .schema('finance').from('quotes_view')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
+        .in('quote_type', ['contract', 'change_order'])
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error fetching organization contracts:", error);
+        return { data: [], error };
+    }
+
+    return { data: data || [], error: null };
+}
 
 /**
  * Get financial summary for all clients in an organization

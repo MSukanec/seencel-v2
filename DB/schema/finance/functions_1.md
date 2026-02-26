@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-25T18:05:07.898Z
+> Generated: 2026-02-26T15:52:15.290Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -190,6 +190,47 @@ BEGIN
     WHERE m.organization_id = p_org_id
       AND m.amount_sign != 0
       AND (p_project_id IS NULL OR m.project_id = p_project_id);
+END;
+$function$
+```
+</details>
+
+### `finance.freeze_quote_prices(p_quote_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION finance.freeze_quote_prices(p_quote_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+    -- Para cada ítem del presupuesto que tiene receta,
+    -- calcular costos actuales desde el catálogo y guardarlos como snapshot
+    UPDATE finance.quote_items qi
+    SET
+        -- Snapshot de costos desglosados
+        snapshot_mat_cost = COALESCE(rv.mat_cost, 0),
+        snapshot_lab_cost = COALESCE(rv.lab_cost, 0),
+        snapshot_ext_cost = COALESCE(rv.ext_cost, 0),
+        -- unit_price = costo según alcance
+        unit_price = CASE qi.cost_scope
+            WHEN 'materials_and_labor'::cost_scope_enum THEN
+                COALESCE(rv.mat_cost, 0) + COALESCE(rv.lab_cost, 0) + COALESCE(rv.ext_cost, 0)
+            WHEN 'labor_only'::cost_scope_enum THEN
+                COALESCE(rv.lab_cost, 0) + COALESCE(rv.ext_cost, 0)
+            ELSE
+                COALESCE(rv.mat_cost, 0) + COALESCE(rv.lab_cost, 0) + COALESCE(rv.ext_cost, 0)
+        END
+    FROM catalog.task_recipes_view rv
+    WHERE qi.quote_id = p_quote_id
+      AND qi.recipe_id IS NOT NULL
+      AND qi.is_deleted = false
+      AND rv.id = qi.recipe_id;
 END;
 $function$
 ```

@@ -29,8 +29,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { useModal } from "@/stores/modal-store";
-import { QuoteForm } from "../forms/quote-form";
+import { usePanel } from "@/stores/panel-store";
 import { deleteQuote, duplicateQuote } from "../actions";
 import { QuoteView, QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS } from "../types";
 import { cn } from "@/lib/utils";
@@ -54,7 +53,7 @@ export function QuoteChangeOrdersView({
     currencies
 }: QuoteChangeOrdersViewProps) {
     const router = useRouter();
-    const { openModal, closeModal } = useModal();
+    const { openPanel, closePanel } = usePanel();
 
     // Delete dialog state
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -76,66 +75,52 @@ export function QuoteChangeOrdersView({
     const approvedCount = changeOrders.filter(co => co.status === 'approved').length;
 
     const handleCreateChangeOrder = () => {
-        openModal(
-            <QuoteForm
-                mode="create"
-                organizationId={contract.organization_id}
-                projectId={contract.project_id || undefined}
-                financialData={{
-                    currencies: currencies.map(c => ({
-                        ...c,
-                        code: c.symbol,
-                        is_default: c.id === contract.currency_id,
-                        exchange_rate: 1
-                    })),
-                    defaultCurrencyId: contract.currency_id,
-                    defaultTaxLabel: contract.tax_label || "IVA",
-                    defaultWalletId: "",
-                    wallets: [],
-                    preferences: {} as any
-                }}
-                clients={[]}
-                projects={[]}
-                parentQuoteId={contract.id}
-                parentQuoteName={contract.name}
-            />,
-            {
-                title: "Nueva Orden de Cambio",
-                description: `Para contrato: ${contract.name}`,
-                size: "md"
-            }
-        );
+        openPanel('quote-form', {
+            mode: 'create',
+            organizationId: contract.organization_id,
+            projectId: contract.project_id || undefined,
+            financialData: {
+                currencies: currencies.map(c => ({
+                    ...c,
+                    code: c.symbol,
+                    is_default: c.id === contract.currency_id,
+                    exchange_rate: 1
+                })),
+                defaultCurrencyId: contract.currency_id,
+                defaultTaxLabel: contract.tax_label || "IVA",
+                defaultWalletId: "",
+                wallets: [],
+                preferences: {} as any
+            },
+            clients: [],
+            projects: [],
+            parentQuoteId: contract.id,
+            parentQuoteName: contract.name,
+        });
     };
 
     const handleEdit = (co: QuoteView) => {
-        openModal(
-            <QuoteForm
-                mode="edit"
-                organizationId={contract.organization_id}
-                projectId={contract.project_id || undefined}
-                initialData={co as any}
-                financialData={{
-                    currencies: currencies.map(c => ({
-                        ...c,
-                        code: c.symbol,
-                        is_default: c.id === contract.currency_id,
-                        exchange_rate: 1
-                    })),
-                    defaultCurrencyId: contract.currency_id,
-                    defaultTaxLabel: contract.tax_label || "IVA",
-                    defaultWalletId: "",
-                    wallets: [],
-                    preferences: {} as any
-                }}
-                clients={[]}
-                projects={[]}
-            />,
-            {
-                title: "Editar Orden de Cambio",
-                description: "Modificar nombre o descripción del adicional",
-                size: "md"
-            }
-        );
+        openPanel('quote-form', {
+            mode: 'edit',
+            organizationId: contract.organization_id,
+            projectId: contract.project_id || undefined,
+            initialData: co,
+            financialData: {
+                currencies: currencies.map(c => ({
+                    ...c,
+                    code: c.symbol,
+                    is_default: c.id === contract.currency_id,
+                    exchange_rate: 1
+                })),
+                defaultCurrencyId: contract.currency_id,
+                defaultTaxLabel: contract.tax_label || "IVA",
+                defaultWalletId: "",
+                wallets: [],
+                preferences: {} as any
+            },
+            clients: [],
+            projects: [],
+        });
     };
 
     const handleDeleteClick = (co: QuoteView) => {

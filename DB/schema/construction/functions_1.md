@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-25T18:05:07.898Z
+> Generated: 2026-02-26T15:52:15.290Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -182,8 +182,8 @@ BEGIN
         SELECT
             NEW.id,
             trm.material_id,
-            (COALESCE(NEW.quantity, 0) * COALESCE(trm.amount, 0))::NUMERIC(20, 4),
-            trm.amount,
+            (COALESCE(NEW.quantity, 0) * COALESCE(trm.quantity, 0))::NUMERIC(20, 4),
+            trm.quantity,
             m.unit_id,
             NEW.task_id,
             NEW.organization_id,

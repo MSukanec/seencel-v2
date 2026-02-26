@@ -246,6 +246,11 @@ export interface TaskRecipeView extends TaskRecipe {
     unit_name: string | null;
     org_name: string | null;
     item_count: number;
+    // Live costs from catalog (updated in real-time)
+    mat_cost: number;
+    lab_cost: number;
+    ext_cost: number;
+    total_cost: number;
 }
 
 // --- Recipe Resources (Multi-tipo) ---

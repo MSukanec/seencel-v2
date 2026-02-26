@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-25T18:05:07.898Z
+> Generated: 2026-02-26T15:52:15.290Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -312,7 +312,7 @@ SELECT cp.id,
   WHERE (cp.is_deleted = false);
 ```
 
-### `finance.contract_summary_view` (🔓 INVOKER)
+### `finance.contract_summary_view` (🔐 DEFINER)
 
 ```sql
 SELECT c.id,
@@ -660,42 +660,76 @@ SELECT ow.id,
      LEFT JOIN finance.wallets w ON ((ow.wallet_id = w.id)));
 ```
 
-### `finance.quotes_items_view` (🔓 INVOKER)
+### `finance.quotes_items_view` (🔐 DEFINER)
 
 ```sql
-SELECT bi.id,
+WITH recipe_costs AS (
+         SELECT rv.id AS recipe_id,
+            rv.name AS recipe_name,
+            rv.mat_cost,
+            rv.lab_cost,
+            rv.ext_cost,
+            rv.total_cost
+           FROM catalog.task_recipes_view rv
+        )
+ SELECT bi.id,
     bi.quote_id AS budget_id,
     bi.organization_id,
     bi.project_id,
     bi.task_id,
+    bi.recipe_id,
     bi.created_at,
     bi.updated_at,
     bi.created_by,
+    t.name AS task_name,
     t.custom_name,
     td.name AS division_name,
     td."order" AS division_order,
-    u.name AS unit,
+    u.symbol AS unit,
     bi.description,
+    rc.recipe_name,
     bi.quantity,
-    bi.unit_price,
     bi.currency_id,
     bi.markup_pct,
     bi.tax_pct,
     bi.cost_scope,
         CASE bi.cost_scope
             WHEN 'materials_and_labor'::cost_scope_enum THEN 'Materiales + Mano de obra'::text
-            WHEN 'materials_only'::cost_scope_enum THEN 'Sólo materiales'::text
             WHEN 'labor_only'::cost_scope_enum THEN 'Sólo mano de obra'::text
             ELSE initcap(replace((bi.cost_scope)::text, '_'::text, ' '::text))
         END AS cost_scope_label,
-    bi.sort_key AS "position"
-   FROM (((finance.quote_items bi
+    bi.sort_key AS "position",
+    bi.unit_price,
+    bi.snapshot_mat_cost,
+    bi.snapshot_lab_cost,
+    bi.snapshot_ext_cost,
+    COALESCE(rc.mat_cost, (0)::numeric) AS live_mat_cost,
+    COALESCE(rc.lab_cost, (0)::numeric) AS live_lab_cost,
+    COALESCE(rc.ext_cost, (0)::numeric) AS live_ext_cost,
+        CASE bi.cost_scope
+            WHEN 'materials_and_labor'::cost_scope_enum THEN ((COALESCE(rc.mat_cost, (0)::numeric) + COALESCE(rc.lab_cost, (0)::numeric)) + COALESCE(rc.ext_cost, (0)::numeric))
+            WHEN 'labor_only'::cost_scope_enum THEN (COALESCE(rc.lab_cost, (0)::numeric) + COALESCE(rc.ext_cost, (0)::numeric))
+            ELSE COALESCE(rc.total_cost, (0)::numeric)
+        END AS live_unit_price,
+        CASE
+            WHEN (q.status = 'draft'::text) THEN
+            CASE bi.cost_scope
+                WHEN 'materials_and_labor'::cost_scope_enum THEN ((COALESCE(rc.mat_cost, (0)::numeric) + COALESCE(rc.lab_cost, (0)::numeric)) + COALESCE(rc.ext_cost, (0)::numeric))
+                WHEN 'labor_only'::cost_scope_enum THEN (COALESCE(rc.lab_cost, (0)::numeric) + COALESCE(rc.ext_cost, (0)::numeric))
+                ELSE COALESCE(rc.total_cost, (0)::numeric)
+            END
+            ELSE bi.unit_price
+        END AS effective_unit_price
+   FROM (((((finance.quote_items bi
      LEFT JOIN catalog.tasks t ON ((t.id = bi.task_id)))
      LEFT JOIN catalog.task_divisions td ON ((td.id = t.task_division_id)))
-     LEFT JOIN catalog.units u ON ((u.id = t.unit_id)));
+     LEFT JOIN catalog.units u ON ((u.id = t.unit_id)))
+     LEFT JOIN finance.quotes q ON ((q.id = bi.quote_id)))
+     LEFT JOIN recipe_costs rc ON ((rc.recipe_id = bi.recipe_id)))
+  WHERE (bi.is_deleted = false);
 ```
 
-### `finance.quotes_view` (🔓 INVOKER)
+### `finance.quotes_view` (🔐 DEFINER)
 
 ```sql
 SELECT q.id,
@@ -740,13 +774,12 @@ SELECT q.id,
      LEFT JOIN projects.projects p ON ((q.project_id = p.id)))
      LEFT JOIN contacts.contacts cl ON ((q.client_id = cl.id)))
      LEFT JOIN finance.quotes parent ON ((q.parent_quote_id = parent.id)))
-     LEFT JOIN ( SELECT qi.quote_id,
+     LEFT JOIN ( SELECT qiv.budget_id AS quote_id,
             count(*) AS item_count,
-            sum((qi.quantity * qi.unit_price)) AS subtotal,
-            sum(((qi.quantity * qi.unit_price) * ((1)::numeric + (COALESCE(qi.markup_pct, (0)::numeric) / 100.0)))) AS subtotal_with_markup
-           FROM finance.quote_items qi
-          WHERE (qi.is_deleted = false)
-          GROUP BY qi.quote_id) stats ON ((q.id = stats.quote_id)))
+            sum((qiv.quantity * qiv.effective_unit_price)) AS subtotal,
+            sum(((qiv.quantity * qiv.effective_unit_price) * ((1)::numeric + (COALESCE(qiv.markup_pct, (0)::numeric) / 100.0)))) AS subtotal_with_markup
+           FROM finance.quotes_items_view qiv
+          GROUP BY qiv.budget_id) stats ON ((q.id = stats.quote_id)))
   WHERE (q.is_deleted = false);
 ```
 

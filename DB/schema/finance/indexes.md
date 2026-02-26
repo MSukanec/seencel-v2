@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-25T18:05:07.898Z
+> Generated: 2026-02-26T15:52:15.290Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [FINANCE] Indexes (134, excluding PKs)
+## [FINANCE] Indexes (135, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -112,6 +112,7 @@
 | personnel_rates | idx_personnel_rates_personnel | `CREATE INDEX idx_personnel_rates_personnel ON finance.personnel_rates USING b...` |
 | personnel_rates | idx_personnel_rates_validity | `CREATE INDEX idx_personnel_rates_validity ON finance.personnel_rates USING bt...` |
 | quote_items | idx_quote_items_not_deleted | `CREATE INDEX idx_quote_items_not_deleted ON finance.quote_items USING btree (...` |
+| quote_items | idx_quote_items_recipe_id | `CREATE INDEX idx_quote_items_recipe_id ON finance.quote_items USING btree (re...` |
 | quote_items | idx_quote_items_sort | `CREATE INDEX idx_quote_items_sort ON finance.quote_items USING btree (quote_i...` |
 | quote_items | idx_quote_items_updated_by | `CREATE INDEX idx_quote_items_updated_by ON finance.quote_items USING btree (u...` |
 | quote_items | quote_items_id_key | `CREATE UNIQUE INDEX quote_items_id_key ON finance.quote_items USING btree (id)` |

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "@/i18n/routing";
-import { FileText, Plus, Circle, FileCheck, Send as SendIcon, XCircle as XCircleIcon, FileSpreadsheet, FileSignature, FilePlus2, Loader2 } from "lucide-react";
+import { FileText, Plus, Circle, FileCheck, Send as SendIcon, XCircle as XCircleIcon, FileSpreadsheet, FileSignature, FilePlus2 } from "lucide-react";
 import { useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
 import { toast } from "sonner";
 
@@ -10,21 +10,11 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { QuoteListItem } from "@/components/shared/list-item/items/quote-list-item";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { useMoney } from "@/hooks/use-money";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { QuoteForm } from "../forms/quote-form";
 import { deleteQuote } from "../actions";
 import { QuoteView } from "../types";
 import { OrganizationFinancialData } from "@/features/clients/types";
@@ -57,7 +47,7 @@ export function QuotesListView({
     projects,
 }: QuotesListViewProps) {
     const router = useRouter();
-    const { openModal, closeModal } = useModal();
+    const { openPanel, closePanel } = usePanel();
     const money = useMoney();
 
     // — Búsqueda con debounce de 300ms —
@@ -77,8 +67,8 @@ export function QuotesListView({
         };
     }, []);
 
-    // — Optimistic delete —
-    const { optimisticItems, removeItem, isPending: isDeleting } = useOptimisticList({
+    // — Optimistic list —
+    const { optimisticItems, addItem, updateItem, removeItem, isPending: isDeleting } = useOptimisticList({
         items: quotes,
         getItemId: (q) => q.id,
     });
@@ -136,51 +126,48 @@ export function QuotesListView({
 
     // — Handlers —
     const handleCreateQuote = () => {
-        // Garantiza que el proyecto activo esté en la lista, aunque no sea 'activo'
-        // (ej: puede estar en estado 'completed' o no estar en la lista de activos del server)
         const projectsForForm = effectiveProjectId && !projects.find(p => p.id === effectiveProjectId)
             ? [{ id: effectiveProjectId, name: activeProjectName || "Proyecto actual" }, ...projects]
             : projects;
 
-        openModal(
-            <QuoteForm
-                mode="create"
-                organizationId={organizationId}
-                financialData={financialData}
-                clients={clients}
-                projects={projectsForForm}
-                projectId={effectiveProjectId ?? undefined}
-            />,
-            {
-                title: "Nuevo Presupuesto",
-                description: "Completá los campos para crear un presupuesto",
-                size: "md",
-            }
-        );
+        openPanel('quote-form', {
+            mode: 'create',
+            organizationId,
+            financialData,
+            clients,
+            projects: projectsForForm,
+            projectId: effectiveProjectId ?? undefined,
+            onSuccess: (created?: QuoteView) => {
+                if (created) {
+                    addItem(created, async () => { router.refresh(); });
+                } else {
+                    router.refresh();
+                }
+            },
+        });
     };
 
     const handleEdit = (quote: QuoteView) => {
-        // Mismo fix que handleCreateQuote: garantiza que el proyecto actual esté en la lista
         const projectsForForm = effectiveProjectId && !projects.find(p => p.id === effectiveProjectId)
             ? [{ id: effectiveProjectId, name: activeProjectName || "Proyecto actual" }, ...projects]
             : projects;
 
-        openModal(
-            <QuoteForm
-                mode="edit"
-                initialData={quote}
-                organizationId={organizationId}
-                financialData={financialData}
-                clients={clients}
-                projects={projectsForForm}
-                projectId={effectiveProjectId ?? undefined}
-            />,
-            {
-                title: "Editar Presupuesto",
-                description: "Modificar nombre, proyecto o cliente del presupuesto",
-                size: "md",
-            }
-        );
+        openPanel('quote-form', {
+            mode: 'edit',
+            initialData: quote,
+            organizationId,
+            financialData,
+            clients,
+            projects: projectsForForm,
+            projectId: effectiveProjectId ?? undefined,
+            onSuccess: (updated?: QuoteView) => {
+                if (updated) {
+                    updateItem(quote.id, updated, async () => { router.refresh(); });
+                } else {
+                    router.refresh();
+                }
+            },
+        });
     };
 
     const handleDeleteClick = (quote: QuoteView) => {
@@ -334,31 +321,20 @@ export function QuotesListView({
                 ))}
             </div>
 
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará el presupuesto{" "}
-                            <strong>{quoteToDelete?.name}</strong>.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => {
-                                e.preventDefault();
-                                confirmDelete();
-                            }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            disabled={isDeleting}
-                        >
-                            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Eliminar
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <DeleteConfirmationDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                onConfirm={confirmDelete}
+                title="¿Eliminar presupuesto?"
+                description={
+                    <>
+                        Esta acción no se puede deshacer. Se eliminará el presupuesto{" "}
+                        <strong>{quoteToDelete?.name}</strong> y todos sus items asociados.
+                    </>
+                }
+                validationText={quoteToDelete?.name}
+                isDeleting={isDeleting}
+            />
         </>
     );
 }

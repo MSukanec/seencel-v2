@@ -11,7 +11,7 @@ import { useLocale } from "next-intl";
 import Link from "next/link";
 import { DataTableFacetedFilter } from "./toolbar-faceted-filter";
 import { FacetedFilter } from "./toolbar-faceted-filter"; // Generic filter for non-table use
-import { ToolbarButton, ToolbarSplitButton, ToolbarAction } from "./toolbar-button";
+import { ToolbarButton, ToolbarSplitButton, ToolbarDropdownButton, ToolbarAction } from "./toolbar-button";
 import { ToolbarSearch } from "./toolbar-search";
 import { useProjectStatusSafe } from "@/features/projects/context/project-status-context";
 import { getDocsSlugForPath } from "@/features/docs/lib/docs-mapping";
@@ -48,6 +48,10 @@ export interface ToolbarProps<TData> {
     // Actions - New Prop for consolidated actions
     /** List of unified actions. If >1, they are grouped into a split button or menu. */
     actions?: ToolbarAction[];
+    /** How to render actions: 'split' (default) = primary button + "..." menu, 'dropdown' = all-equal dropdown */
+    actionsMode?: "split" | "dropdown";
+    /** Custom label for the dropdown trigger (only used when actionsMode="dropdown"). Default: "Acciones" */
+    actionsLabel?: string;
 
     // Data Table Mode (Legacy/Auto-wired)
     table?: Table<TData>;
@@ -101,6 +105,8 @@ export function Toolbar<TData>({
     searchPlaceholder = "Buscar...",
     children, // Legacy action support
     actions,  // New unified actions support
+    actionsMode = "split",
+    actionsLabel,
     leftActions,
     facetedFilters,
     bulkActions,
@@ -300,12 +306,19 @@ export function Toolbar<TData>({
                 )}
                 {/* Custom toolbar buttons (e.g., Personalizar) */}
                 {children}
-                {/* Primary + secondary actions as SplitButton */}
+                {/* Primary + secondary actions as SplitButton or Dropdown */}
                 {resolvedActions && resolvedActions.length > 0 && (
-                    <ToolbarSplitButton
-                        mainAction={resolvedActions[0]}
-                        secondaryActions={resolvedActions.slice(1)}
-                    />
+                    actionsMode === "dropdown" ? (
+                        <ToolbarDropdownButton
+                            actions={resolvedActions}
+                            label={actionsLabel}
+                        />
+                    ) : (
+                        <ToolbarSplitButton
+                            mainAction={resolvedActions[0]}
+                            secondaryActions={resolvedActions.slice(1)}
+                        />
+                    )
                 )}
             </div>
         </motion.div>

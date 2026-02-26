@@ -85,7 +85,7 @@ const DEFAULT_PROJECT_TOOLTIP = (
             <Link href="/organization/projects" className="underline">
                 Proyectos
             </Link>{" "}
-            activos. Solo se muestran proyectos con estado <strong>Activo</strong>.
+            activos. Solo se muestran proyectos con estado <strong>ACTIVO</strong>.
         </span>
         <span className="text-muted-foreground">
             Este campo es <strong>opcional</strong>. Puede existir sin proyecto asignado.

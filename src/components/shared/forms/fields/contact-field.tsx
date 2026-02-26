@@ -59,16 +59,16 @@ function getInitials(name: string): string {
 const DEFAULT_CONTACT_TOOLTIP = (
     <span className="flex flex-col gap-1.5 text-xs leading-relaxed">
         <span>
-            En Seencel, los <strong>clientes</strong> son{" "}
+            Seleccioná un{" "}
             <Link href="/organization/contacts" className="underline">
-                Contactos
-            </Link>
-            . Las personas, empresas o estudios a quienes les hacés un presupuesto
-            deben estar registrados como contactos primero.
+                Contacto
+            </Link>{" "}
+            de tu directorio. Es la persona o empresa a quien va dirigido
+            este presupuesto.
         </span>
         <span className="text-muted-foreground">
-            Este campo es opcional. Un presupuesto puede existir sin cliente asignado,
-            por ejemplo cuando todavía estás estructurando la propuesta internamente.
+            Este campo es <strong>opcional</strong>. Podés crear el presupuesto
+            sin asignar un contacto y vincularlo después.
         </span>
     </span>
 );

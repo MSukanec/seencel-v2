@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition, useMemo, useCallback } from "react";
+import { useRouter } from "@/i18n/routing";
 import { ColumnDef } from "@tanstack/react-table";
 import {
     Plus,
@@ -13,7 +13,6 @@ import {
     FileSignature,
     Edit,
     Trash2,
-    Loader2,
     Hash,
     Calculator,
     Receipt,
@@ -29,23 +28,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 
-import { useModal } from "@/stores/modal-store";
-import { QuoteItemForm } from "../forms/quote-item-form";
+import { usePanel } from "@/stores/panel-store";
 import { QuoteConvertContractForm } from "../forms/quote-convert-contract-form";
-import { convertQuoteToProject, approveQuote, convertQuoteToContract, deleteQuoteItem } from "../actions";
+import { convertQuoteToProject, approveQuote, convertQuoteToContract, deleteQuoteItem, updateQuoteItemField } from "../actions";
 import { QuoteView, QuoteItemView, ContractSummary } from "../types";
 import { TaskView, Unit, TaskDivision } from "@/features/tasks/types";
+import { InlineEditableCell } from "@/components/shared/data-table/inline-editable-cell";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
 // ============================================================================
 // QUOTE BASE VIEW
@@ -73,8 +64,14 @@ export function QuoteBaseView({
     contractSummary
 }: QuoteBaseViewProps) {
     const router = useRouter();
-    const { openModal, closeModal } = useModal();
+    const { openPanel } = usePanel();
     const isContract = quote.quote_type === 'contract';
+
+    // ── Optimistic Items (Según optimistic-updates.md) ──
+    const { optimisticItems, updateItem, removeItem } = useOptimisticList<QuoteItemView>({
+        items,
+        getItemId: (item) => item.id,
+    });
 
     // Conversion Modal State
     const [showConvertModal, setShowConvertModal] = useState(false);
@@ -95,9 +92,15 @@ export function QuoteBaseView({
     }, [divisions]);
 
     // Calculate total amount and per-rubro totals for incidencia calculation
+    // effective_unit_price is live (from recipe) in draft, or frozen (snapshot) in sent/approved
+    const getItemSubtotal = useCallback((item: QuoteItemView) => {
+        const base = item.quantity * (item.effective_unit_price || 0);
+        return base * (1 + (item.markup_pct || 0) / 100);
+    }, []);
+
     const totalAmount = useMemo(() => {
-        return items.reduce((sum, item) => sum + (item.subtotal_with_markup || item.subtotal || 0), 0);
-    }, [items]);
+        return optimisticItems.reduce((sum, item) => sum + getItemSubtotal(item), 0);
+    }, [optimisticItems, getItemSubtotal]);
 
     // KPI calculations
     const taxAmount = useMemo(() => {
@@ -119,37 +122,37 @@ export function QuoteBaseView({
     // Calculate per-rubro totals
     const rubroTotals = useMemo(() => {
         const totals = new Map<string, number>();
-        items.forEach(item => {
+        optimisticItems.forEach(item => {
             const rubro = getDivisionName(item) || "Sin rubro";
             const current = totals.get(rubro) || 0;
-            totals.set(rubro, current + (item.subtotal_with_markup || item.subtotal || 0));
+            totals.set(rubro, current + getItemSubtotal(item));
         });
         return totals;
-    }, [items, divisionMap, tasks]);
+    }, [optimisticItems, divisionMap, tasks]);
 
     // Filtered items based on search + rubro filter
     const filteredItems = useMemo(() => {
-        return items.filter(item => {
+        return optimisticItems.filter(item => {
             const name = (item.task_name || item.custom_name || item.description || "").toLowerCase();
             const matchesSearch = !searchQuery || name.includes(searchQuery.toLowerCase());
             const divName = getDivisionName(item) || "Sin rubro";
             const matchesRubro = rubroFilter.size === 0 || rubroFilter.has(divName);
             return matchesSearch && matchesRubro;
         });
-    }, [items, searchQuery, rubroFilter, divisionMap, tasks]);
+    }, [optimisticItems, searchQuery, rubroFilter, divisionMap, tasks]);
 
     // Unique rubros for filter
     const uniqueRubros = useMemo(() => {
         const set = new Set<string>();
-        items.forEach(item => set.add(getDivisionName(item) || "Sin rubro"));
+        optimisticItems.forEach(item => set.add(getDivisionName(item) || "Sin rubro"));
         return Array.from(set).sort().map(r => ({ label: r, value: r }));
-    }, [items, divisionMap, tasks]);
+    }, [optimisticItems, divisionMap, tasks]);
 
     // Create rubro indices map (rubro name -> rubro index 01, 02, etc.)
     const rubroIndices = useMemo(() => {
         const indices = new Map<string, number>();
         const uniqueRubros: string[] = [];
-        items.forEach(item => {
+        optimisticItems.forEach(item => {
             const rubro = getDivisionName(item) || "Sin rubro";
             if (!uniqueRubros.includes(rubro)) {
                 uniqueRubros.push(rubro);
@@ -159,12 +162,12 @@ export function QuoteBaseView({
             indices.set(rubro, idx + 1);
         });
         return indices;
-    }, [items, divisionMap, tasks]);
+    }, [optimisticItems, divisionMap, tasks]);
 
     // Get item number within its rubro (e.g., 01 for first item in rubro)
     const getItemNumberInRubro = useMemo(() => {
         const rubroItems = new Map<string, QuoteItemView[]>();
-        items.forEach(item => {
+        optimisticItems.forEach(item => {
             const rubro = getDivisionName(item) || "Sin rubro";
             const list = rubroItems.get(rubro) || [];
             list.push(item);
@@ -175,7 +178,7 @@ export function QuoteBaseView({
             const list = rubroItems.get(rubro) || [];
             return list.findIndex(i => i.id === item.id) + 1;
         };
-    }, [items, divisionMap, tasks]);
+    }, [optimisticItems, divisionMap, tasks]);
 
     // Format hierarchical number (e.g., 01.02)
     const formatItemNumber = (item: QuoteItemView) => {
@@ -192,50 +195,32 @@ export function QuoteBaseView({
 
     // Handlers
     const handleAddItem = () => {
-        openModal(
-            <QuoteItemForm
-                mode="create"
-                quoteId={quote.id}
-                organizationId={quote.organization_id}
-                projectId={quote.project_id}
-                currencyId={quote.currency_id}
-                tasks={tasks}
-                onCancel={closeModal}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
-            />,
-            {
-                title: "Agregar Ítem",
-                description: "Selecciona una tarea del catálogo y define cantidad y precio",
-                size: "lg"
-            }
-        );
+        openPanel('quote-item-form', {
+            mode: "create",
+            quoteId: quote.id,
+            organizationId: quote.organization_id,
+            projectId: quote.project_id,
+            currencyId: quote.currency_id,
+            tasks,
+            onSuccess: () => {
+                router.refresh();
+            },
+        });
     };
 
     const handleEditItem = (item: QuoteItemView) => {
-        openModal(
-            <QuoteItemForm
-                mode="edit"
-                quoteId={quote.id}
-                organizationId={quote.organization_id}
-                projectId={quote.project_id}
-                currencyId={quote.currency_id}
-                tasks={tasks}
-                initialData={item}
-                onCancel={closeModal}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
-            />,
-            {
-                title: "Editar Ítem",
-                description: "Modifica los datos del ítem",
-                size: "lg"
-            }
-        );
+        openPanel('quote-item-form', {
+            mode: "edit",
+            quoteId: quote.id,
+            organizationId: quote.organization_id,
+            projectId: quote.project_id,
+            currencyId: quote.currency_id,
+            tasks,
+            initialData: item,
+            onSuccess: () => {
+                router.refresh();
+            },
+        });
     };
 
     const handleDeleteClick = (item: QuoteItemView) => {
@@ -266,7 +251,7 @@ export function QuoteBaseView({
             toast.error(result.error, { id: toastId });
         } else {
             toast.success("¡Proyecto creado exitosamente!", { id: toastId });
-            router.push(`/project/${result.data?.project.id}`);
+            router.push(`/organization/projects` as any);
         }
     };
 
@@ -305,9 +290,32 @@ export function QuoteBaseView({
         }
     };
 
-    // Column definitions
+    // Inline edit handler – optimistic update (instantly updates UI)
+    // Según optimistic-updates.md: updateItem() + server action en background
+    const handleInlineUpdate = useCallback((itemId: string, field: string, value: string | number) => {
+        // Compute the optimistic updates object
+        const updates: Partial<QuoteItemView> = {};
+        if (field === 'quantity') {
+            updates.quantity = parseFloat(String(value)) || 0;
+        } else if (field === 'markup_pct') {
+            updates.markup_pct = parseFloat(String(value)) || 0;
+        } else if (field === 'cost_scope') {
+            updates.cost_scope = value as any;
+        }
+
+        // Instant UI update + server call in background
+        updateItem(itemId, updates, async () => {
+            const result = await updateQuoteItemField(itemId, field, value);
+            if (result.error) {
+                toast.error(result.error);
+            }
+        });
+    }, [updateItem]);
+
+    // Column definitions — Orden profesional de presupuesto
+    // Nro → Tarea → Alcance → Cant. → Ud. → Costo Unit. → Margen → Subtotal → Inc. %
     const columns: ColumnDef<QuoteItemView>[] = [
-        // Columna de numeración jerárquica (01.01, 01.02, etc.)
+        // 1. Número jerárquico (01.01, 01.02, etc.)
         {
             id: "item_number",
             header: () => <span className="text-muted-foreground text-xs">Nro</span>,
@@ -320,102 +328,131 @@ export function QuoteBaseView({
             size: 60,
             maxSize: 70,
         },
-        {
-            id: "division",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Rubro" />,
-            accessorFn: (row) => getDivisionName(row),
-            cell: ({ row }) => {
-                const divisionName = getDivisionName(row.original);
-                return divisionName ? (
-                    <Badge variant="secondary" className="text-xs">{divisionName}</Badge>
-                ) : (
-                    <span className="text-muted-foreground">-</span>
-                );
-            },
-        },
+        // 2. Tarea (arriba) + Receta (abajo)
         createTextColumn<QuoteItemView>({
             accessorKey: "task_name",
             title: "Tarea",
             truncate: 260,
-            subtitle: (row) => (row.description && row.task_name ? row.description : null) ?? null,
+            subtitle: (row) => row.recipe_name || null,
         }),
+        // 3. Alcance de Costo (inline toggle)
         {
             id: "cost_scope",
             accessorKey: "cost_scope",
             header: ({ column }) => <DataTableColumnHeader column={column} title="Alcance" />,
             cell: ({ row }) => {
                 const scope = row.original.cost_scope;
+                const isEditable = quote.status === 'draft';
                 const scopeLabels: Record<string, string> = {
                     'materials_and_labor': 'Mat. + M.O.',
-                    'materials_only': 'Materiales',
                     'labor_only': 'M. de Obra'
                 };
                 const scopeLabel = scopeLabels[scope] || scope;
+
+                if (!isEditable) {
+                    return (
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                            {scopeLabel}
+                        </span>
+                    );
+                }
+
+                const nextScope = scope === 'materials_and_labor' ? 'labor_only' : 'materials_and_labor';
                 return (
-                    <Badge variant="outline" className="text-xs whitespace-nowrap">
+                    <button
+                        type="button"
+                        onClick={() => handleInlineUpdate(row.original.id, 'cost_scope', nextScope)}
+                        className="inline-flex items-center px-2 h-7 rounded-md border border-dashed border-input text-sm whitespace-nowrap hover:bg-muted/50 hover:border-muted-foreground/30 transition-colors cursor-pointer select-none"
+                    >
                         {scopeLabel}
-                    </Badge>
+                    </button>
                 );
             },
         },
+        // 4. Cantidad (inline editable)
         {
             accessorKey: "quantity",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Cant." />,
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Cant." className="justify-end" />,
             cell: ({ row }) => (
-                <span className="font-mono text-right">{row.original.quantity}</span>
+                <InlineEditableCell
+                    value={row.original.quantity}
+                    onSave={(v) => handleInlineUpdate(row.original.id, 'quantity', v)}
+                    disabled={quote.status !== 'draft'}
+                    min={0.001}
+                    step={0.001}
+                />
             ),
         },
+        // 5. Unidad (símbolo)
         {
             id: "unit",
             accessorKey: "unit",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Unidad" />,
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Ud." />,
             cell: ({ row }) => (
-                <Badge variant="secondary">{row.original.unit || "-"}</Badge>
+                <span className="text-xs text-muted-foreground uppercase">{row.original.unit || "-"}</span>
             ),
+            size: 60,
         },
-        // Use column factory for unit_price - properly aligned
+        // 6. Costo Unitario (precio vivo del catálogo o snapshot congelado)
         createMoneyColumn<QuoteItemView>({
-            accessorKey: "unit_price",
-            title: "Precio Unit.",
+            accessorKey: "effective_unit_price",
+            title: "Costo Unit.",
             currencyKey: "currency_symbol",
         }),
+        // 7. Margen % (inline editable)
         {
+            id: "markup_pct",
             accessorKey: "markup_pct",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Markup %" />,
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Margen" className="justify-end" />,
             cell: ({ row }) => (
-                <span className="font-mono text-right">
-                    {row.original.markup_pct > 0 ? `+${row.original.markup_pct}%` : "-"}
-                </span>
+                <InlineEditableCell
+                    value={row.original.markup_pct}
+                    onSave={(v) => handleInlineUpdate(row.original.id, 'markup_pct', v)}
+                    disabled={quote.status !== 'draft'}
+                    suffix="%"
+                    min={0}
+                    step={0.1}
+                    formatValue={(v) => Number(v) > 0 ? `+${v}` : String(v)}
+                />
             ),
+            enableSorting: true,
         },
-        // Use column factory for subtotal - properly aligned
+        // 8. Subtotal = Cantidad × Costo Unit. × (1 + Margen/100)
         {
-            ...createMoneyColumn<QuoteItemView>({
-                accessorKey: "subtotal_with_markup",
-                title: "Subtotal",
-                currencyKey: "currency_symbol",
-            }),
             id: "subtotal",
-            accessorFn: (row) => row.subtotal_with_markup || row.subtotal || 0,
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Subtotal" className="justify-end" />
+            ),
+            accessorFn: (row) => getItemSubtotal(row),
+            cell: ({ row }) => {
+                const subtotal = getItemSubtotal(row.original);
+                return (
+                    <div className="flex justify-end">
+                        <span className="font-mono font-medium tabular-nums">
+                            {quote.currency_symbol || "$"} {subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                    </div>
+                );
+            },
         },
+        // 9. Incidencia % dentro del rubro
         {
             id: "incidencia",
             header: ({ column }) => <DataTableColumnHeader column={column} title="Inc. %" className="justify-end" />,
             accessorFn: (row) => {
-                // Calculate incidencia as % of rubro total
-                const itemSubtotal = row.subtotal_with_markup || row.subtotal || 0;
+                const itemSubtotal = getItemSubtotal(row);
                 const rubro = getDivisionName(row) || "Sin rubro";
                 const rubroTotal = rubroTotals.get(rubro) || 0;
                 return rubroTotal > 0 ? (itemSubtotal / rubroTotal) * 100 : 0;
             },
             cell: ({ row }) => {
-                const itemSubtotal = row.original.subtotal_with_markup || row.original.subtotal || 0;
+                const itemSubtotal = getItemSubtotal(row.original);
                 const rubro = getDivisionName(row.original) || "Sin rubro";
                 const rubroTotal = rubroTotals.get(rubro) || 0;
                 const incidencia = rubroTotal > 0 ? (itemSubtotal / rubroTotal) * 100 : 0;
                 return (
                     <div className="flex justify-end">
-                        <span className="font-mono text-muted-foreground">
+                        <span className="font-mono text-muted-foreground tabular-nums">
                             {incidencia.toFixed(1)}%
                         </span>
                     </div>
@@ -431,19 +468,12 @@ export function QuoteBaseView({
                 <Toolbar
                     portalToHeader
                     actions={[
-                        // Acción principal: Agregar Ítem (disabled si es contrato)
                         {
                             label: "Agregar Ítem",
                             icon: Plus,
                             onClick: handleAddItem,
                             disabled: isContract || quote.status === 'approved'
                         },
-                        // Secundarias en dropdown
-                        {
-                            label: "Exportar PDF",
-                            icon: Download,
-                            onClick: () => { /* TODO: implementar export PDF */ }
-                        }
                     ]}
                 />
                 <div className="flex-1 flex items-center justify-center">
@@ -484,39 +514,12 @@ export function QuoteBaseView({
                     ) : undefined
                 }
                 actions={[
-                    // Acción principal: Agregar Ítem (siempre visible, disabled si es contrato)
                     {
                         label: "Agregar Ítem",
                         icon: Plus,
                         onClick: handleAddItem,
                         disabled: isContract || quote.status === 'approved'
                     },
-                    // Acciones secundarias (en el dropdown "...")
-                    {
-                        label: "Exportar PDF",
-                        icon: Download,
-                        onClick: () => { /* TODO: implementar export PDF */ }
-                    },
-                    ...(quote.status === 'draft' ? [{
-                        label: "Enviar",
-                        icon: Send,
-                        onClick: () => { }
-                    }] : []),
-                    ...(quote.status === 'sent' ? [{
-                        label: "Aprobar",
-                        icon: CheckCircle,
-                        onClick: handleApproveQuote
-                    }] : []),
-                    ...(quote.quote_type === 'quote' && !quote.project_id ? [{
-                        label: "Convertir en Proyecto",
-                        icon: FolderPlus,
-                        onClick: handleConvertToProject
-                    }] : []),
-                    ...(quote.quote_type === 'quote' && quote.project_id && quote.status === 'approved' ? [{
-                        label: "Convertir en Contrato",
-                        icon: FileSignature,
-                        onClick: handleConvertToContractClick
-                    }] : [])
                 ]}
             />
 
@@ -561,17 +564,13 @@ export function QuoteBaseView({
                 getGroupValue={(item) => item.division_name || "Sin rubro"}
                 groupSummaryColumnId="subtotal"
                 groupSummaryAccessor={(groupRows) => {
-                    const groupSubtotal = groupRows.reduce((sum, item) => {
-                        return sum + (item.subtotal_with_markup || item.subtotal || 0);
-                    }, 0);
+                    const groupSubtotal = groupRows.reduce((sum, item) => sum + getItemSubtotal(item), 0);
                     return formatCurrency(groupSubtotal);
                 }}
                 // Incidencia del rubro (% del total del presupuesto)
                 groupIncidenciaColumnId="incidencia"
                 groupIncidenciaAccessor={(groupRows) => {
-                    const groupSubtotal = groupRows.reduce((sum, item) => {
-                        return sum + (item.subtotal_with_markup || item.subtotal || 0);
-                    }, 0);
+                    const groupSubtotal = groupRows.reduce((sum, item) => sum + getItemSubtotal(item), 0);
                     const incidencia = totalAmount > 0 ? (groupSubtotal / totalAmount) * 100 : 0;
                     return `${incidencia.toFixed(1)}%`;
                 }}
@@ -581,35 +580,22 @@ export function QuoteBaseView({
                 }
                 // Auto-hide columns with no data (e.g., Markup when not used)
                 autoHideEmptyColumns
-                autoHideExcludeColumns={["incidencia", "subtotal", "item_number"]}
+                autoHideExcludeColumns={["incidencia", "subtotal", "item_number", "markup_pct"]}
             />
 
             {/* Delete Confirmation Dialog */}
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar ítem?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Vas a eliminar "{itemToDelete?.task_name || itemToDelete?.custom_name || 'este ítem'}" del presupuesto.
-                            Esta acción se puede deshacer.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => {
-                                e.preventDefault();
-                                confirmDelete();
-                            }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            disabled={isDeleting}
-                        >
-                            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Eliminar
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <DeleteConfirmationDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                onConfirm={confirmDelete}
+                title="¿Eliminar ítem?"
+                description={
+                    <>
+                        Vas a eliminar <strong>{itemToDelete?.task_name || itemToDelete?.custom_name || 'este ítem'}</strong> del presupuesto.
+                    </>
+                }
+                isDeleting={isDeleting}
+            />
 
             <QuoteConvertContractForm
                 open={showConvertModal}

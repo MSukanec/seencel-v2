@@ -73,6 +73,7 @@ export interface QuoteItem {
     organization_id: string;
     project_id: string | null;
     task_id: string | null;
+    recipe_id: string | null;
     description: string | null;
     quantity: number;
     unit_price: number;
@@ -81,12 +82,16 @@ export interface QuoteItem {
     tax_pct: number;
     cost_scope: CostScope;
     sort_key: number;
+    // Snapshot costs (frozen on sent)
+    snapshot_mat_cost: number;
+    snapshot_lab_cost: number;
+    snapshot_ext_cost: number;
     created_at: string;
     updated_at: string;
     created_by: string;
 }
 
-export type CostScope = 'materials_and_labor' | 'materials_only' | 'labor_only';
+export type CostScope = 'materials_and_labor' | 'labor_only';
 
 // View type with joined data
 export interface QuoteItemView extends QuoteItem {
@@ -96,8 +101,14 @@ export interface QuoteItemView extends QuoteItem {
     unit: string | null;
     cost_scope_label: string;
     position: number;
-    subtotal: number;
-    subtotal_with_markup: number;
+    recipe_name: string | null;
+    // Live costs from recipe (always current catalog)
+    live_mat_cost: number;
+    live_lab_cost: number;
+    live_ext_cost: number;
+    live_unit_price: number;
+    // Effective = live if draft, snapshot if sent/approved
+    effective_unit_price: number;
 }
 
 // For forms

@@ -43,7 +43,8 @@ export default async function QuotesPage({
                 .select("id, full_name, resolved_avatar_url")
                 .eq("organization_id", activeOrgId)
                 .eq("is_deleted", false)
-                .order("full_name"),
+                .order("full_name")
+                .limit(500),
             // projects_view: solo activos, con image_url y color para avatares en ProjectField
             supabase
                 .schema('projects').from("projects_view")
@@ -51,7 +52,8 @@ export default async function QuotesPage({
                 .eq("organization_id", activeOrgId)
                 .eq("is_deleted", false)
                 .eq("status", "active")
-                .order("name"),
+                .order("name")
+                .limit(200),
         ]);
 
         const clients = (contactsResult.data || []).map((c) => ({

@@ -265,6 +265,18 @@ export async function updateQuoteStatus(id: string, status: string) {
         return { error: "No hay organización activa" };
     }
 
+    // If transitioning to 'sent', freeze recipe prices into quote_items
+    if (status === 'sent') {
+        const { error: freezeError } = await supabase
+            .schema("finance")
+            .rpc('freeze_quote_prices', { p_quote_id: id });
+
+        if (freezeError) {
+            console.error("Error freezing quote prices:", freezeError);
+            return { error: sanitizeError(freezeError) };
+        }
+    }
+
     const updateData: any = { status };
 
     // If approving, set approved_at
@@ -488,9 +500,9 @@ export async function createQuoteItem(formData: FormData) {
     const project_id = formData.get("project_id") as string | null;
     const currency_id = formData.get("currency_id") as string;
     const task_id = formData.get("task_id") as string | null;
+    const recipe_id = formData.get("recipe_id") as string | null;
     const description = formData.get("description") as string | null;
     const quantity = parseFloat(formData.get("quantity") as string) || 1;
-    const unit_price = parseFloat(formData.get("unit_price") as string) || 0;
     const markup_pct = parseFloat(formData.get("markup_pct") as string) || 0;
     const tax_pct = parseFloat(formData.get("tax_pct") as string) || 0;
     const cost_scope = formData.get("cost_scope") as string || "materials_and_labor";
@@ -507,9 +519,11 @@ export async function createQuoteItem(formData: FormData) {
             project_id: project_id || null,
             currency_id,
             task_id: task_id || null,
+            recipe_id: recipe_id || null,
             description: description?.trim() || null,
             quantity,
-            unit_price,
+            // unit_price defaults to 0 in DB; effective price is calculated
+            // from recipe costs by quotes_items_view (live pricing)
             markup_pct,
             tax_pct,
             cost_scope,
@@ -575,6 +589,54 @@ export async function updateQuoteItem(id: string, formData: FormData) {
     return { data, error: null };
 }
 
+// ============================================
+// UPDATE QUOTE ITEM FIELD (Inline Edit)
+// Lightweight partial update for inline editing
+// ============================================
+export async function updateQuoteItemField(
+    id: string,
+    field: string,
+    value: string | number
+) {
+    const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
+
+    if (!activeOrgId) {
+        return { error: "No hay organización activa" };
+    }
+
+    // Whitelist of allowed inline-editable fields
+    const allowedFields = ["quantity", "markup_pct", "tax_pct", "cost_scope"];
+    if (!allowedFields.includes(field)) {
+        return { error: `Campo '${field}' no es editable inline` };
+    }
+
+    const updateData: Record<string, any> = {};
+    if (field === "cost_scope") {
+        updateData[field] = value as string;
+    } else {
+        updateData[field] = parseFloat(value as string) || 0;
+    }
+
+    const { data, error } = await supabase
+        .schema("finance").from("quote_items")
+        .update(updateData)
+        .eq("id", id)
+        .eq("organization_id", activeOrgId)
+        .select("quote_id")
+        .single();
+
+    if (error) {
+        console.error("Error updating quote item field:", error);
+        return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/organization/quotes");
+    if (data?.quote_id) {
+        revalidatePath(`/organization/quotes/${data.quote_id}`);
+    }
+    return { success: true, error: null };
+}
 // ============================================
 // DELETE QUOTE ITEM (Soft Delete)
 // ============================================
@@ -892,12 +954,13 @@ export async function generateCommitmentsFromQuote(
 // ============================================
 // UPDATE QUOTE DOCUMENT TERMS
 // Edición inline de los términos del documento
-// (fechas, impuesto, descuento, descripción, TC)
-// No toca los campos identitarios (nombre, cliente, proyecto, moneda)
+// (nombre, fechas, impuesto, descuento, descripción, TC, cliente, proyecto)
+// No toca campos estructurales (moneda)
 // ============================================
 export async function updateQuoteDocumentTerms(
     quoteId: string,
     terms: {
+        name?: string;
         quote_date?: string | null;
         valid_until?: string | null;
         tax_pct?: number;
@@ -905,6 +968,8 @@ export async function updateQuoteDocumentTerms(
         discount_pct?: number;
         description?: string | null;
         exchange_rate?: number;
+        client_id?: string | null;
+        project_id?: string | null;
     }
 ) {
     const supabase = await createClient();
