@@ -121,8 +121,8 @@ export interface SelectFieldProps {
     onChange: (value: string) => void;
     /** Available options */
     options: SelectOption[];
-    /** Field label */
-    label: string;
+    /** Field label (omit to render without label header) */
+    label?: string;
     /** Placeholder text */
     placeholder?: string;
     /** Is field required? */
@@ -135,6 +135,8 @@ export interface SelectFieldProps {
     error?: string;
     /** Help text below the field */
     helpText?: string;
+    /** Tooltip on (?) icon next to label */
+    tooltip?: React.ReactNode;
 
     // ── Smart Features ──────────────────────────────────────────────────
 
@@ -191,10 +193,12 @@ export function SelectField({
     activeFilterTab,
     onFilterTabChange,
     emptyState,
+    tooltip,
 }: SelectFieldProps) {
 
     // Build the label with optional filter tabs aligned right
-    const labelContent = (
+    // When label is empty/undefined, skip the label header entirely
+    const labelContent = label ? (
         <div className="flex items-center justify-between w-full">
             <FactoryLabel label={label} />
             {filterTabs && filterTabs.length > 0 && onFilterTabChange && (
@@ -220,7 +224,7 @@ export function SelectField({
                 </div>
             )}
         </div>
-    );
+    ) : undefined;
 
     // Loading state
     if (loading) {
@@ -231,6 +235,7 @@ export function SelectField({
                 className={className}
                 error={error}
                 helpText={helpText}
+                tooltip={tooltip}
             >
                 <Skeleton className="h-9 w-full rounded-md" />
             </FormGroup>
@@ -246,6 +251,7 @@ export function SelectField({
                 className={className}
                 error={error}
                 helpText={helpText}
+                tooltip={tooltip}
             >
                 <div className="flex items-center justify-center h-9 rounded-md border border-dashed border-input gap-1 text-sm text-muted-foreground shadow-xs">
                     <span>{emptyState.message}</span>
@@ -305,6 +311,7 @@ export function SelectField({
             className={className}
             error={error}
             helpText={helpText}
+            tooltip={tooltip}
         >
             {selectContent}
         </FormGroup>
@@ -433,8 +440,7 @@ function SearchableSelect({
                         aria-expanded={open}
                         disabled={disabled}
                         className={cn(
-                            "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none disabled:cursor-not-allowed disabled:opacity-50 h-9",
-                            "dark:bg-input/30 dark:hover:bg-input/50",
+                            "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap transition-[color,box-shadow] outline-none disabled:cursor-not-allowed disabled:opacity-50 h-9",
                             clearable && value && "pr-8"
                         )}
                     >

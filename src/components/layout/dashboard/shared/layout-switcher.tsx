@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { SidebarLayout } from "../sidebar/sidebar-layout";
-import { GlobalDrawer } from "./drawer/global-drawer";
+
 import { UserProfile } from "@/types/user";
 
 import { useUserStore } from "@/stores/user-store";
@@ -58,7 +58,7 @@ export function LayoutSwitcher({
                         <SidebarLayout user={user}>
                             {children}
                         </SidebarLayout>
-                        <GlobalDrawer />
+
                         <OnboardingWidgetWrapper />
                     </PresenceProvider>
                 ) : (

@@ -1,19 +1,19 @@
 /**
- * Unit Field Factory
+ * Unit Field Factory (Smart)
  * Standard 19.12 - Reusable Unit of Measurement Selector
  * 
- * Provides a standardized unit selector with:
+ * - Self-populating: reads units from useFormData().units store
  * - Consistent formatting: "Nombre (Símbolo)"
  * - Optional filtering by `applicable_to` (material, task, etc.)
  * - Searchable dropdown via SelectField
- * - Support for disabled / required / clearable states
- * - Configurable valueKey: "id" (default, for FKs) or "symbol" (for text columns)
+ * - Override: pass `units` prop to use custom list
  */
 
 "use client";
 
 import { useMemo } from "react";
 import { SelectField, type SelectOption } from "./select-field";
+import { useFormData } from "@/stores/organization-store";
 
 // ============================================================================
 // Types
@@ -32,8 +32,8 @@ export interface UnitFieldProps {
     value: string;
     /** Callback when unit changes */
     onChange: (value: string) => void;
-    /** List of available units */
-    units: UnitOption[];
+    /** Override: pass custom units list. Default: reads from store */
+    units?: UnitOption[];
     /** Which property to use as the select value: "id" (FK) or "symbol" (text). Default: "id" */
     valueKey?: "id" | "symbol";
     /** Optional filter: only show units applicable to this domain */
@@ -61,7 +61,7 @@ export interface UnitFieldProps {
 export function UnitField({
     value,
     onChange,
-    units,
+    units: unitsOverride,
     valueKey = "id",
     applicableTo,
     label = "Unidad de Medida",
@@ -72,6 +72,10 @@ export function UnitField({
     placeholder = "Seleccionar unidad...",
     error,
 }: UnitFieldProps) {
+    // Smart: read from store by default, allow override
+    const storeData = useFormData();
+    const units = unitsOverride ?? (storeData.units as UnitOption[]);
+
     const options: SelectOption[] = useMemo(() => {
         const filtered = applicableTo
             ? units.filter(u => u.applicable_to?.includes(applicableTo))

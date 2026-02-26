@@ -1,15 +1,21 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { ColumnDef } from "@tanstack/react-table";
+import { Package, ShoppingCart, ChevronDown, ChevronRight } from "lucide-react";
+
+import { MaterialRequirement } from "../types";
+
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { DataTable } from "@/components/shared/data-table";
+import { createTextColumn, createProjectColumn } from "@/components/shared/data-table/columns";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
-import { Package, ClipboardList, Layers, AlertCircle, Boxes } from "lucide-react";
-import { MaterialRequirement } from "../types";
+
+import { useActiveProjectId } from "@/stores/layout-store";
+import { usePanel } from "@/stores/panel-store";
+
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 
 // Simple number formatter for display
 const formatNumber = (value: number): string => {
@@ -23,162 +29,271 @@ interface MaterialsRequirementsViewProps {
     projectId?: string;
     orgId: string;
     requirements: MaterialRequirement[];
+    providers?: any[];
+    financialData?: any;
 }
 
 export function MaterialsRequirementsView({
-    projectId,
     orgId,
-    requirements
+    requirements,
+    providers = [],
+    financialData,
 }: MaterialsRequirementsViewProps) {
+    const activeProjectId = useActiveProjectId();
+    const { openPanel } = usePanel();
+
     // Search state for Toolbar
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Filter requirements by search
+    // ========================================
+    // FILTERING
+    // ========================================
     const filteredRequirements = useMemo(() => {
-        if (!searchQuery) return requirements;
-        return requirements.filter(r =>
-            r.material_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            r.category_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            r.unit_name?.toLowerCase().includes(searchQuery.toLowerCase())
+        let items = requirements;
+
+        // Project context filter
+        if (activeProjectId) {
+            items = items.filter(r => r.project_id === activeProjectId);
+        }
+
+        // Search filter
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            items = items.filter(r =>
+                r.material_name?.toLowerCase().includes(q) ||
+                r.category_name?.toLowerCase().includes(q) ||
+                r.unit_name?.toLowerCase().includes(q) ||
+                r.project_name?.toLowerCase().includes(q)
+            );
+        }
+
+        return items;
+    }, [requirements, activeProjectId, searchQuery]);
+
+
+
+    // ========================================
+    // COLUMNS
+    // ========================================
+    const columns = useMemo(() => {
+        const cols: ColumnDef<MaterialRequirement>[] = [
+            // Hidden column used by groupBy
+            createTextColumn<MaterialRequirement>({
+                accessorKey: "category_name",
+                title: "Categoría",
+                emptyValue: "Sin Categoría",
+            }),
+            createTextColumn<MaterialRequirement>({
+                accessorKey: "material_name",
+                title: "Material",
+                truncate: 220,
+            }),
+            createTextColumn<MaterialRequirement>({
+                accessorKey: "unit_name",
+                title: "Unidad",
+                muted: true,
+                emptyValue: "Sin unidad",
+            }),
+            {
+                accessorKey: "total_required",
+                header: ({ column }) => (
+                    <button
+                        className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Cant. Requerida
+                    </button>
+                ),
+                cell: ({ row }) => {
+                    const value = row.getValue("total_required") as number;
+                    const unit = row.original.unit_name || "u";
+                    return (
+                        <div className="text-right">
+                            <span className="font-semibold tabular-nums text-base">
+                                {formatNumber(value)}
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-1.5">
+                                {unit}
+                            </span>
+                        </div>
+                    );
+                },
+                enableSorting: true,
+            },
+            createTextColumn<MaterialRequirement>({
+                accessorKey: "task_count",
+                title: "Tareas",
+                customRender: (value) => {
+                    const count = Number(value) || 0;
+                    return (
+                        <Badge variant="secondary" className="text-xs tabular-nums">
+                            {count} {count === 1 ? "tarea" : "tareas"}
+                        </Badge>
+                    );
+                },
+            }),
+            {
+                accessorKey: "total_ordered",
+                header: ({ column }) => (
+                    <button
+                        className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Ordenado
+                    </button>
+                ),
+                cell: ({ row }) => {
+                    const value = row.getValue("total_ordered") as number;
+                    const unit = row.original.unit_name || "u";
+                    if (value === 0) {
+                        return (
+                            <div className="text-right text-muted-foreground text-sm">
+                                —
+                            </div>
+                        );
+                    }
+                    return (
+                        <div className="text-right">
+                            <span className="font-semibold tabular-nums text-base">
+                                {formatNumber(value)}
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-1.5">
+                                {unit}
+                            </span>
+                        </div>
+                    );
+                },
+                enableSorting: true,
+            },
+            {
+                accessorKey: "coverage_status",
+                header: () => (
+                    <span className="text-xs font-medium text-muted-foreground">
+                        Estado
+                    </span>
+                ),
+                cell: ({ row }) => {
+                    const status = row.getValue("coverage_status") as string;
+                    const statusConfig: Record<string, { label: string; className: string }> = {
+                        none: {
+                            label: "Sin ordenar",
+                            className: "bg-muted text-muted-foreground",
+                        },
+                        partial: {
+                            label: "Parcial",
+                            className: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+                        },
+                        covered: {
+                            label: "Cubierto",
+                            className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+                        },
+                    };
+                    const config = statusConfig[status] || statusConfig.none;
+                    return (
+                        <Badge variant="secondary" className={`text-xs ${config.className}`}>
+                            {config.label}
+                        </Badge>
+                    );
+                },
+                enableSorting: true,
+            },
+        ];
+
+        // Show project column only when viewing org-wide (no project filter)
+        if (!activeProjectId) {
+            cols.splice(1, 0, createProjectColumn<MaterialRequirement>({
+                accessorKey: "project_name",
+                emptyValue: "Sin proyecto",
+            }));
+        }
+
+        return cols;
+    }, [activeProjectId]);
+
+    // ========================================
+    // ACTIONS
+    // ========================================
+    const handleCreatePO = () => {
+        openPanel(
+            'purchase-order-form',
+            {
+                organizationId: orgId,
+                projectId: activeProjectId || undefined,
+                providers,
+                requirements: filteredRequirements,
+            }
         );
-    }, [requirements, searchQuery]);
+    };
 
-    // Calculate summary stats (from filtered)
-    const totalMaterials = filteredRequirements.length;
-    const totalTasks = new Set(filteredRequirements.flatMap(r => r.construction_task_ids)).size;
-    const categoriesUsed = new Set(filteredRequirements.map(r => r.category_name).filter(Boolean)).size;
+    // ========================================
+    // RENDER
+    // ========================================
 
-    // Group requirements by category for better organization
-    const groupedByCategory = useMemo(() => {
-        const groups: Record<string, MaterialRequirement[]> = {};
-        filteredRequirements.forEach(req => {
-            const category = req.category_name || "Sin Categoría";
-            if (!groups[category]) groups[category] = [];
-            groups[category].push(req);
-        });
-        return groups;
-    }, [filteredRequirements]);
+    // Determine what data set has items (raw vs filtered)
+    const hasAnyData = requirements.length > 0;
+    const hasFilteredData = filteredRequirements.length > 0;
 
     return (
         <>
-            {/* Toolbar with portal to header */}
+            {/* Toolbar — always present */}
             <Toolbar
                 portalToHeader
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 searchPlaceholder="Buscar materiales..."
+                actions={hasAnyData ? [
+                    {
+                        label: "Crear Orden de Compra",
+                        icon: ShoppingCart,
+                        onClick: handleCreatePO,
+                    },
+                ] : []}
             />
 
             <ContentLayout variant="wide" className="pb-6">
-                {/* Empty State - sin botón, esta vista es read-only */}
-                {(!requirements || requirements.length === 0) ? (
+                {/* Empty State: no data at all */}
+                {!hasAnyData ? (
                     <ViewEmptyState
                         mode="empty"
                         icon={Package}
                         viewName="Necesidades de Materiales"
-                        featureDescription="Las necesidades de materiales aparecerán cuando tengas tareas de construcción con recetas de materiales asignadas."
+                        featureDescription="Las necesidades de materiales se calculan automáticamente a partir de las tareas de construcción y sus recetas de materiales. Creá tareas con recetas para ver los materiales requeridos."
+                    />
+                ) : !hasFilteredData ? (
+                    /* No results from filters */
+                    <ViewEmptyState
+                        mode="no-results"
+                        icon={Package}
+                        viewName="necesidades de materiales"
+                        filterContext={activeProjectId ? "en este proyecto" : "con esa búsqueda"}
+                        onResetFilters={() => {
+                            setSearchQuery("");
+                        }}
                     />
                 ) : (
-                    <div className="space-y-6">
-                        {/* KPI Cards */}
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                            <DashboardKpiCard
-                                title="Materiales Requeridos"
-                                value={totalMaterials.toString()}
-                                icon={<Boxes className="h-5 w-5" />}
-                                iconClassName="bg-primary/10 text-primary"
-                            />
-                            <DashboardKpiCard
-                                title="Tareas Origen"
-                                value={totalTasks.toString()}
-                                icon={<ClipboardList className="h-5 w-5" />}
-                                iconClassName="bg-blue-500/10 text-blue-600"
-                            />
-                            <DashboardKpiCard
-                                title="Categorías"
-                                value={categoriesUsed.toString()}
-                                icon={<Layers className="h-5 w-5" />}
-                                iconClassName="bg-violet-500/10 text-violet-600"
-                                className="col-span-2 lg:col-span-1"
-                            />
-                        </div>
-
-                        {/* Materials Grid - Grouped by Category */}
-                        {Object.entries(groupedByCategory).map(([category, materials]) => (
-                            <div key={category} className="space-y-3">
-                                {/* Category Header */}
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="secondary" className="text-xs font-medium">
-                                        {category}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                        {materials.length} material{materials.length !== 1 ? 'es' : ''}
-                                    </span>
-                                </div>
-
-                                {/* Materials Cards - Single Column */}
-                                <div className="flex flex-col gap-2">
-                                    {materials.map((req) => (
-                                        <Card
-                                            key={req.material_id}
-                                            className="group hover:shadow-md transition-all duration-200 hover:border-primary/30"
-                                        >
-                                            <CardContent className="p-4">
-                                                <div className="flex items-center justify-between gap-4">
-                                                    {/* Left: Material Info */}
-                                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                                        {/* Material Icon */}
-                                                        <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
-                                                            <Package className="h-5 w-5" />
-                                                        </div>
-
-                                                        {/* Material Details */}
-                                                        <div className="flex-1 min-w-0">
-                                                            <h3 className="font-semibold text-base truncate group-hover:text-primary transition-colors">
-                                                                {req.material_name}
-                                                            </h3>
-                                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                                <Badge variant="outline" className="text-xs">
-                                                                    {req.unit_name || "Sin unidad"}
-                                                                </Badge>
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    {req.task_count} tarea{req.task_count !== 1 ? 's' : ''} de origen
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Right: Quantity */}
-                                                    <div className="text-right shrink-0">
-                                                        <p className="text-3xl font-bold tabular-nums text-primary">
-                                                            {formatNumber(req.total_required)}
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground font-medium">
-                                                            {req.unit_name || "unidades"}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
+                    <DataTable
+                        columns={columns}
+                        data={filteredRequirements}
+                        enableRowSelection={false}
+                        groupBy="category_name"
+                        groupItemLabel={{ singular: "material", plural: "materiales" }}
+                        renderGroupHeader={(groupValue, rows, isExpanded) => (
+                            <div className="flex items-center gap-2">
+                                {isExpanded ? (
+                                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                                )}
+                                <span className="font-semibold text-sm text-foreground">
+                                    {groupValue}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    ({rows.length} {rows.length === 1 ? "material" : "materiales"})
+                                </span>
                             </div>
-                        ))}
-
-                        {/* Info Alert */}
-                        <div className="flex items-start gap-3 p-4 rounded-lg border bg-muted/50">
-                            <AlertCircle className="h-5 w-5 text-muted-foreground mt-0.5" />
-                            <div className="text-sm text-muted-foreground">
-                                <p className="font-medium text-foreground">¿Cómo se calcula?</p>
-                                <p>
-                                    Cantidad Necesitada = Σ (Cantidad de Tarea × Materiales por Unidad de Tarea)
-                                </p>
-                                <p className="mt-1">
-                                    Ejemplo: 100 m² de mampostería × 10 ladrillos/m² = 1,000 ladrillos
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                        )}
+                        initialSorting={[{ id: "material_name", desc: false }]}
+                    />
                 )}
             </ContentLayout>
         </>

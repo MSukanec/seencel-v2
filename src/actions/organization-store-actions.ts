@@ -12,7 +12,7 @@ import { Currency } from "@/types/currency";
  * - getOrganizationProjects() (1 query, reduced to id+name only)
  * - getClientsByOrganization() (1 query, reduced to id+name only)
  * 
- * Total: 6 queries in parallel (was 8+ sequential in layout)
+ * Total: 10 queries in parallel (was 8+ sequential in layout)
  */
 export async function fetchOrganizationStoreData(orgId: string) {
     const supabase = await createClient();
@@ -33,7 +33,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
     }
 
     // All queries in parallel — no sequential dependencies
-    const [prefsResult, orgResult, currenciesResult, walletsResult, projectsResult, clientsResult, memberResult, externalActorResult] = await Promise.all([
+    const [prefsResult, orgResult, currenciesResult, walletsResult, projectsResult, clientsResult, memberResult, externalActorResult, allMembersResult, unitsResult] = await Promise.all([
         // 1. Organization preferences
         supabase
             .schema('iam').from('organization_preferences')
@@ -63,10 +63,10 @@ export async function fetchOrganizationStoreData(orgId: string) {
             .eq('organization_id', orgId)
             .eq('is_active', true),
 
-        // 5. Projects (only id + name for dropdowns)
+        // 5. Projects (id + name + avatar fields for dropdowns)
         supabase
             .schema('projects').from('projects')
-            .select('id, name')
+            .select('id, name, image_url, color')
             .eq('organization_id', orgId)
             .eq('is_deleted', false)
             .order('name', { ascending: true }),
@@ -101,6 +101,26 @@ export async function fetchOrganizationStoreData(orgId: string) {
                 .eq('is_deleted', false)
                 .maybeSingle()
             : Promise.resolve({ data: null, error: null }),
+
+        // 9. All organization members (for AssignedToField dropdowns)
+        supabase
+            .schema('iam').from('organization_members')
+            .select(`
+                id,
+                user: users (
+                    full_name,
+                    avatar_url
+                )
+            `)
+            .eq('organization_id', orgId)
+            .eq('is_active', true),
+
+        // 10. Units (for UnitField dropdowns)
+        supabase
+            .schema('catalog').from('units')
+            .select('id, name, symbol, applicable_to')
+            .eq('is_deleted', false)
+            .order('name', { ascending: true }),
     ]);
 
     const preferences = prefsResult.data;
@@ -158,10 +178,12 @@ export async function fetchOrganizationStoreData(orgId: string) {
         })
         .sort((a, b) => (Number(b.is_default) - Number(a.is_default)));
 
-    // Format projects (minimal for dropdowns)
+    // Format projects (with avatar data for dropdowns)
     const projects = (projectsResult.data || []).map((p: any) => ({
         id: p.id,
         name: p.name,
+        image_url: p.image_url || null,
+        color: p.color || null,
     }));
 
     // Format clients (minimal for dropdowns)
@@ -171,11 +193,28 @@ export async function fetchOrganizationStoreData(orgId: string) {
         project_id: c.project_id,
     }));
 
+    // Format members (for AssignedToField)
+    const members = (allMembersResult.data || []).map((m: any) => ({
+        id: m.id,
+        full_name: m.user?.full_name || null,
+        avatar_url: m.user?.avatar_url || null,
+    }));
+
+    // Format units (for UnitField)
+    const units = (unitsResult.data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        symbol: u.symbol || null,
+        applicable_to: u.applicable_to || [],
+    }));
+
     return {
         currencies,
         wallets,
         projects,
         clients,
+        members,
+        units,
         preferences: preferences ? { ...preferences } : null,
         isFounder,
         planSlug,

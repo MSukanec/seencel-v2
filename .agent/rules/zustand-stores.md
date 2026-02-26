@@ -20,8 +20,8 @@ Esta regla define cómo manejar el estado global en Seencel V2.
 | `organization-store` | Org, currency, wallets, projects, clients |
 | `user-store` | Perfil del usuario actual |
 | `layout-store` | UI state (sidebar, context navigation) |
-| `modal-store` | Stack de modales |
-| `drawer-store` | Drawer lateral global |
+| `panel-store` | Stack de panels/drawers (forms, detalles) |
+| `modal-store` | Solo confirmaciones y alertas (legacy) |
 
 > ⛔ **NUNCA** crear React Context para estado global.
 > 
@@ -57,13 +57,22 @@ const user = useUser();           // UserProfile | null
 const user = useUserRequired();   // UserProfile (throws si null)
 ```
 
-### Para Modales
+### Para Panels (Forms, Detalles)
+
+```tsx
+import { usePanel } from "@/stores/panel-store";
+
+const { openPanel, closePanel } = usePanel();
+openPanel('material-form', { mode: 'create', orgId });
+```
+
+### Para Modales (Solo Confirmaciones)
 
 ```tsx
 import { useModal } from "@/stores/modal-store";
 
 const { openModal, closeModal } = useModal();
-openModal(<MyForm />, { title: "Crear", size: "lg" });
+// Solo para DeleteDialog, AlertDialog, etc.
 ```
 
 ### Para Context de Navegación
@@ -207,8 +216,8 @@ import { useUser, useUserRequired } from "@/stores/user-store";
 import { useLayoutActions, useActiveContext } from "@/stores/layout-store";
 
 // UI Overlays
-import { useModal } from "@/stores/modal-store";
-import { useDrawer } from "@/stores/drawer-store";
+import { usePanel } from "@/stores/panel-store";   // Forms y detalles
+import { useModal } from "@/stores/modal-store";    // Solo confirmaciones
 ```
 
 > [!IMPORTANT]

@@ -80,7 +80,7 @@ export function ManagedList({
                         <div
                             key={item.id}
                             className={cn(
-                                "flex w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs whitespace-nowrap outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 h-9 dark:bg-input/30 dark:hover:bg-input/50"
+                                "flex w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 h-9"
                             )}
                         >
                             <span className="truncate flex-1 text-left">{item.label}</span>
@@ -107,7 +107,7 @@ export function ManagedList({
                             role="combobox"
                             aria-expanded={isOpen}
                             className={cn(
-                                "w-full justify-between px-3 py-2 font-normal text-muted-foreground h-9 bg-transparent dark:bg-input/30 dark:hover:bg-input/50",
+                                "w-full justify-between px-3 py-2 font-normal text-muted-foreground h-9 bg-transparent",
                                 disabled && "opacity-50 cursor-not-allowed"
                             )}
                             disabled={disabled}

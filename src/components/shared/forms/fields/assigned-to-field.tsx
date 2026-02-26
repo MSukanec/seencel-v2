@@ -1,12 +1,11 @@
 /**
- * Assigned To Field Factory
+ * Assigned To Field Factory (Smart)
  * Standard 19.15 - Reusable Member Assignment Selector
  * 
- * Provides a standardized member assignment selector with:
+ * - Self-populating: reads members from useFormData().members store
  * - Avatar + full name display
  * - Feature Guard for Teams plan (can_invite_members)
- * - Consistent formatting across all forms
- * - "Sin asignar" default option
+ * - Override: pass `members` prop to use custom list
  */
 
 "use client";
@@ -22,6 +21,7 @@ import {
 import { FactoryLabel } from "./field-wrapper";
 import { FeatureLockBadge } from "@/components/ui/feature-guard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useFormData } from "@/stores/organization-store";
 
 export interface AssignableMember {
     id: string;
@@ -34,8 +34,8 @@ export interface AssignedToFieldProps {
     value: string | null | undefined;
     /** Callback when assignment changes */
     onChange: (value: string | null) => void;
-    /** List of organization members */
-    members: AssignableMember[];
+    /** Override: pass custom members list. Default: reads from store */
+    members?: AssignableMember[];
     /** Field label (default: "Asignado a") */
     label?: string;
     /** Is field required? (default: false) */
@@ -53,7 +53,7 @@ export interface AssignedToFieldProps {
 export function AssignedToField({
     value,
     onChange,
-    members,
+    members: membersOverride,
     label = "Asignado a",
     required = false,
     disabled = false,
@@ -61,6 +61,10 @@ export function AssignedToField({
     placeholder = "Sin asignar",
     isTeamsEnabled = true,
 }: AssignedToFieldProps) {
+    // Smart: read from store by default, allow override
+    const storeData = useFormData();
+    const members = membersOverride ?? (storeData.members as AssignableMember[]);
+
     const handleChange = (val: string) => {
         onChange(val === "none" ? null : val);
     };

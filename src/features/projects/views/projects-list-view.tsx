@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { Project } from "@/types/project";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import {
@@ -21,7 +20,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { ProjectCard } from "@/features/projects/components/project-card";
 import { ProjectListItem } from "@/components/shared/list-item/items/project-list-item";
-import { ProjectsProjectForm } from "../forms/projects-project-form";
+
 import { ProjectType, ProjectModality } from "@/types/project";
 import { deleteProject } from "@/features/projects/actions";
 
@@ -46,8 +45,8 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
     const [isDeleting, setIsDeleting] = useState(false);
 
     const router = useRouter();
-    const { openModal } = useModal();
-    const tForm = useTranslations('Project.form');
+    const { openPanel } = usePanel();
+
 
     // 🚀 OPTIMISTIC UI: Instant visual updates
     const {
@@ -68,22 +67,15 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
     // === HANDLERS ===
 
     const handleCreateProject = () => {
-        openModal(
-            <ProjectsProjectForm
-                mode="create"
-                organizationId={organizationId}
-                types={projectTypes}
-                modalities={projectModalities}
-                onSuccess={(project) => {
-                    if (project) addItem(project);
-                }}
-            />,
-            {
-                title: tForm('createTitle'),
-                description: tForm('description'),
-                key: 'create-project',
-            }
-        );
+        openPanel('projects-project-form', {
+            mode: 'create',
+            organizationId,
+            types: projectTypes,
+            modalities: projectModalities,
+            onSuccess: (project: any) => {
+                if (project) addItem(project);
+            },
+        });
     };
 
     const handleEdit = (project: Project) => {
@@ -92,26 +84,19 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
             .filter(p => p.status === 'active' && p.id !== project.id)
             .map(p => ({ id: p.id, name: p.name, color: p.color, image_url: p.image_url }));
 
-        openModal(
-            <ProjectsProjectForm
-                mode="edit"
-                organizationId={organizationId}
-                initialData={project}
-                types={projectTypes}
-                modalities={projectModalities}
-                maxActiveProjects={maxActiveProjects}
-                activeProjectsCount={activeProjectsCount}
-                activeProjects={activeProjectsList}
-                onSuccess={(updatedData) => {
-                    if (updatedData?.id) updateItem(updatedData.id, updatedData);
-                }}
-            />,
-            {
-                title: "Editar Proyecto",
-                description: `Modificando "${project.name}"`,
-                key: `edit-project-${project.id}`
-            }
-        );
+        openPanel('projects-project-form', {
+            mode: 'edit',
+            organizationId,
+            initialData: project,
+            types: projectTypes,
+            modalities: projectModalities,
+            maxActiveProjects,
+            activeProjectsCount,
+            activeProjects: activeProjectsList,
+            onSuccess: (updatedData: any) => {
+                if (updatedData?.id) updateItem(updatedData.id, updatedData);
+            },
+        });
     };
 
     const handleNavigateToProject = (project: Project) => {

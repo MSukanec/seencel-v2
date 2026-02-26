@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { FormFooter } from "@/components/shared/forms/form-footer";
+import { useState, useMemo, useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { createMaterial, updateMaterial, upsertMaterialPrice } from "@/features/materials/actions";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
+import { Package } from "lucide-react";
 import { useFormData } from "@/stores/organization-store";
 import {
     TextField,
@@ -74,7 +74,7 @@ interface MaterialFormProps {
     isAdminMode?: boolean;
     initialData?: Material | null;
     onSuccess?: (material?: Material) => void;
-    onCancel?: () => void;
+    formId?: string;
 }
 
 // ============================================================================
@@ -90,10 +90,29 @@ export function MaterialForm({
     isAdminMode = false,
     initialData,
     onSuccess,
-    onCancel
+    formId
 }: MaterialFormProps) {
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
     const isEditing = mode === "edit";
+
+    // Self-describe: the form defines its own title, description, footer
+    useEffect(() => {
+        setPanelMeta({
+            icon: Package,
+            title: isEditing
+                ? "Editar Material"
+                : isAdminMode ? "Nuevo Material de Sistema" : "Nuevo Material",
+            description: isEditing
+                ? "Modifica los datos de este material"
+                : isAdminMode
+                    ? "Crear un material disponible para todas las organizaciones"
+                    : "Agregar un material personalizado al catálogo de tu organización",
+            size: "md",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Crear Material"
+            }
+        });
+    }, [isEditing, isAdminMode, setPanelMeta]);
 
     // Filter units for material dropdowns (only those applicable to materials)
     const materialUnitOptions = useMemo<SelectOption[]>(() =>
@@ -183,7 +202,7 @@ export function MaterialForm({
 
         // ✅ OPTIMISTIC: Close modal and show success immediately
         onSuccess?.(optimisticData as Material);
-        closeModal();
+        closePanel();
         toast.success(isEditing ? "¡Material actualizado!" : "¡Material creado!");
 
         // 🔄 BACKGROUND: Submit to server
@@ -239,15 +258,11 @@ export function MaterialForm({
         }
     };
 
-    const handleCancel = () => {
-        onCancel?.();
-        closeModal();
-    };
 
     const showPriceSection = !isAdminMode;
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -366,13 +381,6 @@ export function MaterialForm({
 
                 </div>
             </div>
-
-            <FormFooter
-                onCancel={handleCancel}
-                cancelLabel="Cancelar"
-                submitLabel={isEditing ? "Guardar Cambios" : "Crear Material"}
-                className="-mx-4 -mb-4 mt-6"
-            />
         </form>
     );
 }

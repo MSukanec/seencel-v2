@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { DateField, NotesField, TextField, UploadField, AssignedToField } from "@/components/shared/forms/fields";
-import { ActiveProjectField } from "@/components/shared/forms/fields/active-project-field";
+import { ProjectField } from "@/components/shared/forms/fields/project-field";
 import type { UploadedFile } from "@/hooks/use-file-upload";
 import { useModal } from "@/stores/modal-store";
 import { createCard, updateCard } from "@/features/planner/actions";
@@ -220,7 +220,7 @@ export function KanbanCardForm({ organizationId, boardId, listId, projectId, pro
                 <div className="flex-1 overflow-y-auto space-y-4">
                     {/* Project Selector - Only visible when accessing from organization (not project) */}
                     {!projectId && (
-                        <ActiveProjectField
+                        <ProjectField
                             value={form.watch("project_id") === "none" ? "" : (form.watch("project_id") || "")}
                             onChange={(val) => form.setValue("project_id", val || "none")}
                             projects={projects.map(p => ({

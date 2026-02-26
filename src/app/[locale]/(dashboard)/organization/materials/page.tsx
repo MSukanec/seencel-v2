@@ -126,7 +126,12 @@ export default async function OrganizationMaterialsPage({ params, searchParams }
                     </TabsContent>
 
                     <TabsContent value="requirements" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <MaterialsRequirementsView orgId={activeOrgId} requirements={requirements} />
+                        <MaterialsRequirementsView
+                            orgId={activeOrgId}
+                            requirements={requirements}
+                            providers={providers}
+                            financialData={financialData}
+                        />
                     </TabsContent>
 
                     <TabsContent value="orders" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">

@@ -74,7 +74,7 @@ export function MultiSelect({
                         role="combobox"
                         aria-expanded={open}
                         className={cn(
-                            "w-full justify-between h-9 px-3 py-2 border-input bg-transparent dark:bg-input/30 dark:hover:bg-input/50 shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                            "w-full justify-between h-9 px-3 py-2 border-input bg-transparent transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                             !selected.length && "text-muted-foreground",
                             disabled && "opacity-50 cursor-not-allowed"
                         )}

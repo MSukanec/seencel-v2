@@ -24,12 +24,28 @@ interface Wallet {
 interface Project {
     id: string;
     name: string;
+    image_url?: string | null;
+    color?: string | null;
 }
 
 interface Client {
     id: string;
     name: string;
     project_id?: string;
+}
+
+interface Member {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+}
+
+interface Unit {
+    id: string;
+    name: string;
+    symbol?: string | null;
+    abbreviation?: string;
+    applicable_to?: string[];
 }
 
 type DisplayCurrency = 'primary' | 'secondary' | 'both' | 'mix';
@@ -46,6 +62,8 @@ interface OrganizationState {
     projects: Project[];
     clients: Client[];
     currencies: Currency[];
+    members: Member[];
+    units: Unit[];
 
     // Currency display settings
     displayCurrency: DisplayCurrency;
@@ -104,6 +122,8 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     projects: [],
     clients: [],
     currencies: [],
+    members: [],
+    units: [],
     displayCurrency: 'mix',
     currentExchangeRate: 1,
     decimalPlaces: 2,
@@ -300,6 +320,8 @@ export function OrganizationStoreHydrator({
                         projects: data.projects,
                         clients: data.clients,
                         currencies: data.currencies,
+                        members: data.members,
+                        units: data.units,
                         decimalPlaces: data.decimalPlaces,
                         kpiCompactFormat: data.kpiCompactFormat,
                     });
@@ -318,6 +340,8 @@ export function OrganizationStoreHydrator({
                         projects: [],
                         clients: [],
                         currencies: [],
+                        members: [],
+                        units: [],
                     });
                 });
         }
@@ -396,10 +420,12 @@ export function useFormData() {
     const currencies = useOrganizationStore(state => state.currencies);
     const projects = useOrganizationStore(state => state.projects);
     const clients = useOrganizationStore(state => state.clients);
+    const members = useOrganizationStore(state => state.members);
+    const units = useOrganizationStore(state => state.units);
     const getDefaultWallet = useOrganizationStore(state => state.getDefaultWallet);
     const getPrimaryCurrency = useOrganizationStore(state => state.getPrimaryCurrency);
 
-    return { activeOrgId, wallets, currencies, projects, clients, getDefaultWallet, getPrimaryCurrency };
+    return { activeOrgId, wallets, currencies, projects, clients, members, units, getDefaultWallet, getPrimaryCurrency };
 }
 
 /**

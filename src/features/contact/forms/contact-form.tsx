@@ -445,7 +445,7 @@ export function ContactForm({
                                         value={formData.company_name}
                                         onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                                         placeholder="O escribí el nombre manualmente"
-                                        className="border-input flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none h-9 dark:bg-input/30"
+                                        className="border-input flex w-full rounded-md border bg-transparent px-3 py-2 text-sm transition-[color,box-shadow] outline-none h-9"
                                     />
                                 )}
                             </div>
@@ -461,7 +461,7 @@ export function ContactForm({
                                 value={formData.company_name}
                                 onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                                 placeholder="Nombre de la empresa"
-                                className="border-input flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none h-9 dark:bg-input/30"
+                                className="border-input flex w-full rounded-md border bg-transparent px-3 py-2 text-sm transition-[color,box-shadow] outline-none h-9"
                             />
                         )}
                     </FormGroup>

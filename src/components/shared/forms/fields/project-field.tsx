@@ -1,10 +1,12 @@
 /**
- * Project Field Factory
- * Standard 19.13 - Reusable Project Selector
+ * Project Field Factory (Smart)
+ * Standard 19.13 - Unified Project Selector
  *
- * - Muestra avatar: imagen del proyecto si tiene, fallback con iniciales
- * - Por defecto muestra "Proyectos Activos" (filtro se aplica en la query del server)
- * - Tooltip: explica que el campo es opcional y links a /organization/projects
+ * - Self-populating: reads projects from useFormData() store
+ * - Avatar: project image or color-based initials fallback
+ * - Always shows active projects (filtered at query level)
+ * - Override: pass `projects` prop to use custom list
+ * - Tooltip: explains the field is optional with link to /organization/projects
  */
 
 "use client";
@@ -14,25 +16,28 @@ import { FormGroup } from "@/components/ui/form-group";
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { FactoryLabel } from "./field-wrapper";
 import { Link } from "@/i18n/routing";
+import { useFormData } from "@/stores/organization-store";
 
 export interface Project {
     id: string;
     name: string;
     image_url?: string | null;
     color?: string | null;
-    custom_color_hex?: string | null;
 }
 
 export interface ProjectFieldProps {
     value: string;
     onChange: (value: string) => void;
-    projects: Project[];
+    /** Override: pass custom projects list. Default: reads from store */
+    projects?: Project[];
     label?: string;
     tooltip?: React.ReactNode;
     required?: boolean;
     disabled?: boolean;
     className?: string;
     placeholder?: string;
+    searchPlaceholder?: string;
+    emptyMessage?: string;
     allowNone?: boolean;
     noneLabel?: string;
 }
@@ -46,21 +51,44 @@ function getProjectInitials(name: string): string {
 }
 
 /**
+ * Renders project option with color indicator or image avatar
+ */
+function ProjectOptionContent({ project }: { project: Project }) {
+    return (
+        <div className="flex items-center gap-2">
+            {project.image_url ? (
+                <img
+                    src={project.image_url}
+                    alt={project.name}
+                    className="w-5 h-5 rounded-full object-cover shrink-0"
+                />
+            ) : (
+                <div
+                    className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[8px] font-bold text-white"
+                    style={{ backgroundColor: project.color || "#007AFF" }}
+                >
+                    {getProjectInitials(project.name)}
+                </div>
+            )}
+            <span>{project.name}</span>
+        </div>
+    );
+}
+
+/**
  * Tooltip por defecto para el campo Proyecto.
- * Explica que es opcional y que puede usarse antes o independientemente de un proyecto.
  */
 const DEFAULT_PROJECT_TOOLTIP = (
     <span className="flex flex-col gap-1.5 text-xs leading-relaxed">
         <span>
-            Vinculá este presupuesto a uno de tus{" "}
+            Vinculá esto a uno de tus{" "}
             <Link href="/organization/projects" className="underline">
                 Proyectos
             </Link>{" "}
             activos. Solo se muestran proyectos con estado <strong>Activo</strong>.
         </span>
         <span className="text-muted-foreground">
-            Este campo es <strong>opcional</strong>. Un presupuesto puede existir sin proyecto
-            — por ejemplo cuando todavía no ganaste la obra o estás cotizando de forma independiente.
+            Este campo es <strong>opcional</strong>. Puede existir sin proyecto asignado.
         </span>
     </span>
 );
@@ -68,26 +96,33 @@ const DEFAULT_PROJECT_TOOLTIP = (
 export function ProjectField({
     value,
     onChange,
-    projects,
+    projects: projectsOverride,
     label = "Proyecto",
     tooltip = DEFAULT_PROJECT_TOOLTIP,
     required = false,
     disabled = false,
     className,
-    placeholder = "Proyectos Activos",
+    placeholder = "Seleccionar proyecto...",
+    searchPlaceholder = "Buscar proyecto...",
+    emptyMessage = "No hay proyectos activos.",
     allowNone = true,
     noneLabel = "Sin proyecto",
 }: ProjectFieldProps) {
+    // Smart: read from store by default, allow override
+    const storeData = useFormData();
+    const projects = projectsOverride ?? (storeData.projects as Project[]);
 
     const options: ComboboxOption[] = useMemo(() => {
-        const projectOptions: ComboboxOption[] = projects
-            .filter((p) => p.id !== "none")
-            .map((project) => ({
-                value: project.id,
-                label: project.name,
-                image: project.image_url || undefined,
-                fallback: getProjectInitials(project.name),
-            }));
+        const sortedProjects = [...projects].sort((a, b) =>
+            a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+        );
+
+        const projectOptions: ComboboxOption[] = sortedProjects.map((project) => ({
+            value: project.id,
+            label: project.name,
+            content: <ProjectOptionContent project={project} />,
+            selectedContent: <ProjectOptionContent project={project} />,
+        }));
 
         if (allowNone) {
             return [
@@ -107,12 +142,12 @@ export function ProjectField({
             className={className}
         >
             <Combobox
-                value={value || "none"}
-                onValueChange={(val) => onChange(val)}
+                value={value || (allowNone ? "none" : "")}
+                onValueChange={(val) => onChange(val === "none" ? "" : val)}
                 options={options}
                 placeholder={placeholder}
-                searchPlaceholder="Buscar proyecto..."
-                emptyMessage="No se encontraron proyectos activos."
+                searchPlaceholder={searchPlaceholder}
+                emptyMessage={emptyMessage}
                 disabled={disabled}
                 modal={true}
             />

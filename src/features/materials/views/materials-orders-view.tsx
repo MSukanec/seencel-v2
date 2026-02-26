@@ -22,9 +22,10 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
+import { useActiveProjectId } from "@/stores/layout-store";
 
-import { PurchaseOrderForm } from "../forms/purchase-order-form";
+
 import {
     PurchaseOrderView,
     PurchaseOrderStatus,
@@ -57,9 +58,12 @@ export function MaterialsOrdersView({
     units = [],
     requirements = [],
 }: MaterialsOrdersViewProps) {
-    const { openModal, closeModal } = useModal();
+    const { openPanel } = usePanel();
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
+
+    // Project context filter
+    const activeProjectId = useActiveProjectId();
 
     // Search state for Toolbar
     const [searchQuery, setSearchQuery] = useState("");
@@ -69,24 +73,15 @@ export function MaterialsOrdersView({
     // ========================================
 
     const handleNewOrder = () => {
-        openModal(
-            <PurchaseOrderForm
-                projectId={projectId}
-                organizationId={orgId}
-                providers={providers}
-                financialData={financialData}
-                materials={materials}
-                units={units}
-                requirements={requirements}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
-            />,
+        openPanel(
+            'purchase-order-form',
             {
-                title: "Nueva Orden de Compra",
-                description: "Creá una orden de compra para solicitar materiales a un proveedor.",
-                size: "lg"
+                projectId,
+                organizationId: orgId,
+                providers,
+                materials,
+                units,
+                requirements,
             }
         );
     };
@@ -275,13 +270,25 @@ export function MaterialsOrdersView({
         { label: "Convertida", value: "converted" },
     ];
 
-    // Filter orders by search
-    const filteredOrders = searchQuery
-        ? orders.filter(o =>
-            o.provider_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            o.order_number?.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        : orders;
+    // Filter orders by project context + search
+    const filteredOrders = useMemo(() => {
+        let items = orders;
+
+        // Project context filter
+        if (activeProjectId) {
+            items = items.filter(o => o.project_id === activeProjectId);
+        }
+
+        // Search filter
+        if (searchQuery) {
+            items = items.filter(o =>
+                o.provider_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                o.order_number?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        return items;
+    }, [orders, activeProjectId, searchQuery]);
 
     // ========================================
     // RENDER

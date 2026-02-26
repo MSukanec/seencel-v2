@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Crown, AlertTriangle } from "lucide-react";
-import { ActiveProjectField, type ActiveProject } from "@/components/shared/forms/fields";
+import { ProjectField, type Project } from "@/components/shared/forms/fields";
 import { swapProjectStatus } from "@/features/projects/actions";
 import { toast } from "sonner";
 
@@ -24,7 +24,7 @@ interface ProjectSwapModalProps {
         name: string;
     };
     /** List of currently active projects (excluding the one being activated) */
-    activeProjects: ActiveProject[];
+    activeProjects: Project[];
     /** Max allowed by plan */
     maxAllowed: number;
     /** Called after successful swap */
@@ -95,7 +95,7 @@ export function ProjectSwapModal({
 
                 <div className="py-4 space-y-4">
                     {/* Active Project Select — reusable field factory */}
-                    <ActiveProjectField
+                    <ProjectField
                         value={selectedProjectId}
                         onChange={setSelectedProjectId}
                         projects={activeProjects}
@@ -103,6 +103,7 @@ export function ProjectSwapModal({
                         placeholder="Seleccioná un proyecto activo..."
                         emptyMessage="No hay proyectos activos para intercambiar."
                         required={false}
+                        allowNone={false}
                     />
 
                     {/* Preview of what will happen */}

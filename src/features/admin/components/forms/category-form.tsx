@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Folder } from "lucide-react";
+import { usePanel } from "@/stores/panel-store";
 
 interface CategoryFormProps {
     initialData?: {
@@ -15,15 +16,36 @@ interface CategoryFormProps {
     parentId?: string | null;
     onSubmit: (name: string, parentId: string | null) => Promise<{ error?: string; data?: any }>;
     onSuccess: () => void;
+    formId?: string;
 }
 
-export function CategoryForm({ initialData, parentId, onSubmit, onSuccess }: CategoryFormProps) {
+export function CategoryForm({ initialData, parentId, onSubmit, onSuccess, formId }: CategoryFormProps) {
+    const { setPanelMeta } = usePanel();
     const [name, setName] = useState(initialData?.name || "");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const isEditing = !!initialData;
     const effectiveParentId = initialData?.parent_id ?? parentId ?? null;
+
+    // Self-describe
+    useEffect(() => {
+        setPanelMeta({
+            icon: Folder,
+            title: isEditing
+                ? "Editar Categoría"
+                : parentId ? "Nueva Subcategoría" : "Nueva Categoría",
+            description: isEditing
+                ? "Modifica el nombre de la categoría"
+                : parentId
+                    ? "Crear una subcategoría dentro de la categoría seleccionada"
+                    : "Crear una nueva categoría de materiales",
+            size: "md",
+            footer: {
+                submitLabel: isEditing ? "Guardar cambios" : "Crear categoría"
+            }
+        });
+    }, [isEditing, parentId, setPanelMeta]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -51,7 +73,7 @@ export function CategoryForm({ initialData, parentId, onSubmit, onSuccess }: Cat
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id={formId} onSubmit={handleSubmit} className="space-y-4">
             <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <Folder className="h-8 w-8 text-muted-foreground" />
                 <div>
@@ -73,13 +95,6 @@ export function CategoryForm({ initialData, parentId, onSubmit, onSuccess }: Cat
                 />
                 {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-                <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? "Guardando..." : (isEditing ? "Guardar cambios" : "Crear categoría")}
-                </Button>
-            </div>
         </form>
     );
 }
-

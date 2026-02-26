@@ -19,7 +19,9 @@ Esto los hace ideales para estado que necesita ser accedido desde modales, porta
 | `sidebar-store.ts` | Contenido del sidebar contextual | 98 |
 | `theme-store.ts` | Temas personalizados con persistencia | 135 |
 | `user-store.ts` | Usuario actual | 69 |
-| `drawer-store.ts` | Drawer global | 37 |
+| `panel-store.ts` | Stack de paneles global (Primary Interaction Surface) | ~120 |
+| `panel-registry.ts` | Registro de paneles para lazy-loading y URL sync | ~35 |
+| `panel-url-sync.tsx` | Sincronización panel ↔ URL | ~95 |
 | `modal-registry.ts` | Registro de modales para URL sync | 44 |
 | `modal-url-sync.tsx` | Sincronización modal ↔ URL | 86 |
 

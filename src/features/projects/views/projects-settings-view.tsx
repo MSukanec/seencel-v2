@@ -15,8 +15,7 @@ import { SettingsSection, SettingsSectionContainer } from "@/components/shared/s
 import { ListItem } from "@/components/shared/list-item";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { toast } from "sonner";
-import dynamic from "next/dynamic";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import {
     createProjectType,
     updateProjectType,
@@ -26,13 +25,7 @@ import {
     deleteProjectModality,
 } from "@/features/projects/actions";
 
-const ProjectsTypeForm = dynamic(() => import("../forms/projects-type-form").then(mod => mod.ProjectsTypeForm), {
-    loading: () => <p className="p-4">Cargando formulario...</p>
-});
 
-const ProjectsModalityForm = dynamic(() => import("../forms/projects-modality-form").then(mod => mod.ProjectsModalityForm), {
-    loading: () => <p className="p-4">Cargando formulario...</p>
-});
 
 // ─── Shared Types ─────────────────────────────────────────────
 
@@ -68,7 +61,7 @@ export function ProjectsSettingsView({
 
 function TypesSection({ organizationId, initialTypes }: { organizationId: string; initialTypes: SettingsItem[] }) {
     const t = useTranslations("Project.settings.types");
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
     const [types, setTypes] = useState<SettingsItem[]>(initialTypes);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [deletingItem, setDeletingItem] = useState<SettingsItem | null>(null);
@@ -152,32 +145,18 @@ function TypesSection({ organizationId, initialTypes }: { organizationId: string
     };
 
     const handleOpenCreate = () => {
-        openModal(
-            <ProjectsTypeForm
-                organizationId={organizationId}
-                onSubmit={handleCreate}
-            />,
-            {
-                title: t("modal.createTitle"),
-                description: t("modal.createDescription"),
-                size: 'md'
-            }
-        );
+        openPanel('projects-type-form', {
+            organizationId,
+            onSubmit: handleCreate,
+        });
     };
 
     const handleOpenEdit = (type: SettingsItem) => {
-        openModal(
-            <ProjectsTypeForm
-                organizationId={organizationId}
-                initialData={type}
-                onSubmit={(data) => handleEdit(type, data)}
-            />,
-            {
-                title: t("modal.editTitle"),
-                description: t("modal.editDescription"),
-                size: 'md'
-            }
-        );
+        openPanel('projects-type-form', {
+            organizationId,
+            initialData: type,
+            onSubmit: (data: { name: string }) => handleEdit(type, data),
+        });
     };
 
     return (
@@ -231,7 +210,7 @@ function TypesSection({ organizationId, initialTypes }: { organizationId: string
 
 function ModalitiesSection({ organizationId, initialModalities }: { organizationId: string; initialModalities: SettingsItem[] }) {
     const t = useTranslations("Project.settings.modalities");
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
     const [modalities, setModalities] = useState<SettingsItem[]>(initialModalities);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [deletingItem, setDeletingItem] = useState<SettingsItem | null>(null);
@@ -315,32 +294,18 @@ function ModalitiesSection({ organizationId, initialModalities }: { organization
     };
 
     const handleOpenCreate = () => {
-        openModal(
-            <ProjectsModalityForm
-                organizationId={organizationId}
-                onSubmit={handleCreate}
-            />,
-            {
-                title: t("modal.createTitle"),
-                description: t("modal.createDescription"),
-                size: 'md'
-            }
-        );
+        openPanel('projects-modality-form', {
+            organizationId,
+            onSubmit: handleCreate,
+        });
     };
 
     const handleOpenEdit = (modality: SettingsItem) => {
-        openModal(
-            <ProjectsModalityForm
-                organizationId={organizationId}
-                initialData={modality}
-                onSubmit={(data) => handleEdit(modality, data)}
-            />,
-            {
-                title: t("modal.editTitle"),
-                description: t("modal.editDescription"),
-                size: 'md'
-            }
-        );
+        openPanel('projects-modality-form', {
+            organizationId,
+            initialData: modality,
+            onSubmit: (data: { name: string }) => handleEdit(modality, data),
+        });
     };
 
     return (

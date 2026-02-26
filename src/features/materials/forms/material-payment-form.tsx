@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { toast } from "sonner";
-import { FormFooter } from "@/components/shared/forms/form-footer";
+
 import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ interface MaterialPaymentFormProps {
     financialData: OrganizationFinancialData;
     initialData?: any;
     onSuccess?: () => void;
+    formId?: string;
 }
 
 export function MaterialPaymentForm({
@@ -37,10 +38,28 @@ export function MaterialPaymentForm({
     materialTypes,
     financialData,
     initialData,
-    onSuccess
+    onSuccess,
+    formId
 }: MaterialPaymentFormProps) {
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
     const [isLoading, setIsLoading] = useState(false);
+
+    const isEditing = !!initialData?.id;
+
+    // Self-describe
+    useEffect(() => {
+        setPanelMeta({
+            icon: CreditCard,
+            title: isEditing ? "Editar Pago de Material" : "Nuevo Pago de Material",
+            description: isEditing
+                ? "Modifica los detalles del pago."
+                : "Registra un nuevo pago por materiales.",
+            size: "lg",
+            footer: {
+                submitLabel: isEditing ? "Actualizar Pago" : "Registrar Pago"
+            }
+        });
+    }, [isEditing, setPanelMeta]);
     const uploadRef = useRef<MultiFileUploadRef>(null);
 
     const { wallets, currencies, defaultWalletId, defaultCurrencyId } = financialData;
@@ -142,7 +161,7 @@ export function MaterialPaymentForm({
                 toast.success("Pago registrado correctamente");
             }
             if (onSuccess) onSuccess();
-            closeModal();
+            closePanel();
 
         } catch (error: any) {
             console.error("Error submitting payment:", error);
@@ -153,7 +172,7 @@ export function MaterialPaymentForm({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full w-full min-h-0">
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col h-full w-full min-h-0">
             <div className="flex-1 overflow-y-auto space-y-4">
                 {/* Row 1: Date & Purchase */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -320,13 +339,6 @@ export function MaterialPaymentForm({
                 </FormGroup>
 
             </div>
-
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                onCancel={closeModal}
-                isLoading={isLoading}
-                submitLabel={initialData?.id ? "Actualizar Pago" : "Registrar Pago"}
-            />
         </form>
     );
 }

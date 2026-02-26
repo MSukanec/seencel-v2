@@ -126,6 +126,7 @@ export interface MaterialPurchase {
 
 export interface MaterialRequirement {
     project_id: string;
+    project_name: string | null;
     organization_id: string;
     material_id: string;
     material_name: string;
@@ -133,6 +134,9 @@ export interface MaterialRequirement {
     category_id: string | null;
     category_name: string | null;
     total_required: number;
+    total_ordered: number;
+    total_pending: number;
+    coverage_status: 'none' | 'partial' | 'covered';
     task_count: number;
     construction_task_ids: string[];
 }

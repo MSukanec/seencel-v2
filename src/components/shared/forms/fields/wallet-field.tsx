@@ -1,11 +1,11 @@
 /**
- * Wallet Field Factory
+ * Wallet Field Factory (Smart)
  * Standard 19.12 - Reusable Wallet Selector
  * 
- * Provides a standardized wallet selector with:
+ * - Self-populating: reads wallets from useFormData() store
  * - Consistent formatting (wallet name, optionally with currency)
  * - Default wallet pre-selection
- * - Support for disabled state
+ * - Override: pass `wallets` prop to use custom list
  */
 
 "use client";
@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { FactoryLabel } from "./field-wrapper";
+import { useFormData } from "@/stores/organization-store";
 
 export interface Wallet {
     id: string;
@@ -33,8 +34,8 @@ export interface WalletFieldProps {
     value: string;
     /** Callback when wallet changes */
     onChange: (value: string) => void;
-    /** List of available wallets */
-    wallets: Wallet[];
+    /** Override: pass custom wallets list. Default: reads from store */
+    wallets?: Wallet[];
     /** Field label (default: "Billetera") */
     label?: string;
     /** Is field required? (default: true) */
@@ -52,7 +53,7 @@ export interface WalletFieldProps {
 export function WalletField({
     value,
     onChange,
-    wallets,
+    wallets: walletsOverride,
     label = "Billetera",
     required = true,
     disabled = false,
@@ -60,6 +61,10 @@ export function WalletField({
     placeholder = "Seleccionar billetera",
     showCurrency = false,
 }: WalletFieldProps) {
+    // Smart: read from store by default, allow override
+    const storeData = useFormData();
+    const wallets = walletsOverride ?? (storeData.wallets as Wallet[]);
+
     const getWalletLabel = (wallet: Wallet) => {
         const name = wallet.wallet_name || wallet.name || "Billetera";
         if (showCurrency && wallet.currency_symbol) {

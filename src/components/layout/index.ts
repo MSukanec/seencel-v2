@@ -16,5 +16,4 @@ export { ContentLayout } from "./dashboard/shared/content-layout";
 export { SidebarLayout } from "./dashboard/sidebar/sidebar-layout";
 
 // Shared dashboard components
-export { GlobalDrawer } from "./dashboard/shared/drawer/global-drawer";
 export { HeaderTitleUpdater } from "./dashboard/shared/header-title-updater";

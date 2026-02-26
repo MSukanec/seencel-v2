@@ -11,6 +11,7 @@ import { LazyAreaChart as BaseAreaChart, LazyDonutChart as BaseDonutChart } from
 import { useMoney } from "@/hooks/use-money";
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { useActiveProjectId } from "@/stores/layout-store";
 
 interface MaterialsOverviewViewProps {
     projectId?: string;
@@ -20,24 +21,31 @@ interface MaterialsOverviewViewProps {
 
 export function MaterialsOverviewView({ orgId, payments }: MaterialsOverviewViewProps) {
     const money = useMoney();
+    const activeProjectId = useActiveProjectId();
+
+    // Filter payments by active project context
+    const projectPayments = useMemo(() => {
+        if (!activeProjectId) return payments;
+        return payments.filter(p => p.project_id === activeProjectId);
+    }, [payments, activeProjectId]);
 
     // =============================================
     // KPIs - All calculated client-side using useMoney
     // =============================================
     const kpis = useMemo(() => {
         // Total using useMoney.sum() for proper bimonetary aggregation
-        const { total } = money.sum(payments);
+        const { total } = money.sum(projectPayments);
 
         // Unique months for average calculation
         const uniqueMonths = new Set(
-            payments.map(p => p.payment_date?.substring(0, 7)).filter(Boolean)
+            projectPayments.map(p => p.payment_date?.substring(0, 7)).filter(Boolean)
         );
         const monthCount = Math.max(uniqueMonths.size, 1);
         const monthlyAverage = total / monthCount;
 
         // Type concentration - group by type and find top
         const byType: Record<string, MaterialPaymentView[]> = {};
-        payments.forEach(p => {
+        projectPayments.forEach(p => {
             const typeName = p.material_type_name || "Sin Tipo";
             if (!byType[typeName]) byType[typeName] = [];
             byType[typeName].push(p);
@@ -57,12 +65,12 @@ export function MaterialsOverviewView({ orgId, payments }: MaterialsOverviewView
         return {
             total,
             monthlyAverage,
-            paymentCount: payments.length,
+            paymentCount: projectPayments.length,
             monthCount,
             concentrationPct,
             topTypeName: topType?.name || "-"
         };
-    }, [payments, money]);
+    }, [projectPayments, money]);
 
     // =============================================
     // Charts - Calculated client-side using toFunctionalAmount for consistency
@@ -70,7 +78,7 @@ export function MaterialsOverviewView({ orgId, payments }: MaterialsOverviewView
     const charts = useMemo(() => {
         // Monthly evolution - aggregate by month using toFunctionalAmount
         const monthlyData: Record<string, number> = {};
-        payments.forEach(p => {
+        projectPayments.forEach(p => {
             const month = p.payment_date?.substring(0, 7) || "";
             if (month) {
                 const functionalAmount = money.toFunctionalAmount(p);
@@ -83,7 +91,7 @@ export function MaterialsOverviewView({ orgId, payments }: MaterialsOverviewView
 
         // Type distribution - aggregate by type using toFunctionalAmount
         const byType: Record<string, number> = {};
-        payments.forEach(p => {
+        projectPayments.forEach(p => {
             const typeName = p.material_type_name || "Sin Tipo";
             const functionalAmount = money.toFunctionalAmount(p);
             byType[typeName] = (byType[typeName] || 0) + functionalAmount;
@@ -94,7 +102,7 @@ export function MaterialsOverviewView({ orgId, payments }: MaterialsOverviewView
             .slice(0, 6);
 
         return { monthlyEvolution, typeDistribution };
-    }, [payments, money]);
+    }, [projectPayments, money]);
 
     // =============================================
     // Insights - Generated using rules engine
@@ -108,7 +116,7 @@ export function MaterialsOverviewView({ orgId, payments }: MaterialsOverviewView
         });
     }, [charts, kpis.paymentCount]);
 
-    const recentActivity = payments.slice(0, 5);
+    const recentActivity = projectPayments.slice(0, 5);
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
@@ -125,7 +133,7 @@ export function MaterialsOverviewView({ orgId, payments }: MaterialsOverviewView
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <DashboardKpiCard
                             title="Total Pagos"
-                            items={payments}
+                            items={projectPayments}
                             icon={<DollarSign className="w-5 h-5" />}
                             iconClassName="bg-amount-negative/10 text-amount-negative"
                             description="Suma de todos los pagos de materiales"

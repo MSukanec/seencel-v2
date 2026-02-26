@@ -6,13 +6,13 @@ import { toast } from "sonner";
 
 import { MaterialType } from "@/features/materials/types";
 import { deleteMaterialType } from "@/features/materials/actions";
-import { MaterialTypeFormDialog } from "../forms/material-type-form";
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ContentLayout } from "@/components/layout";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import {
     Table,
     TableBody,
@@ -44,38 +44,28 @@ interface MaterialsSettingsViewProps {
 }
 
 export function MaterialsSettingsView({ materialTypes, organizationId }: MaterialsSettingsViewProps) {
-    const { openModal, closeModal } = useModal();
+    const { openPanel, closePanel } = usePanel();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [typeToDelete, setTypeToDelete] = useState<MaterialType | null>(null);
     const [isDeleting, startDeleteTransition] = useTransition();
 
     const handleCreate = () => {
-        openModal(
-            <MaterialTypeFormDialog
-                organizationId={organizationId}
-                onSuccess={closeModal}
-                onCancel={closeModal}
-            />,
+        openPanel(
+            'material-type-form',
             {
-                title: "Nuevo Tipo de Material",
-                description: "Crea un nuevo tipo para clasificar tus pagos de materiales.",
-                size: "md"
+                organizationId,
+                onSuccess: () => closePanel(),
             }
         );
     };
 
     const handleEdit = (type: MaterialType) => {
-        openModal(
-            <MaterialTypeFormDialog
-                typeToEdit={type}
-                organizationId={organizationId}
-                onSuccess={closeModal}
-                onCancel={closeModal}
-            />,
+        openPanel(
+            'material-type-form',
             {
-                title: "Editar Tipo de Material",
-                description: "Modifica los detalles del tipo de material.",
-                size: "md"
+                typeToEdit: type,
+                organizationId,
+                onSuccess: () => closePanel(),
             }
         );
     };

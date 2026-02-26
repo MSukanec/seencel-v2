@@ -1,95 +1,96 @@
-# Plan: Migración de Forms/Modals a Autonomía
+# Plan: Migración de Forms a Panel System
 
-## Problema
+## Estado: En progreso
 
-Muchos forms de Seencel están **acoplados a la página que los abre**. Requieren datos auxiliares (como `contactCategories`, `currencies`, `providers`) como props que solo la página padre puede proveer. Esto impide abrir el mismo form desde otro lugar de la app.
-
-**Ejemplo concreto:** `ContactForm` requiere `contactCategories`, `companyContacts` y `onOptimisticSubmit` — no se puede abrir desde la vista de Participantes de un proyecto porque esa página no tiene esos datos.
+> ⚠️ Este plan originalmente era "Forms Autónomos en Modales". Ahora se migra al **Panel System** (drawers agnósticos).
 
 ---
 
-## Auditoría: 3 Patrones Encontrados
+## Estrategia
 
-### 🟢 Patrón A: Semi-Autónomo via Store
-| | |
-|---|---|
-| **Ejemplo** | `MaterialForm` |
-| **Cómo funciona** | Usa `useFormData()` del Zustand store para `currencies` |
-| **Ventaja** | Funciona en cualquier modal/portal (Zustand está fuera del React tree) |
-| **Limitación** | Solo sirve para datos que ya están en el store |
+Todo form que hoy usa `openModal()` debe migrarse al Panel System cuando se recorra la página correspondiente.
 
-### 🟡 Patrón B: Semi-Autónomo via useEffect
-| | |
-|---|---|
-| **Ejemplo** | `ClientForm` |
-| **Cómo funciona** | Fetchea `contacts` y `projects` en un `useEffect` con Supabase directo |
-| **Ventaja** | Funciona desde cualquier parte, no depende del store |
-| **Limitación** | Flash de loading momentáneo |
+### Pasos por form
 
-### 🔴 Patrón C: Acoplado al padre (LA MAYORÍA)
-| | |
+1. Cambiar `useModal` → `usePanel`
+2. Agregar `setPanelMeta` (icon, title, description, size, footer)
+3. Usar `<form id={formId}>` y eliminar `<FormFooter>`
+4. **OBLIGATORIO: usar Field Factories** (ver sección abajo)
+5. Registrar en `panel-registry.ts`
+6. En la view: `openPanel(panelId, { datos })` sin presentación
+
+### Datos auxiliares
+
+| Datos que necesita | Estrategia |
 |---|---|
-| **Ejemplos** | `ContactForm`, `SubcontractsSubcontractForm`, `FinanceMovementForm` |
-| **Cómo funciona** | Recibe TODO como props desde la vista padre |
-| **Problema** | No se puede abrir desde otra página |
+| `currencies`, `wallets`, `projects`, `clients` | **Store** (`useFormData()`) |
+| Datos específicos del feature | Props desde la view o useEffect interno |
+| `onOptimisticSubmit` callback | Props `onSuccess` |
 
 ---
 
-## Estrategia de Migración
+## ⚠️ Field Factories: USO OBLIGATORIO
 
-Para cada form acoplado, elegir la estrategia según el tipo de datos que necesita:
+**TODOS los campos en forms (nuevos o migrados) DEBEN usar los Field Factories de `@/components/shared/forms/fields/`.**
 
-| Datos que necesita | Estrategia | Razón |
+> ⛔ **NUNCA** usar `<Input>` + `<FormGroup>` raw. SIEMPRE usar el Field Factory correspondiente.
+>
+> ⛔ **NUNCA** usar `<Select>` + `<FormGroup>` raw. SIEMPRE usar `<SelectField>`.
+
+### Campos disponibles
+
+| Campo | Factory |
+|---|---|
+| Texto | `TextField` |
+| Select (dropdown) | `SelectField` |
+| Moneda | `CurrencyField` (smart) |
+| Billetera | `WalletField` (smart) |
+| Proyecto | `ProjectField` (smart) |
+| Contacto | `ContactField` (smart) |
+| Monto / número | `AmountField` |
+| Fecha | `DateField` |
+| Hora | `TimeField` |
+| Notas / textarea | `NotesField` |
+| Referencia | `ReferenceField` |
+| Tipo de cambio | `ExchangeRateField` |
+| Switch | `SwitchField` |
+| Color picker | `ColorField` |
+| Upload | `UploadField` |
+| Asignado a | `AssignedToField` |
+| Segmented | `SegmentedField` |
+| Teléfono | `PhoneField` |
+| Unidad | `UnitField` |
+| Tarea | `TaskField` |
+
+### Cuándo avisar al usuario
+
+Si un campo requerido **no tiene Field Factory**, el agente DEBE:
+1. **Avisar al usuario** describiendo qué campo se necesita
+2. **NO crear un campo raw** como workaround
+3. Esperar decisión: crear un nuevo Field Factory o usar uno existente con adaptaciones
+
+---
+
+## Estado de Migración
+
+| Feature | Estado | Forms |
 |---|---|---|
-| `currencies`, `wallets`, `projects`, `clients` | **Store** (`useFormData()`) | Ya están en el store global |
-| Datos específicos del feature (`contactCategories`, `providers`, etc.) | **useEffect** fetch interno | No vale la pena cargarlos en el store global |
-| `onOptimisticSubmit` callback | **Eliminar** — el form llama server actions directamente | El form maneja su propio ciclo de vida |
+| **Materials** | ✅ Completo | material-form, material-payment-form, purchase-order-form, material-type-form, category-form |
+| **Projects** | ✅ Completo | projects-project-form, projects-type-form, projects-modality-form |
+| **Finance** | 🔲 Pendiente | movement-form, exchange-form, general-costs forms |
+| **Tasks** | 🔲 Pendiente | task-form, recipe-form |
+| **Subcontracts** | 🔲 Pendiente | subcontract-form, payment-form |
+| **Clients** | 🔲 Pendiente | client-form, commitment-form, payment-form |
+| **Contacts** | 🔲 Pendiente | contact-form |
+| **Team** | 🔲 Pendiente | member-form |
+| **SiteLog** | 🔲 Pendiente | entry-form, type-form |
+| **Capital** | 🔲 Pendiente | contribution-form |
+| **Planner** | 🔲 Pendiente | board-form, item-form |
 
 ---
 
-## Forms Prioritarios para Migrar
+## Skill de Referencia
 
-### 1. ✅ `ContactForm` (PRIMERO — bloquea Participantes)
-- **Archivo:** `src/features/contact/forms/contact-form.tsx`
-- **Props acopladas:** `contactCategories`, `companyContacts`, `onOptimisticSubmit`
-- **Cambios:**
-  - Agregar `useEffect` para fetchear `contactCategories` y `companyContacts` internamente
-  - Eliminar `onOptimisticSubmit` — el form llama `createContact` / `updateContact` directamente
-  - Mantener solo: `organizationId`, `initialData?`
-  - Agregar `onSuccess?` callback simple (para refresh del padre)
-
-### 2. `FinanceMovementForm`
-- **Props acopladas:** `concepts`, `wallets`, `currencies`, `projects`, `clients`, `financialData`
-- **Cambios:** Migrar `currencies`, `wallets`, `projects`, `clients` a `useFormData()`. `concepts` y `financialData` via useEffect.
-
-### 3. `SubcontractsSubcontractForm`
-- **Props acopladas:** `providers`, `currencies`, `indexTypes`
-- **Cambios:** `currencies` via store. `providers`, `indexTypes` via useEffect.
-
-### 4. `SubcontractPaymentForm`
-- Similar al anterior.
-
-### 5. `GeneralCostsPaymentForm`
-- Similar al anterior.
-
----
-
-## Regla de Oro (para nuevos forms)
-
-> Un form NUNCA debe recibir datos auxiliares (listas para dropdowns, categorías, etc.) como props.
-> Debe obtenerlos del **store** (si son globales) o **fetchearlos internamente** (si son específicos del feature).
-> Solo debe recibir como props: `organizationId`, `initialData?`, `onSuccess?`.
-
----
-
-## Estado
-
-| Form | Estado | Prioridad |
-|---|---|---|
-| `ContactForm` | 🔲 Pendiente | 🔴 Alta |
-| `FinanceMovementForm` | 🔲 Pendiente | 🟡 Media |
-| `SubcontractsSubcontractForm` | 🔲 Pendiente | 🟡 Media |
-| `SubcontractPaymentForm` | 🔲 Pendiente | 🟢 Baja |
-| `GeneralCostsPaymentForm` | 🔲 Pendiente | 🟢 Baja |
-| `GeneralCostsCategoryForm` | 🔲 Pendiente | 🟢 Baja |
-| `GeneralCostsConceptForm` | 🔲 Pendiente | 🟢 Baja |
+```
+.agent/skills/seencel-panel-forms/SKILL.md
+```

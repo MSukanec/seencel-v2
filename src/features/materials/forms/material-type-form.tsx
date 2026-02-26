@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { usePanel } from "@/stores/panel-store";
+import { Tags } from "lucide-react";
 
-import { FormFooter } from "@/components/shared/forms/form-footer";
+
 import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,20 +16,36 @@ interface MaterialTypeFormDialogProps {
     typeToEdit?: MaterialType;
     organizationId?: string;
     onSuccess?: () => void;
-    onCancel?: () => void;
+    formId?: string;
 }
 
 export function MaterialTypeFormDialog({
     typeToEdit,
     organizationId,
     onSuccess,
-    onCancel
+    formId
 }: MaterialTypeFormDialogProps) {
+    const { setPanelMeta } = usePanel();
     const [isLoading, setIsLoading] = useState(false);
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
 
     const isEditing = !!typeToEdit;
+
+    // Self-describe
+    useEffect(() => {
+        setPanelMeta({
+            icon: Tags,
+            title: isEditing ? "Editar Tipo de Material" : "Nuevo Tipo de Material",
+            description: isEditing
+                ? "Modifica los detalles del tipo de material."
+                : "Crea un nuevo tipo para clasificar tus pagos de materiales.",
+            size: "md",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Crear Tipo"
+            }
+        });
+    }, [isEditing, setPanelMeta]);
 
     useEffect(() => {
         if (typeToEdit) {
@@ -77,7 +95,7 @@ export function MaterialTypeFormDialog({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto">
                 <div className="space-y-4">
                     <FormGroup label="Nombre" required>
@@ -97,13 +115,6 @@ export function MaterialTypeFormDialog({
                     </FormGroup>
                 </div>
             </div>
-
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                isLoading={isLoading}
-                submitLabel={isEditing ? "Guardar Cambios" : "Crear Tipo"}
-                onCancel={onCancel}
-            />
         </form>
     );
 }

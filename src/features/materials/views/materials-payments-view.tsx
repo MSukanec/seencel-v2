@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { MaterialPaymentView, OrganizationFinancialData, MaterialPurchase, MaterialType } from "../types";
 import { deleteMaterialPaymentAction, createMaterialType } from "../actions";
-import { MaterialPaymentForm } from "../forms/material-payment-form";
+
 
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
@@ -18,6 +18,8 @@ import { createDateColumn, createTextColumn, createMoneyColumn } from "@/compone
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
+import { useActiveProjectId } from "@/stores/layout-store";
 import { useRouter } from "next/navigation";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { useMoney } from "@/hooks/use-money";
@@ -45,8 +47,12 @@ export function MaterialsPaymentsView({
     financialData,
     materialTypes
 }: MaterialsPaymentsViewProps) {
-    const { openModal, closeModal } = useModal();
+    const { openModal } = useModal();
+    const { openPanel, closePanel } = usePanel();
     const router = useRouter();
+
+    // Project context filter
+    const activeProjectId = useActiveProjectId();
 
     // Search state for Toolbar
     const [searchQuery, setSearchQuery] = useState("");
@@ -233,45 +239,37 @@ export function MaterialsPaymentsView({
     // ========================================
 
     const handleNewPayment = () => {
-        openModal(
-            <MaterialPaymentForm
-                projectId={projectId}
-                organizationId={orgId}
-                purchases={purchases}
-                materialTypes={materialTypes}
-                financialData={financialData}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
-            />,
+        openPanel(
+            'material-payment-form',
             {
-                title: "Nuevo Pago de Material",
-                description: "Registra un nuevo pago por materiales.",
-                size: "lg"
+                projectId,
+                organizationId: orgId,
+                purchases,
+                materialTypes,
+                financialData,
+                onSuccess: () => {
+                    closePanel();
+                    router.refresh();
+                },
             }
         );
     };
 
     const handleEdit = (payment: MaterialPaymentView) => {
-        openModal(
-            <MaterialPaymentForm
-                projectId={projectId}
-                organizationId={orgId}
-                purchases={purchases}
-                materialTypes={materialTypes}
-                financialData={financialData}
-                initialData={payment as any}
-                onSuccess={() => {
-                    closeModal();
+        openPanel(
+            'material-payment-form',
+            {
+                projectId,
+                organizationId: orgId,
+                purchases,
+                materialTypes,
+                financialData,
+                initialData: payment,
+                onSuccess: () => {
+                    closePanel();
                     toast.success("Pago actualizado");
                     router.refresh();
-                }}
-            />,
-            {
-                title: "Editar Pago de Material",
-                description: "Modifica los detalles del pago.",
-                size: "lg"
+                },
             }
         );
     };
@@ -321,14 +319,26 @@ export function MaterialsPaymentsView({
         { label: "Anulado", value: "void" },
     ];
 
-    // Filter payments by search
-    const filteredPayments = searchQuery
-        ? optimisticPayments.filter(p =>
-            p.reference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.wallet_name?.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        : optimisticPayments;
+    // Filter payments by project context + search
+    const filteredPayments = useMemo(() => {
+        let items = optimisticPayments;
+
+        // Project context filter
+        if (activeProjectId) {
+            items = items.filter(p => p.project_id === activeProjectId);
+        }
+
+        // Search filter
+        if (searchQuery) {
+            items = items.filter(p =>
+                p.reference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.wallet_name?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        return items;
+    }, [optimisticPayments, activeProjectId, searchQuery]);
 
     // ========================================
     // KPI CALCULATIONS

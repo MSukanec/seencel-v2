@@ -36,8 +36,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useModal } from "@/stores/modal-store";
-import { MaterialForm, type MaterialCategory, type Unit, type Material } from "@/features/materials/forms/material-form";
-import { CategoryForm } from "@/features/admin/components/forms/category-form";
+import { usePanel } from "@/stores/panel-store";
+import { type MaterialCategory, type Unit, type Material } from "@/features/materials/forms/material-form";
 import { deleteMaterial, deleteMaterialsBulk } from "@/features/materials/actions";
 import { createMaterialCategory, updateMaterialCategory, deleteMaterialCategory } from "@/features/admin/material-actions";
 import { toast } from "sonner";
@@ -102,6 +102,7 @@ export function MaterialsCatalogView({
 }: MaterialsCatalogViewProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
+    const { openPanel, closePanel } = usePanel();
     const [activeTab, setActiveTab] = useState<"all" | "material" | "consumable">("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -481,28 +482,21 @@ export function MaterialsCatalogView({
     // ========================================================================
 
     const handleCreateMaterial = () => {
-        openModal(
-            <MaterialForm
-                mode="create"
-                organizationId={orgId}
-                units={units}
-                categories={categories}
-                providers={providers}
-                isAdminMode={isAdminMode}
-                onSuccess={(newMaterial) => {
-                    closeModal();
-                    // Optimistic update - add to list immediately
+        openPanel(
+            'material-form',
+            {
+                mode: "create",
+                organizationId: orgId,
+                units,
+                categories,
+                providers,
+                isAdminMode,
+                onSuccess: (newMaterial: any) => {
+                    closePanel();
                     if (newMaterial) {
                         addItem(newMaterial as MaterialWithDetails);
                     }
-                }}
-            />,
-            {
-                title: isAdminMode ? "Nuevo Material de Sistema" : "Nuevo Material",
-                description: isAdminMode
-                    ? "Crear un material disponible para todas las organizaciones"
-                    : "Agregar un material personalizado al catálogo de tu organización",
-                size: "md"
+                },
             }
         );
     };
@@ -513,27 +507,22 @@ export function MaterialsCatalogView({
             return;
         }
 
-        openModal(
-            <MaterialForm
-                mode="edit"
-                organizationId={orgId}
-                initialData={material}
-                units={units}
-                categories={categories}
-                providers={providers}
-                isAdminMode={isAdminMode}
-                onSuccess={(updatedMaterial) => {
-                    closeModal();
-                    // Optimistic update - update in list immediately
+        openPanel(
+            'material-form',
+            {
+                mode: "edit",
+                organizationId: orgId,
+                initialData: material,
+                units,
+                categories,
+                providers,
+                isAdminMode,
+                onSuccess: (updatedMaterial: any) => {
+                    closePanel();
                     if (updatedMaterial) {
                         updateItem(material.id, updatedMaterial);
                     }
-                }}
-            />,
-            {
-                title: "Editar Material",
-                description: "Modifica los datos de este material",
-                size: "md"
+                },
             }
         );
     };
@@ -576,47 +565,37 @@ export function MaterialsCatalogView({
     // ========================================================================
 
     const handleCreateCategory = (parentId: string | null = null) => {
-        openModal(
-            <CategoryForm
-                parentId={parentId}
-                onSubmit={async (name, pId) => {
+        openPanel(
+            'category-form',
+            {
+                parentId,
+                onSubmit: async (name: string, pId: string | null) => {
                     const result = await createMaterialCategory(name, pId);
                     if (!result.error) {
                         toast.success("Categoría creada");
                         router.refresh();
                     }
                     return result;
-                }}
-                onSuccess={() => closeModal()}
-            />,
-            {
-                title: parentId ? "Nueva Subcategoría" : "Nueva Categoría",
-                description: parentId
-                    ? "Crear una subcategoría dentro de la categoría seleccionada"
-                    : "Crear una nueva categoría de materiales",
-                size: "md"
+                },
+                onSuccess: () => closePanel(),
             }
         );
     };
 
     const handleEditCategory = (category: CategoryItem) => {
-        openModal(
-            <CategoryForm
-                initialData={category}
-                onSubmit={async (name, pId) => {
+        openPanel(
+            'category-form',
+            {
+                initialData: category,
+                onSubmit: async (name: string, pId: string | null) => {
                     const result = await updateMaterialCategory(category.id, name, pId);
                     if (!result.error) {
                         toast.success("Categoría actualizada");
                         router.refresh();
                     }
                     return result;
-                }}
-                onSuccess={() => closeModal()}
-            />,
-            {
-                title: "Editar Categoría",
-                description: "Modifica el nombre de la categoría",
-                size: "md"
+                },
+                onSuccess: () => closePanel(),
             }
         );
     };

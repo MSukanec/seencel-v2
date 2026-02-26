@@ -1,27 +1,20 @@
 "use client";
 
-import { FormFooter } from "@/components/shared/forms/form-footer";
 import { createProject, updateProject } from "@/features/projects/actions";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { useModal } from "@/stores/modal-store";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { FormGroup } from "@/components/ui/form-group";
+import { usePanel } from "@/stores/panel-store";
+import { SelectField } from "@/components/shared/forms/fields/select-field";
 import { TextField } from "@/components/shared/forms/fields/text-field";
 import { ColorField } from "@/components/shared/forms/fields/color-field";
 import { UploadField, type ImagePalette } from "@/components/shared/forms/fields/upload-field";
 import type { UploadedFile } from "@/hooks/use-file-upload";
 import { ProjectSwapModal } from "@/features/projects/components/project-swap-modal";
-import { type ActiveProject } from "@/components/shared/forms/fields";
+import { type Project } from "@/components/shared/forms/fields";
 
 import { ProjectType, ProjectModality } from "@/types/project";
 import { toast } from "sonner";
+import { Building } from "lucide-react";
 
 // Color palette for projects
 const PROJECT_COLORS = [
@@ -44,7 +37,8 @@ interface ProjectsProjectFormProps {
     maxActiveProjects?: number;
     activeProjectsCount?: number;
     /** List of currently active projects (for swap modal) */
-    activeProjects?: ActiveProject[];
+    activeProjects?: Project[];
+    formId?: string;
 }
 
 export function ProjectsProjectForm({
@@ -57,11 +51,29 @@ export function ProjectsProjectForm({
     maxActiveProjects = -1,
     activeProjectsCount = 0,
     activeProjects = [],
+    formId,
 }: ProjectsProjectFormProps) {
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
     const [isLoading, setIsLoading] = useState(false);
     const t = useTranslations('Project.form');
     const isEditing = mode === 'edit';
+
+    // Self-describe
+    useEffect(() => {
+        setPanelMeta({
+            icon: Building,
+            title: isEditing ? "Editar Proyecto" : t('createTitle'),
+            description: isEditing
+                ? `Modificando "${initialData?.name || 'proyecto'}"`
+                : t('description'),
+            size: "md",
+            footer: {
+                submitLabel: isLoading
+                    ? (isEditing ? t('saving') : t('creating'))
+                    : (isEditing ? t('save') : t('createTitle')),
+            }
+        });
+    }, [isEditing, isLoading, setPanelMeta, t, initialData?.name]);
 
     // Controlled states
     const [name, setName] = useState(initialData?.name || "");
@@ -96,13 +108,8 @@ export function ProjectsProjectForm({
 
     // Semi-autonomous callback — delegates state update to the view
     const handleFormSuccess = (projectData: any) => {
-        closeModal();
+        closePanel();
         onSuccess?.(projectData);
-    };
-
-    const handleCancel = () => {
-        uploadCleanupRef.current?.();
-        closeModal();
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -214,7 +221,7 @@ export function ProjectsProjectForm({
 
     return (
         <>
-            <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+            <form id={formId} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
                 {/* Scrollable Content Body */}
                 <div className="flex-1 overflow-y-auto">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -233,58 +240,41 @@ export function ProjectsProjectForm({
 
                         {/* Status: 50% width */}
                         <div className="md:col-span-6">
-                            <FormGroup
+                            <SelectField
+                                value={status}
+                                onChange={setStatus}
                                 label={t('status')}
-                                htmlFor="status"
+                                options={[
+                                    { value: 'active', label: t('statusActive') },
+                                    { value: 'inactive', label: t('statusInactive') },
+                                    { value: 'completed', label: t('statusCompleted') },
+                                ]}
                                 tooltip="Los proyectos activos cuentan para el límite de tu plan. Marcá como Completado o Inactivo los que ya no estés trabajando para liberar espacio."
-                            >
-                                <Select value={status} onValueChange={setStatus}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="active">{t('statusActive')}</SelectItem>
-                                        <SelectItem value="inactive">{t('statusInactive')}</SelectItem>
-                                        <SelectItem value="completed">{t('statusCompleted')}</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </FormGroup>
+                            />
                         </div>
 
                         {/* Type: 50% width */}
                         <div className="md:col-span-6">
-                            <FormGroup label={t('type')} htmlFor="type">
-                                <Select value={projectTypeId} onValueChange={setProjectTypeId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={t('typePlaceholder')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {types.map((type) => (
-                                            <SelectItem key={type.id} value={type.id}>
-                                                {type.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </FormGroup>
+                            <SelectField
+                                value={projectTypeId}
+                                onChange={setProjectTypeId}
+                                label={t('type')}
+                                placeholder={t('typePlaceholder')}
+                                options={types.map(type => ({ value: type.id, label: type.name }))}
+                                emptyState={{ message: "Sin tipos.", linkText: "Crear en Configuración", linkHref: "/organization/projects" }}
+                            />
                         </div>
 
                         {/* Modality: 50% width */}
                         <div className="md:col-span-6">
-                            <FormGroup label={t('modality')} htmlFor="modality">
-                                <Select value={projectModalityId} onValueChange={setProjectModalityId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={t('modalityPlaceholder')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {modalities.map((modality) => (
-                                            <SelectItem key={modality.id} value={modality.id}>
-                                                {modality.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </FormGroup>
+                            <SelectField
+                                value={projectModalityId}
+                                onChange={setProjectModalityId}
+                                label={t('modality')}
+                                placeholder={t('modalityPlaceholder')}
+                                options={modalities.map(m => ({ value: m.id, label: m.name }))}
+                                emptyState={{ message: "Sin modalidades.", linkText: "Crear en Configuración", linkHref: "/organization/projects" }}
+                            />
                         </div>
 
                         {/* Image Upload: 100% width (UploadField shared field) */}
@@ -336,17 +326,6 @@ export function ProjectsProjectForm({
                         </div>
                     </div>
                 </div>
-
-                <FormFooter
-                    onCancel={handleCancel}
-                    cancelLabel={t('cancel')}
-                    submitLabel={isLoading
-                        ? (isEditing ? t('saving') : t('creating'))
-                        : (isEditing ? t('save') : t('createTitle'))
-                    }
-                    isLoading={isLoading}
-                    className="-mx-4 -mb-4 mt-6"
-                />
             </form>
 
             {/* Swap Modal — shown when user tries to change status to 'active' at limit */}

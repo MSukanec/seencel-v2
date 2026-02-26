@@ -10,12 +10,12 @@
  * - Consistent styling and behavior
  * 
  * Usage:
- * <CurrencyField value={currencyId} onChange={setCurrencyId} currencies={currencies} />
+ * <CurrencyField value={currencyId} onChange={setCurrencyId} />
  */
 
 export { CurrencyField, type CurrencyFieldProps } from "./currency-field";
 export { WalletField, type WalletFieldProps } from "./wallet-field";
-export { ProjectField, type ProjectFieldProps } from "./project-field";
+export { ProjectField, type ProjectFieldProps, type Project } from "./project-field";
 export { AmountField, type AmountFieldProps } from "./amount-field";
 export { DateField, type DateFieldProps } from "./date-field";
 export { NotesField, type NotesFieldProps } from "./notes-field";
@@ -28,8 +28,8 @@ export { SwitchField, type SwitchFieldProps } from "./switch-field";
 export { ColorField, type ColorFieldProps } from "./color-field";
 export { UploadField, type UploadFieldProps } from "./upload-field";
 export { AssignedToField, type AssignedToFieldProps, type AssignableMember } from "./assigned-to-field";
-export { ActiveProjectField, type ActiveProjectFieldProps, type ActiveProject } from "./active-project-field";
 export { SelectField, type SelectFieldProps, type SelectOption, type SelectGroup, type FilterTab, type SelectEmptyState } from "./select-field";
 export { SegmentedField, type SegmentedFieldProps, type SegmentedOption } from "./segmented-field";
 export { PhoneField, type PhoneFieldProps } from "./phone-field";
 export { UnitField, type UnitFieldProps, type UnitOption } from "./unit-field";
+export { TaskField, type TaskFieldProps, type CatalogTaskOption } from "./task-field";

@@ -171,14 +171,17 @@ export interface MaterialCategoryNode {
 /**
  * Get all materials for an organization catalog
  * Returns both system materials and organization-specific materials
+ * System materials (is_system=true) have their prices enriched separately
+ * since the view's LATERAL JOIN only matches prices where material.organization_id = price.organization_id
  */
 export async function getMaterialsForOrganization(organizationId: string): Promise<CatalogMaterial[]> {
     const supabase = await createClient();
 
+    // Fetch org materials + system materials (is_system=true have organization_id=NULL)
     const { data, error } = await supabase
         .schema('catalog').from('materials_view')
         .select('*')
-        .eq('organization_id', organizationId)
+        .or(`organization_id.eq.${organizationId},is_system.eq.true`)
         .order('name', { ascending: true });
 
     if (error) {
@@ -191,28 +194,62 @@ export async function getMaterialsForOrganization(organizationId: string): Promi
         return [];
     }
 
-    return (data || []).map((m: any) => ({
-        id: m.id,
-        name: m.name,
-        code: m.code || null,
-        description: m.description || null,
-        unit_id: m.unit_id,
-        unit_name: m.unit_of_computation || null,
-        unit_symbol: m.unit_symbol || m.unit_of_computation || null,
-        category_id: m.category_id,
-        category_name: m.category_name || null,
-        material_type: m.material_type || 'material',
-        is_system: m.is_system,
-        organization_id: m.organization_id,
-        default_provider_id: m.default_provider_id || null,
-        default_sale_unit_id: m.default_sale_unit_id || null,
-        default_sale_unit_quantity: m.default_sale_unit_quantity || null,
-        sale_unit_name: m.sale_unit_name || null,
-        sale_unit_symbol: m.sale_unit_symbol || null,
-        org_unit_price: m.org_unit_price,
-        org_price_currency_id: m.org_price_currency_id,
-        org_price_valid_from: m.org_price_valid_from || null,
-    }));
+    if (!data || data.length === 0) return [];
+
+    // Enrich: prices for system materials (the view can't resolve them because material.organization_id is NULL)
+    const systemMaterialIds = data.filter((m: any) => m.is_system && !m.org_unit_price).map((m: any) => m.id);
+    let systemPricesMap: Record<string, { unit_price: number; currency_id: string; valid_from: string }> = {};
+
+    if (systemMaterialIds.length > 0) {
+        const { data: prices } = await supabase
+            .schema('catalog').from('material_prices')
+            .select('material_id, unit_price, currency_id, valid_from')
+            .in('material_id', systemMaterialIds)
+            .eq('organization_id', organizationId)
+            .lte('valid_from', new Date().toISOString().split('T')[0])
+            .or('valid_to.is.null,valid_to.gte.' + new Date().toISOString().split('T')[0])
+            .order('valid_from', { ascending: false });
+
+        if (prices) {
+            // Keep only the most recent price per material
+            for (const p of prices) {
+                if (!systemPricesMap[p.material_id]) {
+                    systemPricesMap[p.material_id] = {
+                        unit_price: parseFloat(p.unit_price as any) || 0,
+                        currency_id: p.currency_id,
+                        valid_from: p.valid_from,
+                    };
+                }
+            }
+        }
+    }
+
+    return data.map((m: any) => {
+        const systemPrice = m.is_system ? systemPricesMap[m.id] : null;
+        return {
+            id: m.id,
+            name: m.name,
+            code: m.code || null,
+            description: m.description || null,
+            unit_id: m.unit_id,
+            unit_name: m.unit_of_computation || null,
+            unit_symbol: m.unit_symbol || m.unit_of_computation || null,
+            category_id: m.category_id,
+            category_name: m.category_name || null,
+            material_type: m.material_type || 'material',
+            is_system: m.is_system,
+            organization_id: m.organization_id,
+            default_provider_id: m.default_provider_id || null,
+            default_sale_unit_id: m.default_sale_unit_id || null,
+            default_sale_unit_quantity: m.default_sale_unit_quantity || null,
+            sale_unit_name: m.sale_unit_name || null,
+            sale_unit_symbol: m.sale_unit_symbol || null,
+            // Use view price for org materials, enriched price for system materials
+            org_unit_price: m.org_unit_price ?? systemPrice?.unit_price ?? null,
+            org_price_currency_id: m.org_price_currency_id ?? systemPrice?.currency_id ?? null,
+            org_price_valid_from: m.org_price_valid_from ?? systemPrice?.valid_from ?? null,
+        };
+    });
 }
 
 /**
@@ -316,6 +353,7 @@ export async function getProjectMaterialRequirements(projectId: string): Promise
 
     return (data || []).map((r: any) => ({
         project_id: r.project_id,
+        project_name: r.project_name || null,
         organization_id: r.organization_id,
         material_id: r.material_id,
         material_name: r.material_name || 'Material desconocido',
@@ -323,6 +361,9 @@ export async function getProjectMaterialRequirements(projectId: string): Promise
         category_id: r.category_id,
         category_name: r.category_name,
         total_required: parseFloat(r.total_required) || 0,
+        total_ordered: parseFloat(r.total_ordered) || 0,
+        total_pending: parseFloat(r.total_pending) || 0,
+        coverage_status: r.coverage_status || 'none',
         task_count: parseInt(r.task_count) || 0,
         construction_task_ids: r.construction_task_ids || [],
     }));
@@ -352,6 +393,7 @@ export async function getOrgMaterialRequirements(organizationId: string): Promis
 
     return (data || []).map((r: any) => ({
         project_id: r.project_id,
+        project_name: r.project_name || null,
         organization_id: r.organization_id,
         material_id: r.material_id,
         material_name: r.material_name || 'Material desconocido',
@@ -359,6 +401,9 @@ export async function getOrgMaterialRequirements(organizationId: string): Promis
         category_id: r.category_id,
         category_name: r.category_name,
         total_required: parseFloat(r.total_required) || 0,
+        total_ordered: parseFloat(r.total_ordered) || 0,
+        total_pending: parseFloat(r.total_pending) || 0,
+        coverage_status: r.coverage_status || 'none',
         task_count: parseInt(r.task_count) || 0,
         construction_task_ids: r.construction_task_ids || [],
     }));

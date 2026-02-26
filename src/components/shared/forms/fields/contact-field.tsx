@@ -1,9 +1,11 @@
 /**
- * Contact Field Factory
+ * Contact Field Factory (Smart)
  * Standard 19.13 - Reusable Contact/Provider Selector
  *
- * Avatar: prioridad resolved_avatar_url (Google OAuth) > avatar_url (legacy)
- * Tooltip: explica que "Cliente = Contacto", incluye link a la página de Contactos
+ * - Self-populating: reads contacts from useFormData().clients store
+ * - Avatar: prioridad resolved_avatar_url (Google OAuth) > avatar_url (legacy)
+ * - Tooltip: explica que "Cliente = Contacto", incluye link a la página de Contactos
+ * - Override: pass `contacts` prop to use custom list
  */
 
 "use client";
@@ -13,6 +15,7 @@ import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { FactoryLabel } from "./field-wrapper";
 import { useMemo } from "react";
 import { Link } from "@/i18n/routing";
+import { useFormData } from "@/stores/organization-store";
 
 export interface Contact {
     id: string;
@@ -27,7 +30,8 @@ export interface Contact {
 export interface ContactFieldProps {
     value: string;
     onChange: (value: string) => void;
-    contacts: Contact[];
+    /** Override: pass custom contacts list. Default: reads from store (.clients) */
+    contacts?: Contact[];
     label?: string;
     tooltip?: React.ReactNode;
     required?: boolean;
@@ -72,7 +76,7 @@ const DEFAULT_CONTACT_TOOLTIP = (
 export function ContactField({
     value,
     onChange,
-    contacts,
+    contacts: contactsOverride,
     label = "Cliente",
     tooltip = DEFAULT_CONTACT_TOOLTIP,
     required = false,
@@ -84,6 +88,9 @@ export function ContactField({
     allowNone = true,
     noneLabel = "Sin cliente asignado",
 }: ContactFieldProps) {
+    // Smart: read from store by default, allow override
+    const storeData = useFormData();
+    const contacts = contactsOverride ?? (storeData.clients as Contact[]);
 
     const options: ComboboxOption[] = useMemo(() => {
         const sortedContacts = [...contacts].sort((a, b) =>

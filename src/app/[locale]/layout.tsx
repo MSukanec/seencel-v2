@@ -8,6 +8,7 @@ import { routing } from '@/i18n/routing';
 import { ThemeProvider } from "@/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ModalProvider } from "@/providers/modal-provider";
+import { PanelProvider } from "@/providers/panel-provider";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { AcquisitionTracker } from "@/components/shared/acquisition-tracker";
 import { NavigationProgress } from "@/components/shared/navigation-progress";
@@ -98,6 +99,7 @@ export default async function LocaleLayout({
             <AcquisitionTracker />
             {children}
             <ModalProvider />
+            <PanelProvider />
             <Toaster />
             <ServiceWorkerRegistration />
           </ThemeProvider>

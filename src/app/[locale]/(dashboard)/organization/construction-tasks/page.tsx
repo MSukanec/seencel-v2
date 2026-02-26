@@ -88,6 +88,7 @@ export default async function OrganizationConstructionTasksPage({ params, search
             unit_symbol: t.unit_symbol,
             division_name: t.division_name,
             code: t.code,
+            status: t.status,
         }));
 
         // Check if catalog data is available
