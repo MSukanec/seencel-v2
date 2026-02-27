@@ -493,11 +493,8 @@ export function Toolbar<TData>({
 
     return (
         <>
-            {/* DESKTOP TOOLBAR - Rendered via Portal or Inline */}
-            {mounted && portalToHeader && document.getElementById('toolbar-portal-root')
-                ? createPortal(desktopToolbar, document.getElementById('toolbar-portal-root')!)
-                : desktopToolbar
-            }
+            {/* DESKTOP TOOLBAR - Always inline (portalToHeader deprecated) */}
+            {desktopToolbar}
             {/* MOBILE FLOATING ACTION BAR - iOS Style */}
             {/* Rendered via Portal to escape scroll containers */}
             {/* ============================================ */}

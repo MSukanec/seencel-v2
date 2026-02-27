@@ -7,6 +7,10 @@ import { usePathname } from "next/navigation";
 import { CurrencyModeSelector } from "@/components/shared/currency-mode-selector";
 import { HeaderOrgProjectSelector } from "@/components/layout/dashboard/shared/header-org-project-selector";
 import { HeaderAvatarButton } from "@/components/layout/dashboard/shared/header-avatar-button";
+import { HeaderIconButton } from "@/components/layout/dashboard/shared/header-icon-button";
+import { SidebarNotificationsButton } from "@/components/layout/dashboard/sidebar/buttons/sidebar-notifications-button";
+import { CalendarDays, Users } from "lucide-react";
+import { Link } from "@/i18n/routing";
 
 export interface BreadcrumbItem {
     label: string | React.ReactNode
@@ -63,7 +67,7 @@ export function PageHeader({
     return (
         <div
             className={cn(
-                "sticky top-0 z-10 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border",
+                "sticky top-0 z-10 w-full bg-shell",
                 className
             )}
             {...props}
@@ -124,23 +128,30 @@ export function PageHeader({
                         )}
                     </div>
 
-                    {/* Right: Actions */}
-                    <div id="page-header-actions" className="flex items-center gap-2">
+                    {/* Right: Quick Access + Actions + Avatar */}
+                    <div id="page-header-actions" className="flex items-center gap-1.5">
                         <CurrencyModeSelector />
                         {actions}
 
+                        {/* Quick Access — unified HeaderIconButton */}
+                        <Link href="/organization/planner" title="Planificador">
+                            <HeaderIconButton title="Planificador">
+                                <CalendarDays className="h-4 w-4" />
+                            </HeaderIconButton>
+                        </Link>
+                        <Link href="/organization/team" title="Equipo">
+                            <HeaderIconButton title="Equipo">
+                                <Users className="h-4 w-4" />
+                            </HeaderIconButton>
+                        </Link>
+                        <SidebarNotificationsButton variant="header" />
+
                         {/* User Avatar — always last */}
-                        <div className="ml-1 border-l border-border/50 pl-3">
-                            <HeaderAvatarButton />
-                        </div>
+                        <HeaderAvatarButton />
                     </div>
                 </div>
 
-                {/* Row 2: Toolbar Portal Target - Auto-hides when empty */}
-                <div
-                    id="toolbar-portal-root"
-                    className="px-8 py-1.5 empty:hidden empty:p-0"
-                />
+                {/* Row 2 removed — toolbar now renders inline in content */}
 
                 {children}
             </div>

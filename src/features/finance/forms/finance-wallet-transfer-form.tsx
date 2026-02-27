@@ -2,36 +2,29 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { CalendarIcon, ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { FormGroup } from "@/components/ui/form-group";
-import { FormFooter } from "@/components/shared/forms/form-footer";
-import { useModal } from "@/stores/modal-store";
-import { useFormData } from "@/stores/organization-store";
-
-import { cn } from "@/lib/utils";
 import { formatDateForDB } from "@/lib/timezone-data";
 import { createWalletTransfer } from "@/features/finance/actions";
+import { useFormData } from "@/stores/organization-store";
+
+// Field Factories — Standard 19.10
+import {
+    DateField,
+    WalletField,
+    CurrencyField,
+    AmountField,
+    NotesField,
+} from "@/components/shared/forms/fields";
+
+// FormFooter for standalone usage (inside modals from other call sites)
+import { FormFooter } from "@/components/shared/forms/form-footer";
 
 interface WalletTransferFormProps {
-    organizationId?: string; // Optional - falls back to store
+    organizationId?: string;
     projectId?: string;
-    wallets?: { id: string; wallet_name: string; currency_code?: string }[]; // Optional - falls back to store
-    currencies?: { id: string; name: string; code: string; symbol: string }[]; // Optional - falls back to store
+    wallets?: { id: string; wallet_name: string; currency_code?: string }[];
+    currencies?: { id: string; name: string; code: string; symbol: string }[];
     onSuccess?: () => void;
     onCancel?: () => void;
 }
@@ -44,8 +37,6 @@ export function WalletTransferForm({
     onSuccess,
     onCancel,
 }: WalletTransferFormProps) {
-    const { closeModal } = useModal();
-
     // Get data from Zustand store (works in portals/modals)
     const storeData = useFormData();
 
@@ -100,7 +91,6 @@ export function WalletTransferForm({
 
         // ✅ OPTIMISTIC: Close and show success immediately
         onSuccess?.();
-        closeModal();
         toast.success("Transferencia registrada");
 
         // 🔄 BACKGROUND: Submit to server
@@ -125,7 +115,6 @@ export function WalletTransferForm({
         }
     };
 
-    const selectedCurrency = currencies.find(c => c.id === currencyId);
     const fromWallet = wallets.find(w => w.id === fromWalletId);
     const toWallet = wallets.find(w => w.id === toWalletId);
 
@@ -133,66 +122,28 @@ export function WalletTransferForm({
         <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto">
                 <div className="space-y-4">
-                    {/* Date */}
-                    <FormGroup label="Fecha de Operación" required>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !operationDate && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {operationDate
-                                        ? format(operationDate, "d 'de' MMMM 'de' yyyy", { locale: es })
-                                        : "Seleccionar fecha"}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={operationDate}
-                                    onSelect={(date) => date && setOperationDate(date)}
-                                    initialFocus
-                                    locale={es}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </FormGroup>
+                    {/* Fecha */}
+                    <DateField
+                        label="Fecha de Operación"
+                        value={operationDate}
+                        onChange={(date) => date && setOperationDate(date)}
+                    />
 
-                    {/* Wallets */}
+                    {/* Billeteras */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormGroup label="Billetera Origen" required>
-                            <Select value={fromWalletId} onValueChange={setFromWalletId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar billetera" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {wallets.map((wallet) => (
-                                        <SelectItem key={wallet.id} value={wallet.id}>
-                                            {wallet.wallet_name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
+                        <WalletField
+                            label="Billetera Origen"
+                            value={fromWalletId}
+                            onChange={setFromWalletId}
+                            wallets={wallets}
+                        />
 
-                        <FormGroup label="Billetera Destino" required>
-                            <Select value={toWalletId} onValueChange={setToWalletId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar billetera" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {wallets.map((wallet) => (
-                                        <SelectItem key={wallet.id} value={wallet.id}>
-                                            {wallet.wallet_name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
+                        <WalletField
+                            label="Billetera Destino"
+                            value={toWalletId}
+                            onChange={setToWalletId}
+                            wallets={wallets}
+                        />
                     </div>
 
                     {/* Visual indicator */}
@@ -204,57 +155,36 @@ export function WalletTransferForm({
                         </div>
                     )}
 
-                    {/* Currency and Amount */}
+                    {/* Moneda y Monto */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormGroup label="Moneda" required>
-                            <Select value={currencyId} onValueChange={setCurrencyId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar moneda" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {currencies.map((curr) => (
-                                        <SelectItem key={curr.id} value={curr.id}>
-                                            {curr.name} ({curr.symbol})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
+                        <CurrencyField
+                            value={currencyId}
+                            onChange={setCurrencyId}
+                            currencies={currencies}
+                        />
 
-                        <FormGroup label="Monto" required>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    {selectedCurrency?.symbol || "$"}
-                                </span>
-                                <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    placeholder="0.00"
-                                    className="pl-8"
-                                />
-                            </div>
-                        </FormGroup>
+                        <AmountField
+                            value={amount}
+                            onChange={setAmount}
+                        />
                     </div>
 
-                    {/* Description */}
-                    <FormGroup label="Descripción (opcional)">
-                        <Textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Ej: Transferencia a cuenta bancaria"
-                            rows={2}
-                        />
-                    </FormGroup>
+                    {/* Descripción */}
+                    <NotesField
+                        label="Descripción (opcional)"
+                        value={description}
+                        onChange={setDescription}
+                        placeholder="Ej: Transferencia a cuenta bancaria"
+                        rows={2}
+                        required={false}
+                    />
                 </div>
             </div>
 
             <FormFooter
                 className="-mx-4 -mb-4 mt-6"
                 submitLabel="Registrar Transferencia"
-                onCancel={onCancel || closeModal}
+                onCancel={onCancel}
             />
         </form>
     );

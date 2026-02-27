@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { toast } from "sonner";
-import { FormFooter } from "@/components/shared/forms/form-footer";
+import { Banknote } from "lucide-react";
 import { FormGroup } from "@/components/ui/form-group";
 import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import { createPaymentAction, updatePaymentAction, getCommitmentsByClientAction } from "@/features/clients/actions";
@@ -31,9 +31,9 @@ interface ClientsPaymentFormProps {
     financialData: OrganizationFinancialData;
     initialData?: any;
     onSuccess?: () => void;
-    // Optional: for organization context where project must be selected
     projects?: { id: string; name: string }[];
     showProjectSelector?: boolean;
+    formId?: string; // ← from PanelProvider
 }
 
 export function ClientsPaymentForm({
@@ -44,9 +44,10 @@ export function ClientsPaymentForm({
     initialData,
     onSuccess,
     projects = [],
-    showProjectSelector = false
+    showProjectSelector = false,
+    formId,
 }: ClientsPaymentFormProps) {
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
     const [isLoading, setIsLoading] = useState(false);
     const uploadRef = useRef<MultiFileUploadRef>(null);
 
@@ -203,7 +204,7 @@ export function ClientsPaymentForm({
                 toast.success("Pago registrado correctamente");
             }
             if (onSuccess) onSuccess();
-            closeModal();
+            closePanel();
 
         } catch (error: any) {
             console.error("Error submitting payment:", error);
@@ -215,8 +216,23 @@ export function ClientsPaymentForm({
 
     const isEditing = !!initialData?.id;
 
+    // 🚨 Panel self-description
+    useEffect(() => {
+        setPanelMeta({
+            icon: Banknote,
+            title: isEditing ? "Editar Pago" : "Nuevo Pago de Cliente",
+            description: isEditing
+                ? "Modificá los detalles del pago."
+                : "Registrá un nuevo pago para esta organización.",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Registrar Pago",
+            },
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isEditing]);
+
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+        <form id={formId} onSubmit={handleSubmit} className="space-y-4">
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto">
                 {/* Project Selector - only shown when in organization context */}
@@ -350,13 +366,6 @@ export function ClientsPaymentForm({
                 </div>
             </div>
 
-            {/* Sticky Footer */}
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                onCancel={closeModal}
-                isLoading={isLoading}
-                submitLabel={isEditing ? "Guardar Cambios" : "Registrar Pago"}
-            />
         </form>
     );
 }

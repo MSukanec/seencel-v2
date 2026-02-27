@@ -349,52 +349,7 @@ export function SidebarContent({
                         {drillState === "organization" && (
                             <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="organization">
 
-                                {/* Quick Access Row */}
-                                <div
-                                    className={cn(
-                                        "rounded-lg",
-                                        "bg-sidebar-accent/30",
-                                        "border border-sidebar-border/40",
-                                        "p-1.5 mb-0.5"
-                                    )}
-                                    style={{
-                                        boxShadow: "0 1px 3px 0 rgba(0,0,0,0.12), inset 0 1px 0 0 rgba(255,255,255,0.06)",
-                                    }}
-                                >
-                                    {/* Quick access icons */}
-                                    <div className="grid grid-cols-4 gap-1">
-                                        {/* Notifications — uses the full component with popover */}
-                                        <SidebarTooltip label="Notificaciones" isExpanded={false}>
-                                            <SidebarNotificationsButton variant="quick-access" />
-                                        </SidebarTooltip>
-
-                                        {([
-                                            { icon: CalendarDays, label: 'Planificador', href: '/organization/planner' },
-                                            { icon: Users, label: 'Equipo', href: '/organization/team' },
-                                            { icon: ClipboardList, label: 'Tareas', href: '', disabled: true },
-                                        ] as { icon: typeof CalendarDays; label: string; href: string; disabled?: boolean }[]).map((item) => (
-                                            <SidebarTooltip key={item.label} label={item.label} isExpanded={false}>
-                                                <button
-                                                    onClick={() => {
-                                                        if (item.disabled) return;
-                                                        router.push(item.href as any);
-                                                        onLinkClick?.();
-                                                    }}
-                                                    disabled={item.disabled}
-                                                    className={cn(
-                                                        "flex items-center justify-center h-8 w-full rounded-lg transition-all duration-150",
-                                                        item.disabled
-                                                            ? "text-muted-foreground/40 cursor-not-allowed opacity-50"
-                                                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/80 cursor-pointer",
-                                                        !item.disabled && pathname === item.href && "text-primary bg-primary/10"
-                                                    )}
-                                                >
-                                                    <item.icon className="h-4 w-4" />
-                                                </button>
-                                            </SidebarTooltip>
-                                        ))}
-                                    </div>
-                                </div>
+                                {/* Quick Access moved to header */}
 
                                 {/* Visión General — styled as card matching accordion items */}
                                 <div

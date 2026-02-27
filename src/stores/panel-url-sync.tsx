@@ -12,23 +12,33 @@ function PanelUrlSynchronizerContent() {
     const router = useRouter();
     const { stack, openPanel, closePanel } = usePanel();
 
-    // Guard: prevents URL→Panel sync from reopening a panel that's being closed
-    const closingRef = useRef(false);
+    // Guards to prevent infinite sync loops between URL and store
+    const isSyncingToUrl = useRef(false);
+    const isSyncingFromUrl = useRef(false);
+    const lastPanelFromUrl = useRef<string | null>(null);
 
     // 1. URL → Panel Sync (Deep Linking & Back Button)
     useEffect(() => {
+        // Skip if we're the one who just updated the URL
+        if (isSyncingToUrl.current) {
+            isSyncingToUrl.current = false;
+            return;
+        }
+
         const panelKey = searchParams.get('panel');
 
         if (panelKey) {
-            if (closingRef.current) return;
-
-            // Check if this panel is already open
-            const isAlreadyOpen = stack.some(p => p.panelId === panelKey);
+            // Check if this panel is already open (use fresh store state)
+            const currentStack = usePanel.getState().stack;
+            const isAlreadyOpen = currentStack.some(p => p.panelId === panelKey);
 
             if (!isAlreadyOpen) {
                 const registryItem = PANEL_REGISTRY[panelKey];
                 if (registryItem) {
-                    // Extract panelId from URL and build props
+                    isSyncingFromUrl.current = true;
+                    lastPanelFromUrl.current = panelKey;
+
+                    // Extract props from URL params
                     const props: Record<string, unknown> = {};
                     searchParams.forEach((value, key) => {
                         if (key !== 'panel') {
@@ -43,11 +53,11 @@ function PanelUrlSynchronizerContent() {
                 }
             }
         } else {
-            // URL was cleaned, reset the closing guard
-            closingRef.current = false;
-
-            // If URL param is gone but we have a URL-tracked panel open, close it (browser Back)
-            if (stack.length > 0) {
+            // URL panel param was removed (e.g., browser Back button)
+            // Only close if there IS a panel open AND it wasn't us who removed the param
+            const currentStack = usePanel.getState().stack;
+            if (currentStack.length > 0 && !isSyncingToUrl.current) {
+                isSyncingFromUrl.current = true;
                 closePanel();
             }
         }
@@ -56,13 +66,18 @@ function PanelUrlSynchronizerContent() {
 
     // 2. Panel → URL Sync (User opens/closes panel programmatically)
     useEffect(() => {
+        // Skip if this stack change was triggered by URL sync
+        if (isSyncingFromUrl.current) {
+            isSyncingFromUrl.current = false;
+            return;
+        }
+
         if (stack.length === 0) {
-            // Clean URL if it has a panel param
+            // Panel closed — clean URL if it has a panel param
             if (searchParams.has('panel')) {
-                closingRef.current = true;
+                isSyncingToUrl.current = true;
                 const newParams = new URLSearchParams(searchParams.toString());
                 newParams.delete('panel');
-                // Also clean panelId if present
                 newParams.delete('panelId');
                 const paramString = newParams.toString();
                 router.replace(paramString ? `${pathname}?${paramString}` : pathname);
@@ -74,6 +89,7 @@ function PanelUrlSynchronizerContent() {
         const currentPanelKey = searchParams.get('panel');
 
         if (currentPanelKey !== topPanel.panelId) {
+            isSyncingToUrl.current = true;
             const newParams = new URLSearchParams(searchParams.toString());
             newParams.set('panel', topPanel.panelId);
 

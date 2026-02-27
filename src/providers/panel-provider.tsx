@@ -232,10 +232,27 @@ function PanelFooter({ config, formId, isSubmitting, onCancel }: PanelFooterProp
         );
     }
 
-    // Case 3: Standard Cancel + Submit (default)
+    // Case 3: Standard Cancel + Submit (or Cancel-only if no submitLabel)
     const cancelLabel = config.cancelLabel || "Cancelar";
-    const submitLabel = config.submitLabel || "Guardar";
 
+    // Cancel-only mode: no submitLabel → full-width Cancel
+    if (!config.submitLabel) {
+        return (
+            <div className="flex-none p-3 border-t border-border bg-background">
+                <Button
+                    variant="outline"
+                    type="button"
+                    onClick={onCancel}
+                    disabled={isSubmitting}
+                    className="w-full"
+                >
+                    {cancelLabel}
+                </Button>
+            </div>
+        );
+    }
+
+    // Cancel + Submit: 25%/75% grid
     return (
         <div className="flex-none p-3 border-t border-border bg-background">
             <div className="grid grid-cols-4 gap-3">
@@ -257,7 +274,7 @@ function PanelFooter({ config, formId, isSubmitting, onCancel }: PanelFooterProp
                     className="w-full col-span-3"
                 >
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {submitLabel}
+                    {config.submitLabel}
                 </Button>
             </div>
         </div>

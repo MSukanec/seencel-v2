@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { useUser } from "@/stores/user-store";
 import { useModal } from "@/stores/modal-store";
 import { FeedbackForm } from "@/components/shared/forms/feedback-form";
+import { HeaderIconButton } from "@/components/layout/dashboard/shared/header-icon-button";
 import {
     Home,
     LayoutDashboard,
@@ -85,21 +86,14 @@ export function HeaderAvatarButton() {
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <button
-                    className={cn(
-                        "relative flex items-center justify-center rounded-full transition-all duration-200",
-                        "hover:ring-2 hover:ring-primary/20",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                        open && "ring-2 ring-primary/30",
-                    )}
-                >
+                <HeaderIconButton active={open} className="p-0">
                     <Avatar className="h-8 w-8 rounded-full">
                         <AvatarImage src={avatarUrl} alt={name} />
                         <AvatarFallback className="text-xs rounded-full bg-primary/10 text-primary font-medium">
                             {initials}
                         </AvatarFallback>
                     </Avatar>
-                </button>
+                </HeaderIconButton>
             </PopoverTrigger>
 
             <PopoverContent

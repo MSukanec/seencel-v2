@@ -76,15 +76,15 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
     const isCompact = sidebarWidth < COMPACT_THRESHOLD;
 
     return (
-        <div className="h-screen flex flex-col bg-background overflow-hidden">
+        <div className="h-screen flex flex-col bg-shell overflow-hidden">
             <div className="flex flex-1 overflow-hidden relative">
                 {/* Desktop Sidebar - Hidden on Mobile */}
                 <div className="hidden md:block h-full shrink-0">
                     <Sidebar user={user} />
                 </div>
 
-                {/* Main Content */}
-                <main className="flex-1 overflow-hidden flex flex-col min-w-0">
+                {/* Main Content — Canvas */}
+                <main className="flex-1 overflow-hidden flex flex-col min-w-0 bg-background rounded-tl-2xl">
                     {children}
                 </main>
 

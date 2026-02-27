@@ -52,6 +52,9 @@
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
 
+  /* ── Shell (unified sidebar + header frame) ── */
+  --shell: oklch(0.97 0 0);
+
   /* ── Semantic Colors ── */
   --semantic-positive: #69804a;
   --semantic-positive-fg: oklch(0.985 0 0);
@@ -99,9 +102,9 @@
 
 .dark {
   /* ── Core UI Colors ── */
-  --background: oklch(26.033% 0.00003 271.152);
+  --background: #383838;
   --foreground: oklch(0.985 0 0);
-  --card: oklch(29% 0.00003 0);
+  --card: #242424;
   --card-foreground: oklch(0.985 0 0);
   --popover: #242424;
   --popover-foreground: oklch(0.985 0 0);
@@ -117,14 +120,17 @@
   --ring: oklch(0.62 0.02 270);
 
   /* ── Sidebar ── */
-  --sidebar: #303030;
+  --sidebar: #242424;
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.274 0.006 286.033);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
+
+  /* ── Shell (unified sidebar + header frame) ── */
+  --shell: #242424;
 
   /* ── Semantic Colors (dark overrides) ── */
   --semantic-positive: oklch(67.24% 0.15355 132.579);
@@ -173,6 +179,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  /* Shell → Tailwind */
+  --color-shell: var(--shell);
 
   /* Semantic Colors → Tailwind (bg-semantic-positive, text-semantic-negative, etc.) */
   --color-semantic-positive: var(--semantic-positive);

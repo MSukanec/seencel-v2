@@ -9,8 +9,11 @@
  */
 
 import { ColumnDef } from "@tanstack/react-table";
+import { format } from "date-fns";
 import { createDateColumn, createTextColumn, createMoneyColumn, createStatusColumn } from "@/components/shared/data-table/columns";
+import { parseDateFromDB } from "@/lib/timezone-data";
 import type { StatusOption } from "@/components/shared/data-table/columns";
+import type { ExportColumn } from "@/lib/export";
 
 // ─── Constants ───────────────────────────────────────────
 
@@ -119,3 +122,26 @@ export function getMovementColumns(
         }),
     ];
 }
+
+// ─── Export Column Definitions ───────────────────────────
+
+export const MOVEMENT_EXPORT_COLUMNS: ExportColumn<any>[] = [
+    {
+        key: 'payment_date', header: 'Fecha', transform: (val) => {
+            const date = parseDateFromDB(val);
+            return date ? format(date, 'dd/MM/yyyy') : '';
+        }
+    },
+    { key: 'movement_type', header: 'Tipo', transform: (val) => MOVEMENT_TYPE_LABELS[val] || val || '' },
+    { key: 'concept_name', header: 'Concepto', transform: (val) => val ?? '' },
+    { key: 'description', header: 'Descripción', transform: (val) => val ?? '' },
+    { key: 'amount', header: 'Monto', transform: (val) => Number(val) || 0 },
+    { key: 'currency_code', header: 'Moneda', transform: (val) => val ?? '' },
+    {
+        key: 'status', header: 'Estado', transform: (val) => {
+            const config = MOVEMENT_STATUS_CONFIG.find(s => s.value === val);
+            return config?.label ?? val ?? '';
+        }
+    },
+    { key: 'reference', header: 'Referencia', transform: (val) => val ?? '' },
+];

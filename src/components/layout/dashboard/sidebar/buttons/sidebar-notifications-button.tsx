@@ -22,6 +22,7 @@ import { UserNotification } from "@/features/notifications/queries";
 import { fetchUserNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/features/notifications/actions";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/stores/user-store";
+import { HeaderIconButton } from "@/components/layout/dashboard/shared/header-icon-button";
 
 // ============================================================================
 // SIDEBAR NOTIFICATIONS BUTTON
@@ -34,8 +35,8 @@ import { useUser } from "@/stores/user-store";
 interface SidebarNotificationsButtonProps {
     isExpanded?: boolean;
     className?: string;
-    /** 'sidebar' = original expandable button, 'quick-access' = compact icon-only */
-    variant?: 'sidebar' | 'quick-access';
+    /** 'sidebar' = original expandable button, 'quick-access' = compact icon-only, 'header' = circular icon for top header */
+    variant?: 'sidebar' | 'quick-access' | 'header';
 }
 
 export function SidebarNotificationsButton({
@@ -123,8 +124,16 @@ export function SidebarNotificationsButton({
     };
 
     const isQuickAccess = variant === 'quick-access';
+    const isHeader = variant === 'header';
 
-    const buttonContent = isQuickAccess ? (
+    const buttonContent = isHeader ? (
+        <HeaderIconButton active={open} className="relative">
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-red-600 ring-2 ring-[var(--shell)] animate-pulse" />
+            )}
+        </HeaderIconButton>
+    ) : isQuickAccess ? (
         <button
             className={cn(
                 "flex items-center justify-center h-8 w-full rounded-lg transition-all duration-150 relative",
@@ -184,7 +193,7 @@ export function SidebarNotificationsButton({
 
             <PopoverContent
                 className="w-80 p-0"
-                side={isQuickAccess ? "bottom" : "top"}
+                side={isHeader ? "bottom" : isQuickAccess ? "bottom" : "top"}
                 align="start"
                 sideOffset={8}
             >

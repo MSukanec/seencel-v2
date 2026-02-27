@@ -16,6 +16,7 @@ import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/tool
 import { DateRangeFilter, type DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
 import { startOfDay, endOfDay, isAfter, isBefore, isEqual } from "date-fns";
 import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { useActiveProjectId } from "@/stores/layout-store";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { useRouter } from "@/i18n/routing";
@@ -25,7 +26,7 @@ import { createDateColumn, createTextColumn, createMoneyColumn, createProjectCol
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { PaymentForm } from "../forms/clients-payment-form";
+// PaymentForm loaded via panel registry as 'client-payment-form'
 import { ClientPaymentView, OrganizationFinancialData } from "../types";
 import { deletePaymentAction } from "../actions";
 import { ImportConfig } from "@/lib/import";
@@ -57,7 +58,8 @@ export function ClientsPaymentsView({
     orgId,
     projects = [],
 }: ClientsPaymentsViewProps) {
-    const { openModal } = useModal();
+    const { openModal } = useModal(); // Kept for BulkImportModal only
+    const { openPanel, closePanel } = usePanel();
     const router = useRouter();
     const activeProjectId = useActiveProjectId();
 
@@ -300,37 +302,31 @@ export function ClientsPaymentsView({
     // HANDLERS
     // ========================================
     const handleNewPayment = () => {
-        openModal(
-            <PaymentForm
-                organizationId={orgId}
-                clients={clients}
-                financialData={financialData}
-                projectId={activeProjectId || undefined}
-                showProjectSelector={!activeProjectId}
-                projects={activeProjectId ? [] : projects}
-            />,
-            {
-                title: "Nuevo Pago de Cliente",
-                description: "Registra un nuevo pago para esta organización.",
-                size: "lg"
-            }
-        );
+        openPanel('client-payment-form', {
+            organizationId: orgId,
+            clients,
+            financialData,
+            projectId: activeProjectId || undefined,
+            showProjectSelector: !activeProjectId,
+            projects: activeProjectId ? [] : projects,
+            onSuccess: () => {
+                closePanel();
+                router.refresh();
+            },
+        });
     };
 
     const handleEdit = (payment: ClientPaymentView) => {
-        openModal(
-            <PaymentForm
-                organizationId={orgId}
-                clients={clients}
-                financialData={financialData}
-                initialData={payment as any}
-            />,
-            {
-                title: "Editar Pago",
-                description: "Modifica los detalles del pago.",
-                size: "lg"
-            }
-        );
+        openPanel('client-payment-form', {
+            organizationId: orgId,
+            clients,
+            financialData,
+            initialData: payment,
+            onSuccess: () => {
+                closePanel();
+                router.refresh();
+            },
+        });
     };
 
     const handleImport = () => {

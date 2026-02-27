@@ -24,7 +24,7 @@ export function Sidebar({ user }: SidebarProps) {
     return (
         <aside
             className={cn(
-                "hidden md:flex flex-col border-r border-border bg-sidebar/95 backdrop-blur-xl z-40 h-full shrink-0 transition-all duration-300 ease-in-out",
+                "hidden md:flex flex-col bg-sidebar z-40 h-full shrink-0 transition-all duration-300 ease-in-out",
                 isExpanded ? "w-[240px]" : "w-[50px]",
             )}
             onMouseEnter={() => setIsHovered(true)}

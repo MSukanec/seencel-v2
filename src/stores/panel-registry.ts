@@ -74,4 +74,24 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
         component: dynamic(() => import('@/features/quotes/forms/quote-item-form').then(mod => ({ default: mod.QuoteItemForm }))),
         defaultOptions: { size: 'md' },
     },
+
+    // ========================================================================
+    // Finance Feature
+    // ========================================================================
+    'finance-movement-form': {
+        component: dynamic(() => import('@/features/finance/forms/finance-movement-form').then(mod => ({ default: mod.FinanceMovementForm }))),
+        defaultOptions: { size: 'lg' },
+    },
+    'movement-detail': {
+        component: dynamic(() => import('@/features/finance/components/movement-detail-panel').then(mod => ({ default: mod.MovementDetailPanel }))),
+        defaultOptions: { size: 'md' },
+    },
+
+    // ========================================================================
+    // Clients Feature
+    // ========================================================================
+    'client-payment-form': {
+        component: dynamic(() => import('@/features/clients/forms/clients-payment-form').then(mod => ({ default: mod.ClientsPaymentForm }))),
+        defaultOptions: { size: 'lg' },
+    },
 };

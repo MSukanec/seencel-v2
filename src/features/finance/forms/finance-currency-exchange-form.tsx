@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { useModal } from "@/stores/modal-store";
 import { formatDateForDB } from "@/lib/timezone-data";
 import { createCurrencyExchange } from "@/features/finance/actions";
 import { useFormData } from "@/stores/organization-store";
@@ -35,8 +34,6 @@ export function CurrencyExchangeForm({
     onSuccess,
     onCancel,
 }: CurrencyExchangeFormProps) {
-    const { closeModal } = useModal();
-
     // Get data from Zustand store (works in portals/modals)
     const storeData = useFormData();
 
@@ -107,7 +104,6 @@ export function CurrencyExchangeForm({
 
         // ✅ OPTIMISTIC: Close and show success immediately
         onSuccess?.();
-        closeModal();
         toast.success("Cambio de moneda registrado");
 
         // 🔄 BACKGROUND: Submit to server
@@ -224,7 +220,7 @@ export function CurrencyExchangeForm({
             <FormFooter
                 className="-mx-4 -mb-4 mt-6"
                 submitLabel="Registrar Cambio"
-                onCancel={onCancel || closeModal}
+                onCancel={onCancel}
             />
         </form>
     );

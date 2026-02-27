@@ -2,6 +2,7 @@
 
 /**
  * Finance Movements View
+ * Standard 19.0 - Lean View Pattern (~200 lines)
  * 
  * Vista operativa: tabla pura de movimientos financieros.
  * Orquesta hooks + columnas + UI. No contiene lógica de negocio.
@@ -13,19 +14,22 @@ import { format } from "date-fns";
 import { isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { useTableActions } from "@/hooks/use-table-actions";
 import { useTableFilters } from "@/hooks/use-table-filters";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DateRangeFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
-import { exportToCSV, exportToExcel, type ExportColumn } from "@/lib/export";
-import { FinanceMovementForm } from "../forms/finance-movement-form";
-import { PaymentForm as GeneralCostsPaymentForm } from "@/features/general-costs/forms/general-costs-payment-form";
-import { MovementDetailModal } from "../components/movement-detail-modal";
+import { exportToCSV, exportToExcel } from "@/lib/export";
 import { deleteFinanceMovement } from "../actions";
-import { getMovementColumns, MOVEMENT_TYPE_LABELS, MOVEMENT_TYPE_OPTIONS, MOVEMENT_STATUS_OPTIONS } from "../tables/movements-columns";
+import {
+    getMovementColumns,
+    MOVEMENT_TYPE_OPTIONS,
+    MOVEMENT_STATUS_OPTIONS,
+    MOVEMENT_EXPORT_COLUMNS,
+} from "../tables/movements-columns";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
@@ -44,27 +48,6 @@ interface FinancesMovementsViewProps {
     financialData?: any;
 }
 
-// ─── Export columns definition ───────────────────────────
-
-const EXPORT_COLUMNS: ExportColumn<any>[] = [
-    { key: 'payment_date', header: 'Fecha', transform: (val) => val ? format(new Date(val), 'dd/MM/yyyy') : '' },
-    { key: 'movement_type', header: 'Tipo', transform: (val) => MOVEMENT_TYPE_LABELS[val] || val || '' },
-    { key: 'concept_name', header: 'Concepto', transform: (val) => val ?? '' },
-    { key: 'description', header: 'Descripción', transform: (val) => val ?? '' },
-    { key: 'amount', header: 'Monto', transform: (val) => Number(val) || 0 },
-    { key: 'currency_code', header: 'Moneda', transform: (val) => val ?? '' },
-    {
-        key: 'status', header: 'Estado', transform: (val) => {
-            const map: Record<string, string> = {
-                confirmed: 'Confirmado', completed: 'Confirmado', paid: 'Confirmado',
-                pending: 'Pendiente', rejected: 'Rechazado', cancelled: 'Rechazado', void: 'Anulado',
-            };
-            return map[val] ?? val ?? '';
-        }
-    },
-    { key: 'reference', header: 'Referencia', transform: (val) => val ?? '' },
-];
-
 // ─── Component ───────────────────────────────────────────
 
 export function FinancesMovementsView({
@@ -79,10 +62,18 @@ export function FinancesMovementsView({
     financialData
 }: FinancesMovementsViewProps) {
     const router = useRouter();
-    // TODO(legacy): Migrar FinanceMovementForm y MovementDetailModal a openPanel
-    const { openModal, closeModal } = useModal();
+    const { openPanel, closePanel } = usePanel();
 
-    // ─── Filter config (shared between hook and render) ──
+    // 🚀 OPTIMISTIC UI: Instant visual updates for list operations
+    const {
+        optimisticItems: optimisticMovements,
+        removeItem: optimisticRemove,
+    } = useOptimisticList({
+        items: movements,
+        getItemId: (m) => m.id,
+    });
+
+    // ─── Filter config ───────────────────────────────────
     const walletOptions = wallets.map(w => ({
         label: w.wallet_name || w.name || "Billetera",
         value: w.id,
@@ -100,14 +91,26 @@ export function FinancesMovementsView({
     const filters = useTableFilters({ facets: facetConfigs });
 
     const { handleDelete, handleBulkDelete, DeleteConfirmDialog } = useTableActions<any>({
-        onDelete: (item) => deleteFinanceMovement(item.id, item.movement_type),
+        onDelete: (item) => {
+            // 🚀 Optimistic: remove immediately, then execute server action
+            optimisticRemove(item.id, async () => {
+                try {
+                    await deleteFinanceMovement(item.id, item.movement_type);
+                    toast.success("Movimiento eliminado");
+                } catch {
+                    toast.error("Error al eliminar el movimiento");
+                    router.refresh();
+                }
+            });
+            return Promise.resolve();
+        },
         entityName: "movimiento",
         entityNamePlural: "movimientos",
     });
 
     // ─── Filtered data ───────────────────────────────────
     const filteredMovements = useMemo(() => {
-        return movements.filter(m => {
+        return optimisticMovements.filter(m => {
             // Date range
             if (filters.dateRange?.from || filters.dateRange?.to) {
                 const date = startOfDay(new Date(m.payment_date));
@@ -130,7 +133,7 @@ export function FinancesMovementsView({
             if (walletFilter?.size > 0 && !walletFilter.has(m.wallet_id)) return false;
             return true;
         });
-    }, [movements, filters.dateRange, filters.facetValues]);
+    }, [optimisticMovements, filters.dateRange, filters.facetValues]);
 
     // ─── Lookups ─────────────────────────────────────────
     const getWalletName = (walletId: string) =>
@@ -143,7 +146,7 @@ export function FinancesMovementsView({
     const handleExportCSV = () => {
         exportToCSV({
             data: filteredMovements,
-            columns: EXPORT_COLUMNS,
+            columns: MOVEMENT_EXPORT_COLUMNS,
             fileName: `movimientos-${format(new Date(), 'yyyy-MM-dd')}`,
         });
         toast.success('Exportación CSV descargada');
@@ -152,63 +155,51 @@ export function FinancesMovementsView({
     const handleExportExcel = () => {
         exportToExcel({
             data: filteredMovements,
-            columns: EXPORT_COLUMNS,
+            columns: MOVEMENT_EXPORT_COLUMNS,
             fileName: `movimientos-${format(new Date(), 'yyyy-MM-dd')}`,
             sheetName: 'Movimientos',
         });
         toast.success('Exportación Excel descargada');
     };
 
-    // ─── Handlers ────────────────────────────────────────
-    // TODO(legacy): Migrar a openPanel cuando FinanceMovementForm soporte panels
-    const openNewMovementModal = () => {
+    // ─── Panel handlers ──────────────────────────────────
+    const openNewMovement = () => {
         if (!organizationId) return;
-        openModal(
-            <FinanceMovementForm
-                organizationId={organizationId}
-                concepts={generalCostConcepts}
-                wallets={wallets}
-                currencies={currencies}
-                projects={projects}
-                clients={clients}
-                financialData={financialData}
-            />,
-            {
-                title: "Nuevo Movimiento",
-                description: "Seleccioná el tipo de movimiento y completá los datos.",
-                size: "lg"
-            }
-        );
+        openPanel('finance-movement-form', {
+            organizationId,
+            concepts: generalCostConcepts,
+            wallets,
+            currencies,
+            projects,
+            clients,
+            financialData,
+            onSuccess: () => { closePanel(); router.refresh(); },
+        });
     };
 
     const handleRowClick = (movement: any) => {
-        openModal(
-            <MovementDetailModal
-                movement={movement}
-                walletName={getWalletName(movement.wallet_id)}
-                projectName={getProjectName(movement.project_id)}
-                onEdit={() => { closeModal(); handleEdit(movement); }}
-                onClose={closeModal}
-            />,
-            { title: "Detalle del Movimiento", description: "Información completa del movimiento financiero.", size: "md" }
-        );
+        openPanel('movement-detail', {
+            movement,
+            walletName: getWalletName(movement.wallet_id),
+            projectName: getProjectName(movement.project_id),
+            onEdit: () => handleEdit(movement),
+        });
     };
 
     const handleEdit = (movement: any) => {
         switch (movement.movement_type) {
             case 'general_cost':
-                openModal(
-                    <GeneralCostsPaymentForm
-                        initialData={movement}
-                        concepts={generalCostConcepts}
-                        wallets={wallets}
-                        currencies={currencies}
-                        organizationId={organizationId || ''}
-                        onSuccess={() => { closeModal(); router.refresh(); }}
-                        onCancel={closeModal}
-                    />,
-                    { title: "Editar Pago de Gasto General", description: "Modificá los datos del pago.", size: "md" }
-                );
+                openPanel('finance-movement-form', {
+                    organizationId: organizationId || '',
+                    concepts: generalCostConcepts,
+                    wallets,
+                    currencies,
+                    projects,
+                    clients,
+                    financialData,
+                    initialMovementType: 'general_cost',
+                    onSuccess: () => { closePanel(); router.refresh(); },
+                });
                 break;
             case 'client_payment':
                 toast.info("Para editar cobros de clientes, andá a la sección de Clientes"); break;
@@ -227,45 +218,57 @@ export function FinancesMovementsView({
     };
 
     // ─── Columns ─────────────────────────────────────────
-    const columns = getMovementColumns({
-        getWalletName,
-        getProjectName,
-        showProjectColumn,
-    });
+    const columns = getMovementColumns({ getWalletName, getProjectName, showProjectColumn });
 
-    // ─── Toolbar actions (primary + split button) ────────
+    // ─── Toolbar ─────────────────────────────────────────
     const toolbarActions = organizationId ? [
-        { label: "Nuevo Movimiento", onClick: openNewMovementModal, icon: Plus },
+        { label: "Nuevo Movimiento", onClick: openNewMovement, icon: Plus },
         ...getStandardToolbarActions({
             onExportCSV: handleExportCSV,
             onExportExcel: handleExportExcel,
         }),
     ] : undefined;
 
-    // ─── Stats badge ─────────────────────────────────────
     const statsBadge = (
         <Badge variant="secondary" className="text-xs font-normal">
             {filters.hasActiveFilters
-                ? `${filteredMovements.length} de ${movements.length}`
-                : `${movements.length} movimientos`
+                ? `${filteredMovements.length} de ${optimisticMovements.length}`
+                : `${optimisticMovements.length} movimientos`
             }
         </Badge>
     );
 
+    // ─── Filter toolbar content ──────────────────────────
+    const filterContent = (
+        <div className="flex items-center gap-2">
+            <DateRangeFilter
+                value={filters.dateRange}
+                onChange={filters.setDateRange}
+            />
+            {facetConfigs.map(facet => (
+                <FacetedFilter
+                    key={facet.key}
+                    title={facet.title}
+                    options={facet.options}
+                    selectedValues={filters.facetValues[facet.key] || new Set()}
+                    onSelect={(val) => filters.toggleFacet(facet.key, val)}
+                    onClear={() => filters.clearFacet(facet.key)}
+                />
+            ))}
+        </div>
+    );
+
     // ─── Empty State (no data at all) ────────────────────
-    if (movements.length === 0) {
+    if (optimisticMovements.length === 0) {
         return (
             <>
-                <Toolbar
-                    portalToHeader
-                    actions={toolbarActions}
-                />
+                <Toolbar portalToHeader actions={toolbarActions} />
                 <ViewEmptyState
                     mode="empty"
                     icon={Banknote}
                     viewName="Movimientos Financieros"
                     featureDescription="No hay movimientos registrados. Creá tu primer movimiento para comenzar."
-                    onAction={organizationId ? openNewMovementModal : undefined}
+                    onAction={organizationId ? openNewMovement : undefined}
                     actionLabel="Nuevo Movimiento"
                 />
             </>
@@ -282,24 +285,7 @@ export function FinancesMovementsView({
                     onSearchChange={filters.setSearchQuery}
                     searchPlaceholder="Buscar movimientos..."
                     leftActions={statsBadge}
-                    filterContent={
-                        <div className="flex items-center gap-2">
-                            <DateRangeFilter
-                                value={filters.dateRange}
-                                onChange={filters.setDateRange}
-                            />
-                            {facetConfigs.map(facet => (
-                                <FacetedFilter
-                                    key={facet.key}
-                                    title={facet.title}
-                                    options={facet.options}
-                                    selectedValues={filters.facetValues[facet.key] || new Set()}
-                                    onSelect={(val) => filters.toggleFacet(facet.key, val)}
-                                    onClear={() => filters.clearFacet(facet.key)}
-                                />
-                            ))}
-                        </div>
-                    }
+                    filterContent={filterContent}
                     actions={toolbarActions}
                 />
                 <ViewEmptyState
@@ -323,24 +309,7 @@ export function FinancesMovementsView({
                 onSearchChange={filters.setSearchQuery}
                 searchPlaceholder="Buscar movimientos..."
                 leftActions={statsBadge}
-                filterContent={
-                    <div className="flex items-center gap-2">
-                        <DateRangeFilter
-                            value={filters.dateRange}
-                            onChange={filters.setDateRange}
-                        />
-                        {facetConfigs.map(facet => (
-                            <FacetedFilter
-                                key={facet.key}
-                                title={facet.title}
-                                options={facet.options}
-                                selectedValues={filters.facetValues[facet.key] || new Set()}
-                                onSelect={(val) => filters.toggleFacet(facet.key, val)}
-                                onClear={() => filters.clearFacet(facet.key)}
-                            />
-                        ))}
-                    </div>
-                }
+                filterContent={filterContent}
                 actions={toolbarActions}
             />
 
