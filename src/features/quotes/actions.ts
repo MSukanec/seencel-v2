@@ -266,7 +266,21 @@ export async function updateQuoteStatus(id: string, status: string) {
     }
 
     // If transitioning to 'sent', freeze recipe prices into quote_items
+    // and auto-increment version if this is a re-send
     if (status === 'sent') {
+        // Check if this is a re-send by looking for items with existing snapshots
+        // (snapshot_mat/lab/ext_cost are set by freeze_quote_prices on each send)
+        // Check all three snapshot fields as some items may only have labor or ext costs
+        const { data: snapshotItems } = await supabase
+            .schema("finance").from("quote_items")
+            .select("id")
+            .eq("quote_id", id)
+            .or("snapshot_mat_cost.gt.0,snapshot_lab_cost.gt.0,snapshot_ext_cost.gt.0")
+            .limit(1);
+
+        const isResend = snapshotItems && snapshotItems.length > 0;
+
+        // Freeze/re-freeze prices
         const { error: freezeError } = await supabase
             .schema("finance")
             .rpc('freeze_quote_prices', { p_quote_id: id });
@@ -274,6 +288,27 @@ export async function updateQuoteStatus(id: string, status: string) {
         if (freezeError) {
             console.error("Error freezing quote prices:", freezeError);
             return { error: sanitizeError(freezeError) };
+        }
+
+        // Auto-increment version on re-send
+        if (isResend) {
+            const { data: currentQuote } = await supabase
+                .schema("finance").from("quotes")
+                .select("version")
+                .eq("id", id)
+                .single();
+
+            if (currentQuote) {
+                const { error: versionError } = await supabase
+                    .schema("finance").from("quotes")
+                    .update({ version: (currentQuote.version || 1) + 1 })
+                    .eq("id", id);
+
+                if (versionError) {
+                    console.error("Error incrementing version:", versionError);
+                    // Non-blocking: version increment failure shouldn't block the send
+                }
+            }
         }
     }
 
@@ -337,8 +372,8 @@ export async function approveQuote(quoteId: string) {
         };
     }
 
-    // Call the atomic database function
-    const { data, error } = await supabase.rpc(
+    // Call the atomic database function (lives in construction schema)
+    const { data, error } = await supabase.schema("construction").rpc(
         'approve_quote_and_create_tasks',
         {
             p_quote_id: quoteId,

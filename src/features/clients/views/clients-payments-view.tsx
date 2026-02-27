@@ -4,6 +4,10 @@ import { useState, useMemo, useCallback } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Banknote, Plus, FilterX } from "lucide-react";
 import { toast } from "sonner";
+import { exportToCSV, exportToExcel, ExportColumn } from "@/lib/export";
+import { parseDateFromDB } from "@/lib/timezone-data";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
@@ -340,9 +344,62 @@ export function ClientsPaymentsView({
         );
     };
 
-    const handleExport = () => {
-        // TODO: Export to Excel
-        console.log("Export clicked");
+    // ========================================
+    // EXPORT
+    // ========================================
+    const exportColumns: ExportColumn<ClientPaymentView>[] = [
+        {
+            key: 'payment_date',
+            header: 'Fecha',
+            transform: (val) => {
+                const d = parseDateFromDB(val);
+                return d ? format(d, 'dd/MM/yyyy', { locale: es }) : '';
+            }
+        },
+        { key: 'project_name' as keyof ClientPaymentView, header: 'Proyecto', transform: (val) => val ?? '' },
+        { key: 'client_name', header: 'Cliente', transform: (val) => val ?? '' },
+        { key: 'commitment_concept', header: 'Compromiso', transform: (val) => val ?? 'Sin compromiso' },
+        { key: 'wallet_name', header: 'Billetera', transform: (val) => val ?? '' },
+        {
+            key: 'amount',
+            header: 'Monto',
+            transform: (val) => typeof val === 'number' ? val : 0
+        },
+        { key: 'currency_code' as keyof ClientPaymentView, header: 'Moneda', transform: (val) => val ?? '' },
+        {
+            key: 'status',
+            header: 'Estado',
+            transform: (val) => {
+                const map: Record<string, string> = {
+                    confirmed: 'Confirmado',
+                    pending: 'Pendiente',
+                    rejected: 'Rechazado',
+                    void: 'Anulado',
+                };
+                return map[val] ?? val ?? '';
+            }
+        },
+        { key: 'reference' as keyof ClientPaymentView, header: 'Referencia', transform: (val) => val ?? '' },
+        { key: 'notes' as keyof ClientPaymentView, header: 'Notas', transform: (val) => val ?? '' },
+    ];
+
+    const handleExportCSV = () => {
+        exportToCSV({
+            data: filteredData,
+            columns: exportColumns,
+            fileName: `cobros-pagos-${format(new Date(), 'yyyy-MM-dd')}`,
+        });
+        toast.success('Exportación CSV descargada');
+    };
+
+    const handleExportExcel = () => {
+        exportToExcel({
+            data: filteredData,
+            columns: exportColumns,
+            fileName: `cobros-pagos-${format(new Date(), 'yyyy-MM-dd')}`,
+            sheetName: 'Pagos de Clientes',
+        });
+        toast.success('Exportación Excel descargada');
     };
 
     // ========================================
@@ -414,8 +471,8 @@ export function ClientsPaymentsView({
                         },
                         ...getStandardToolbarActions({
                             onImport: handleImport,
-                            onExportCSV: handleExport,
-                            onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                            onExportCSV: handleExportCSV,
+                            onExportExcel: handleExportExcel,
                         }),
                     ]}
                 />
@@ -493,8 +550,8 @@ export function ClientsPaymentsView({
                     },
                     ...getStandardToolbarActions({
                         onImport: handleImport,
-                        onExportCSV: handleExport,
-                        onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                        onExportCSV: handleExportCSV,
+                        onExportExcel: handleExportExcel,
                     }),
                 ]}
             />

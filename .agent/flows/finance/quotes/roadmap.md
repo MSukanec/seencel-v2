@@ -72,9 +72,10 @@
 **Descripción**: Retener un % de cada factura (típico 5-10%). Campo `retention_percent` en contrato, cálculo automático en cada invoice, vista de retenciones acumuladas, liberación al completar.
 **Dependencia**: Requiere L2 (Owner Invoices) implementado.
 
-### L4: Versionado real del presupuesto
-**Descripción**: El campo `version` existe pero no hay UI para comparar versiones. Crear tabla `quote_versions` o usar snapshots JSON para guardar estados históricos.
-**Impacto**: Permite tracking de cambios y negociaciones con el cliente.
+### L4: Versionado real del presupuesto (historial de versiones)
+**Prioridad**: 🟡 Media
+**Descripción**: El auto-incremento de versión al re-enviar ya fue implementado (Feb 2026). Sin embargo, actualmente no se guarda historial: al volver a borrador y re-enviar, la versión anterior se sobreescribe. El siguiente paso es crear una tabla `quote_versions` (o snapshots JSON) que capture el estado completo del presupuesto + items en cada envío, y una UI de comparación para ver diferencias entre versiones.
+**Impacto**: Permite tracking de cambios y negociaciones con el cliente. Crítico para auditoría y transparencia comercial.
 
 ### L5: Documentos adjuntos y firma electrónica
 **Descripción**: Adjuntar contratos firmados (Supabase Storage). Integración con DocuSign/HelloSign para firma digital.

@@ -191,6 +191,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
         id: c.id,
         name: c.contact_full_name || c.contact_company_name || 'Sin nombre',
         project_id: c.project_id,
+        contact_id: c.contact_id,
     }));
 
     // Format members (for AssignedToField)

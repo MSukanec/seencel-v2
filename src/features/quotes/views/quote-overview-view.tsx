@@ -45,6 +45,7 @@ import { updateQuoteDocumentTerms, updateQuoteStatus, approveQuote, convertQuote
 import { toast } from "sonner";
 import { parseDateFromDB, formatDateForDB } from "@/lib/timezone-data";
 import { cn } from "@/lib/utils";
+import { useOrganizationStore } from "@/stores/organization-store";
 import {
     SettingsSection,
     SettingsSectionContainer,
@@ -132,6 +133,7 @@ function getTransitionConfig(
                 "Los campos del documento (nombre, condiciones, ítems) se bloquearán para edición.",
                 "Los costos del catálogo ya no afectarán este documento.",
                 `El valor total congelado será: ${total}`,
+                "Si ya fue enviado antes, la versión se incrementará automáticamente.",
                 "Podrás volver a Borrador si necesitás hacer cambios.",
             ],
             confirmLabel: "Enviar al cliente",
@@ -139,32 +141,40 @@ function getTransitionConfig(
     }
 
     if (targetStatus === "approved" && currentStatus === "draft") {
+        const consequences = [
+            `Se crearán ${itemCount} tareas de obra en el proyecto vinculado.`,
+            "Los precios se congelarán con los costos actuales.",
+            "El documento quedará bloqueado permanentemente.",
+            `El valor total del presupuesto es: ${total}`,
+            "Esta acción no se puede deshacer.",
+        ];
+        if (!quote.client_id) {
+            consequences.push("⚠️ No hay cliente asignado. No se podrán generar compromisos de pago hasta asignar uno.");
+        }
         return {
             title: "Aprobar Presupuesto",
             description: "Estás a punto de aprobar este presupuesto directamente desde borrador.",
-            consequences: [
-                `Se crearán ${itemCount} tareas de obra en el proyecto vinculado.`,
-                "Los precios se congelarán con los costos actuales.",
-                "El documento quedará bloqueado permanentemente.",
-                `El valor total del presupuesto es: ${total}`,
-                "Esta acción no se puede deshacer.",
-            ],
+            consequences,
             confirmLabel: "Aprobar y crear tareas",
             confirmVariant: "default",
         };
     }
 
     if (targetStatus === "approved" && currentStatus === "sent") {
+        const consequences = [
+            `Se crearán ${itemCount} tareas de obra en el proyecto vinculado.`,
+            "Los precios ya están congelados desde el envío.",
+            "El documento quedará bloqueado permanentemente.",
+            `El valor total aprobado será: ${total}`,
+            "Esta acción no se puede deshacer.",
+        ];
+        if (!quote.client_id) {
+            consequences.push("⚠️ No hay cliente asignado. No se podrán generar compromisos de pago hasta asignar uno.");
+        }
         return {
             title: "Aprobar Presupuesto",
             description: "El cliente aceptó — estás a punto de aprobar este presupuesto.",
-            consequences: [
-                `Se crearán ${itemCount} tareas de obra en el proyecto vinculado.`,
-                "Los precios ya están congelados desde el envío.",
-                "El documento quedará bloqueado permanentemente.",
-                `El valor total aprobado será: ${total}`,
-                "Esta acción no se puede deshacer.",
-            ],
+            consequences,
             confirmLabel: "Aprobar y crear tareas",
             confirmVariant: "default",
         };
@@ -288,7 +298,12 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
     const handleClientChange = (v: string) => {
         if (isReadOnly) return;
         setClientId(v);
-        triggerAutoSave({ client_id: v || null });
+        // quotes.client_id FK → contacts.contacts.id, but ContactField returns
+        // project_clients.id. Look up the contact_id from the store.
+        const storeClients = useOrganizationStore.getState().clients;
+        const match = storeClients.find((c: any) => c.id === v);
+        const contactId = match?.contact_id || v || null;
+        triggerAutoSave({ client_id: contactId || null });
     };
 
     const handleProjectChange = (v: string) => {
@@ -389,12 +404,26 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
     const buildToolbarActions = () => {
         const actions: { label: string; icon: any; onClick: () => void; disabled?: boolean }[] = [];
 
+        // Approval requires project + items
+        const canApprove = !!quote.project_id && items.length > 0;
+        const handleApproveClick = () => {
+            if (!quote.project_id) {
+                toast.warning("Asigná un proyecto antes de aprobar. La aprobación crea tareas de obra que necesitan un proyecto destino.");
+                return;
+            }
+            if (items.length === 0) {
+                toast.warning("Agregá al menos un ítem antes de aprobar.");
+                return;
+            }
+            requestTransition("approved", handleApprove);
+        };
+
         if (quote.status === "draft") {
             actions.push({ label: "Marcar como Enviado", icon: Send, onClick: () => requestTransition("sent", () => handleStatusChange("sent")), disabled: statusLoading });
-            actions.push({ label: "Aprobar", icon: CheckCircle2, onClick: () => requestTransition(quote.status === "draft" ? "approved" : "approved", handleApprove), disabled: statusLoading });
+            actions.push({ label: "Aprobar", icon: CheckCircle2, onClick: handleApproveClick, disabled: statusLoading });
             actions.push({ label: "Rechazar", icon: XCircle, onClick: () => requestTransition("rejected", () => handleStatusChange("rejected")), disabled: statusLoading });
         } else if (quote.status === "sent") {
-            actions.push({ label: "Aprobar", icon: CheckCircle2, onClick: () => requestTransition("approved", handleApprove), disabled: statusLoading });
+            actions.push({ label: "Aprobar", icon: CheckCircle2, onClick: handleApproveClick, disabled: statusLoading });
             actions.push({ label: "Rechazar", icon: XCircle, onClick: () => requestTransition("rejected", () => handleStatusChange("rejected")), disabled: statusLoading });
             actions.push({ label: "Volver a Borrador", icon: FileText, onClick: () => requestTransition("draft", () => handleStatusChange("draft")), disabled: statusLoading });
         } else if (quote.status === "approved" && quote.quote_type === "quote" && quote.project_id) {

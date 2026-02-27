@@ -32,6 +32,7 @@ interface Client {
     id: string;
     name: string;
     project_id?: string;
+    contact_id?: string;
 }
 
 interface Member {
