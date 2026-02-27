@@ -109,15 +109,42 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 
 **Ubicación:** `@/components/shared/data-table/`
 
-### Uso
+### Column Factories (OBLIGATORIO)
+
+Usar los column factories estándar en vez de definir `ColumnDef` manualmente:
+
+```tsx
+import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
+
+const columns = [
+    createDateColumn({ accessorKey: "payment_date", avatarFallbackKey: "creator_name" }),
+    createTextColumn({ accessorKey: "name", title: "Nombre", truncate: true }),
+    createMoneyColumn({ accessorKey: "amount", prefix: "auto", colorMode: "auto" }),
+];
+```
+
+| Factory | Propósito |
+|---------|-----------|
+| `createDateColumn` | Fecha con avatar del creador, formato localizado |
+| `createTextColumn` | Texto con truncate, subtitle, customRender |
+| `createMoneyColumn` | Monto con auto +/-, colores, exchange rate |
+| `createProjectColumn` | Proyecto con avatar de color/imagen |
+
+### Columnas Separadas (OBLIGATORIO)
+
+> ⛔ **NUNCA** definir columnas inline dentro de la vista. Extraerlas a `feature/tables/*-columns.tsx`.
+
+### Uso de DataTable
 
 ```tsx
 <DataTable
-    columns={columns}  // NO agregar columna "actions" manual
+    columns={columns}
     data={data}
     enableRowActions={true}
     onEdit={handleEdit}
-    onDelete={handleDelete}
+    onDelete={handleDelete}        // ← viene de useTableActions
+    onBulkDelete={handleBulkDelete} // ← viene de useTableActions
+    onClearFilters={filters.clearAll}  // ← viene de useTableFilters
 />
 ```
 
@@ -142,13 +169,27 @@ toast.success("Guardado exitosamente");
 toast.error("Error al guardar");
 ```
 
-### Dialogs
+### Dialogs de Confirmación (Delete)
 
-> ⛔ **NUNCA** usar `window.confirm()`. Siempre usar `AlertDialog`.
+> ⛔ **NUNCA** reimplementar `AlertDialog` para delete. Usar `useTableActions`.
 
 ```tsx
-import { AlertDialog, AlertDialogAction, ... } from "@/components/ui/alert-dialog";
+import { useTableActions } from "@/hooks/use-table-actions";
+
+const { handleDelete, handleBulkDelete, DeleteConfirmDialog } = useTableActions({
+    onDelete: (item) => deleteAction(item.id),
+    entityName: "material",
+    entityNamePlural: "materiales",
+});
+
+// En el DataTable:
+<DataTable onDelete={handleDelete} onBulkDelete={handleBulkDelete} />
+
+// Al final del JSX:
+<DeleteConfirmDialog />
 ```
+
+> ⛔ **NUNCA** usar `window.confirm()`.
 
 ---
 
@@ -168,6 +209,9 @@ const file = await compressImage(rawFile, 'avatar'); // 'avatar' | 'cover' | 'do
 
 - [ ] ¿Lista vacía muestra `ViewEmptyState` con ambos modos (empty + no-results)?
 - [ ] ¿Toolbar usa `portalToHeader`?
-- [ ] ¿DataTable para listas > 20 items?
+- [ ] ¿DataTable con columnas en archivo `tables/*-columns.tsx`?
+- [ ] ¿Column Factories (`createDateColumn`, `createTextColumn`, `createMoneyColumn`)?
+- [ ] ¿Delete usa `useTableActions` (NO AlertDialog manual)?
+- [ ] ¿Filtros usan `useTableFilters`?
 - [ ] ¿Toasts para feedback, no mensajes inline?
 - [ ] ¿Imágenes comprimidas antes de upload?

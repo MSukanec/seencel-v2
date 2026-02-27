@@ -7,7 +7,7 @@ import { DataTableColumnHeader } from "@/components/shared/data-table/data-table
 import { createDateColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
-import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
+import { MetricCard } from "@/components/cards";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
@@ -309,28 +309,32 @@ export function FinancesCapitalView({
             <div className="space-y-6">
                 {/* ── KPI Row ─────────────────────────────────────── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <DashboardKpiCard
+                    <MetricCard
                         title="Capital Neto"
-                        value={money.format(kpis.netCapital)}
+                        amount={kpis.netCapital}
                         icon={<Wallet className="h-5 w-5" />}
                         iconClassName={kpis.netCapital >= 0 ? "bg-amount-positive/10 text-amount-positive" : "bg-amount-negative/10 text-amount-negative"}
+                        size="default"
                     />
-                    <DashboardKpiCard
+                    <MetricCard
                         title="Aportes Totales"
-                        value={money.format(kpis.contributions)}
+                        amount={kpis.contributions}
                         icon={<ArrowUpRight className="h-5 w-5" />}
                         iconClassName="bg-amount-positive/10 text-amount-positive"
+                        size="default"
                     />
-                    <DashboardKpiCard
+                    <MetricCard
                         title="Retiros Totales"
-                        value={money.format(kpis.withdrawals)}
+                        amount={kpis.withdrawals}
                         icon={<ArrowDownRight className="h-5 w-5" />}
                         iconClassName="bg-amount-negative/10 text-amount-negative"
+                        size="default"
                     />
-                    <DashboardKpiCard
+                    <MetricCard
                         title="Participantes"
                         value={kpis.participantCount.toString()}
                         icon={<Users className="h-5 w-5" />}
+                        size="default"
                     />
                 </div>
 

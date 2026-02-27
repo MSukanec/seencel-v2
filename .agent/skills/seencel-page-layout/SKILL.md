@@ -96,7 +96,7 @@ Reservado **EXCLUSIVAMENTE** para componentes genéricos:
 | `layout/` | Estructura visual (Header, Sidebar, Footer, PageWrapper). |
 | `shared/` | Componentes reusables complejos (DeleteModal, FormFooter, DataTable). |
 | `charts/` | Componentes de gráficos (BaseBarChart, BasePieChart, etc.). |
-| `dashboard/` | Componentes de dashboard (DashboardCard, DashboardKpiCard). |
+| `cards/` | Sistema unificado de cards (MetricCard, ChartCard). |
 
 > ⛔ **PROHIBIDO**: Crear carpetas de negocio aquí (ej. `src/components/users`).
 > ⛔ **PROHIBIDO**: Usar `src/components/global`. Usar `shared` en su lugar.
@@ -114,12 +114,14 @@ src/features/[feature]/
 ├── forms/                               # 📝 Formularios (ver skill seencel-forms-modals)
 │   ├── [feature]-[entity]-form.tsx
 │   └── [feature]-[other]-form.tsx
+├── tables/                              # 📊 Definiciones de columnas de DataTable
+│   └── [entity]-columns.tsx             # Columnas extraídas + constantes
 ├── pages/                               # 🖥️ SERVER COMPONENTS (data fetching)
 │   ├── index.ts                         # Exporta todas las pages
 │   ├── [feature]-list-page.tsx          # Server Component: lista
 │   └── [feature]-detail-page.tsx        # Server Component: detalle
 └── views/                               # 👁️ CLIENT COMPONENTS (UI interactiva)
-    ├── [feature]-list-view.tsx          # Client: UI de la lista
+    ├── [feature]-list-view.tsx          # Client: ORQUESTA hooks + UI (~150-200 líneas)
     ├── [feature]-overview-view.tsx      # Client: Tab resumen/overview
     ├── [feature]-[tab1]-view.tsx        # Client: Tab específico 1
     ├── [feature]-[tab2]-view.tsx        # Client: Tab específico 2
@@ -247,91 +249,139 @@ export default async function FeaturePage({ params }: Props) {
 
 ## 🛠️ 3. Implementación de Views (`views/*.tsx`)
 
-### Naming Convention
-**OBLIGATORIO**: Los archivos deben seguir patrones claros:
+### 🚨 ARQUITECTURA LEAN: Hooks Globales + Columnas Extraídas
 
-#### Páginas dentro de Features (`-page.tsx`)
-Se usan cuando una feature tiene una "página de detalle" que se importa desde `app/` pero la lógica vive en `features/`:
+> [!CAUTION]
+> **Una vista NUNCA debería superar las 200-250 líneas.** Si tu vista tiene más de 300 líneas, algo está mal.
+> La vista solo ORQUESTA: conecta hooks con UI. No contiene lógica de negocio.
+
+#### Estructura de una vista con DataTable:
 
 ```
-src/features/subcontracts/
+features/[feature]/
+├── tables/
+│   └── [entity]-columns.tsx       # Columnas + constantes (type labels, etc)
 ├── views/
-│   ├── subcontracts-list-view.tsx      # Vista principal (listado)
-│   ├── subcontracts-overview-view.tsx  # Vista overview (dashboard)
-│   └── details/                        # 📁 Páginas de detalle
-│       ├── subcontract-detail-page.tsx # ⭐ PAGE del detalle (Server Component)
-│       ├── subcontract-overview-view.tsx
-│       ├── subcontract-payments-view.tsx
-│       └── subcontract-tasks-view.tsx
+│   └── [feature]-list-view.tsx    # Solo orquesta (~150-200 líneas)
 ```
+
+#### Hooks Globales OBLIGATORIOS:
+
+| Hook | Ubicación | Propósito |
+|------|-----------|----------|
+| `useTableActions` | `@/hooks/use-table-actions` | Delete single/bulk + dialog confirmación |
+| `useTableFilters` | `@/hooks/use-table-filters` | Search + date range + faceted filters |
+
+#### Ejemplo de referencia (Gold Standard):
+
+```tsx
+"use client";
+import { useTableActions } from "@/hooks/use-table-actions";
+import { useTableFilters } from "@/hooks/use-table-filters";
+import { getEntityColumns, ENTITY_TYPE_OPTIONS, ENTITY_STATUS_OPTIONS } from "../tables/entity-columns";
+
+export function EntityListView({ items, wallets, organizationId }: Props) {
+    // 1. Hooks globales
+    const filters = useTableFilters({
+        facets: [
+            { key: "type", title: "Tipo", options: ENTITY_TYPE_OPTIONS },
+            { key: "status", title: "Estado", options: ENTITY_STATUS_OPTIONS },
+        ],
+    });
+
+    const { handleDelete, handleBulkDelete, DeleteConfirmDialog } = useTableActions({
+        onDelete: (item) => deleteEntity(item.id),
+        entityName: "elemento",
+    });
+
+    // 2. Filtrado
+    const filtered = useMemo(() =>
+        items.filter(item => {
+            if (filters.facetValues.type?.size > 0 && !filters.facetValues.type.has(item.type)) return false;
+            if (filters.facetValues.status?.size > 0 && !filters.facetValues.status.has(item.status)) return false;
+            return true;
+        }),
+    [items, filters.facetValues]);
+
+    // 3. Columnas desde archivo separado
+    const columns = getEntityColumns({ wallets });
+
+    // 4. Render: solo toolbar + table + dialog
+    return (
+        <div className="space-y-4">
+            <Toolbar
+                portalToHeader
+                searchQuery={filters.searchQuery}
+                onSearchChange={filters.setSearchQuery}
+                filterContent={
+                    <div className="flex items-center gap-2">
+                        {facetConfigs.map(f => (
+                            <FacetedFilter
+                                key={f.key} title={f.title} options={f.options}
+                                selectedValues={filters.facetValues[f.key]}
+                                onSelect={val => filters.toggleFacet(f.key, val)}
+                                onClear={() => filters.clearFacet(f.key)}
+                            />
+                        ))}
+                    </div>
+                }
+                actions={[{ label: "Crear", icon: Plus, onClick: handleCreate }]}
+            />
+            <DataTable
+                columns={columns}
+                data={filtered}
+                onDelete={handleDelete}
+                onBulkDelete={handleBulkDelete}
+                onClearFilters={filters.clearAll}
+            />
+            <DeleteConfirmDialog />
+        </div>
+    );
+}
+```
+
+> [!IMPORTANT]
+> **¿Por qué extraer columnas?** Porque en las mejores apps (Stripe, Linear), las columnas son definiciones declarativas separadas de la lógica de la vista. Esto permite:
+> - Reutilizar columnas en múltiples vistas
+> - Testear columnas independientemente
+> - Mantener la vista bajo 200 líneas
+
+#### Archivo de Columnas (`tables/entity-columns.tsx`):
+
+```tsx
+import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
+
+// Constantes exportadas para filtros facetados
+export const ENTITY_TYPE_OPTIONS = [
+    { label: "Tipo A", value: "type_a" },
+    { label: "Tipo B", value: "type_b" },
+];
+
+export function getEntityColumns(options: { wallets: any[] }) {
+    return [
+        createDateColumn({ accessorKey: "created_at" }),
+        createTextColumn({ accessorKey: "name", title: "Nombre" }),
+        createMoneyColumn({ accessorKey: "amount", prefix: "auto", colorMode: "auto" }),
+        // Status con badge (custom — no hay factory aún)
+        { accessorKey: "status", ... },
+    ];
+}
+```
+
+### Naming Convention
 
 | Tipo | Sufijo | Responsabilidad | Ejemplo |
 |------|--------|-----------------|---------|
 | Page | `-page.tsx` | Server Component, fetch de datos, estructura Tabs | `subcontract-detail-page.tsx` |
 | View | `-view.tsx` | Client Component, UI interactiva, Toolbar | `subcontracts-list-view.tsx` |
+| Columns | `-columns.tsx` | Definición de columnas de DataTable | `movements-columns.tsx` |
 
-#### Reglas de Nombrado
-*   ✅ `subcontracts-list-view.tsx` (Vista de listado)
-*   ✅ `subcontract-detail-page.tsx` (Página de detalle - singular!)
-*   ✅ `subcontract-payments-view.tsx` (Vista dentro del detalle)
-*   ❌ `list-view.tsx` (falta prefijo de feature)
-*   ❌ `overview.tsx` (falta sufijo -view)
-*   ❌ `subcontracts-detail-view.tsx` (las pages NO terminan en -view)
-
-> [!IMPORTANT]
-> **Páginas de detalle**: Cuando una entidad tiene su propia página de detalle (`/subcontracts/[id]`), crear una carpeta `views/details/` con el `-page.tsx` y sus `-view.tsx` internos.
-
-### Toolbar y Actions (🚨 CRÍTICO)
-
-**TODAS las acciones de creación ("Crear X", "Nuevo X") DEBEN ir en el `<Toolbar portalToHeader />`.**
-
-NUNCA pongas botones de acción directamente en el body de la View. El Toolbar se teleporta al header de la página.
-
-```tsx
-// src/features/[feature]/views/[feature]-list-view.tsx
-"use client";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { ViewEmptyState } from "@/components/shared/empty-state";
-
-export function ListView({ data }) {
-    const handleCreate = () => { /* ... */ };
-
-    // ✅ CORRECTO: ViewEmptyState con action + Toolbar en paralelo
-    if (data.length === 0) {
-        return (
-            <>
-                <Toolbar
-                    portalToHeader
-                    actions={[
-                        { label: "Crear", icon: Plus, onClick: handleCreate }
-                    ]}
-                />
-                <ViewEmptyState
-                    mode="empty"
-                    icon={ListIcon}
-                    viewName="Elementos"
-                    featureDescription="Creá tu primer elemento para comenzar."
-                    onAction={handleCreate}
-                    actionLabel="Crear Elemento"
-                />
-            </>
-        );
-    }
-
-    // ✅ CORRECTO: Toolbar siempre presente cuando hay data
-    return (
-        <>
-            <Toolbar
-                portalToHeader
-                actions={[
-                    { label: "Crear", icon: Plus, onClick: handleCreate }
-                ]}
-            />
-            <DataTable data={data} />
-        </>
-    );
-}
-```
+> [!WARNING]
+> **⛔ PROHIBIDO en vistas:**
+> - Definir columnas inline (extraerlas a `tables/`)
+> - Reimplementar delete/bulk delete (usar `useTableActions`)
+> - Reimplementar estados de filtro (usar `useTableFilters`)
+> - Superar 250 líneas
 
 ### ❌ Anti-patrón: Botones en Body
 ```tsx
@@ -553,102 +603,69 @@ Después de una mutación, usar `router.refresh()` como fallback combinado con o
 
 ---
 
-## 📊 11. Dashboard Components & Charts (OBLIGATORIO)
+## 📊 11. Cards & Charts (OBLIGATORIO)
 
-### 11.1 Componentes de Dashboard
+### 11.1 Sistema Unificado de Cards
 
-Cuando construyas vistas con KPIs o gráficos, **SIEMPRE** usar los componentes estándar del dashboard:
+Todos los KPIs y gráficos usan el sistema unificado en `@/components/cards`:
 
 | Componente | Uso | Import |
 |-----------|-----|--------|
-| `DashboardKpiCard` | Mostrar un KPI numérico (monto, porcentaje, count) | `@/components/dashboard/dashboard-kpi-card` |
-| `DashboardCard` | Wrapper para gráficos, tablas o contenido complejo | `@/components/dashboard/dashboard-card` |
+| `MetricCard` | KPI numérico (monto, porcentaje, count) | `@/components/cards` |
+| `ChartCard` | Wrapper para gráficos con header estandarizado | `@/components/cards` |
+
+> [!CAUTION]
+> **⛔ LEGACY — NO USAR:**
+> - `DashboardKpiCard` → usar `MetricCard`
+> - `DashboardCard` → usar `ChartCard`
+> - Cards manuales con `<Card>` de shadcn → usar `MetricCard` o `ChartCard`
 
 ```tsx
-// ❌ INCORRECTO - Usar Card manual para KPIs
-<Card>
-    <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-            Saldo Pendiente
-        </CardTitle>
-    </CardHeader>
-    <CardContent>
-        <p className="text-2xl font-mono font-bold">{formatMoney(value)}</p>
-    </CardContent>
-</Card>
+// ❌ INCORRECTO - Componentes legacy
+import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
+import { DashboardCard } from "@/components/dashboard/dashboard-card";
 
-// ✅ CORRECTO - Usar DashboardKpiCard
-<DashboardKpiCard
+// ✅ CORRECTO - Sistema unificado
+import { MetricCard, ChartCard } from "@/components/cards";
+
+<MetricCard
     title="Saldo Pendiente"
-    value={formatMoney(value)}
+    amount={value}
     icon={<DollarSign className="h-5 w-5" />}
     description="Monto restante por pagar"
-    compact={true}
-    size="large"
+    size="default"
 />
+
+<ChartCard
+    title="Evolución"
+    description="Últimos 12 meses"
+    icon={<TrendingUp className="h-4 w-4" />}
+>
+    <LazyDualAreaChart ... />
+</ChartCard>
 ```
 
-### 11.2 DashboardKpiCard Props
+### 11.2 MetricCard Props
 
 | Prop | Tipo | Descripción |
 |------|------|-------------|
 | `title` | string | Título del KPI |
-| `value` | string \| number | Valor principal |
+| `value` | string | Valor principal (texto libre) |
+| `amount` | number | Valor numérico (formateado automáticamente) |
 | `icon` | ReactNode | Icono decorativo |
-| `trend` | object | `{ value, label, direction: 'up'|'down'|'neutral' }` |
-| `description` | string | Texto secundario debajo del valor |
-| `currencyBreakdown` | array | Para KPIs bi-monetarios |
-| `compact` | boolean | Si usar notación compacta (31.4M en vez de 31.431.097) |
-| `size` | 'default' \| 'large' \| 'hero' | Tamaño del valor |
+| `description` | string | Texto secundario |
+| `size` | `'default'` \| `'large'` | Tamaño del valor (usar `default` siempre) |
 
-### 11.3 DashboardCard para Gráficos
+> [!IMPORTANT]
+> **Usar `size="default"` en TODAS las MetricCards** para mantener consistencia visual entre vistas.
 
-```tsx
-// ❌ INCORRECTO - Card manual para gráficos
-<Card>
-    <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Evolución
-        </CardTitle>
-        <CardDescription>Descripción</CardDescription>
-    </CardHeader>
-    <CardContent>
-        <BaseDualAreaChart ... />
-    </CardContent>
-</Card>
-
-// ✅ CORRECTO - DashboardCard
-<DashboardCard
-    title="Evolución"
-    description="Descripción"
-    icon={<TrendingUp className="h-4 w-4" />}
->
-    <BaseDualAreaChart ... />
-</DashboardCard>
-```
-
-### 11.4 Colores de Charts (🚨 CRÍTICO)
+### 11.3 Colores de Charts (🚨 CRÍTICO)
 
 > [!CAUTION]
 > **NUNCA usar variables CSS `hsl(var(--chart-X))` en props de colores de Recharts.**
 > Las variables CSS no se parsean correctamente. Usar valores HEX directos.
 
-```tsx
-// ❌ INCORRECTO - Variables CSS no funcionan
-<BaseDualAreaChart
-    primaryColor="hsl(var(--chart-2))"
-    secondaryColor="hsl(var(--chart-5))"
-/>
-
-// ✅ CORRECTO - Valores HEX directos
-<BaseDualAreaChart
-    primaryColor="#22c55e"  // Verde
-    secondaryColor="#8B5CF6" // Violeta
-/>
-```
-
-**Paleta de colores estándar (HEX):**
+**Paleta estándar:**
 
 | Nombre | HEX | Uso típico |
 |--------|-----|------------|
@@ -666,8 +683,19 @@ Cuando construyas vistas con KPIs o gráficos, **SIEMPRE** usar los componentes 
 ### Estructura
 - [ ] `page.tsx` exporta `generateMetadata`
 - [ ] Tabs en prop `tabs` de PageWrapper
-- [ ] Views en archivos `*-view.tsx`
+- [ ] Views en archivos `*-view.tsx` (~150-200 líneas máx)
+- [ ] Columnas extraídas en `tables/*-columns.tsx`
 - [ ] Toolbar con `portalToHeader` en vistas de listado
+
+### Hooks Globales
+- [ ] Delete usa `useTableActions` (NO reimplementar AlertDialog)
+- [ ] Filtros usan `useTableFilters` (NO crear estados sueltos)
+- [ ] Column Factories (`createDateColumn`, `createTextColumn`, `createMoneyColumn`)
+
+### Cards & Charts
+- [ ] KPIs usan `MetricCard` de `@/components/cards` (NO `DashboardKpiCard`)
+- [ ] Gráficos usan `ChartCard` (NO `DashboardCard`)
+- [ ] Charts usan componentes `Lazy*`
 
 ### i18n
 - [ ] Textos en `messages/es.json`
@@ -676,7 +704,5 @@ Cuando construyas vistas con KPIs o gráficos, **SIEMPRE** usar los componentes 
 - [ ] Rutas registradas en `routing.ts`
 
 ### Performance
-- [ ] Delete usa `useOptimisticList`
-- [ ] Charts usan componentes `Lazy*`
 - [ ] Tab switching usa estado local
 - [ ] Animaciones `duration-150` o más rápidas

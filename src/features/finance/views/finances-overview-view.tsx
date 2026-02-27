@@ -2,10 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { FinanceDashboardProvider, useFinanceDashboard } from "@/features/finance/context/finance-dashboard-context";
-import { DashboardWidgetGrid } from "@/components/widgets/grid";
-import { WIDGET_REGISTRY, DEFAULT_FINANCE_LAYOUT } from "@/components/widgets/registry";
-import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
-import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { MetricCard, ChartCard, InsightCard } from "@/components/cards";
 import { BaseDualAreaChart } from "@/components/charts/area/base-dual-area-chart";
 import { BaseDonutChart } from "@/components/charts/pie/base-donut-chart";
 import { TrendingUp, TrendingDown, BarChart3, PieChart, Activity, Wallet, Lightbulb, Banknote } from "lucide-react";
@@ -14,12 +11,9 @@ import { es } from "date-fns/locale";
 import { ChartConfig } from "@/components/ui/chart";
 import { useMoney } from "@/hooks/use-money";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { InsightCard } from "@/features/insights/components/insight-card";
 import { generateFinanceInsights } from "@/features/insights/logic/finance";
 import { cn } from "@/lib/utils";
 import { DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { LayoutDashboard, Check } from "lucide-react";
 
 interface FinancesOverviewViewProps {
     movements: any[];
@@ -60,9 +54,6 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
 // Inner component to consume the context
 function FinancesDashboardContent() {
     const { kpis, filteredMovements, isMixView, wallets } = useFinanceDashboard();
-    const [isEditing, setIsEditing] = useState(false);
-
-    // Legacy Chart Logic (kept for comparison/legacy support)
     const money = useMoney();
 
     // ========================================
@@ -189,196 +180,163 @@ function FinancesDashboardContent() {
 
 
     return (
-        <div className="space-y-8">
-            {/* Toolbar - Portal to Header */}
-            <Toolbar
-                portalToHeader
-                actions={[{
-                    label: isEditing ? "Guardar" : "Personalizar",
-                    onClick: () => setIsEditing(!isEditing),
-                    icon: isEditing ? Check : LayoutDashboard,
-                    variant: isEditing ? "default" : "outline"
-                }]}
-            />
+        <div className="space-y-6">
 
+            {/* ── KPI Cards ─────────────────────────────────── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricCard
+                    title="Ingresos Totales"
+                    amount={kpis.ingresos}
+                    icon={<TrendingUp className="h-5 w-5" />}
+                    iconClassName="bg-amount-positive/10 text-amount-positive"
+                    description="Cobros y aportes"
+                    currencyBreakdown={isMixView && kpis.ingresosBreakdown.length > 1 ? kpis.ingresosBreakdown : undefined}
+                    size="default"
+                />
+                <MetricCard
+                    title="Egresos Totales"
+                    amount={kpis.egresos}
+                    icon={<TrendingDown className="h-5 w-5" />}
+                    iconClassName="bg-amount-negative/10 text-amount-negative"
+                    description="Pagos y retiros"
+                    currencyBreakdown={isMixView && kpis.egresosBreakdown.length > 1 ? kpis.egresosBreakdown : undefined}
+                    size="default"
+                />
+                <MetricCard
+                    title="Balance Neto"
+                    amount={kpis.balance}
+                    icon={<Wallet className="h-5 w-5" />}
+                    iconClassName={kpis.balance >= 0 ? "bg-amount-positive/10 text-amount-positive" : "bg-amount-negative/10 text-amount-negative"}
+                    description="Ingresos - Egresos"
+                    size="default"
+                />
+                <MetricCard
+                    title="Promedio Mensual"
+                    amount={kpis.monthlyAverage}
+                    icon={<Activity className="h-5 w-5" />}
+                    description="Ingreso promedio / mes"
+                    size="default"
+                />
+            </div>
 
-            {/* Enterprise Widget Grid */}
-            <DashboardWidgetGrid
-                registry={WIDGET_REGISTRY}
-                layout={DEFAULT_FINANCE_LAYOUT}
-                isEditing={isEditing}
-                storageKey="seencel_finance_layout_v2"
-            />
+            {/* ── Charts Row ────────────────────────────────── */}
+            <div className="grid gap-6 lg:grid-cols-2 items-start [&>*]:min-w-0">
+                <ChartCard
+                    title="Evolución Financiera"
+                    description="Ingresos vs Egresos por mes"
+                    icon={<BarChart3 className="w-4 h-4" />}
+                >
+                    {evolutionData.length > 0 ? (
+                        <BaseDualAreaChart
+                            data={evolutionData}
+                            xKey="month"
+                            primaryKey="ingresos"
+                            secondaryKey="egresos"
+                            primaryLabel="Ingresos"
+                            secondaryLabel="Egresos"
+                            height={220}
+                            config={evolutionChartConfig}
+                            gradient
+                            showLegend
+                        />
+                    ) : (
+                        <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
+                            Sin datos de movimientos
+                        </div>
+                    )}
+                </ChartCard>
 
-            <div className="border-t border-border/50 my-6" />
+                <ChartCard
+                    title="Saldo por Billetera"
+                    description="Balance actual por cuenta"
+                    icon={<PieChart className="w-4 h-4" />}
+                >
+                    {distributionData.length > 0 ? (
+                        <BaseDonutChart
+                            data={distributionData}
+                            nameKey="name"
+                            valueKey="value"
+                            height={200}
+                            config={distributionChartConfig}
+                        />
+                    ) : (
+                        <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                            Sin datos de movimientos
+                        </div>
+                    )}
+                </ChartCard>
+            </div>
 
-            {/* 2. LEGACY: Comparison Section */}
-            <div className="space-y-4 opacity-75">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold tracking-tight">Legacy View (Comparación)</h2>
-                </div>
+            {/* ── Insights + Activity ───────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ChartCard
+                    title="Insights Financieros"
+                    description="Análisis automático de tu situación"
+                    icon={<Lightbulb className="w-4 h-4" />}
+                >
+                    {insights.length > 0 ? (
+                        <div className="space-y-2">
+                            {insights.map((insight) => (
+                                <InsightCard key={insight.id} insight={insight} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                            No hay insights en este momento
+                        </div>
+                    )}
+                </ChartCard>
 
-                {/* Legacy KPI Cards using Context Data */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <DashboardKpiCard
-                        title="Ingresos Totales"
-                        amount={kpis.ingresos}
-                        icon={<TrendingUp className="h-5 w-5" />}
-                        iconClassName="bg-amount-positive/10 text-amount-positive"
-                        description="Cobros y aportes"
-                        currencyBreakdown={isMixView && kpis.ingresosBreakdown.length > 1 ? kpis.ingresosBreakdown : undefined}
-                        size="hero"
-                    />
-                    <DashboardKpiCard
-                        title="Egresos Totales"
-                        amount={kpis.egresos}
-                        icon={<TrendingDown className="h-5 w-5" />}
-                        iconClassName="bg-amount-negative/10 text-amount-negative"
-                        description="Pagos y retiros"
-                        currencyBreakdown={isMixView && kpis.egresosBreakdown.length > 1 ? kpis.egresosBreakdown : undefined}
-                        size="hero"
-                    />
-                    <DashboardKpiCard
-                        title="Balance Neto"
-                        amount={kpis.balance}
-                        icon={<Wallet className="h-5 w-5" />}
-                        iconClassName={kpis.balance >= 0 ? "bg-amount-positive/10 text-amount-positive" : "bg-amount-negative/10 text-amount-negative"}
-                        description="Ingresos - Egresos"
-                        size="hero"
-                    />
-                    <DashboardKpiCard
-                        title="Promedio Mensual"
-                        amount={kpis.monthlyAverage}
-                        icon={<Activity className="h-5 w-5" />}
-                        description="Ingreso promedio / mes"
-                        size="hero"
-                    />
-                </div>
+                <ChartCard
+                    title="Actividad Reciente"
+                    description="Últimos movimientos registrados"
+                    icon={<Activity className="w-4 h-4" />}
+                >
+                    {recentActivity.length > 0 ? (
+                        <div className="space-y-4">
+                            {recentActivity.map((movement, i) => {
+                                const isPositive = Number(movement.amount_sign ?? 1) > 0;
+                                const hasAvatar = movement.creator_avatar_url;
+                                const creatorInitial = movement.creator_full_name?.charAt(0)?.toUpperCase() || '?';
 
-                {/* ROW 2: Charts - 2 Column Grid */}
-                <div className="grid gap-6 lg:grid-cols-2 items-start [&>*]:min-w-0">
-                    {/* 1. Evolución Financiera */}
-                    <DashboardCard
-                        title="Evolución Financiera"
-                        description="Ingresos vs Egresos por mes"
-                        icon={<BarChart3 className="w-4 h-4" />}
-                    >
-                        {evolutionData.length > 0 ? (
-                            <BaseDualAreaChart
-                                data={evolutionData}
-                                xKey="month"
-                                primaryKey="ingresos"
-                                secondaryKey="egresos"
-                                primaryLabel="Ingresos"
-                                secondaryLabel="Egresos"
-                                height={220}
-                                config={evolutionChartConfig}
-                                gradient
-                                showLegend
-                            />
-                        ) : (
-                            <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
-                                Sin datos de movimientos
-                            </div>
-                        )}
-                    </DashboardCard>
-
-                    {/* 2. Saldo por Billetera */}
-                    <DashboardCard
-                        title="Saldo por Billetera"
-                        description="Balance actual por cuenta"
-                        icon={<PieChart className="w-4 h-4" />}
-                    >
-                        {distributionData.length > 0 ? (
-                            <BaseDonutChart
-                                data={distributionData}
-                                nameKey="name"
-                                valueKey="value"
-                                height={200}
-                                config={distributionChartConfig}
-                            />
-                        ) : (
-                            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
-                                Sin datos de movimientos
-                            </div>
-                        )}
-                    </DashboardCard>
-                </div>
-
-                {/* ROW 3: Insights + Activity (2 Column Grid) */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* LEFT: Insights */}
-                    <DashboardCard
-                        title="Insights Financieros"
-                        description="Análisis automático de tu situación"
-                        icon={<Lightbulb className="w-4 h-4" />}
-                    >
-                        {insights.length > 0 ? (
-                            <div className="space-y-2">
-                                {insights.map((insight) => (
-                                    <InsightCard key={insight.id} insight={insight} />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
-                                No hay insights en este momento
-                            </div>
-                        )}
-                    </DashboardCard>
-
-                    {/* RIGHT: Recent Activity with Creator Avatars */}
-                    <DashboardCard
-                        title="Actividad Reciente"
-                        description="Últimos movimientos registrados"
-                        icon={<Activity className="w-4 h-4" />}
-                    >
-                        {recentActivity.length > 0 ? (
-                            <div className="space-y-4">
-                                {recentActivity.map((movement, i) => {
-                                    const isPositive = Number(movement.amount_sign ?? 1) > 0;
-                                    const hasAvatar = movement.creator_avatar_url;
-                                    const creatorInitial = movement.creator_full_name?.charAt(0)?.toUpperCase() || '?';
-
-                                    return (
-                                        <div key={i} className="flex items-center gap-3">
-                                            {/* Creator Avatar */}
-                                            {hasAvatar ? (
-                                                <img
-                                                    src={movement.creator_avatar_url}
-                                                    alt={movement.creator_full_name || 'Usuario'}
-                                                    className="h-9 w-9 rounded-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
-                                                    {creatorInitial}
-                                                </div>
-                                            )}
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium truncate">
-                                                    {movement.entity_name || movement.description || "Movimiento"}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {movement.creator_full_name && <span>{movement.creator_full_name} · </span>}
-                                                    {formatDistanceToNow(new Date(movement.payment_date), { addSuffix: true, locale: es })}
-                                                </p>
+                                return (
+                                    <div key={i} className="flex items-center gap-3">
+                                        {hasAvatar ? (
+                                            <img
+                                                src={movement.creator_avatar_url}
+                                                alt={movement.creator_full_name || 'Usuario'}
+                                                className="h-9 w-9 rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+                                                {creatorInitial}
                                             </div>
-                                            <span className={cn(
-                                                "text-sm font-semibold",
-                                                isPositive ? "text-amount-positive" : "text-amount-negative"
-                                            )}>
-                                                {isPositive ? "+" : "-"}{movement.currency_symbol || "$"} {Math.abs(Number(movement.amount)).toLocaleString('es-AR')}
-                                            </span>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">
+                                                {movement.entity_name || movement.description || "Movimiento"}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {movement.creator_full_name && <span>{movement.creator_full_name} · </span>}
+                                                {formatDistanceToNow(new Date(movement.payment_date), { addSuffix: true, locale: es })}
+                                            </p>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
-                                Sin actividad reciente
-                            </div>
-                        )}
-                    </DashboardCard>
-                </div>
+                                        <span className={cn(
+                                            "text-sm font-semibold",
+                                            isPositive ? "text-amount-positive" : "text-amount-negative"
+                                        )}>
+                                            {isPositive ? "+" : "-"}{movement.currency_symbol || "$"} {Math.abs(Number(movement.amount)).toLocaleString('es-AR')}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                            Sin actividad reciente
+                        </div>
+                    )}
+                </ChartCard>
             </div>
         </div>
     );

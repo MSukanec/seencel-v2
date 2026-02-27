@@ -55,7 +55,7 @@
   /* ── Semantic Colors ── */
   --semantic-positive: #69804a;
   --semantic-positive-fg: oklch(0.985 0 0);
-  --semantic-negative: oklch(0.54 0.19 24);
+  --semantic-negative: oklch(43.454% 0.11876 32.203);
   --semantic-negative-fg: oklch(0.985 0 0);
   --semantic-warning: oklch(0.75 0.15 75);
   --semantic-warning-fg: oklch(0.20 0.02 75);
@@ -127,8 +127,8 @@
   --sidebar-ring: oklch(0.552 0.016 285.938);
 
   /* ── Semantic Colors (dark overrides) ── */
-  --semantic-positive: oklch(0.65 0.17 145);
-  --semantic-negative: oklch(0.65 0.20 24);
+  --semantic-positive: oklch(67.24% 0.15355 132.579);
+  --semantic-negative: oklch(56.079% 0.18871 27.183);
   --semantic-warning: oklch(0.78 0.14 75);
   --semantic-info: oklch(0.65 0.17 250);
   --semantic-neutral: oklch(0.65 0.10 235);

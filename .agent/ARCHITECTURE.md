@@ -79,7 +79,8 @@ features/finance/
 ├── actions/     → Operaciones de servidor (crear, editar, borrar)
 ├── components/  → Piezas de UI específicas de finanzas
 ├── forms/       → Formularios
-├── views/       → Vistas de página
+├── tables/      → Columnas de DataTable extraídas
+├── views/       → Vistas de página (~150-200 líneas máx)
 ├── hooks/       → Lógica específica
 └── types/       → Tipos de datos
 ```
@@ -104,7 +105,8 @@ features/finance/
 ```
 components/
 ├── ui/          → Botones, inputs, cards (base)
-├── shared/      → Componentes compartidos (PageWrapper, Toolbar)
+├── cards/       → MetricCard, ChartCard (sistema unificado)
+├── shared/      → Componentes compartidos (PageWrapper, Toolbar, DataTable)
 └── layout/      → Sidebar, header, navegación
 ```
 
@@ -145,6 +147,8 @@ components/
 | Hook | Función |
 |------|---------|
 | `use-money` | Operaciones de dinero, formateo, display mode |
+| `use-table-actions` | Delete single/bulk + dialog confirmación (GLOBAL) |
+| `use-table-filters` | Search + date range + faceted filters (GLOBAL) |
 | `use-optimistic-action` | Updates optimistas con rollback |
 | `use-financial-features` | Feature flags financieros |
 | `use-sidebar-data` | Datos para sidebar |
@@ -216,4 +220,4 @@ Cuando audites una carpeta:
 ---
 
 **Mantenido por:** Seencel Team  
-**Actualizado:** Febrero 2025
+**Actualizado:** Febrero 2026
