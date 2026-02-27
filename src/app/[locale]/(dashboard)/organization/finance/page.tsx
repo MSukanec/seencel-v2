@@ -89,8 +89,6 @@ export default async function FinancePage({ params, searchParams }: { params: Pr
             type: m.movement_type,
             payment_date: m.movement_date,
             amount: m.original_amount,
-            signed_amount: m.signed_amount,
-            functional_amount: m.original_amount * (m.exchange_rate || 1),
             currency_id: m.currency_id,
             currency_code: cur?.code || "",
             currency_symbol: cur?.symbol || "$",

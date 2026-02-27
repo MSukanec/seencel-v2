@@ -48,16 +48,14 @@ export function FinancesCapitalView({
     const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
 
     // =========================================================================
-    // KPI Calculations
+    // KPI Calculations (multi-currency safe via money.sum)
     // =========================================================================
     const kpis = useMemo(() => {
-        const contributions = movements
-            .filter(m => m.type === "contribution")
-            .reduce((sum, m) => sum + Number(m.functional_amount || m.amount || 0), 0);
+        const contributionItems = movements.filter(m => m.type === "contribution");
+        const withdrawalItems = movements.filter(m => m.type === "withdrawal");
 
-        const withdrawals = movements
-            .filter(m => m.type === "withdrawal")
-            .reduce((sum, m) => sum + Number(m.functional_amount || m.amount || 0), 0);
+        const contributions = money.sum(contributionItems).total;
+        const withdrawals = money.sum(withdrawalItems).total;
 
         return {
             contributions,
@@ -65,7 +63,7 @@ export function FinancesCapitalView({
             netCapital: contributions - withdrawals,
             participantCount: participants.length,
         };
-    }, [movements, participants]);
+    }, [movements, participants, money]);
 
     // =========================================================================
     // Filtered movements
