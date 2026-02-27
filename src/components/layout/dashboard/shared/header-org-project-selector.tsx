@@ -360,7 +360,6 @@ export function HeaderOrgProjectSelector() {
         '/organization/reports', '/organizacion/informes',
         '/organization/projects', '/organizacion/proyectos',
         '/organization/team', '/organizacion/equipo',
-        '/organization/capital', '/organizacion/capital',
     ];
 
     const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/)/, '');

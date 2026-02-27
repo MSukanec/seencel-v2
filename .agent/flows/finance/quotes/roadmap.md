@@ -33,6 +33,7 @@
 | **Banner de documento bloqueado** *(Feb 2026)* | Alerta visible en tabs Resumen e Items cuando el presupuesto está bloqueado |
 | **Fix approve_quote project_id** *(Feb 2026)* | Corregido uso de `v_quote.project_id` en función SQL (antes usaba `qi.project_id` nullable) |
 | **Fix tasks default en QuoteItemForm** *(Feb 2026)* | Guard defensivo `tasks = []` para evitar crash en `filter` |
+| **Columna Precio Venta en Items** *(Feb 2026)* | Columna visual `Precio Venta = Costo Unit. × (1 + Margen%)` entre Margen y Subtotal |
 
 ---
 
@@ -42,11 +43,6 @@
 **Prioridad**: 🟢 Baja
 **Descripción**: El botón "Exportar" en la lista de presupuestos dice "Próximamente". Ya tenemos la infra de Excel instalada.
 **Archivos**: `quotes-list-view.tsx`
-
-### P2: Agregar precio de venta visible
-**Prioridad**: 🟡 Media
-**Descripción**: Agregar columna "Precio Venta" = Costo × (1 + Margen%) para transparencia.
-**Archivos**: `quote-base-view.tsx`
 
 ### P3: PDF generation review
 **Prioridad**: 🟡 Media

@@ -90,10 +90,6 @@ export const routing = defineRouting({
             en: '/organization/finance',
             es: '/organizacion/finanzas'
         },
-        '/organization/capital': {
-            en: '/organization/capital',
-            es: '/organizacion/capital'
-        },
 
         '/organization/reports': {
             en: '/organization/reports',

@@ -65,6 +65,8 @@ interface QuoteOverviewViewProps {
     quote: QuoteView;
     contractSummary?: ContractSummary | null;
     items?: QuoteItemView[];
+    /** All org contacts for the client dropdown (override for ContactField) */
+    allContacts?: { id: string; name: string; resolved_avatar_url?: string | null; company_name?: string | null }[];
 }
 
 // ── Estado badges ─────────────────────────────────────────────────────────────
@@ -237,7 +239,7 @@ function getTransitionConfig(
 // Component
 // ============================================================================
 
-export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteOverviewViewProps) {
+export function QuoteOverviewView({ quote, contractSummary, items = [], allContacts }: QuoteOverviewViewProps) {
     const isContract = quote.quote_type === "contract";
     const money = useMoney();
     const router = useRouter();
@@ -298,12 +300,8 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
     const handleClientChange = (v: string) => {
         if (isReadOnly) return;
         setClientId(v);
-        // quotes.client_id FK → contacts.contacts.id, but ContactField returns
-        // project_clients.id. Look up the contact_id from the store.
-        const storeClients = useOrganizationStore.getState().clients;
-        const match = storeClients.find((c: any) => c.id === v);
-        const contactId = match?.contact_id || v || null;
-        triggerAutoSave({ client_id: contactId || null });
+        // quotes.client_id FK → contacts.contacts.id directly
+        triggerAutoSave({ client_id: v || null });
     };
 
     const handleProjectChange = (v: string) => {
@@ -558,6 +556,7 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                             <ContactField
                                 value={clientId}
                                 onChange={handleClientChange}
+                                contacts={allContacts}
                                 label="Cliente"
                                 disabled={isReadOnly}
                             />

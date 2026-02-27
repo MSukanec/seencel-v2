@@ -84,7 +84,6 @@ function deriveViewName(pathname: string): string {
         '/organization/contacts': 'Contactos',
         '/organization/finance': 'Finanzas',
         '/organization/general-costs': 'Gastos Generales',
-        '/organization/capital': 'Capital',
         '/organization/settings': 'Configuración',
         '/organization/planner': 'Planificador',
         '/organization/projects': 'Proyectos',

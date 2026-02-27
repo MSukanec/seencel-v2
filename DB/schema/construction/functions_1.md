@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-26T22:25:46.213Z
+> Generated: 2026-02-27T17:03:38.530Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -83,6 +83,7 @@ BEGIN
     -- ========================================
     -- 3. CREATE CONSTRUCTION TASKS from quote_items
     -- ========================================
+    -- NOTE: markup_pct removed — column does not exist in construction_tasks
     INSERT INTO construction.construction_tasks (
         project_id,
         organization_id,
@@ -92,13 +93,12 @@ BEGIN
         original_quantity,
         description,
         cost_scope,
-        markup_pct,
         status,
         progress_percent,
         created_by
     )
     SELECT
-        qi.project_id,
+        v_quote.project_id,
         qi.organization_id,
         qi.task_id,
         qi.id AS quote_item_id,
@@ -106,7 +106,6 @@ BEGIN
         qi.quantity AS original_quantity,
         qi.description,
         qi.cost_scope,
-        qi.markup_pct,
         'pending'::text,
         0,
         p_member_id

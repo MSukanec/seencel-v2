@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-26T22:25:46.213Z
+> Generated: 2026-02-27T17:03:38.530Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -402,12 +402,13 @@ SELECT gcp.id,
     (EXISTS ( SELECT 1
            FROM media_links ml
           WHERE (ml.general_cost_payment_id = gcp.id))) AS has_attachments
-   FROM ((((((finance.general_costs_payments gcp
+   FROM (((((((finance.general_costs_payments gcp
      LEFT JOIN finance.general_costs gc ON ((gc.id = gcp.general_cost_id)))
      LEFT JOIN finance.general_cost_categories gcc ON ((gcc.id = gc.category_id)))
      LEFT JOIN iam.organization_members om ON ((om.id = gcp.created_by)))
      LEFT JOIN iam.users u ON ((u.id = om.user_id)))
-     LEFT JOIN finance.wallets w ON ((w.id = gcp.wallet_id)))
+     LEFT JOIN finance.organization_wallets ow ON ((ow.id = gcp.wallet_id)))
+     LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
      LEFT JOIN finance.currencies cur ON ((cur.id = gcp.currency_id)))
   WHERE (gcp.is_deleted = false);
 ```

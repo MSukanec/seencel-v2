@@ -68,6 +68,11 @@ export default async function QuoteDetailAppPage({
             getTaskDivisions(),
             supabase.schema("finance").from("currencies").select("id, name, symbol").order("name"),
             getQuoteResources(quoteId),
+            // All org contacts for the client dropdown (quotes can target ANY contact, not just project_clients)
+            supabase.schema("contacts").from("contacts_view")
+                .select("id, full_name, resolved_avatar_url, company_name")
+                .eq("organization_id", activeOrgId)
+                .order("full_name", { ascending: true }),
         ];
 
         if (isContract) {
@@ -83,8 +88,14 @@ export default async function QuoteDetailAppPage({
         const divisions = results[3].data || [];
         const currencies = results[4].data || [];
         const resources = results[5];
-        const changeOrders = isContract ? results[6] : [];
-        const contractSummary = isContract ? results[7] : null;
+        const allContacts = (results[6].data || []).map((c: any) => ({
+            id: c.id,
+            name: c.full_name || "Sin nombre",
+            resolved_avatar_url: c.resolved_avatar_url,
+            company_name: c.company_name,
+        }));
+        const changeOrders = isContract ? results[7] : [];
+        const contractSummary = isContract ? results[8] : null;
 
         return (
             <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
@@ -164,6 +175,7 @@ export default async function QuoteDetailAppPage({
                                 quote={quote}
                                 contractSummary={contractSummary}
                                 items={items}
+                                allContacts={allContacts}
                             />
                         </ContentLayout>
                     </TabsContent>

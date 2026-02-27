@@ -315,7 +315,7 @@ export function QuoteBaseView({
     }, [updateItem]);
 
     // Column definitions — Orden profesional de presupuesto
-    // Nro → Tarea → Alcance → Cant. → Ud. → Costo Unit. → Margen → Subtotal → Inc. %
+    // Nro → Tarea → Alcance → Cant. → Ud. → Costo Unit. → Margen → Precio Venta → Subtotal → Inc. %
     const columns: ColumnDef<QuoteItemView>[] = [
         // 1. Número jerárquico (01.01, 01.02, etc.)
         {
@@ -419,7 +419,31 @@ export function QuoteBaseView({
             ),
             enableSorting: true,
         },
-        // 8. Subtotal = Cantidad × Costo Unit. × (1 + Margen/100)
+        // 8. Precio de Venta unitario = Costo Unit. × (1 + Margen/100)
+        {
+            id: "sale_price",
+            header: ({ column }) => (
+                <DataTableColumnHeader column={column} title="Precio Venta" className="justify-end" />
+            ),
+            accessorFn: (row) => {
+                const cost = Number(row.effective_unit_price) || 0;
+                const markup = Number(row.markup_pct) || 0;
+                return cost * (1 + markup / 100);
+            },
+            cell: ({ row }) => {
+                const cost = Number(row.original.effective_unit_price) || 0;
+                const markup = Number(row.original.markup_pct) || 0;
+                const salePrice = cost * (1 + markup / 100);
+                return (
+                    <div className="flex justify-end">
+                        <span className="font-mono tabular-nums text-foreground">
+                            {quote.currency_symbol || "$"} {salePrice.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                    </div>
+                );
+            },
+        },
+        // 9. Subtotal = Cantidad × Costo Unit. × (1 + Margen/100)
         {
             id: "subtotal",
             header: ({ column }) => (
@@ -437,7 +461,7 @@ export function QuoteBaseView({
                 );
             },
         },
-        // 9. Incidencia % dentro del rubro
+        // 10. Incidencia % dentro del rubro
         {
             id: "incidencia",
             header: ({ column }) => <DataTableColumnHeader column={column} title="Inc. %" className="justify-end" />,
