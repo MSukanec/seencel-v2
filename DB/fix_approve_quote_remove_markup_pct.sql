@@ -94,7 +94,7 @@ BEGIN
         created_by
     )
     SELECT
-        qi.project_id,
+        v_quote.project_id,
         qi.organization_id,
         qi.task_id,
         qi.id AS quote_item_id,

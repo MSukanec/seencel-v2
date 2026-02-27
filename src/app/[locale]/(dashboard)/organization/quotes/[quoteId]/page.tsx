@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
 import { getUserOrganizations } from "@/features/organization/queries";
-import { getQuote, getQuoteItems, getChangeOrdersByContract, getContractSummary } from "@/features/quotes/queries";
+import { getQuote, getQuoteItems, getQuoteResources, getChangeOrdersByContract, getContractSummary } from "@/features/quotes/queries";
 import { getOrganizationTasks, getUnits, getTaskDivisions } from "@/features/tasks/queries";
 import { createClient } from "@/lib/supabase/server";
 import { PageWrapper, ContentLayout } from "@/components/layout";
@@ -9,13 +9,14 @@ import { ErrorDisplay } from "@/components/ui/error-display";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/routing";
-import { FileText, ChevronLeft } from "lucide-react";
+import { FileText, ChevronLeft, Layers } from "lucide-react";
 
 // Views
 import { QuoteBaseView } from "@/features/quotes/views/quote-base-view";
 import { QuoteChangeOrdersView } from "@/features/quotes/views/quote-change-orders-view";
 import { QuoteOverviewView } from "@/features/quotes/views/quote-overview-view";
 import { QuoteAnalyticsView } from "@/features/quotes/views/quote-analytics-view";
+import { QuoteResourcesView } from "@/features/quotes/views/quote-resources-view";
 
 export async function generateMetadata(): Promise<Metadata> {
     return {
@@ -66,6 +67,7 @@ export default async function QuoteDetailAppPage({
             getUnits(),
             getTaskDivisions(),
             supabase.schema("finance").from("currencies").select("id, name, symbol").order("name"),
+            getQuoteResources(quoteId),
         ];
 
         if (isContract) {
@@ -80,8 +82,9 @@ export default async function QuoteDetailAppPage({
         const units = results[2].data || [];
         const divisions = results[3].data || [];
         const currencies = results[4].data || [];
-        const changeOrders = isContract ? results[5] : [];
-        const contractSummary = isContract ? results[6] : null;
+        const resources = results[5];
+        const changeOrders = isContract ? results[6] : [];
+        const contractSummary = isContract ? results[7] : null;
 
         return (
             <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
@@ -133,6 +136,9 @@ export default async function QuoteDetailAppPage({
                             <TabsTrigger value="items" className={tabTriggerClass}>
                                 Ítems
                             </TabsTrigger>
+                            <TabsTrigger value="resources" className={tabTriggerClass}>
+                                Recursos
+                            </TabsTrigger>
                             <TabsTrigger value="analytics" className={tabTriggerClass}>
                                 Analítica
                             </TabsTrigger>
@@ -175,6 +181,15 @@ export default async function QuoteDetailAppPage({
                                 divisions={divisions}
                                 currencies={currencies}
                             />
+                        </ContentLayout>
+                    </TabsContent>
+
+                    <TabsContent
+                        value="resources"
+                        className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden"
+                    >
+                        <ContentLayout variant="wide" className="h-full overflow-y-auto">
+                            <QuoteResourcesView resources={resources} />
                         </ContentLayout>
                     </TabsContent>
 

@@ -28,63 +28,61 @@
 | **Duplicar presupuesto** | Copia quote + todos los items |
 | **Descuento global + IVA** | `discount_pct` y `tax_pct` aplicados en cascada |
 | **Edición de términos** | Nombre, descripción, IVA, descuento, TC, cliente, proyecto editables inline |
+| **Vista Recursos** *(Feb 2026)* | Tab "Recursos" con desglose de materiales, mano de obra y servicios externos desde recetas |
+| **Bloqueo de Items en estados no-draft** *(Feb 2026)* | Botones, acciones de fila e inline editing bloqueados cuando `status !== 'draft'` |
+| **Banner de documento bloqueado** *(Feb 2026)* | Alerta visible en tabs Resumen e Items cuando el presupuesto está bloqueado |
+| **Fix approve_quote project_id** *(Feb 2026)* | Corregido uso de `v_quote.project_id` en función SQL (antes usaba `qi.project_id` nullable) |
+| **Fix tasks default en QuoteItemForm** *(Feb 2026)* | Guard defensivo `tasks = []` para evitar crash en `filter` |
 
 ---
 
 ## ⏳ Pendiente: Corto plazo
 
-### ~~P1: Ejecutar SQL de `recipe_name` y símbolo de unidad~~ ✅
-**Estado**: Completado — SQL ejecutado, introspección actualizada.
+### P1: Exportar a Excel en vista lista
+**Prioridad**: 🟢 Baja
+**Descripción**: El botón "Exportar" en la lista de presupuestos dice "Próximamente". Ya tenemos la infra de Excel instalada.
+**Archivos**: `quotes-list-view.tsx`
 
-### P2: Migrar vistas de DEFINER a INVOKER
+### P2: Agregar precio de venta visible
 **Prioridad**: 🟡 Media
-**Descripción**: `quotes_view`, `quotes_items_view` y `contract_summary_view` son `SECURITY DEFINER`, lo que bypasea RLS. Migrar a `SECURITY INVOKER` requiere asegurar que todas las tablas referenciadas (catalog.tasks, catalog.task_divisions, catalog.units, contacts.contacts, projects.projects) tengan RLS adecuada.
-**Archivos afectados**: SQL scripts para migrar vistas + verificar RLS en tablas cross-schema
-**Impacto**: Mejora seguridad, evita riesgo de filtración cross-org
+**Descripción**: Agregar columna "Precio Venta" = Costo × (1 + Margen%) para transparencia.
+**Archivos**: `quote-base-view.tsx`
 
-### ~~P3: Actualizar FEATURE.md desactualizado~~ ✅
-**Estado**: Completado — `FEATURE.md` eliminado por el usuario. Este flow es ahora la fuente de verdad.
-
-### P4: Agregar precio de venta visible
+### P3: PDF generation review
 **Prioridad**: 🟡 Media
-**Descripción**: Actualmente el usuario ve Costo Unit. + Margen % → Subtotal. Agregar una columna "Precio Venta" = Costo × (1 + Margen%) para que sea más transparente cómo el margen afecta el costo por unidad antes de multiplicar por la cantidad.
-**Archivos**: `src/features/quotes/views/quote-base-view.tsx`
-
-### P5: PDF generation review
-**Prioridad**: 🟡 Media
-**Descripción**: El PDF generation existe pero necesita revisión para asegurar que refleje los nuevos campos (recipe_name, símbolo de unidad, margen).
+**Descripción**: Revisar que el PDF refleje campos actuales (recipe_name, símbolo unidad, margen, recursos).
 **Archivos**: Componentes de generación PDF
+
+### P4: Revisión completa de página (/review-page)
+**Prioridad**: 🟡 Media
+**Descripción**: Ejecutar checklist de página completo (metadata, error handling, empty states, toolbar, etc.)
+**Archivos**: Todos los archivos del feature
 
 ---
 
 ## 🔮 Pendiente: Largo plazo
 
 ### L1: Schedule of Values (SOV) — CRÍTICO
-**Descripción**: Convertir los `quote_items` de un contrato en un SOV facturable con progress billing. Cada período se actualiza el % completado, materiales almacenados, retención. Requiere extender `quote_items` o crear tabla `quote_sov_lines`.
+**Descripción**: Convertir `quote_items` de un contrato en SOV facturable con progress billing.
 **Impacto**: Sin SOV, no hay facturación profesional de avance de obra.
-**Referencia**: AIA G702/G703, patrón Procore SOV.
 
 ### L2: Owner Invoices / Progress Billing — CRÍTICO
-**Descripción**: Generar certificados/facturas mensuales basados en el SOV. Tabla `owner_invoices` + `owner_invoice_items`. Workflow: draft → submitted → approved → paid.
-**Dependencia**: Requiere L1 (SOV) implementado.
+**Descripción**: Certificados/facturas mensuales basados en SOV.
+**Dependencia**: L1
 
 ### L3: Retenciones
-**Descripción**: Retener un % de cada factura (típico 5-10%). Campo `retention_percent` en contrato, cálculo automático en cada invoice, vista de retenciones acumuladas, liberación al completar.
-**Dependencia**: Requiere L2 (Owner Invoices) implementado.
+**Descripción**: Retener % de cada factura, liberar al completar.
+**Dependencia**: L2
 
-### L4: Versionado real del presupuesto (historial de versiones)
-**Prioridad**: 🟡 Media
-**Descripción**: El auto-incremento de versión al re-enviar ya fue implementado (Feb 2026). Sin embargo, actualmente no se guarda historial: al volver a borrador y re-enviar, la versión anterior se sobreescribe. El siguiente paso es crear una tabla `quote_versions` (o snapshots JSON) que capture el estado completo del presupuesto + items en cada envío, y una UI de comparación para ver diferencias entre versiones.
-**Impacto**: Permite tracking de cambios y negociaciones con el cliente. Crítico para auditoría y transparencia comercial.
+### L4: Versionado real del presupuesto
+**Descripción**: Historial de versiones con comparación. Tabla `quote_versions` o snapshots JSON.
 
 ### L5: Documentos adjuntos y firma electrónica
-**Descripción**: Adjuntar contratos firmados (Supabase Storage). Integración con DocuSign/HelloSign para firma digital.
-**Impacto**: Elimina papeles y agiliza el ciclo de contratación.
+**Descripción**: Adjuntar contratos firmados. Integración DocuSign/HelloSign.
 
 ### L6: Portal de clientes para presupuestos
-**Descripción**: Permitir al cliente ver, comentar y aprobar presupuestos desde un portal externo sin necesidad de cuenta Seencel.
-**Dependencia**: Requiere sistema de acceso externo (external-access flow).
+**Descripción**: Portal externo sin cuenta Seencel.
 
 ### L7: Billing Periods
-**Descripción**: Definir períodos de facturación mensuales/quincenales con tracking de avance acumulado vs período actual.
-**Dependencia**: Requiere L1 (SOV) y L2 (Owner Invoices).
+**Descripción**: Períodos de facturación con tracking acumulado.
+**Dependencia**: L1, L2

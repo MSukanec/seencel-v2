@@ -111,6 +111,54 @@ export interface QuoteItemView extends QuoteItem {
     effective_unit_price: number;
 }
 
+// ── Resource breakdown types (for Resources view) ────────────────────────────
+
+export interface QuoteResourceMaterial {
+    material_id: string;
+    material_name: string;
+    unit_name: string | null;
+    unit_symbol: string | null;
+    unit_quantity: number;       // qty per unit of task (from recipe)
+    total_quantity: number;      // aggregated across all items using this material
+    waste_percentage: number;
+    unit_price: number | null;   // current catalog price
+    total_cost: number;          // total_quantity × unit_price
+    task_names: string[];        // which items use this material
+}
+
+export interface QuoteResourceLabor {
+    labor_type_id: string;
+    labor_name: string;
+    unit_name: string | null;
+    unit_symbol: string | null;
+    unit_quantity: number;
+    total_quantity: number;
+    unit_price: number | null;
+    total_cost: number;
+    task_names: string[];
+}
+
+export interface QuoteResourceExternalService {
+    service_id: string;
+    service_name: string;
+    unit_price: number;
+    contact_name: string | null;
+    task_names: string[];
+    total_cost: number;
+}
+
+export interface QuoteResources {
+    materials: QuoteResourceMaterial[];
+    labor: QuoteResourceLabor[];
+    externalServices: QuoteResourceExternalService[];
+    totals: {
+        materials: number;
+        labor: number;
+        externalServices: number;
+        grand_total: number;
+    };
+}
+
 // For forms
 export interface QuoteFormData {
     name: string;

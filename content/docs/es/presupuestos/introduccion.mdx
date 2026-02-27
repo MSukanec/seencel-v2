@@ -106,13 +106,19 @@ SEENCEL soporta presupuestos en moneda local y moneda extranjera simultáneament
 
 ## Vista de detalle
 
-Al abrir un presupuesto, encontrás tres pestañas:
+Al abrir un presupuesto, encontrás cinco pestañas:
 
 | Pestaña | Contenido |
 |---------|-----------|
-| **Resumen** | Totales, información general, estado y datos del cliente |
-| **Ítems** | Desglose línea por línea con precios, márgenes y cantidades |
+| **Resumen** | Totales, información general, estado, fechas y datos del cliente |
+| **Ítems** | Desglose línea por línea con precios, márgenes y cantidades editables inline |
+| **Recursos** | Vista de materiales, mano de obra y servicios externos necesarios para el presupuesto |
+| **Analítica** | Gráficos de distribución por rubro, incidencia de costos y comparativas |
 | **Órdenes de Cambio** | *(Solo contratos)* Modificaciones y adicionales al contrato base |
+
+<Callout type="info" title="Documento bloqueado">
+Cuando un presupuesto está en estado **Enviado** o **Aprobado**, las pestañas Resumen e Ítems se bloquean automáticamente. Un banner te indica que el documento no puede editarse en ese estado. Si necesitás modificarlo, primero pasalo a Borrador.
+</Callout>
 
 ---
 
@@ -121,13 +127,29 @@ Al abrir un presupuesto, encontrás tres pestañas:
 Desde la pestaña **Ítems** podés armar el desglose detallado del presupuesto:
 
 - **Agregar ítems** desde el catálogo de tareas de tu organización
-- **Definir cantidad y precio unitario** para cada ítem
-- **Aplicar un margen** (markup) por ítem o global
-- **Reordenar ítems** arrastrando las filas
-- **Ver subtotales** automáticos con y sin margen
+- **Editar inline** — Hacé click directamente en los campos de cantidad, margen y alcance para editarlos sin abrir un formulario (los campos editables tienen borde punteado)
+- **Alcance de costo** — Cada ítem puede calcular su costo con "Materiales + Mano de Obra" o "Solo Mano de Obra"
+- **Agrupación por rubro** — Los ítems se agrupan automáticamente por rubro/división con subtotales e incidencia porcentual
+- **KPIs automáticos** — Subtotal, descuento, IVA y total se recalculan al instante
 
-<Callout type="info" title="Ítems del catálogo técnico">
-Los ítems se vinculan a tareas de tu **Catálogo Técnico**. Esto significa que podés reutilizar los análisis de precio de cada tarea y mantener consistencia entre tus presupuestos y tus costos reales de obra.
+<Callout type="info" title="Precios vivos vs. congelados">
+Mientras el presupuesto está en **Borrador**, los precios unitarios se actualizan en tiempo real desde el catálogo técnico. Al pasar a **Enviado**, los precios se "congelan" (snapshot): aunque el catálogo cambie después, el presupuesto mantiene los precios del momento del envío.
+</Callout>
+
+---
+
+## Recursos del presupuesto
+
+La pestaña **Recursos** muestra un desglose detallado de todos los insumos necesarios para el presupuesto, calculado automáticamente desde las recetas del catálogo técnico:
+
+- **Materiales** — Todos los materiales requeridos con cantidades agregadas, precios unitarios y costos totales
+- **Mano de obra** — Tipos de mano de obra con horas/unidades necesarias y costos
+- **Servicios externos** — Subcontrataciones y servicios de terceros
+
+Cada recurso muestra badges indicando en qué tareas se utiliza, para entender de dónde viene cada costo.
+
+<Callout type="tip" title="¿Para qué sirve esta vista?">
+Los presupuestos suceden **antes** de crear un proyecto, por lo que no tenés acceso a los módulos de Materiales o Mano de Obra. La pestaña Recursos te da esa visibilidad anticipada: sabés exactamente qué necesitás antes de empezar la obra.
 </Callout>
 
 ---

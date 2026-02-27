@@ -16,7 +16,8 @@ import {
     Hash,
     Calculator,
     Receipt,
-    DollarSign
+    DollarSign,
+    Lock
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -66,6 +67,7 @@ export function QuoteBaseView({
     const router = useRouter();
     const { openPanel } = usePanel();
     const isContract = quote.quote_type === 'contract';
+    const isReadOnly = quote.status !== 'draft';
 
     // ── Optimistic Items (Según optimistic-updates.md) ──
     const { optimisticItems, updateItem, removeItem } = useOptimisticList<QuoteItemView>({
@@ -472,7 +474,7 @@ export function QuoteBaseView({
                             label: "Agregar Ítem",
                             icon: Plus,
                             onClick: handleAddItem,
-                            disabled: isContract || quote.status === 'approved'
+                            disabled: quote.status !== 'draft'
                         },
                     ]}
                 />
@@ -492,6 +494,26 @@ export function QuoteBaseView({
 
     return (
         <div className="space-y-4">
+
+            {/* Read-only banner */}
+            {isReadOnly && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex items-center gap-3">
+                    <div className="bg-amber-500/15 p-2 rounded-full shrink-0">
+                        <Lock className="h-4 w-4 text-amber-500" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-amber-200">
+                            Ítems bloqueados — Estado: {quote.status === 'sent' ? 'Enviado' : quote.status === 'approved' ? 'Aprobado' : quote.status === 'rejected' ? 'Rechazado' : quote.status}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {quote.status === 'sent' && 'Los ítems están bloqueados porque el presupuesto fue enviado al cliente. Volvé a Borrador para editarlos.'}
+                            {quote.status === 'approved' && 'Los ítems están bloqueados porque el presupuesto fue aprobado. Las tareas de obra ya fueron creadas.'}
+                            {quote.status === 'rejected' && 'Los ítems están bloqueados porque el presupuesto fue rechazado. Volvé a Borrador para editarlos.'}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <Toolbar
                 portalToHeader
                 searchQuery={searchQuery}
@@ -518,7 +540,7 @@ export function QuoteBaseView({
                         label: "Agregar Ítem",
                         icon: Plus,
                         onClick: handleAddItem,
-                        disabled: isContract || quote.status === 'approved'
+                        disabled: quote.status !== 'draft'
                     },
                 ]}
             />
@@ -556,7 +578,7 @@ export function QuoteBaseView({
                 data={filteredItems}
                 showPagination={false}
                 pageSize={100}
-                enableRowActions={quote.status !== 'approved'}
+                enableRowActions={quote.status === 'draft'}
                 onEdit={handleEditItem}
                 onDelete={handleDeleteClick}
                 // Row Grouping by Division/Rubro

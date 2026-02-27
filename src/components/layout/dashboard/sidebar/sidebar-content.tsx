@@ -6,6 +6,7 @@ import { useLayoutStore, NavigationContext } from "@/stores/layout-store";
 import { usePathname, useRouter } from "@/i18n/routing";
 import { useRouter as useNextRouter } from "next/navigation";
 import { SidebarContextButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarAdminButton } from "./buttons";
+import { HeaderOrgSelector } from "@/components/layout/dashboard/shared/header-org-selector";
 import { SidebarAccordionGroups } from "./sidebar-accordion";
 import { SidebarPlanButton } from "./plan-button";
 import { getPlanAccentVars } from "@/components/shared/plan-badge";
@@ -247,9 +248,16 @@ export function SidebarContent({
                 <div className="flex flex-col w-full h-full overflow-hidden">
                     <div className="w-full flex items-center gap-1.5 mb-2 px-2">
                         <div className="flex-1 min-w-0">
-                            <SidebarBrandButton
-                                isExpanded={isExpanded}
-                            />
+                            {drillState === "home" ? (
+                                <SidebarBrandButton
+                                    isExpanded={isExpanded}
+                                />
+                            ) : (
+                                <HeaderOrgSelector
+                                    variant="sidebar"
+                                    isExpanded={isExpanded}
+                                />
+                            )}
                         </div>
                     </div>
 

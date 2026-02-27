@@ -33,6 +33,7 @@ import { usePanel } from "@/stores/panel-store";
 import { deleteQuote, duplicateQuote } from "../actions";
 import { QuoteView, QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS } from "../types";
 import { cn } from "@/lib/utils";
+import { parseDateFromDB } from "@/lib/timezone-data";
 
 // ============================================================================
 // QUOTE CHANGE ORDERS VIEW
@@ -62,8 +63,8 @@ export function QuoteChangeOrdersView({
 
     // Sort by most recent first
     const sortedChangeOrders = [...changeOrders].sort((a, b) => {
-        const dateA = new Date(a.created_at || 0).getTime();
-        const dateB = new Date(b.created_at || 0).getTime();
+        const dateA = (parseDateFromDB(a.created_at) ?? new Date(0)).getTime();
+        const dateB = (parseDateFromDB(b.created_at) ?? new Date(0)).getTime();
         return dateB - dateA;
     });
 
@@ -155,7 +156,8 @@ export function QuoteChangeOrdersView({
 
     const formatDate = (dateStr: string) => {
         if (!dateStr) return "-";
-        const date = new Date(dateStr);
+        const date = parseDateFromDB(dateStr);
+        if (!date) return "-";
         return date.toLocaleDateString('es-AR', {
             day: '2-digit',
             month: 'short',

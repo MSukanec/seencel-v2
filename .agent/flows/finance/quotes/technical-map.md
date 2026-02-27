@@ -98,7 +98,7 @@
 
 ## 3. Funciones SQL
 
-### `finance.approve_quote_and_create_tasks(quote_id uuid)`
+### `construction.approve_quote_and_create_tasks(quote_id uuid)`
 
 Llamada via RPC desde `approveQuote()`. Acciones atómicas:
 1. Valida que el quote no esté ya aprobado
@@ -122,6 +122,7 @@ Llamada via RPC desde `approveQuote()`. Acciones atómicas:
 | `getContractSummary(contractId)` | Resumen desde `contract_summary_view` |
 | `getContractWithChangeOrders(contractId)` | Contract + COs + summary (paralelo) |
 | `getNextChangeOrderNumber(contractId)` | Siguiente número de CO |
+| `getQuoteResources(quoteId)` | Desglose de materiales, M.O. y servicios externos desde recetas de items |
 
 ### Actions (`src/features/quotes/actions.ts`)
 
@@ -160,6 +161,7 @@ Llamada via RPC desde `approveQuote()`. Acciones atómicas:
 | `quote-overview-view.tsx` | Tab "Resumen" — datos generales, términos, cliente, proyecto |
 | `quote-change-orders-view.tsx` | Tab "Adicionales" — lista de COs con KPIs de revised value |
 | `quote-analytics-view.tsx` | Tab "Analítica" — gráficos y análisis del presupuesto |
+| `quote-resources-view.tsx` | Tab "Recursos" — desglose de materiales, M.O. y servicios ext. con KPIs |
 
 ### Pages (`src/app/[locale]/(dashboard)/organization/quotes/`)
 
@@ -181,6 +183,10 @@ Llamada via RPC desde `approveQuote()`. Acciones atómicas:
 | `QuoteStatus` | `'draft' / 'sent' / 'approved' / 'rejected'` |
 | `QuoteType` | `'quote' / 'contract' / 'change_order'` |
 | `CostScope` | `'materials_and_labor' / 'labor_only'` |
+| `QuoteResources` | Agregado de materiales, M.O. y servicios ext. con totales |
+| `QuoteResourceMaterial` | Material individual del desglose |
+| `QuoteResourceLabor` | M.O. individual del desglose |
+| `QuoteResourceExternalService` | Servicio externo individual del desglose |
 
 ---
 
@@ -188,7 +194,7 @@ Llamada via RPC desde `approveQuote()`. Acciones atómicas:
 
 | Archivo | Qué hace | Estado |
 |---------|----------|--------|
-| `DB/08_add_recipe_name_to_view.sql` | Agrega `recipe_name` a `quotes_items_view`, cambia `u.name → u.symbol`, recrea vistas dependientes | ⚠️ Pendiente ejecución |
+| `DB/fix_approve_quote_remove_markup_pct.sql` | Remove `markup_pct` + fix `project_id` en función SQL | ✅ Ejecutado |
 
 ---
 

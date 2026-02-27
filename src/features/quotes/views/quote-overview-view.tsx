@@ -499,60 +499,12 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                     description="Información general del documento."
                 >
                     <div className="space-y-4">
-                        {/* Fila 1: Nombre (full width) */}
-                        <TextField
-                            value={name}
-                            onChange={handleNameChange}
-                            label="Nombre"
-                            placeholder="Nombre del presupuesto"
-                            required
-                            disabled={isReadOnly}
-                        />
-
-                        {/* Fila 2: Proyecto / Cliente (2 columnas) */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <ProjectField
-                                value={projectId}
-                                onChange={handleProjectChange}
-                                label="Proyecto"
-                                disabled={isReadOnly}
-                            />
-                            <ContactField
-                                value={clientId}
-                                onChange={handleClientChange}
-                                label="Cliente"
-                                disabled={isReadOnly}
-                            />
-                        </div>
-
-                        {/* Fila 3: Descripción */}
-                        <NotesField
-                            value={description}
-                            onChange={handleDescriptionChange}
-                            label={isContract ? "Alcance del Contrato" : "Descripción"}
-                            placeholder="Agregar descripción del alcance..."
-                            required={false}
-                            disabled={isReadOnly}
-                        />
-                    </div>
-                </SettingsSection>
-
-                {/* ══════════════════════════════════════════════════════════ */}
-                {/* SECCIÓN 2: Estado y Fechas                               */}
-                {/* ══════════════════════════════════════════════════════════ */}
-                <SettingsSection
-                    icon={Calendar}
-                    title="Estado y Fechas"
-                    description="Estado actual, versión y fechas del documento."
-                >
-                    <div className="space-y-4">
                         {/* Fila 1: Estado / Versión (2 columnas) */}
                         <div className="grid grid-cols-2 gap-4">
                             <SelectField
                                 value={quote.status}
                                 onChange={(newStatus) => {
                                     if (newStatus === quote.status) return;
-                                    // Find the matching action and trigger its confirmation
                                     const action = toolbarActions.find(a => {
                                         if (newStatus === "sent") return a.label === "Marcar como Enviado";
                                         if (newStatus === "approved") return a.label === "Aprobar";
@@ -585,7 +537,55 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                             />
                         </div>
 
-                        {/* Fila 2: Fechas (2 columnas) */}
+                        {/* Fila 2: Nombre (full width) */}
+                        <TextField
+                            value={name}
+                            onChange={handleNameChange}
+                            label="Nombre"
+                            placeholder="Nombre del presupuesto"
+                            required
+                            disabled={isReadOnly}
+                        />
+
+                        {/* Fila 3: Proyecto / Cliente (2 columnas) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <ProjectField
+                                value={projectId}
+                                onChange={handleProjectChange}
+                                label="Proyecto"
+                                disabled={isReadOnly}
+                            />
+                            <ContactField
+                                value={clientId}
+                                onChange={handleClientChange}
+                                label="Cliente"
+                                disabled={isReadOnly}
+                            />
+                        </div>
+
+                        {/* Fila 4: Descripción */}
+                        <NotesField
+                            value={description}
+                            onChange={handleDescriptionChange}
+                            label={isContract ? "Alcance del Contrato" : "Descripción"}
+                            placeholder="Agregar descripción del alcance..."
+                            required={false}
+                            disabled={isReadOnly}
+                        />
+                    </div>
+                </SettingsSection>
+
+                {/* ══════════════════════════════════════════════════════════ */}
+                {/* SECCIÓN 2: Condiciones                                   */}
+                {/* Fechas, impuesto, descuento y tipo de cambio             */}
+                {/* ══════════════════════════════════════════════════════════ */}
+                <SettingsSection
+                    icon={Settings2}
+                    title="Condiciones"
+                    description="Fechas, impuesto, descuento y tipo de cambio aplicados al documento."
+                >
+                    <div className="space-y-4">
+                        {/* Fila 1: Fechas (2 columnas) */}
                         <div className="grid grid-cols-2 gap-4">
                             <DateField
                                 value={quoteDate}
@@ -605,20 +605,9 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                                 disabled={isReadOnly}
                             />
                         </div>
-                    </div>
-                </SettingsSection>
 
-                {/* ══════════════════════════════════════════════════════════ */}
-                {/* SECCIÓN 3: Condiciones                                   */}
-                {/* ══════════════════════════════════════════════════════════ */}
-                <SettingsSection
-                    icon={Settings2}
-                    title="Condiciones"
-                    description="Impuesto, descuento y tipo de cambio aplicados al documento."
-                >
-                    <div className="space-y-4">
-                        {/* Fila 1: Tipo de impuesto / Impuesto % (2 columnas) */}
-                        <div className="grid grid-cols-2 gap-4">
+                        {/* Fila 2: Tipo de impuesto / Impuesto % / Descuento % (3 columnas) */}
+                        <div className="grid grid-cols-3 gap-4">
                             <SelectField
                                 value={taxLabel}
                                 onChange={handleTaxLabelChange}
@@ -637,10 +626,6 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                                 suffix="%"
                                 disabled={isReadOnly}
                             />
-                        </div>
-
-                        {/* Fila 2: Descuento / Tipo de cambio (2 columnas) */}
-                        <div className="grid grid-cols-2 gap-4">
                             <AmountField
                                 value={discountPct}
                                 onChange={handleDiscountPctChange}
@@ -651,7 +636,11 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                                 suffix="%"
                                 disabled={isReadOnly}
                             />
-                            {showExchangeRate && (
+                        </div>
+
+                        {/* Fila 3: Tipo de cambio (solo si aplica) */}
+                        {showExchangeRate && (
+                            <div className="grid grid-cols-3 gap-4">
                                 <AmountField
                                     value={exchangeRate}
                                     onChange={handleExchangeRateChange}
@@ -661,8 +650,8 @@ export function QuoteOverviewView({ quote, contractSummary, items = [] }: QuoteO
                                     step={0.000001}
                                     disabled={isReadOnly}
                                 />
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
                 </SettingsSection>
 

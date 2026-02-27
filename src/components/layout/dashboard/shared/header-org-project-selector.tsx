@@ -406,18 +406,12 @@ export function HeaderOrgProjectSelector() {
 
     return (
         <div className="flex items-center gap-0">
-            {/* Org Selector — always visible */}
-            <OrgSelector currentOrg={currentOrg} />
-
-            {/* Breadcrumb separator + Project Selector */}
+            {/* Project Selector — only visible on project-enabled pages */}
             {showProjectSelector && (
-                <>
-                    <span className="text-muted-foreground/40 text-sm select-none mx-0.5">/</span>
-                    <ProjectSelector
-                        projects={activeProjects}
-                        onProjectChange={handleProjectChange}
-                    />
-                </>
+                <ProjectSelector
+                    projects={activeProjects}
+                    onProjectChange={handleProjectChange}
+                />
             )}
         </div>
     );

@@ -51,7 +51,7 @@ export function QuoteItemForm({
     organizationId,
     projectId,
     currencyId,
-    tasks,
+    tasks = [],
     initialData,
     onSuccess,
     formId,
