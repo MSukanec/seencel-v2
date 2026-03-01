@@ -11,6 +11,8 @@ export interface FacetedFilterConfig {
     key: string;
     /** Display label (e.g. "Tipo", "Estado") */
     title: string;
+    /** Icon component for the filter category */
+    icon?: React.ComponentType<{ className?: string }>;
     /** Available options */
     options: { label: string; value: string }[];
 }
@@ -22,7 +24,7 @@ interface UseTableFiltersOptions {
     facets?: FacetedFilterConfig[];
 }
 
-interface UseTableFiltersReturn {
+export interface UseTableFiltersReturn {
     /** Search query state */
     searchQuery: string;
     /** Set search query */
@@ -41,6 +43,10 @@ interface UseTableFiltersReturn {
     clearAll: () => void;
     /** Whether any filter is active */
     hasActiveFilters: boolean;
+    /** Original facet configs (for FilterPopover consumption) */
+    facetConfigs: FacetedFilterConfig[];
+    /** Whether date range is enabled */
+    enableDateRange: boolean;
 }
 
 // ─── Hook ────────────────────────────────────────────────
@@ -48,7 +54,7 @@ interface UseTableFiltersReturn {
 export function useTableFilters(
     options: UseTableFiltersOptions = {}
 ): UseTableFiltersReturn {
-    const { facets = [] } = options;
+    const { facets = [], enableDateRange = false } = options;
 
     // ─── State ───────────────────────────────────────────
     const [searchQuery, setSearchQuery] = useState("");
@@ -113,5 +119,7 @@ export function useTableFilters(
         clearFacet,
         clearAll,
         hasActiveFilters,
+        facetConfigs: facets,
+        enableDateRange,
     };
 }

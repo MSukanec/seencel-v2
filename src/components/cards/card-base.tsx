@@ -53,8 +53,8 @@ export function CardBase({ children, className, compact = false, ...props }: Car
         <Card
             className={cn(
                 "flex flex-col min-w-0 overflow-hidden",
-                "bg-card/50 backdrop-blur-sm border-border/50",
-                "transition-all hover:bg-card/80 hover:shadow-md",
+                "bg-card border-border/50",
+                "transition-all hover:shadow-md",
                 !compact && "h-full",
                 className
             )}

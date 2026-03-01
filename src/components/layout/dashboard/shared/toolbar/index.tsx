@@ -290,20 +290,6 @@ export function Toolbar<TData>({
 
             {/* Right side: Actions */}
             <div className="flex items-center gap-2 shrink-0">
-                {/* Auto-injected docs button (icon-only) */}
-                {showDocsButton && docsSlug && (
-                    <ToolbarButton
-                        variant="outline"
-                        size="icon"
-                        asChild
-                        className="h-8 w-8"
-                    >
-                        <Link href={`/${locale}/docs/${docsSlug}`} target="_blank">
-                            <BookOpen className="h-4 w-4" />
-                            <span className="sr-only">Documentación</span>
-                        </Link>
-                    </ToolbarButton>
-                )}
                 {/* Custom toolbar buttons (e.g., Personalizar) */}
                 {children}
                 {/* Primary + secondary actions as SplitButton or Dropdown */}

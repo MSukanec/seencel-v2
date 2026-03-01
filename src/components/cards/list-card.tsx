@@ -116,7 +116,7 @@ export function ListCard({
             {viewAllHref && items.length > maxItems && (
                 <CardBase.Footer>
                     <Link
-                        href={viewAllHref}
+                        href={viewAllHref as any}
                         className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
                     >
                         {viewAllLabel}

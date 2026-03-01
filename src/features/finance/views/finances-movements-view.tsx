@@ -9,9 +9,8 @@
  */
 
 import { useMemo } from "react";
-import { Plus, Banknote } from "lucide-react";
-import { format } from "date-fns";
-import { isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
+import { Plus, Banknote, Tags, CircleDot, Wallet } from "lucide-react";
+import { format, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { usePanel } from "@/stores/panel-store";
@@ -19,8 +18,7 @@ import { useTableActions } from "@/hooks/use-table-actions";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { DateRangeFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
-import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
+import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { exportToCSV, exportToExcel } from "@/lib/export";
 import { deleteFinanceMovement } from "../actions";
@@ -32,7 +30,6 @@ import {
 } from "../tables/movements-columns";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { Badge } from "@/components/ui/badge";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -80,18 +77,18 @@ export function FinancesMovementsView({
     }));
 
     const facetConfigs = [
-        { key: "type", title: "Tipo", options: MOVEMENT_TYPE_OPTIONS },
-        { key: "status", title: "Estado", options: MOVEMENT_STATUS_OPTIONS },
+        { key: "type", title: "Tipo", icon: Tags, options: MOVEMENT_TYPE_OPTIONS },
+        { key: "status", title: "Estado", icon: CircleDot, options: MOVEMENT_STATUS_OPTIONS },
         ...(walletOptions.length > 0
-            ? [{ key: "wallet", title: "Billetera", options: walletOptions }]
+            ? [{ key: "wallet", title: "Billetera", icon: Wallet, options: walletOptions }]
             : []),
     ];
 
     // ─── Hooks globales ──────────────────────────────────
-    const filters = useTableFilters({ facets: facetConfigs });
+    const filters = useTableFilters({ facets: facetConfigs, enableDateRange: true });
 
     const { handleDelete, handleBulkDelete, DeleteConfirmDialog } = useTableActions<any>({
-        onDelete: (item) => {
+        onDelete: async (item) => {
             // 🚀 Optimistic: remove immediately, then execute server action
             optimisticRemove(item.id, async () => {
                 try {
@@ -102,7 +99,7 @@ export function FinancesMovementsView({
                     router.refresh();
                 }
             });
-            return Promise.resolve();
+            return { success: true };
         },
         entityName: "movimiento",
         entityNamePlural: "movimientos",
@@ -229,35 +226,6 @@ export function FinancesMovementsView({
         }),
     ] : undefined;
 
-    const statsBadge = (
-        <Badge variant="secondary" className="text-xs font-normal">
-            {filters.hasActiveFilters
-                ? `${filteredMovements.length} de ${optimisticMovements.length}`
-                : `${optimisticMovements.length} movimientos`
-            }
-        </Badge>
-    );
-
-    // ─── Filter toolbar content ──────────────────────────
-    const filterContent = (
-        <div className="flex items-center gap-2">
-            <DateRangeFilter
-                value={filters.dateRange}
-                onChange={filters.setDateRange}
-            />
-            {facetConfigs.map(facet => (
-                <FacetedFilter
-                    key={facet.key}
-                    title={facet.title}
-                    options={facet.options}
-                    selectedValues={filters.facetValues[facet.key] || new Set()}
-                    onSelect={(val) => filters.toggleFacet(facet.key, val)}
-                    onClear={() => filters.clearFacet(facet.key)}
-                />
-            ))}
-        </div>
-    );
-
     // ─── Empty State (no data at all) ────────────────────
     if (optimisticMovements.length === 0) {
         return (
@@ -281,11 +249,7 @@ export function FinancesMovementsView({
             <>
                 <Toolbar
                     portalToHeader
-                    searchQuery={filters.searchQuery}
-                    onSearchChange={filters.setSearchQuery}
-                    searchPlaceholder="Buscar movimientos..."
-                    leftActions={statsBadge}
-                    filterContent={filterContent}
+                    leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar movimientos..." /></>}
                     actions={toolbarActions}
                 />
                 <ViewEmptyState
@@ -300,19 +264,17 @@ export function FinancesMovementsView({
         );
     }
 
+    // ─── Toolbar (embedded inside DataTable card) ───────
+    const embeddedToolbar = (
+        <Toolbar
+            leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar movimientos..." /></>}
+            actions={toolbarActions}
+        />
+    );
+
     // ─── Render ──────────────────────────────────────────
     return (
-        <div className="space-y-4">
-            <Toolbar
-                portalToHeader
-                searchQuery={filters.searchQuery}
-                onSearchChange={filters.setSearchQuery}
-                searchPlaceholder="Buscar movimientos..."
-                leftActions={statsBadge}
-                filterContent={filterContent}
-                actions={toolbarActions}
-            />
-
+        <>
             <DataTable
                 columns={columns}
                 data={filteredMovements}
@@ -326,9 +288,10 @@ export function FinancesMovementsView({
                 globalFilter={filters.searchQuery}
                 onGlobalFilterChange={filters.setSearchQuery}
                 onClearFilters={filters.clearAll}
+                embeddedToolbar={embeddedToolbar}
             />
 
             <DeleteConfirmDialog />
-        </div>
+        </>
     );
 }

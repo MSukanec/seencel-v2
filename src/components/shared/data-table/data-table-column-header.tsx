@@ -24,7 +24,7 @@ export function DataTableColumnHeader<TData, TValue>({
     className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
     if (!column.getCanSort()) {
-        return <div className={cn("flex items-center h-8 text-sm font-medium", className)}>{title}</div>;
+        return <div className={cn("flex items-center h-8 text-xs font-medium text-muted-foreground", className)}>{title}</div>;
     }
 
     return (
@@ -40,7 +40,7 @@ export function DataTableColumnHeader<TData, TValue>({
                             !className?.includes("justify-end") && "-ml-3"
                         )}
                     >
-                        <span>{title}</span>
+                        <span className="text-xs font-medium">{title}</span>
                         {column.getIsSorted() === "desc" ? (
                             <ArrowDown className="ml-2 h-4 w-4 text-primary" />
                         ) : column.getIsSorted() === "asc" ? (

@@ -9,13 +9,36 @@ import { HeaderOrgProjectSelector } from "@/components/layout/dashboard/shared/h
 import { HeaderAvatarButton } from "@/components/layout/dashboard/shared/header-avatar-button";
 import { HeaderIconButton } from "@/components/layout/dashboard/shared/header-icon-button";
 import { SidebarNotificationsButton } from "@/components/layout/dashboard/sidebar/buttons/sidebar-notifications-button";
-import { CalendarDays, Users } from "lucide-react";
+import { CalendarDays, Users, BookOpen } from "lucide-react";
 import { Link } from "@/i18n/routing";
+import { useLocale } from "next-intl";
+import { getDocsSlugForPath } from "@/features/docs/lib/docs-mapping";
 
 export interface BreadcrumbItem {
     label: string | React.ReactNode
     href?: string
 }
+
+// ─── Header Docs Button ─────────────────────────────────
+// Auto-detects the docs page for the current route.
+// Only renders when a matching docs slug exists.
+
+function HeaderDocsButton() {
+    const pathname = usePathname();
+    const locale = useLocale();
+    const docsSlug = getDocsSlugForPath(pathname);
+
+    if (!docsSlug) return null;
+
+    return (
+        <a href={`/${locale}/docs/${docsSlug}`} target="_blank" rel="noopener noreferrer">
+            <HeaderIconButton title="Documentación">
+                <BookOpen className="h-4 w-4" />
+            </HeaderIconButton>
+        </a>
+    );
+}
+
 
 interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
     /** Breadcrumb items - only the LAST item is displayed as page title */
@@ -101,27 +124,17 @@ export function PageHeader({
                         {/* Tabs inline with title - Full Height */}
                         {tabs && (
                             <div className={cn(
-                                "flex items-center border-l border-border/50 pl-6 h-full",
-                                // FORCE OVERRIDES using !important and direct descendant specific selectors
+                                "flex items-center border-l border-border/50 pl-4 h-full",
                                 // TabList
-                                "[&_[role=tablist]]:!bg-transparent [&_[role=tablist]]:!p-0 [&_[role=tablist]]:!gap-0 [&_[role=tablist]]:!h-full",
+                                "[&_[role=tablist]]:!bg-transparent [&_[role=tablist]]:!p-0 [&_[role=tablist]]:!gap-0 [&_[role=tablist]]:!h-full [&_[role=tablist]]:!items-end",
                                 // TabTrigger - Base
-                                "[&_[role=tab]]:!relative [&_[role=tab]]:!h-full [&_[role=tab]]:!rounded-none [&_[role=tab]]:!bg-transparent",
-                                "[&_[role=tab]]:!px-6 [&_[role=tab]]:!text-muted-foreground [&_[role=tab]]:!shadow-none [&_[role=tab]]:!border-none",
-                                "[&_[role=tab]]:!cursor-pointer",
-                                // TabTrigger - Active
-                                "[&_[role=tab][data-state=active]]:!text-foreground [&_[role=tab][data-state=active]]:!bg-transparent",
+                                "[&_[role=tab]]:!relative [&_[role=tab]]:!h-[calc(100%-6px)] [&_[role=tab]]:!rounded-t-lg [&_[role=tab]]:!rounded-b-none",
+                                "[&_[role=tab]]:!bg-transparent [&_[role=tab]]:!border-none",
+                                "[&_[role=tab]]:!px-5 [&_[role=tab]]:!text-muted-foreground [&_[role=tab]]:!shadow-none",
+                                "[&_[role=tab]]:!cursor-pointer [&_[role=tab]]:!transition-all [&_[role=tab]]:!duration-200",
+                                // TabTrigger - Active: same background as page content
+                                "[&_[role=tab][data-state=active]]:!text-foreground [&_[role=tab][data-state=active]]:!bg-background",
                                 "[&_[role=tab][data-state=active]]:!shadow-none",
-                                // Pseudo-elements: Line on TOP + gradient going DOWN (short)
-                                "[&_[role=tab]]:after:absolute [&_[role=tab]]:after:top-0 [&_[role=tab]]:after:left-0 [&_[role=tab]]:after:right-0",
-                                "[&_[role=tab]]:after:h-[2px] [&_[role=tab]]:after:scale-x-0 [&_[role=tab]]:after:bg-primary/80",
-                                "[&_[role=tab]]:after:transition-transform [&_[role=tab]]:after:duration-300",
-                                "[&_[role=tab][data-state=active]]:after:scale-x-100",
-                                // Gradient: from top to bottom, short (60% height)
-                                "[&_[role=tab]]:before:absolute [&_[role=tab]]:before:top-0 [&_[role=tab]]:before:left-0 [&_[role=tab]]:before:right-0 [&_[role=tab]]:before:h-[60%]",
-                                "[&_[role=tab]]:before:bg-gradient-to-b [&_[role=tab]]:before:from-primary/20 [&_[role=tab]]:before:to-transparent",
-                                "[&_[role=tab]]:before:opacity-0 [&_[role=tab]]:before:transition-opacity [&_[role=tab]]:before:duration-300",
-                                "[&_[role=tab][data-state=active]]:before:opacity-100"
                             )}>
                                 {tabs}
                             </div>
@@ -134,16 +147,14 @@ export function PageHeader({
                         {actions}
 
                         {/* Quick Access — unified HeaderIconButton */}
-                        <Link href="/organization/planner" title="Planificador">
-                            <HeaderIconButton title="Planificador">
-                                <CalendarDays className="h-4 w-4" />
-                            </HeaderIconButton>
-                        </Link>
-                        <Link href="/organization/team" title="Equipo">
-                            <HeaderIconButton title="Equipo">
-                                <Users className="h-4 w-4" />
-                            </HeaderIconButton>
-                        </Link>
+                        {/* BLOQUEADO TEMPORALMENTE - Planificador y Equipo */}
+                        <HeaderIconButton title="Planificador" className="opacity-40 pointer-events-none">
+                            <CalendarDays className="h-4 w-4" />
+                        </HeaderIconButton>
+                        <HeaderIconButton title="Equipo" className="opacity-40 pointer-events-none">
+                            <Users className="h-4 w-4" />
+                        </HeaderIconButton>
+                        <HeaderDocsButton />
                         <SidebarNotificationsButton variant="header" />
 
                         {/* User Avatar — always last */}

@@ -106,6 +106,12 @@ interface DataTableProps<TData, TValue> {
     autoHideExcludeColumns?: string[];
 
     // =========================================================================
+    // EMBEDDED TOOLBAR — Renders toolbar inside the card, above the table
+    // =========================================================================
+    /** Toolbar rendered as first row inside the DataTable card (integrated layout) */
+    embeddedToolbar?: React.ReactNode;
+
+    // =========================================================================
     // DEPRECATED PROPS - Accepted for backward compatibility but NOT rendered
     // The toolbar should be managed at the Page/View level using the Toolbar component
     // =========================================================================
@@ -169,6 +175,8 @@ export function DataTable<TData, TValue>({
     // Column visibility props
     autoHideEmptyColumns = false,
     autoHideExcludeColumns = [],
+    // Embedded toolbar
+    embeddedToolbar,
 }: DataTableProps<TData, TValue> & { meta?: any }) {
     const [sorting, setSorting] = React.useState<SortingState>(initialSorting || []);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -273,16 +281,19 @@ export function DataTable<TData, TValue>({
                         checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
                         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
                         aria-label="Seleccionar todo"
-                        className="translate-y-[2px]"
+                        className="translate-y-[2px] border-muted-foreground/50 data-[state=checked]:border-primary"
                     />
                 ),
                 cell: ({ row }) => (
-                    <div onClick={(e) => e.stopPropagation()}>
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className={`transition-opacity duration-150 ${row.getIsSelected() ? "opacity-100" : "opacity-0 group-hover/row:opacity-100"}`}
+                    >
                         <Checkbox
                             checked={row.getIsSelected()}
                             onCheckedChange={(value) => row.toggleSelected(!!value)}
                             aria-label="Seleccionar fila"
-                            className="translate-y-[2px]"
+                            className="translate-y-[2px] border-muted-foreground/50 data-[state=checked]:border-primary"
                         />
                     </div>
                 ),
@@ -388,6 +399,12 @@ export function DataTable<TData, TValue>({
                     </div>
                 ) : (
                     <Card className="overflow-hidden">
+                        {/* Embedded Toolbar — integrated header */}
+                        {embeddedToolbar && (
+                            <div className="px-4 py-2.5 border-b border-border/50">
+                                {embeddedToolbar}
+                            </div>
+                        )}
                         <div className="relative w-full overflow-auto">
                             <UiTable>
                                 <TableHeader
@@ -600,7 +617,7 @@ export function DataTable<TData, TValue>({
                                                                     key={row.id}
                                                                     data-state={isSelected && "selected"}
                                                                     className={cn(
-                                                                        "transition-colors hover:bg-transparent",
+                                                                        "group/row transition-colors hover:bg-transparent",
                                                                         onRowClick && "cursor-pointer"
                                                                     )}
                                                                     onClick={(e) => {
@@ -633,7 +650,7 @@ export function DataTable<TData, TValue>({
                                                     key={row.id}
                                                     data-state={isSelected && "selected"}
                                                     className={cn(
-                                                        "transition-colors",
+                                                        "group/row transition-colors",
                                                         onRowClick && "cursor-pointer"
                                                     )}
                                                     onClick={(e) => {
@@ -678,13 +695,19 @@ export function DataTable<TData, TValue>({
                                 </TableBody>
                             </UiTable>
                         </div>
+                        {/* Pagination — inside card when toolbar is embedded */}
+                        {embeddedToolbar && showPagination && !isLoading && table.getFilteredRowModel().rows.length > pageSize && (
+                            <div className="border-t border-border/50">
+                                <DataTablePagination table={table} />
+                            </div>
+                        )}
                     </Card>
                 )
             )}
 
-            {/* Pagination */}
+            {/* Pagination — outside card (legacy, when no embedded toolbar) */}
             {
-                showPagination && !isLoading && table.getFilteredRowModel().rows.length > pageSize && (
+                !embeddedToolbar && showPagination && !isLoading && table.getFilteredRowModel().rows.length > pageSize && (
                     <DataTablePagination table={table} />
                 )
             }
