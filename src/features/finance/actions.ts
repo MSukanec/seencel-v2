@@ -188,6 +188,49 @@ export async function deleteFinanceMovement(
     return { success: true };
 }
 
+/**
+ * Update one or more fields on a financial movement
+ * Generic partial update — routes to the correct table based on movement_type.
+ * Used by inline editing (status, description, date, etc.)
+ */
+export async function updateMovementField(
+    movementId: string,
+    movementType: string,
+    fields: Record<string, any>
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    const tableMap: Record<string, { table: string; schema: string }> = {
+        'client_payment': { table: 'client_payments', schema: 'finance' },
+        'material_payment': { table: 'material_payments', schema: 'finance' },
+        'labor_payment': { table: 'labor_payments', schema: 'finance' },
+        'subcontract_payment': { table: 'subcontract_payments', schema: 'finance' },
+        'partner_contribution': { table: 'partner_contributions', schema: 'finance' },
+        'partner_withdrawal': { table: 'partner_withdrawals', schema: 'finance' },
+        'general_cost': { table: 'general_costs_payments', schema: 'finance' },
+        'wallet_transfer': { table: 'financial_operation_movements', schema: 'finance' },
+        'currency_exchange': { table: 'financial_operation_movements', schema: 'finance' },
+    };
+
+    const target = tableMap[movementType];
+    if (!target) {
+        return { success: false, error: `Tipo de movimiento desconocido: ${movementType}` };
+    }
+
+    const { error } = await supabase
+        .schema(target.schema as any)
+        .from(target.table)
+        .update(fields)
+        .eq('id', movementId);
+
+    if (error) {
+        console.error(`[updateMovementField] Error updating ${target.table}:`, error);
+        return { success: false, error: "Error al actualizar el movimiento" };
+    }
+
+    return { success: true };
+}
+
 // ============================================
 // CURRENCY EXCHANGE
 // ============================================

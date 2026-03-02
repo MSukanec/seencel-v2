@@ -15,6 +15,7 @@ export type UserPreferencesUpdate = {
     layout?: 'default' | 'sidebar';
     timezone?: string;
     sidebar_project_avatars?: boolean;
+    font_size?: 'smaller' | 'small' | 'default' | 'large' | 'larger';
 };
 
 type ActionResponse = { success: boolean; error?: string; avatar_url?: string };
@@ -119,6 +120,7 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdate) 
     if (preferences.theme) updateData.theme = preferences.theme;
     if (preferences.timezone) updateData.timezone = preferences.timezone;
     if (preferences.sidebar_project_avatars !== undefined) updateData.sidebar_project_avatars = preferences.sidebar_project_avatars;
+    if (preferences.font_size) updateData.font_size = preferences.font_size;
     if (preferences.layout) {
         updateData.layout = preferences.layout === 'sidebar' ? 'classic' : 'experimental';
     }

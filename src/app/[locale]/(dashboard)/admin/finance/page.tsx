@@ -1,33 +1,37 @@
 import type { Metadata } from "next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wallet, FileText, PieChart, Ticket, CreditCard } from "lucide-react";
-import { PageWrapper } from "@/components/layout";
-import { ContentLayout } from "@/components/layout";
+import { Wallet, CreditCard, Landmark, PieChart, Ticket } from "lucide-react";
+import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import {
     AdminFinanceSubscriptionsView,
-    AdminFinanceInvoicesView,
     AdminFinancePaymentsView,
+    AdminFinanceTransfersView,
     AdminFinancePlansView,
     AdminFinanceCouponsView,
 } from "@/features/admin/finance/views";
-import { getAdminPayments, getAdminBankTransfers } from "@/features/admin/finance/queries";
+import {
+    getAdminPayments,
+    getAdminBankTransfers,
+    getAdminSubscriptions,
+    getAdminPlans,
+} from "@/features/admin/finance/queries";
 import { getCoupons } from "@/features/admin/coupon-actions";
 
 // ✅ METADATA OBLIGATORIA
 export const metadata: Metadata = {
     title: "Finanzas | Seencel Admin",
-    description: "Gestión de pagos, suscripciones, facturas y cupones",
+    description: "Gestión de pagos, transferencias, suscripciones y cupones",
     robots: "noindex, nofollow",
 };
 
 export default async function AdminFinancePage() {
-    // ✅ ERROR BOUNDARY MANUAL
     try {
-        // Fetch data in parallel
-        const [payments, bankTransfers, coupons] = await Promise.all([
+        const [payments, bankTransfers, subscriptions, plans, coupons] = await Promise.all([
             getAdminPayments(),
             getAdminBankTransfers(),
+            getAdminSubscriptions(),
+            getAdminPlans(),
             getCoupons(),
         ]);
 
@@ -38,89 +42,55 @@ export default async function AdminFinancePage() {
                     title="Finanzas"
                     icon={<Wallet />}
                     tabs={
-                        <TabsList className="bg-transparent p-0 gap-6 flex items-start justify-start">
-                            <TabsTrigger
-                                value="payments"
-                                className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <CreditCard className="h-4 w-4" />
-                                    <span>Pagos</span>
-                                </div>
+                        <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
+                            <TabsTrigger value="payments">
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Pagos
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="subscriptions"
-                                className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Wallet className="h-4 w-4" />
-                                    <span>Suscripciones</span>
-                                </div>
+                            <TabsTrigger value="transfers">
+                                <Landmark className="h-4 w-4 mr-2" />
+                                Transferencias
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="invoices"
-                                className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4" />
-                                    <span>Facturación</span>
-                                </div>
+                            <TabsTrigger value="subscriptions">
+                                <Wallet className="h-4 w-4 mr-2" />
+                                Suscripciones
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="plans"
-                                className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <PieChart className="h-4 w-4" />
-                                    <span>Planes</span>
-                                </div>
+                            <TabsTrigger value="plans">
+                                <PieChart className="h-4 w-4 mr-2" />
+                                Planes
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="coupons"
-                                className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Ticket className="h-4 w-4" />
-                                    <span>Cupones</span>
-                                </div>
+                            <TabsTrigger value="coupons">
+                                <Ticket className="h-4 w-4 mr-2" />
+                                Cupones
                             </TabsTrigger>
                         </TabsList>
                     }
                 >
-                    <TabsContent value="payments" className="m-0 h-full focus-visible:outline-none">
-                        <ContentLayout variant="wide">
-                            <AdminFinancePaymentsView payments={payments} bankTransfers={bankTransfers} />
-                        </ContentLayout>
-                    </TabsContent>
+                    <ContentLayout variant="wide">
+                        <TabsContent value="payments" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                            <AdminFinancePaymentsView payments={payments} />
+                        </TabsContent>
 
-                    <TabsContent value="subscriptions" className="m-0 h-full focus-visible:outline-none">
-                        <ContentLayout variant="wide">
-                            <AdminFinanceSubscriptionsView />
-                        </ContentLayout>
-                    </TabsContent>
+                        <TabsContent value="transfers" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                            <AdminFinanceTransfersView bankTransfers={bankTransfers} />
+                        </TabsContent>
 
-                    <TabsContent value="invoices" className="m-0 h-full focus-visible:outline-none">
-                        <ContentLayout variant="wide">
-                            <AdminFinanceInvoicesView />
-                        </ContentLayout>
-                    </TabsContent>
+                        <TabsContent value="subscriptions" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                            <AdminFinanceSubscriptionsView subscriptions={subscriptions} />
+                        </TabsContent>
 
-                    <TabsContent value="plans" className="m-0 h-full focus-visible:outline-none">
-                        <ContentLayout variant="wide">
-                            <AdminFinancePlansView />
-                        </ContentLayout>
-                    </TabsContent>
+                        <TabsContent value="plans" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                            <AdminFinancePlansView plans={plans} />
+                        </TabsContent>
 
-                    <TabsContent value="coupons" className="m-0 h-full focus-visible:outline-none">
-                        <ContentLayout variant="wide">
+                        <TabsContent value="coupons" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                             <AdminFinanceCouponsView coupons={coupons} />
-                        </ContentLayout>
-                    </TabsContent>
+                        </TabsContent>
+                    </ContentLayout>
                 </PageWrapper>
             </Tabs>
         );
     } catch (error) {
-        // ✅ MANEJO DE ERRORES AMIGABLE
         return (
             <div className="h-full w-full flex items-center justify-center">
                 <ErrorDisplay

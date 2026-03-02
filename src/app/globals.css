@@ -106,7 +106,7 @@
   --foreground: oklch(0.985 0 0);
   --card: #242424;
   --card-foreground: oklch(0.985 0 0);
-  --popover: #1a1a1a;
+  --popover: #1c1d1f;
   --popover-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
@@ -134,7 +134,7 @@
 
   /* ── Semantic Colors (dark overrides) ── */
   --semantic-positive: oklch(67.24% 0.15355 132.579);
-  --semantic-negative: oklch(56.079% 0.18871 27.183);
+  --semantic-negative: oklch(66.687% 0.19569 25.713);
   --semantic-warning: oklch(0.78 0.14 75);
   --semantic-info: oklch(0.65 0.17 250);
   --semantic-neutral: oklch(0.65 0.10 235);
@@ -158,6 +158,12 @@
   /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Typography Scale Override (Linear-inspired) */
+  --text-sm: 0.8125rem;
+  /* 13px — primary body text (was 14px) */
+  --text-sm--line-height: 1.25rem;
+  /* 20px line height */
 
   /* Core Colors → Tailwind */
   --color-background: var(--background);
@@ -236,6 +242,8 @@
 
   body {
     @apply bg-background text-foreground;
+    font-weight: 500;
+    /* Linear-style: medium weight as default */
   }
 
   body[style*="overflow: hidden"] {
@@ -255,6 +263,33 @@
   [role="button"][aria-disabled="true"] {
     cursor: not-allowed;
   }
+
+  /* ── Font Size Preference (Linear-style) ── */
+  html[data-font-size="smaller"] {
+    font-size: 87.5%;
+  }
+
+  /* 14px base */
+  html[data-font-size="small"] {
+    font-size: 93.75%;
+  }
+
+  /* 15px base */
+  html[data-font-size="default"] {
+    font-size: 100%;
+  }
+
+  /* 16px base */
+  html[data-font-size="large"] {
+    font-size: 106.25%;
+  }
+
+  /* 17px base */
+  html[data-font-size="larger"] {
+    font-size: 112.5%;
+  }
+
+  /* 18px base */
 }
 
 /* ============================================================================

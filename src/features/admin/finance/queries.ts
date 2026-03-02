@@ -180,3 +180,125 @@ export async function getAdminBankTransfers(): Promise<AdminBankTransfer[]> {
         };
     }) as AdminBankTransfer[];
 }
+
+// ============================================================================
+// SUBSCRIPTIONS
+// ============================================================================
+
+export type AdminSubscription = {
+    id: string;
+    organization_id: string;
+    plan_id: string;
+    status: string;
+    billing_period: string;
+    started_at: string;
+    expires_at: string;
+    cancelled_at: string | null;
+    amount: number;
+    currency: string;
+    payer_email: string | null;
+    coupon_code: string | null;
+    provider_subscription_id: string | null;
+    created_at: string;
+    updated_at: string;
+    // Joined
+    organization: { id: string; name: string } | null;
+    plan: { id: string; name: string; slug: string | null } | null;
+};
+
+export async function getAdminSubscriptions(): Promise<AdminSubscription[]> {
+    const supabase = await createClient();
+
+    const { data: subs, error } = await supabase
+        .schema('billing').from("organization_subscriptions")
+        .select(`
+            id, organization_id, plan_id, status, billing_period,
+            started_at, expires_at, cancelled_at, amount, currency,
+            payer_email, coupon_code, provider_subscription_id,
+            created_at, updated_at
+        `)
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+    if (error) {
+        console.error("Error fetching subscriptions:", error);
+        throw new Error("Error al obtener suscripciones");
+    }
+
+    if (!subs?.length) return [];
+
+    // Fetch orgs
+    const orgIds = [...new Set(subs.map(s => s.organization_id))] as string[];
+    const { data: orgsData } = orgIds.length
+        ? await supabase.schema('iam').from('organizations').select('id, name').in('id', orgIds)
+        : { data: [] };
+    const orgMap = new Map(orgsData?.map(o => [o.id, o]) ?? []);
+
+    // Fetch plans
+    const planIds = [...new Set(subs.map(s => s.plan_id))] as string[];
+    const { data: plansData } = planIds.length
+        ? await supabase.schema('billing').from('plans').select('id, name, slug').in('id', planIds)
+        : { data: [] };
+    const planMap = new Map(plansData?.map(p => [p.id, p]) ?? []);
+
+    return subs.map(row => ({
+        ...row,
+        organization: orgMap.get(row.organization_id) ?? null,
+        plan: planMap.get(row.plan_id) ?? null,
+    })) as AdminSubscription[];
+}
+
+// ============================================================================
+// PLANS
+// ============================================================================
+
+export type AdminPlan = {
+    id: string;
+    name: string;
+    slug: string | null;
+    is_active: boolean;
+    billing_type: string | null;
+    monthly_amount: number | null;
+    annual_amount: number | null;
+    annual_discount_percent: number | null;
+    status: string;
+    features: Record<string, unknown> | null;
+    // Computed
+    active_subscriptions_count: number;
+};
+
+export async function getAdminPlans(): Promise<AdminPlan[]> {
+    const supabase = await createClient();
+
+    const { data: plans, error } = await supabase
+        .schema('billing').from("plans")
+        .select(`
+            id, name, slug, is_active, billing_type,
+            monthly_amount, annual_amount, annual_discount_percent,
+            status, features
+        `)
+        .order("name", { ascending: true });
+
+    if (error) {
+        console.error("Error fetching plans:", error);
+        throw new Error("Error al obtener planes");
+    }
+
+    if (!plans?.length) return [];
+
+    // Count active subscriptions per plan
+    const { data: subCounts } = await supabase
+        .schema('billing').from("organization_subscriptions")
+        .select("plan_id")
+        .eq("status", "active");
+
+    const countMap = new Map<string, number>();
+    subCounts?.forEach(s => {
+        countMap.set(s.plan_id, (countMap.get(s.plan_id) || 0) + 1);
+    });
+
+    return plans.map(row => ({
+        ...row,
+        active_subscriptions_count: countMap.get(row.id) || 0,
+    })) as AdminPlan[];
+}

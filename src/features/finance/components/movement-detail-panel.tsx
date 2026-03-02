@@ -65,6 +65,9 @@ export function MovementDetailPanel({
     const money = useMoney();
     const { setPanelMeta, closePanel } = usePanel();
 
+    // Guard: movement might be undefined when panel first opens
+    if (!movement) return null;
+
     // Set panel meta on mount
     useEffect(() => {
         setPanelMeta({

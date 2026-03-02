@@ -1,29 +1,25 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Loader2 } from "lucide-react";
+/**
+ * General Costs — Concepts View
+ * Standard 19.0 - Lean View Pattern
+ *
+ * Vista de conceptos de gasto (recurrentes o eventuales).
+ * Usa columnas de tables/ + useTableActions.
+ */
+
+import { Plus, FileText } from "lucide-react";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { ViewEmptyState } from "@/components/shared/empty-state";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { usePanel } from "@/stores/panel-store";
+import { useTableActions } from "@/hooks/use-table-actions";
+import { deleteGeneralCost } from "../actions";
+import { getGeneralCostConceptColumns } from "../tables/general-costs-concept-columns";
+import { GeneralCost, GeneralCostCategory } from "../types";
 import { toast } from "sonner";
 
-import { GeneralCost, GeneralCostCategory } from "@/features/general-costs/types";
-import { deleteGeneralCost } from "@/features/general-costs/actions";
-import { ConceptFormDialog } from "../forms/general-costs-concept-form";
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
-
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+// ─── Types ───────────────────────────────────────────────
 
 interface GeneralCostsConceptsViewProps {
     data: GeneralCost[];
@@ -31,154 +27,80 @@ interface GeneralCostsConceptsViewProps {
     organizationId: string;
 }
 
+// ─── Component ───────────────────────────────────────────
+
 export function GeneralCostsConceptsView({ data, categories, organizationId }: GeneralCostsConceptsViewProps) {
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [selectedConcept, setSelectedConcept] = useState<GeneralCost | undefined>(undefined);
+    const { openPanel } = usePanel();
 
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [conceptToDelete, setConceptToDelete] = useState<GeneralCost | null>(null);
-    const [isDeleting, startDeleteTransition] = useTransition();
-
-    const handleCreate = () => {
-        setSelectedConcept(undefined);
-        setIsDialogOpen(true);
-    };
-
-    const handleEdit = (concept: GeneralCost) => {
-        setSelectedConcept(concept);
-        setIsDialogOpen(true);
-    };
-
-    const handleDeleteClick = (concept: GeneralCost) => {
-        setConceptToDelete(concept);
-        setIsDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = () => {
-        if (!conceptToDelete) return;
-
-        startDeleteTransition(async () => {
+    // ─── Delete actions ──────────────────────────────────
+    const { handleDelete, DeleteConfirmDialog } = useTableActions<GeneralCost>({
+        onDelete: async (item) => {
             try {
-                await deleteGeneralCost(conceptToDelete.id);
+                await deleteGeneralCost(item.id);
                 toast.success("Concepto eliminado");
-                setIsDeleteDialogOpen(false);
-            } catch (error) {
-                console.error(error);
+                return { success: true };
+            } catch {
                 toast.error("Error al eliminar el concepto");
+                return { success: false };
             }
+        },
+        entityName: "concepto",
+        entityNamePlural: "conceptos",
+    });
+
+    // ─── Handlers ────────────────────────────────────────
+    const handleCreate = () => {
+        openPanel('general-cost-concept-form', {
+            organizationId,
+            categories,
         });
     };
 
-    const columns: ColumnDef<GeneralCost>[] = [
-        {
-            accessorKey: "name",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Nombre" />,
-            cell: ({ row }) => <span className="font-medium">{row.getValue("name")}</span>,
-        },
-        {
-            id: "category",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Categoría" />,
-            accessorFn: (row) => row.category?.name,
-            cell: ({ row }) => {
-                const category = row.original.category;
-                return category ? (
-                    <Badge variant="outline">{category.name}</Badge>
-                ) : (
-                    <span className="text-muted-foreground">-</span>
-                );
-            },
-        },
-        {
-            accessorKey: "is_recurring",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Recurrencia" />,
-            cell: ({ row }) => {
-                const cost = row.original;
-                return cost.is_recurring ? (
-                    <Badge variant="secondary">
-                        {cost.recurrence_interval === 'monthly' ? 'Mensual' : cost.recurrence_interval}
-                        {cost.expected_day ? ` (Día ${cost.expected_day})` : ''}
-                    </Badge>
-                ) : (
-                    <span className="text-muted-foreground">Único</span>
-                );
-            },
-        },
-        {
-            accessorKey: "description",
-            header: "Descripción",
-            cell: ({ row }) => (
-                <span className="text-muted-foreground truncate max-w-[200px] block">
-                    {row.getValue("description") || "-"}
-                </span>
-            ),
-        },
+    const handleEdit = (concept: GeneralCost) => {
+        openPanel('general-cost-concept-form', {
+            organizationId,
+            categories,
+            initialData: concept,
+        });
+    };
+
+    // ─── Columns ─────────────────────────────────────────
+    const columns = getGeneralCostConceptColumns();
+
+    // ─── Toolbar actions ─────────────────────────────────
+    const toolbarActions = [
+        { label: "Nuevo Concepto", icon: Plus, onClick: handleCreate },
     ];
 
+    // ─── Empty state ─────────────────────────────────────
+    if (data.length === 0) {
+        return (
+            <>
+                <Toolbar portalToHeader actions={toolbarActions} />
+                <ViewEmptyState
+                    mode="empty"
+                    icon={FileText}
+                    viewName="Conceptos de Gasto"
+                    featureDescription="Definí los tipos de gastos recurrentes o eventuales de tu organización."
+                    onAction={handleCreate}
+                    actionLabel="Nuevo Concepto"
+                />
+            </>
+        );
+    }
+
+    // ─── Render ──────────────────────────────────────────
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h3 className="text-lg font-medium">Conceptos de Gasto</h3>
-                    <p className="text-sm text-muted-foreground">Define los tipos de gastos recurrentes o eventuales.</p>
-                </div>
-                <Button onClick={handleCreate}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuevo Concepto
-                </Button>
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Listado de Conceptos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <DataTable
-                        columns={columns}
-                        data={data}
-                        showPagination={true}
-                        pageSize={10}
-                        enableRowActions={true}
-                        onEdit={handleEdit}
-                        onDelete={handleDeleteClick}
-                    />
-                </CardContent>
-            </Card>
-
-            <ConceptFormDialog
-                open={isDialogOpen}
-                onOpenChange={setIsDialogOpen}
-                conceptToEdit={selectedConcept}
-                categories={categories}
-                organizationId={organizationId}
+        <>
+            <DataTable
+                columns={columns}
+                data={data}
+                enableRowActions
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                embeddedToolbar={() => <Toolbar actions={toolbarActions} />}
             />
-
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará el concepto
-                            <strong> {conceptToDelete?.name}</strong>.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => {
-                                e.preventDefault(); // Prevent auto-close
-                                confirmDelete();
-                            }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            disabled={isDeleting}
-                        >
-                            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Eliminar
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
+            <DeleteConfirmDialog />
+        </>
     );
 }
-
-

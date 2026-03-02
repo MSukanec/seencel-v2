@@ -18,10 +18,10 @@ import { useTableActions } from "@/hooks/use-table-actions";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
+import { FilterPopover, SearchButton, DisplayButton } from "@/components/shared/toolbar-controls";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { exportToCSV, exportToExcel } from "@/lib/export";
-import { deleteFinanceMovement } from "../actions";
+import { deleteFinanceMovement, updateMovementField } from "../actions";
 import {
     getMovementColumns,
     MOVEMENT_TYPE_OPTIONS,
@@ -36,7 +36,7 @@ import { useRouter } from "@/i18n/routing";
 interface FinancesMovementsViewProps {
     movements: any[];
     wallets?: any[];
-    projects?: { id: string; name: string }[];
+    projects?: { id: string; name: string; image_url?: string | null; color?: string | null }[];
     showProjectColumn?: boolean;
     organizationId?: string;
     currencies?: { id: string; name: string; code: string; symbol: string }[];
@@ -65,6 +65,7 @@ export function FinancesMovementsView({
     const {
         optimisticItems: optimisticMovements,
         removeItem: optimisticRemove,
+        updateItem: optimisticUpdate,
     } = useOptimisticList({
         items: movements,
         getItemId: (m) => m.id,
@@ -136,8 +137,13 @@ export function FinancesMovementsView({
     const getWalletName = (walletId: string) =>
         wallets.find(w => w.id === walletId)?.wallet_name || "-";
 
-    const getProjectName = (projectId: string) =>
-        projects.find(p => p.id === projectId)?.name || "-";
+    // Project options for inline editing
+    const projectOptions = projects.map(p => ({
+        value: p.id,
+        label: p.name,
+        color: p.color,
+        imageUrl: p.image_url,
+    }));
 
     // ─── Export handlers ─────────────────────────────────
     const handleExportCSV = () => {
@@ -178,7 +184,7 @@ export function FinancesMovementsView({
         openPanel('movement-detail', {
             movement,
             walletName: getWalletName(movement.wallet_id),
-            projectName: getProjectName(movement.project_id),
+            projectName: projects.find(p => p.id === movement.project_id)?.name || "-",
             onEdit: () => handleEdit(movement),
         });
     };
@@ -214,8 +220,33 @@ export function FinancesMovementsView({
         }
     };
 
+    // ─── Inline update handler (optimistic) ──────────────
+    // UI-only keys used for optimistic updates but not sent to DB
+    const UI_ONLY_KEYS = new Set(['project_name', 'project_image_url', 'project_color']);
+
+    const handleInlineUpdate = (row: any, fields: Record<string, any>) => {
+        // All fields for optimistic UI update
+        optimisticUpdate(row.id, fields, async () => {
+            // Only send DB-valid fields to the server
+            const dbFields = Object.fromEntries(
+                Object.entries(fields).filter(([key]) => !UI_ONLY_KEYS.has(key))
+            );
+            try {
+                const result = await updateMovementField(row.id, row.movement_type, dbFields);
+                if (!result.success) {
+                    toast.error(result.error || "Error al actualizar");
+                }
+                // Always refresh to sync server state with optimistic UI
+                router.refresh();
+            } catch {
+                toast.error("Error al actualizar el movimiento");
+                router.refresh();
+            }
+        });
+    };
+
     // ─── Columns ─────────────────────────────────────────
-    const columns = getMovementColumns({ getWalletName, getProjectName, showProjectColumn });
+    const columns = getMovementColumns({ getWalletName, projectOptions, showProjectColumn, onInlineUpdate: handleInlineUpdate });
 
     // ─── Toolbar ─────────────────────────────────────────
     const toolbarActions = organizationId ? [
@@ -265,9 +296,9 @@ export function FinancesMovementsView({
     }
 
     // ─── Toolbar (embedded inside DataTable card) ───────
-    const embeddedToolbar = (
+    const embeddedToolbar = (table: any) => (
         <Toolbar
-            leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar movimientos..." /></>}
+            leftActions={<><FilterPopover filters={filters} /><DisplayButton table={table} /><SearchButton filters={filters} placeholder="Buscar movimientos..." /></>}
             actions={toolbarActions}
         />
     );

@@ -49,22 +49,22 @@ export function DataTableRowActions<TData>({
                     <span className="sr-only">Abrir menú</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[160px]">
+            <DropdownMenuContent align="end" className="w-40">
                 {onView && (
-                    <DropdownMenuItem onClick={() => onView(data)}>
-                        <Eye className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={() => onView(data)} className="text-xs gap-2">
+                        <Eye className="h-3.5 w-3.5" />
                         Ver detalle
                     </DropdownMenuItem>
                 )}
                 {onEdit && (
-                    <DropdownMenuItem onClick={() => onEdit(data)}>
-                        <Pencil className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={() => onEdit(data)} className="text-xs gap-2">
+                        <Pencil className="h-3.5 w-3.5" />
                         Editar
                     </DropdownMenuItem>
                 )}
                 {onDuplicate && (
-                    <DropdownMenuItem onClick={() => onDuplicate(data)}>
-                        <Copy className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={() => onDuplicate(data)} className="text-xs gap-2">
+                        <Copy className="h-3.5 w-3.5" />
                         Duplicar
                     </DropdownMenuItem>
                 )}
@@ -77,7 +77,7 @@ export function DataTableRowActions<TData>({
                             <DropdownMenuItem
                                 key={index}
                                 onClick={() => action.onClick(data)}
-                                className={action.variant === "destructive" ? "text-destructive focus:text-destructive" : ""}
+                                className={`text-xs gap-2 ${action.variant === "destructive" ? "text-destructive focus:text-destructive" : ""}`}
                             >
                                 {action.icon}
                                 {action.label}
@@ -91,9 +91,9 @@ export function DataTableRowActions<TData>({
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             onClick={() => onDelete(data)}
-                            className="text-destructive focus:text-destructive"
+                            className="text-xs gap-2 text-destructive focus:text-destructive"
                         >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                             Eliminar
                         </DropdownMenuItem>
                     </>

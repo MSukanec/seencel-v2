@@ -110,7 +110,6 @@ function deriveViewName(pathname: string): string {
         '/admin': 'Admin - Dashboard',
         '/admin/academy': 'Admin - Academia',
         '/admin/audit-logs': 'Admin - Auditoría',
-        '/admin/billing': 'Admin - Facturación',
         '/admin/catalog': 'Admin - Catálogo',
         '/admin/changelog': 'Admin - Changelog',
         '/admin/directory': 'Admin - Directorio',

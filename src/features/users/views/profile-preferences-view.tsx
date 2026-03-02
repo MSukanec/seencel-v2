@@ -13,7 +13,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Languages, Clock, Palette, Monitor } from "lucide-react";
+import { Languages, Clock, Palette, Monitor, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter, usePathname } from "@/i18n/routing";
 import { updateUserPreferences } from "@/features/users/actions";
@@ -21,6 +21,15 @@ import { TIMEZONES, detectBrowserTimezone } from "@/lib/timezone-data";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { toast } from "sonner";
+import { useLayoutActions, useFontSize, type FontSize } from "@/stores/layout-store";
+
+const FONT_SIZE_OPTIONS: { value: FontSize; label: string }[] = [
+    { value: 'smaller', label: 'Más pequeño' },
+    { value: 'small', label: 'Pequeño' },
+    { value: 'default', label: 'Normal' },
+    { value: 'large', label: 'Grande' },
+    { value: 'larger', label: 'Más grande' },
+];
 
 interface PreferencesViewProps {
     initialTimezone?: string | null;
@@ -34,6 +43,13 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
     const pathname = usePathname();
     const [isPending, startTransition] = useTransition();
     const [timezone, setTimezone] = useState<string>(initialTimezone || detectBrowserTimezone());
+    const fontSize = useFontSize();
+    const { setFontSize } = useLayoutActions();
+
+    const onFontSizeChange = (size: FontSize) => {
+        setFontSize(size); // Instant: localStorage + DOM
+        updateUserPreferences({ font_size: size }); // Persist to DB
+    };
 
     const onLanguageChange = (newLocale: string) => {
         startTransition(async () => {
@@ -127,6 +143,30 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
                             onClick={() => onThemeChange("dark")}
                             type="dark"
                         />
+                    </div>
+                </SettingsSection>
+
+                {/* ── Tamaño de Fuente ── */}
+                <SettingsSection
+                    icon={Type}
+                    title="Tamaño de fuente"
+                    description="Ajusta el tamaño del texto en toda la aplicación."
+                >
+                    <div className="flex items-center gap-1.5 p-1 bg-muted/50 rounded-lg w-fit">
+                        {FONT_SIZE_OPTIONS.map((option) => (
+                            <button
+                                key={option.value}
+                                onClick={() => onFontSizeChange(option.value)}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                                    fontSize === option.value
+                                        ? "bg-background text-foreground shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                                )}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
                     </div>
                 </SettingsSection>
             </SettingsSectionContainer>

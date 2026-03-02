@@ -511,3 +511,55 @@ export async function deleteGeneralCostPayment(id: string) {
     return true;
 }
 
+/**
+ * Update one or more fields on a general cost payment (inline editing).
+ * Handles special resolution:
+ * - wallet_name → wallet_id (looks up wallets by name)
+ * - payment_date, status → direct update
+ */
+export async function updateGeneralCostPaymentField(
+    paymentId: string,
+    fields: Record<string, any>
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    // Build DB-safe fields
+    const dbFields: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(fields)) {
+        if (key === 'wallet_name') {
+            // Resolve wallet_name → wallet_id
+            const { data: wallet } = await supabase
+                .schema('finance').from('organization_wallets_view')
+                .select('id')
+                .eq('wallet_name', value)
+                .limit(1)
+                .single();
+
+            if (wallet) {
+                dbFields.wallet_id = wallet.id;
+            }
+        } else if (['status', 'payment_date', 'notes', 'reference', 'general_cost_id'].includes(key)) {
+            // Direct DB-safe fields
+            dbFields[key] = value;
+        }
+        // Skip UI-only fields (e.g. wallet_icon, category_name, etc.)
+    }
+
+    if (Object.keys(dbFields).length === 0) {
+        return { success: true }; // Nothing to update
+    }
+
+    const { error } = await supabase
+        .schema('finance')
+        .from('general_costs_payments')
+        .update(dbFields)
+        .eq('id', paymentId);
+
+    if (error) {
+        console.error('[updateGeneralCostPaymentField] Error:', error);
+        return { success: false, error: "Error al actualizar el pago" };
+    }
+
+    return { success: true };
+}

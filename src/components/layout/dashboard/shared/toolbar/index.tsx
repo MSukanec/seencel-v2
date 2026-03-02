@@ -16,7 +16,6 @@ import { ToolbarSearch } from "./toolbar-search";
 import { useProjectStatusSafe } from "@/features/projects/context/project-status-context";
 import { getDocsSlugForPath } from "@/features/docs/lib/docs-mapping";
 
-// Note: Removed DataTableViewOptions as requested by user.
 import { DataTableBulkActions } from "@/components/shared/data-table/data-table-bulk-actions";
 
 import { Input } from "@/components/ui/input";

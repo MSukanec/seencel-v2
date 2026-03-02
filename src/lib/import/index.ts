@@ -24,6 +24,7 @@ export { importMaterialPaymentsBatch, importMaterialsCatalogBatch } from "./mate
 export { importTasksCatalogBatch } from "./tasks-import";
 export { importAITasksBatch } from "./ai-tasks-import";
 export { importDivisionsBatch } from "./divisions-import";
+export { importGeneralCostPaymentsBatch } from "./general-costs-import";
 
 // Re-export utilities from related files
 export * from "./utils";

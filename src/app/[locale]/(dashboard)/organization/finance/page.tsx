@@ -82,8 +82,31 @@ export default async function FinancePage({ params, searchParams }: { params: Pr
         capitalContactMap = new Map((capitalContacts || []).map(c => [c.id, c]));
     }
 
+    // Fetch member names + avatars for created_by lookup
+    const capitalCreatorIds = [...new Set(
+        (capitalMovementsResult.data || []).map((m: any) => m.created_by).filter(Boolean)
+    )];
+    let capitalMemberMap = new Map<string, { name: string; avatar_url: string | null }>();
+    if (capitalCreatorIds.length > 0) {
+        const { data: members } = await supabase
+            .schema("iam")
+            .from("organization_members")
+            .select("id, users(full_name, avatar_url)")
+            .in("id", capitalCreatorIds);
+        capitalMemberMap = new Map(
+            (members || []).map((m: any) => [
+                m.id,
+                {
+                    name: (m.users as any)?.full_name || "",
+                    avatar_url: (m.users as any)?.avatar_url || null,
+                },
+            ])
+        );
+    }
+
     const capitalMovements = (capitalMovementsResult.data || []).map((m: any) => {
         const cur = currencyMap.get(m.currency_id);
+        const creator = capitalMemberMap.get(m.created_by);
         return {
             id: m.id,
             type: m.movement_type,
@@ -101,6 +124,8 @@ export default async function FinancePage({ params, searchParams }: { params: Pr
             description: m.notes || m.reference || "",
             project_id: m.project_id,
             created_by: m.created_by,
+            creator_name: creator?.name || "",
+            creator_avatar_url: creator?.avatar_url || null,
             created_at: m.created_at,
         };
     });
@@ -174,7 +199,7 @@ export default async function FinancePage({ params, searchParams }: { params: Pr
                             Movimientos
                         </TabsTrigger>
                         <TabsTrigger value="capital" className={tabTriggerClass}>
-                            Capital
+                            Socios
                         </TabsTrigger>
                         <TabsTrigger value="settings" className={tabTriggerClass}>
                             Configuración

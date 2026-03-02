@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-27T17:03:38.530Z
+> Generated: 2026-03-01T21:32:52.143Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -40,8 +40,8 @@
 - `is_self(p_user_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `is_system_row(p_is_system boolean)` → boolean 🔐 *(public/functions_1.md)*
 - `set_timestamp()` → trigger 🔐 *(public/functions_1.md)*
-- `unaccent(regdictionary, text)` → text *(public/functions_2.md)*
 - `unaccent(text)` → text *(public/functions_2.md)*
+- `unaccent(regdictionary, text)` → text *(public/functions_2.md)*
 - `unaccent_init(internal)` → internal *(public/functions_2.md)*
 - `unaccent_lexize(internal, internal, internal, internal)` → internal *(public/functions_2.md)*
 
@@ -72,7 +72,7 @@
 - **`iam.user_acquisition`** (9 cols | FK: user_id → users)
 - **`iam.user_data`** (9 cols | FK: user_id → users)
 - **`iam.user_organization_preferences`** (6 cols | FK: user_id → users, organization_id → organizations)
-- **`iam.user_preferences`** (12 cols | FK: user_id → users, last_organization_id → organizations)
+- **`iam.user_preferences`** (13 cols | FK: user_id → users, last_organization_id → organizations)
 - **`iam.user_presence`** (10 cols | FK: user_id → users)
 - **`iam.user_view_history`** (9 cols | FK: user_id → users, organization_id → organizations)
 - **`iam.users`** (11 cols | FK: role_id → roles)
@@ -87,8 +87,8 @@
 - `iam.can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
-- `iam.can_view_org(p_organization_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
+- `iam.can_view_org(p_organization_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_project(p_project_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.current_user_id()` → uuid 🔐 *(iam/functions_1.md)*
 - `iam.dismiss_home_banner()` → boolean 🔐 *(iam/functions_1.md)*

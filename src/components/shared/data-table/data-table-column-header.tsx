@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Column } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown, EyeOff } from "lucide-react";
 
@@ -23,30 +24,38 @@ export function DataTableColumnHeader<TData, TValue>({
     title,
     className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
+    const [isHovered, setIsHovered] = useState(false);
+
     if (!column.getCanSort()) {
-        return <div className={cn("flex items-center h-8 text-xs font-medium text-muted-foreground", className)}>{title}</div>;
+        return <div className={cn("flex items-center h-7 text-xs font-medium text-muted-foreground", className)}>{title}</div>;
     }
 
     return (
-        <div className={cn("flex items-center space-x-2", className)}>
+        <div className={cn("flex items-center space-x-2 w-full", className)}>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
-                            "h-8 data-[state=open]:bg-accent hover:bg-muted/50",
-                            // Solo aplicar -ml-3 si no está alineado a la derecha
+                            "h-7 data-[state=open]:bg-accent hover:bg-muted/50",
                             !className?.includes("justify-end") && "-ml-3"
                         )}
+                        onMouseEnter={() => setIsHovered(true)}
+                        onMouseLeave={() => setIsHovered(false)}
                     >
                         <span className="text-xs font-medium">{title}</span>
                         {column.getIsSorted() === "desc" ? (
-                            <ArrowDown className="ml-2 h-4 w-4 text-primary" />
+                            <ArrowDown className="ml-1.5 h-3.5 w-3.5 text-foreground" />
                         ) : column.getIsSorted() === "asc" ? (
-                            <ArrowUp className="ml-2 h-4 w-4 text-primary" />
+                            <ArrowUp className="ml-1.5 h-3.5 w-3.5 text-foreground" />
                         ) : (
-                            <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/50" />
+                            <ArrowUpDown
+                                className={cn(
+                                    "ml-1.5 h-3.5 w-3.5 text-muted-foreground/40 transition-opacity duration-150",
+                                    isHovered ? "opacity-100" : "opacity-0"
+                                )}
+                            />
                         )}
                     </Button>
                 </DropdownMenuTrigger>
@@ -73,4 +82,3 @@ export function DataTableColumnHeader<TData, TValue>({
         </div>
     );
 }
-

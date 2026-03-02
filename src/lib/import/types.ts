@@ -28,4 +28,5 @@ export const ENTITY_TYPE_LABELS: Record<string, string> = {
     'client_payments': 'Pagos de Clientes',
     'subcontract_payments': 'Pagos de Subcontratos',
     'labor_payments': 'Pagos de Mano de Obra',
+    'general_cost_payments': 'Pagos de Gastos Generales',
 };

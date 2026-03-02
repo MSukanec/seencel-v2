@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-27T17:03:38.530Z
+> Generated: 2026-03-01T21:32:52.143Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -869,6 +869,9 @@ SELECT gcp.id,
     'general_cost'::text AS movement_type,
     gcp.organization_id,
     NULL::uuid AS project_id,
+    NULL::text AS project_name,
+    NULL::text AS project_image_url,
+    NULL::text AS project_color,
     gcp.payment_date,
     date_trunc('month'::text, (gcp.payment_date)::timestamp with time zone) AS payment_month,
     gcp.amount,
@@ -911,6 +914,9 @@ UNION ALL
     'material_payment'::text AS movement_type,
     mp.organization_id,
     mp.project_id,
+    p.name AS project_name,
+    p.image_url AS project_image_url,
+    p.color AS project_color,
     mp.payment_date,
     date_trunc('month'::text, (mp.payment_date)::timestamp with time zone) AS payment_month,
     mp.amount,
@@ -939,7 +945,7 @@ UNION ALL
     NULL::text AS to_currency_code,
     NULL::text AS to_currency_symbol,
     NULL::text AS to_wallet_name
-   FROM ((((((((finance.material_payments mp
+   FROM (((((((((finance.material_payments mp
      LEFT JOIN finance.currencies cur ON ((cur.id = mp.currency_id)))
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = mp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
@@ -948,12 +954,16 @@ UNION ALL
      LEFT JOIN contacts.contacts prov ON ((prov.id = mi.provider_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = mp.created_by)))
      LEFT JOIN iam.users u_created ON ((u_created.id = om_created.user_id)))
+     LEFT JOIN projects.projects p ON ((p.id = mp.project_id)))
   WHERE ((mp.is_deleted = false) OR (mp.is_deleted IS NULL))
 UNION ALL
  SELECT lp.id,
     'labor_payment'::text AS movement_type,
     lp.organization_id,
     lp.project_id,
+    p.name AS project_name,
+    p.image_url AS project_image_url,
+    p.color AS project_color,
     lp.payment_date,
     date_trunc('month'::text, (lp.payment_date)::timestamp with time zone) AS payment_month,
     lp.amount,
@@ -982,7 +992,7 @@ UNION ALL
     NULL::text AS to_currency_code,
     NULL::text AS to_currency_symbol,
     NULL::text AS to_wallet_name
-   FROM ((((((((finance.labor_payments lp
+   FROM (((((((((finance.labor_payments lp
      LEFT JOIN finance.currencies cur ON ((cur.id = lp.currency_id)))
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = lp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
@@ -991,12 +1001,16 @@ UNION ALL
      LEFT JOIN catalog.labor_categories lc ON ((lc.id = pl.labor_type_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = lp.created_by)))
      LEFT JOIN iam.users u_created ON ((u_created.id = om_created.user_id)))
+     LEFT JOIN projects.projects p ON ((p.id = lp.project_id)))
   WHERE ((lp.is_deleted = false) OR (lp.is_deleted IS NULL))
 UNION ALL
  SELECT sp.id,
     'subcontract_payment'::text AS movement_type,
     sp.organization_id,
     sp.project_id,
+    p.name AS project_name,
+    p.image_url AS project_image_url,
+    p.color AS project_color,
     sp.payment_date,
     date_trunc('month'::text, (sp.payment_date)::timestamp with time zone) AS payment_month,
     sp.amount,
@@ -1025,7 +1039,7 @@ UNION ALL
     NULL::text AS to_currency_code,
     NULL::text AS to_currency_symbol,
     NULL::text AS to_wallet_name
-   FROM (((((((finance.subcontract_payments sp
+   FROM ((((((((finance.subcontract_payments sp
      LEFT JOIN finance.currencies cur ON ((cur.id = sp.currency_id)))
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = sp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
@@ -1033,12 +1047,16 @@ UNION ALL
      LEFT JOIN contacts.contacts ct ON ((ct.id = s.contact_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = sp.created_by)))
      LEFT JOIN iam.users u_created ON ((u_created.id = om_created.user_id)))
+     LEFT JOIN projects.projects p ON ((p.id = sp.project_id)))
   WHERE ((sp.is_deleted = false) OR (sp.is_deleted IS NULL))
 UNION ALL
  SELECT cp.id,
     'client_payment'::text AS movement_type,
     cp.organization_id,
     cp.project_id,
+    p.name AS project_name,
+    p.image_url AS project_image_url,
+    p.color AS project_color,
     cp.payment_date,
     date_trunc('month'::text, (cp.payment_date)::timestamp with time zone) AS payment_month,
     cp.amount,
@@ -1067,7 +1085,7 @@ UNION ALL
     NULL::text AS to_currency_code,
     NULL::text AS to_currency_symbol,
     NULL::text AS to_wallet_name
-   FROM ((((((((finance.client_payments cp
+   FROM (((((((((finance.client_payments cp
      LEFT JOIN finance.currencies cur ON ((cur.id = cp.currency_id)))
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = cp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
@@ -1076,12 +1094,16 @@ UNION ALL
      LEFT JOIN finance.client_commitments cc ON ((cc.id = cp.commitment_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = cp.created_by)))
      LEFT JOIN iam.users u_created ON ((u_created.id = om_created.user_id)))
+     LEFT JOIN projects.projects p ON ((p.id = cp.project_id)))
   WHERE ((cp.is_deleted = false) OR (cp.is_deleted IS NULL))
 UNION ALL
  SELECT fo.id,
     'currency_exchange'::text AS movement_type,
     fo.organization_id,
     fo.project_id,
+    p.name AS project_name,
+    p.image_url AS project_image_url,
+    p.color AS project_color,
     fo.operation_date AS payment_date,
     date_trunc('month'::text, (fo.operation_date)::timestamp with time zone) AS payment_month,
     fom_out.amount,
@@ -1108,7 +1130,7 @@ UNION ALL
     cur_in.code AS to_currency_code,
     cur_in.symbol AS to_currency_symbol,
     w_in.name AS to_wallet_name
-   FROM ((((((((((finance.financial_operations fo
+   FROM (((((((((((finance.financial_operations fo
      LEFT JOIN finance.financial_operation_movements fom_out ON (((fom_out.financial_operation_id = fo.id) AND (fom_out.direction = 'out'::text) AND ((fom_out.is_deleted = false) OR (fom_out.is_deleted IS NULL)))))
      LEFT JOIN finance.financial_operation_movements fom_in ON (((fom_in.financial_operation_id = fo.id) AND (fom_in.direction = 'in'::text) AND ((fom_in.is_deleted = false) OR (fom_in.is_deleted IS NULL)))))
      LEFT JOIN finance.currencies cur_out ON ((cur_out.id = fom_out.currency_id)))
@@ -1119,12 +1141,16 @@ UNION ALL
      LEFT JOIN finance.wallets w_in ON ((w_in.id = ow_in.wallet_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = fo.created_by)))
      LEFT JOIN iam.users u_created ON ((u_created.id = om_created.user_id)))
+     LEFT JOIN projects.projects p ON ((p.id = fo.project_id)))
   WHERE ((fo.type = 'currency_exchange'::text) AND (fo.is_deleted = false))
 UNION ALL
  SELECT fo.id,
     'wallet_transfer'::text AS movement_type,
     fo.organization_id,
     fo.project_id,
+    p.name AS project_name,
+    p.image_url AS project_image_url,
+    p.color AS project_color,
     fo.operation_date AS payment_date,
     date_trunc('month'::text, (fo.operation_date)::timestamp with time zone) AS payment_month,
     fom_out.amount,
@@ -1151,7 +1177,7 @@ UNION ALL
     cur.code AS to_currency_code,
     cur.symbol AS to_currency_symbol,
     w_in.name AS to_wallet_name
-   FROM (((((((((finance.financial_operations fo
+   FROM ((((((((((finance.financial_operations fo
      LEFT JOIN finance.financial_operation_movements fom_out ON (((fom_out.financial_operation_id = fo.id) AND (fom_out.direction = 'out'::text) AND ((fom_out.is_deleted = false) OR (fom_out.is_deleted IS NULL)))))
      LEFT JOIN finance.financial_operation_movements fom_in ON (((fom_in.financial_operation_id = fo.id) AND (fom_in.direction = 'in'::text) AND ((fom_in.is_deleted = false) OR (fom_in.is_deleted IS NULL)))))
      LEFT JOIN finance.currencies cur ON ((cur.id = fom_out.currency_id)))
@@ -1161,5 +1187,6 @@ UNION ALL
      LEFT JOIN finance.wallets w_in ON ((w_in.id = ow_in.wallet_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = fo.created_by)))
      LEFT JOIN iam.users u_created ON ((u_created.id = om_created.user_id)))
+     LEFT JOIN projects.projects p ON ((p.id = fo.project_id)))
   WHERE ((fo.type = 'wallet_transfer'::text) AND (fo.is_deleted = false));
 ```

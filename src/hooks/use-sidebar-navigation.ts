@@ -31,7 +31,6 @@ import {
     MessageCircle,
     ScrollText,
     MessageSquareText,
-    Receipt,
     Layers,
 } from "lucide-react";
 import { NavigationContext } from "@/stores/layout-store";
@@ -224,7 +223,6 @@ export function useSidebarNavigation() {
                     label: 'Comercial',
                     items: [
                         { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
-                        { title: 'Facturación', href: '/admin/billing', icon: Receipt },
                     ],
                 },
                 // Catálogo Técnico — Tareas y Recursos

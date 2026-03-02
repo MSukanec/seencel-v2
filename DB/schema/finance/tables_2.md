@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-27T17:03:38.530Z
+> Generated: 2026-03-01T21:32:52.143Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -22,7 +22,7 @@
 | updated_at | timestamptz | ✗ | now() |  |
 | wallet_id | uuid | ✓ |  | FK → organization_wallets.id |
 | partner_id | uuid | ✓ |  | FK → capital_participants.id |
-| status | text | ✗ | 'confirmed'::text |  |
+| status | text | ✗ | 'pending'::text |  |
 | created_by | uuid | ✓ |  |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
@@ -44,7 +44,7 @@
 | updated_at | timestamptz | ✗ | now() |  |
 | wallet_id | uuid | ✓ |  | FK → organization_wallets.id |
 | partner_id | uuid | ✓ |  | FK → capital_participants.id |
-| status | text | ✗ | 'confirmed'::text |  |
+| status | text | ✗ | 'pending'::text |  |
 | created_by | uuid | ✓ |  |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
@@ -224,7 +224,7 @@
 | created_at | timestamptz | ✓ | now() |  |
 | updated_at | timestamptz | ✓ | now() |  |
 | wallet_id | uuid | ✓ |  | FK → organization_wallets.id |
-| status | text | ✗ | 'confirmed'::text |  |
+| status | text | ✗ | 'pending'::text |  |
 | created_by | uuid | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
 | is_deleted | bool | ✓ | false |  |

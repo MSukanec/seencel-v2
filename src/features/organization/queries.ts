@@ -408,7 +408,7 @@ export async function getFinancialMovements() {
     // Fetch Projects for mapping (exclude deleted projects)
     const { data: projects } = await supabase
         .schema('projects').from('projects')
-        .select('id, name')
+        .select('id, name, image_url, color')
         .eq('organization_id', orgId)
         .eq('is_deleted', false);
 

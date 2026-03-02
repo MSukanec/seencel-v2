@@ -108,8 +108,8 @@ interface DataTableProps<TData, TValue> {
     // =========================================================================
     // EMBEDDED TOOLBAR — Renders toolbar inside the card, above the table
     // =========================================================================
-    /** Toolbar rendered as first row inside the DataTable card (integrated layout) */
-    embeddedToolbar?: React.ReactNode;
+    /** Toolbar rendered as first row inside the DataTable card. Receives table instance for column visibility controls */
+    embeddedToolbar?: React.ReactNode | ((table: Table<TData>) => React.ReactNode);
 
     // =========================================================================
     // DEPRECATED PROPS - Accepted for backward compatibility but NOT rendered
@@ -139,7 +139,7 @@ export function DataTable<TData, TValue>({
     isLoading = false,
     onRowClick,
     emptyState,
-    pageSize = 10,
+    pageSize = 100,
     showPagination = true,
     stickyHeader = true,
     viewMode = "table",
@@ -402,7 +402,10 @@ export function DataTable<TData, TValue>({
                         {/* Embedded Toolbar — integrated header */}
                         {embeddedToolbar && (
                             <div className="px-4 py-2.5 border-b border-border/50">
-                                {embeddedToolbar}
+                                {typeof embeddedToolbar === 'function'
+                                    ? embeddedToolbar(table)
+                                    : embeddedToolbar
+                                }
                             </div>
                         )}
                         <div className="relative w-full overflow-auto">
@@ -436,7 +439,14 @@ export function DataTable<TData, TValue>({
                                                                 !(isSelecting && isLast) && "overflow-hidden",
                                                                 isFirst ? "px-4" : isLast ? "px-6" : "px-4"
                                                             )}
-                                                            style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
+                                                            style={{
+                                                                // Linear-style: primary column fills remaining space,
+                                                                // compact columns auto-shrink to content
+                                                                width: header.column.columnDef.enableHiding === false
+                                                                    && header.id !== 'select' && header.id !== 'actions'
+                                                                    ? '100%'
+                                                                    : header.getSize() !== 150 ? header.getSize() : undefined
+                                                            }}
                                                         >
                                                             {/* Normal header content - slides out */}
                                                             <div
@@ -628,11 +638,18 @@ export function DataTable<TData, TValue>({
                                                                         }
                                                                     }}
                                                                 >
-                                                                    {row.getVisibleCells().map((cell) => (
-                                                                        <TableCell key={cell.id} className="px-4 py-3">
-                                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                        </TableCell>
-                                                                    ))}
+                                                                    {row.getVisibleCells().map((cell) => {
+                                                                        const isFill = (cell.column.columnDef.meta as any)?.fillWidth;
+                                                                        return (
+                                                                            <TableCell
+                                                                                key={cell.id}
+                                                                                className={cn("px-4 py-3", isFill && "overflow-hidden max-w-0")}
+                                                                                style={isFill ? { width: '100%' } : undefined}
+                                                                            >
+                                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                            </TableCell>
+                                                                        );
+                                                                    })}
                                                                 </TableRow>
                                                             );
                                                         })
@@ -661,11 +678,18 @@ export function DataTable<TData, TValue>({
                                                         }
                                                     }}
                                                 >
-                                                    {row.getVisibleCells().map((cell) => (
-                                                        <TableCell key={cell.id} className="px-4 py-3">
-                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                        </TableCell>
-                                                    ))}
+                                                    {row.getVisibleCells().map((cell) => {
+                                                        const isFill = (cell.column.columnDef.meta as any)?.fillWidth;
+                                                        return (
+                                                            <TableCell
+                                                                key={cell.id}
+                                                                className={cn("px-4 py-3", isFill && "overflow-hidden max-w-0")}
+                                                                style={isFill ? { width: '100%' } : undefined}
+                                                            >
+                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                            </TableCell>
+                                                        );
+                                                    })}
                                                 </TableRow>
                                             );
                                         })
@@ -695,20 +719,42 @@ export function DataTable<TData, TValue>({
                                 </TableBody>
                             </UiTable>
                         </div>
-                        {/* Pagination — inside card when toolbar is embedded */}
-                        {embeddedToolbar && showPagination && !isLoading && table.getFilteredRowModel().rows.length > pageSize && (
-                            <div className="border-t border-border/50">
-                                <DataTablePagination table={table} />
+                        {/* Show More — inside card when toolbar is embedded */}
+                        {embeddedToolbar && showPagination && !isLoading && table.getCanNextPage() && (
+                            <div className="border-t border-border/50 px-4 py-3 flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">
+                                    Mostrando {table.getRowModel().rows.length} de {table.getFilteredRowModel().rows.length}
+                                </span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-xs h-7 text-muted-foreground hover:text-foreground"
+                                    onClick={() => table.setPageSize(table.getState().pagination.pageSize + 100)}
+                                >
+                                    Mostrar más
+                                </Button>
                             </div>
                         )}
                     </Card>
                 )
             )}
 
-            {/* Pagination — outside card (legacy, when no embedded toolbar) */}
+            {/* Show More — outside card (legacy, when no embedded toolbar) */}
             {
-                !embeddedToolbar && showPagination && !isLoading && table.getFilteredRowModel().rows.length > pageSize && (
-                    <DataTablePagination table={table} />
+                !embeddedToolbar && showPagination && !isLoading && table.getCanNextPage() && (
+                    <div className="flex items-center justify-between px-2">
+                        <span className="text-xs text-muted-foreground">
+                            Mostrando {table.getRowModel().rows.length} de {table.getFilteredRowModel().rows.length}
+                        </span>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => table.setPageSize(table.getState().pagination.pageSize + 100)}
+                        >
+                            Mostrar más
+                        </Button>
+                    </div>
                 )
             }
         </div>

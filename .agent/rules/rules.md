@@ -67,24 +67,29 @@ features/[feature]/
 |------|--------|----------|
 | `useTableActions` | `@/hooks/use-table-actions` | Delete single/bulk + dialog |
 | `useTableFilters` | `@/hooks/use-table-filters` | Search + date + facets |
+| `useOptimisticList` | `@/hooks/use-optimistic-action` | Optimistic add/remove/update en listas |
 
 ### Column Factories OBLIGATORIOS:
 
 | Factory | Propósito |
 |---------|----------|
-| `createDateColumn` | Fecha con avatar, formato localizado |
-| `createTextColumn` | Texto con truncate, subtitle, customRender |
+| `createDateColumn` | Fecha con avatar, formato localizado, inline DatePicker |
+| `createTextColumn` | Texto con truncate, subtitle, customRender, inline Input |
 | `createMoneyColumn` | Monto con +/-, colores semánticos, exchange rate |
-| `createStatusColumn` | Badge semántico (positive/negative/warning/neutral) |
-| `createProjectColumn` | Proyecto con avatar |
+| `createStatusColumn` | Badge semántico (positive/negative/warning/neutral), inline Command |
+| `createProjectColumn` | Proyecto con avatar, inline Command selector |
+| `createEntityColumn` | Tipo/entidad con label mapeado + subtítulo |
+| `createPercentColumn` | Porcentaje alineado a derecha, font-mono |
 
 ### Prohibiciones:
 - ⛔ Definir columnas inline en la vista → extraerlas a `tables/`
 - ⛔ Reimplementar AlertDialog para delete → usar `useTableActions`
 - ⛔ Crear estados de filtro sueltos → usar `useTableFilters`
 - ⛔ Vista de más de 250 líneas
+- ⛔ Toolbar controls manuales → usar `FilterPopover`, `SearchButton`, `DisplayButton` de `@/components/shared/toolbar-controls`
 
-📖 **Detalle:** Skill [seencel-page-layout](../skills/seencel-page-layout/SKILL.md) sección 3
+📖 **Detalle COMPLETO (LEER SIEMPRE):** Skill [seencel-datatable-system](../skills/seencel-datatable-system/SKILL.md)
+📖 **Referencia estándar:** Finanzas > Movimientos (`finance/views/finances-movements-view.tsx` + `finance/tables/movements-columns.tsx`)
 
 ---
 

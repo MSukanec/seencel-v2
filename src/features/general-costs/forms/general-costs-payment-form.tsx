@@ -1,83 +1,106 @@
 "use client";
 
+/**
+ * General Costs — Payment Form (Panel)
+ * Standard 19.0 - Self-Contained Panel Form
+ *
+ * Supports edit mode with Field Factories.
+ * View mode is handled by a separate detail panel if needed.
+ */
+
 import { useState, useEffect, useRef } from "react";
+import { usePanel } from "@/stores/panel-store";
+import { Receipt } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { CalendarIcon, Wallet, FileText, ArrowDownCircle, User } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Combobox } from "@/components/ui/combobox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { FormGroup } from "@/components/ui/form-group";
-import { FormFooter } from "@/components/shared/forms/form-footer";
-import { ViewFormFooter } from "@/components/shared/forms/view-form-footer";
-import { DetailField, DetailGrid, DetailSection } from "@/components/shared/forms/detail-field";
-import { Badge } from "@/components/ui/badge";
-import { AttachmentList, AttachmentItem } from "@/components/shared/attachments/attachment-list";
-import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/components/shared/multi-file-upload";
-
-import { cn } from "@/lib/utils";
+    AmountField,
+    DateField,
+    SelectField,
+    WalletField,
+    CurrencyField,
+    ExchangeRateField,
+    NotesField,
+    ReferenceField,
+    UploadField,
+} from "@/components/shared/forms/fields";
+import type { UploadedFile } from "@/hooks/use-file-upload";
 import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import { GeneralCost, GeneralCostPaymentView } from "@/features/general-costs/types";
 import { createGeneralCostPayment, updateGeneralCostPayment } from "@/features/general-costs/actions";
-import { useMoney } from "@/hooks/use-money";
-import { getMovementAttachments, getAttachmentUrl } from "@/features/finance/actions";
+
+// ─── Types ───────────────────────────────────────────────
 
 interface PaymentFormProps {
-    initialData?: GeneralCostPaymentView | null;
+    organizationId: string;
     concepts: GeneralCost[];
     wallets: { id: string; wallet_name: string }[];
     currencies: { id: string; name: string; code: string; symbol: string }[];
-    organizationId: string;
+    initialData?: GeneralCostPaymentView | null;
     onSuccess?: () => void;
-    onCancel?: () => void;
-    onEdit?: () => void;
-    viewMode?: boolean;
+    formId?: string;
 }
 
-export function PaymentForm({
-    initialData,
+// ─── Status options ──────────────────────────────────────
+
+const STATUS_OPTIONS = [
+    { value: "confirmed", label: "Confirmado" },
+    { value: "pending", label: "Pendiente" },
+    { value: "overdue", label: "Vencido" },
+    { value: "cancelled", label: "Cancelado" },
+];
+
+// ─── Component ───────────────────────────────────────────
+
+export function GeneralCostsPaymentForm({
+    organizationId,
     concepts,
     wallets,
     currencies,
-    organizationId,
+    initialData,
     onSuccess,
-    onCancel,
-    onEdit,
-    viewMode = false
+    formId,
 }: PaymentFormProps) {
+    const { closePanel, setPanelMeta } = usePanel();
     const isEditing = !!initialData;
     const [isLoading, setIsLoading] = useState(false);
-    const money = useMoney();
-    const uploadRef = useRef<MultiFileUploadRef>(null);
+    const uploadCleanupRef = useRef<(() => void) | null>(null);
 
-    // Form state
+    // ─── Form state ──────────────────────────────────────
     const [paymentDate, setPaymentDate] = useState<Date>(
         parseDateFromDB(initialData?.payment_date) || new Date()
     );
-    const [generalCostId, setGeneralCostId] = useState<string>(initialData?.general_cost_id || "");
-    const [amount, setAmount] = useState<string>(initialData?.amount?.toString() || "");
-    const [status, setStatus] = useState<string>(initialData?.status || "confirmed");
-    const [currencyId, setCurrencyId] = useState<string>(initialData?.currency_id || currencies[0]?.id || "");
-    const [walletId, setWalletId] = useState<string>(initialData?.wallet_id || wallets[0]?.id || "");
-    const [notes, setNotes] = useState<string>(initialData?.notes || "");
-    const [reference, setReference] = useState<string>(initialData?.reference || "");
-    const [exchangeRate, setExchangeRate] = useState<string>(
-        initialData?.exchange_rate?.toString() || ""
-    );
+    const [generalCostId, setGeneralCostId] = useState(initialData?.general_cost_id || "");
+    const [amount, setAmount] = useState(initialData?.amount?.toString() || "");
+    const [status, setStatus] = useState(initialData?.status || "confirmed");
+    const [currencyId, setCurrencyId] = useState(initialData?.currency_id || currencies[0]?.id || "");
+    const [walletId, setWalletId] = useState(initialData?.wallet_id || wallets[0]?.id || "");
+    const [notes, setNotes] = useState(initialData?.notes || "");
+    const [reference, setReference] = useState(initialData?.reference || "");
+    const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate?.toString() || "");
     const [files, setFiles] = useState<UploadedFile[]>([]);
 
+    // ─── Panel Meta ──────────────────────────────────────
+    useEffect(() => {
+        setPanelMeta({
+            icon: Receipt,
+            title: isEditing ? "Editar Pago" : "Nuevo Pago",
+            description: isEditing
+                ? "Modificá los datos del pago de gasto general."
+                : "Registrá un pago de gasto general.",
+            size: "lg",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Registrar Pago",
+            },
+        });
+    }, [isEditing, setPanelMeta]);
+
+    // ─── Concept options ─────────────────────────────────
+    const conceptOptions = [
+        { value: "", label: "Sin concepto (Varios)" },
+        ...concepts.map((c) => ({ value: c.id, label: c.name })),
+    ];
+
+    // ─── Submit ──────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -85,12 +108,10 @@ export function PaymentForm({
             toast.error("El monto debe ser mayor a 0");
             return;
         }
-
         if (!walletId) {
             toast.error("Seleccioná una billetera");
             return;
         }
-
         if (!currencyId) {
             toast.error("Seleccioná una moneda");
             return;
@@ -99,13 +120,6 @@ export function PaymentForm({
         setIsLoading(true);
 
         try {
-            // Upload files first if any are pending
-            let finalFiles = files;
-            if (uploadRef.current) {
-                const uploaded = await uploadRef.current.startUpload();
-                if (uploaded) finalFiles = uploaded;
-            }
-
             const payload = {
                 payment_date: formatDateForDB(paymentDate)!,
                 general_cost_id: generalCostId || undefined,
@@ -116,7 +130,7 @@ export function PaymentForm({
                 notes: notes || undefined,
                 reference: reference || undefined,
                 exchange_rate: exchangeRate ? parseFloat(exchangeRate) : undefined,
-                media_files: finalFiles && finalFiles.length > 0 ? finalFiles : undefined,
+                media_files: files && files.length > 0 ? files : undefined,
             };
 
             if (isEditing && initialData) {
@@ -129,343 +143,106 @@ export function PaymentForm({
                 });
                 toast.success("Pago registrado");
             }
-
             onSuccess?.();
-        } catch (error) {
-            console.error(error);
+            closePanel();
+        } catch {
             toast.error("Error al guardar el pago");
         } finally {
             setIsLoading(false);
         }
     };
 
-    // === VIEW MODE: Read-only detail view ===
-    if (viewMode && initialData) {
-        const walletName = wallets.find(w => w.id === initialData.wallet_id)?.wallet_name || "-";
-        const conceptName = concepts.find(c => c.id === initialData.general_cost_id)?.name || "Varios";
-        const currencyCode = currencies.find(c => c.id === initialData.currency_id)?.code || "";
-        const amountValue = Number(initialData.amount);
-        const exchangeRateValue = Number(initialData.exchange_rate);
+    // ─── Render ──────────────────────────────────────────
+    return (
+        <form id={formId} onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Fecha */}
+                <DateField
+                    label="Fecha de Pago"
+                    value={paymentDate}
+                    onChange={(d) => d && setPaymentDate(d)}
+                    required
+                />
 
-        // Attachments state and fetch logic for view mode
-        const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-        const [loadingAttachments, setLoadingAttachments] = useState(false);
+                {/* Estado */}
+                <SelectField
+                    label="Estado"
+                    value={status}
+                    onChange={setStatus}
+                    options={STATUS_OPTIONS}
+                    placeholder="Seleccionar estado"
+                />
 
-        useEffect(() => {
-            if (initialData.has_attachments) {
-                setLoadingAttachments(true);
-                getMovementAttachments(initialData.id, 'general_cost_payment')
-                    .then(({ attachments: data }) => setAttachments(data as AttachmentItem[]))
-                    .finally(() => setLoadingAttachments(false));
-            }
-        }, [initialData.id, initialData.has_attachments]);
+                {/* Concepto — full width */}
+                <SelectField
+                    label="Concepto"
+                    value={generalCostId}
+                    onChange={setGeneralCostId}
+                    options={conceptOptions}
+                    placeholder="Buscar concepto..."
+                    searchable
+                    clearable
+                    className="md:col-span-2"
+                />
 
-        const handleGetUrl = async (bucket: string, filePath: string): Promise<string | null> => {
-            const { url } = await getAttachmentUrl(bucket, filePath);
-            return url;
-        };
+                {/* Billetera */}
+                <WalletField
+                    value={walletId}
+                    onChange={setWalletId}
+                    wallets={wallets.map((w) => ({ id: w.id, name: w.wallet_name }))}
+                    required
+                />
 
-        const getStatusBadge = (status: string) => {
-            const configs: Record<string, { label: string; className: string }> = {
-                confirmed: { label: "Confirmado", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
-                pending: { label: "Pendiente", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
-                overdue: { label: "Vencido", className: "bg-destructive/10 text-destructive border-destructive/20" },
-                cancelled: { label: "Cancelado", className: "bg-destructive/10 text-destructive border-destructive/20" },
-            };
-            const config = configs[status] || { label: status, className: "" };
-            return (
-                <Badge variant="outline" className={config.className}>
-                    {config.label}
-                </Badge>
-            );
-        };
+                {/* Monto */}
+                <AmountField
+                    value={amount}
+                    onChange={setAmount}
+                />
 
-        return (
-            <div className="flex flex-col h-full min-h-0">
-                {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto space-y-6">
-                    {/* Header Section - Type & Status */}
-                    <div className="flex items-center justify-between pb-2">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2.5 rounded-lg bg-amount-negative/10">
-                                <ArrowDownCircle className="h-5 w-5 text-amount-negative" />
-                            </div>
-                            <div>
-                                <p className="font-semibold text-lg">Gastos Generales</p>
-                                <p className="text-sm text-muted-foreground">{conceptName}</p>
-                            </div>
-                        </div>
-                        {getStatusBadge(initialData.status)}
-                    </div>
+                {/* Moneda */}
+                <CurrencyField
+                    value={currencyId}
+                    onChange={setCurrencyId}
+                    currencies={currencies}
+                    required
+                />
 
-                    {/* Amount Section */}
-                    <div className="bg-muted/30 rounded-lg p-4 text-center">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                            Monto
-                        </p>
-                        <p className="text-3xl font-bold font-mono text-amount-negative">
-                            -{money.format(Math.abs(amountValue), currencyCode)}
-                        </p>
-                        {exchangeRateValue && exchangeRateValue !== 1 && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Cotización: {exchangeRateValue.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
-                            </p>
-                        )}
-                    </div>
+                {/* Cotización */}
+                <ExchangeRateField
+                    value={exchangeRate}
+                    onChange={setExchangeRate}
+                />
 
-                    {/* Details Grid */}
-                    <DetailSection title="Detalles">
-                        <DetailGrid cols={2}>
-                            <DetailField
-                                label="Fecha"
-                                value={
-                                    <span className="flex items-center gap-2">
-                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                        {format(parseDateFromDB(initialData.payment_date) || new Date(), "dd 'de' MMMM, yyyy", { locale: es })}
-                                    </span>
-                                }
-                            />
-                            <DetailField
-                                label="Billetera"
-                                value={
-                                    <span className="flex items-center gap-2">
-                                        <Wallet className="h-4 w-4 text-muted-foreground" />
-                                        {walletName}
-                                    </span>
-                                }
-                            />
-                            {initialData.reference && (
-                                <DetailField
-                                    label="Referencia"
-                                    value={initialData.reference}
-                                />
-                            )}
-                        </DetailGrid>
-                    </DetailSection>
+                {/* Notas — full width */}
+                <NotesField
+                    value={notes}
+                    onChange={setNotes}
+                    placeholder="Descripción del pago..."
+                    rows={2}
+                    className="md:col-span-2"
+                />
 
-                    {/* Description */}
-                    {initialData.notes && (
-                        <DetailSection title="Descripción">
-                            <div className="flex items-start gap-2">
-                                <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                <p className="text-sm text-foreground">{initialData.notes}</p>
-                            </div>
-                        </DetailSection>
-                    )}
+                {/* Referencia — full width */}
+                <ReferenceField
+                    value={reference}
+                    onChange={setReference}
+                    placeholder="Nro. de recibo, factura, etc."
+                    className="md:col-span-2"
+                />
 
-                    {/* Creator Info */}
-                    {(initialData as any).creator_full_name && (
-                        <DetailSection title="Creado por">
-                            <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                                    {(initialData as any).creator_avatar_url ? (
-                                        <img
-                                            src={(initialData as any).creator_avatar_url}
-                                            alt={(initialData as any).creator_full_name}
-                                            className="h-8 w-8 rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <User className="h-4 w-4 text-muted-foreground" />
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium">{(initialData as any).creator_full_name}</p>
-                                    {(initialData as any).created_at && (
-                                        <p className="text-xs text-muted-foreground">
-                                            {format(new Date((initialData as any).created_at), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </DetailSection>
-                    )}
-
-                    {/* Attachments Section */}
-                    {(initialData.has_attachments || attachments.length > 0) && (
-                        <DetailSection title="Adjuntos">
-                            <AttachmentList
-                                attachments={attachments}
-                                onGetUrl={handleGetUrl}
-                                isLoading={loadingAttachments}
-                            />
-                        </DetailSection>
-                    )}
-                </div>
-
-                {/* Footer */}
-                <ViewFormFooter
-                    className="-mx-4 -mb-4 mt-6"
-                    onEdit={onEdit}
-                    onClose={onCancel || (() => { })}
-                    showEdit={!!onEdit}
+                {/* Comprobante — full width */}
+                <UploadField
+                    label="Comprobante"
+                    mode="multi-file"
+                    value={files}
+                    onChange={(f) => setFiles(Array.isArray(f) ? f : f ? [f] : [])}
+                    bucket="private-assets"
+                    folderPath={`organizations/${organizationId}/finance/general-costs`}
+                    maxSizeMB={5}
+                    className="md:col-span-2"
+                    cleanupRef={uploadCleanupRef}
                 />
             </div>
-        );
-    }
-
-    // === EDIT MODE: Form with inputs ===
-    return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Fecha */}
-                    <FormGroup label="Fecha de Pago" required>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !paymentDate && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {paymentDate ? format(paymentDate, "PPP", { locale: es }) : "Seleccionar"}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={paymentDate}
-                                    onSelect={(date) => date && setPaymentDate(date)}
-                                    locale={es}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </FormGroup>
-
-                    {/* Estado */}
-                    <FormGroup label="Estado">
-                        <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Estado" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="confirmed">Confirmado</SelectItem>
-                                <SelectItem value="pending">Pendiente</SelectItem>
-                                <SelectItem value="overdue">Vencido</SelectItem>
-                                <SelectItem value="cancelled">Cancelado</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-
-                    {/* Concepto - Full width */}
-                    <FormGroup label="Concepto" className="md:col-span-2">
-                        <Combobox
-                            options={[
-                                { value: "", label: "Sin concepto (Varios)" },
-                                ...concepts.map((concept) => ({
-                                    value: concept.id,
-                                    label: concept.name
-                                }))
-                            ]}
-                            value={generalCostId}
-                            onValueChange={setGeneralCostId}
-                            placeholder="Buscar concepto..."
-                            emptyMessage="No se encontraron conceptos"
-                        />
-                    </FormGroup>
-
-                    {/* Billetera */}
-                    <FormGroup label="Billetera" required>
-                        <Select value={walletId} onValueChange={setWalletId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar billetera" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {wallets.map((wallet) => (
-                                    <SelectItem key={wallet.id} value={wallet.id}>
-                                        {wallet.wallet_name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-
-                    {/* Monto */}
-                    <FormGroup label="Monto" required>
-                        <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                        />
-                    </FormGroup>
-
-                    {/* Moneda */}
-                    <FormGroup label="Moneda" required>
-                        <Select value={currencyId} onValueChange={setCurrencyId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar moneda" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {currencies.map((curr) => (
-                                    <SelectItem key={curr.id} value={curr.id}>
-                                        {curr.name} ({curr.symbol})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-
-                    {/* Cotización */}
-                    <FormGroup label="Tipo de Cambio">
-                        <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="Ej: 1050.50"
-                            value={exchangeRate}
-                            onChange={(e) => setExchangeRate(e.target.value)}
-                        />
-                    </FormGroup>
-
-                    {/* Notas - Full width */}
-                    <FormGroup label="Notas" className="md:col-span-2">
-                        <Textarea
-                            placeholder="Descripción del pago..."
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            rows={2}
-                        />
-                    </FormGroup>
-
-                    {/* Referencia - Full width */}
-                    <FormGroup label="Referencia" className="md:col-span-2">
-                        <Input
-                            placeholder="Nro. de recibo, factura, etc."
-                            value={reference}
-                            onChange={(e) => setReference(e.target.value)}
-                        />
-                    </FormGroup>
-
-                    {/* Comprobante - Full width */}
-                    <FormGroup label="Comprobante" className="md:col-span-2">
-                        <MultiFileUpload
-                            ref={uploadRef}
-                            bucket="private-assets"
-                            folderPath={`organizations/${organizationId}/finance/general-costs`}
-                            onUploadComplete={setFiles}
-                            initialFiles={files}
-                            autoUpload={false}
-                            maxSizeMB={5}
-                            className="w-full"
-                        />
-                    </FormGroup>
-                </div>
-            </div>
-
-            {/* Sticky Footer */}
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                isLoading={isLoading}
-                submitLabel={isEditing ? "Guardar Cambios" : "Registrar Pago"}
-                onCancel={onCancel}
-            />
         </form>
     );
 }

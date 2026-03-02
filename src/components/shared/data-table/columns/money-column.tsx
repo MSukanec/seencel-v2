@@ -51,6 +51,8 @@ export interface MoneyColumnOptions<TData> {
      * For string signKey: you must specify the positive value (e.g., "contribution")
      */
     signPositiveValue?: string | number;
+    /** Column width in px (default: 130) */
+    size?: number;
 }
 
 /**
@@ -131,11 +133,11 @@ function MoneyCell<TData>({
 
     return (
         <div className={cn("flex flex-col", align === "right" ? "items-end text-right" : "items-start")}>
-            <span className={cn("font-mono font-medium", colorClass)}>
+            <span className={cn("text-sm font-medium", colorClass)}>
                 {displayAmount}
             </span>
             {showRate && (
-                <span className="text-xs text-muted-foreground font-mono">
+                <span className="text-xs text-muted-foreground font-[450]">
                     Cot: {exchangeRate.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                 </span>
             )}
@@ -155,6 +157,7 @@ export function createMoneyColumn<TData>(
         title = "Monto",
         align = "right",
         enableSorting = true,
+        size = 130,
     } = options;
 
     return {
@@ -168,5 +171,6 @@ export function createMoneyColumn<TData>(
         ),
         cell: ({ row }) => <MoneyCell row={row} options={options} />,
         enableSorting,
+        size,
     };
 }

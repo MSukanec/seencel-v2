@@ -1,42 +1,40 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Receipt, DollarSign, TrendingDown, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+/**
+ * General Costs — Payments View
+ * Standard 19.0 - Lean View Pattern (~200 lines)
+ *
+ * Vista operativa: tabla pura de pagos de gastos generales.
+ * Orquesta hooks + columnas + UI. No contiene lógica de negocio.
+ */
 
-import { GeneralCost, GeneralCostPaymentView } from "@/features/general-costs/types";
-import { deleteGeneralCostPayment } from "@/features/general-costs/actions";
-import { PaymentForm } from "../forms/general-costs-payment-form";
-
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
-import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
-import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
+import { useMemo } from "react";
+import { Plus, Receipt, CircleDot } from "lucide-react";
+import { format, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
+import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { getStandardToolbarActions } from "@/lib/toolbar-actions";
+import { usePanel } from "@/stores/panel-store";
 import { useModal } from "@/stores/modal-store";
+import { useTableActions } from "@/hooks/use-table-actions";
+import { useTableFilters } from "@/hooks/use-table-filters";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { FilterPopover, SearchButton, DisplayButton } from "@/components/shared/toolbar-controls";
+import { getStandardToolbarActions } from "@/lib/toolbar-actions";
+import { exportToCSV, exportToExcel } from "@/lib/export";
+import { createImportBatch, revertImportBatch, importGeneralCostPaymentsBatch, type ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
-import { ImportConfig, createImportBatch, revertImportBatch } from "@/lib/import";
-import { exportToCSV, exportToExcel, ExportColumn } from "@/lib/export";
-import { parseDateFromDB } from "@/lib/timezone-data";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-
-import { useMoney } from "@/hooks/use-money";
-
+import { deleteGeneralCostPayment, updateGeneralCostPaymentField } from "../actions";
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+    getGeneralCostPaymentColumns,
+    GENERAL_COST_STATUS_OPTIONS,
+    GENERAL_COST_EXPORT_COLUMNS,
+} from "../tables/general-costs-payment-columns";
+import { toast } from "sonner";
+import { useRouter } from "@/i18n/routing";
+import { GeneralCost, GeneralCostPaymentView } from "../types";
+
+// ─── Types ───────────────────────────────────────────────
 
 interface GeneralCostsPaymentsViewProps {
     data: GeneralCostPaymentView[];
@@ -46,52 +44,172 @@ interface GeneralCostsPaymentsViewProps {
     organizationId: string;
 }
 
-export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, organizationId }: GeneralCostsPaymentsViewProps) {
-    const { openModal, closeModal } = useModal();
+// ─── Component ───────────────────────────────────────────
 
-    // === Centralized money operations ===
-    const money = useMoney();
+export function GeneralCostsPaymentsView({
+    data,
+    concepts,
+    wallets,
+    currencies,
+    organizationId,
+}: GeneralCostsPaymentsViewProps) {
+    const router = useRouter();
+    const { openPanel } = usePanel();
+    const { openModal } = useModal();
 
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [paymentToDelete, setPaymentToDelete] = useState<GeneralCostPaymentView | null>(null);
-    const [isDeleting, startDeleteTransition] = useTransition();
+    // 🚀 Optimistic UI
+    const {
+        optimisticItems,
+        removeItem: optimisticRemove,
+        updateItem: optimisticUpdate,
+    } = useOptimisticList({
+        items: data,
+        getItemId: (m) => m.id,
+    });
 
-    // Use centralized formatting
-    const formatCurrency = (amount: number, currencyCode?: string) => {
-        return money.format(amount, currencyCode);
-    };
+    // ─── Filters ─────────────────────────────────────────
+    const filters = useTableFilters({
+        facets: [
+            { key: "status", title: "Estado", icon: CircleDot, options: GENERAL_COST_STATUS_OPTIONS },
+        ],
+        enableDateRange: true,
+    });
 
-    const handleOpenForm = (payment?: GeneralCostPaymentView) => {
-        openModal(
-            <PaymentForm
-                initialData={payment}
-                concepts={concepts}
-                wallets={wallets}
-                currencies={currencies}
-                organizationId={organizationId}
-                onSuccess={closeModal}
-                onCancel={closeModal}
-            />,
-            {
-                title: payment ? "Editar Pago" : "Registrar Pago",
-                description: payment
-                    ? "Modificá los datos del pago de gasto general."
-                    : "Registrá un nuevo pago de gasto general.",
-                size: "lg"
+    // ─── Delete actions ──────────────────────────────────
+    const { handleDelete, handleBulkDelete, DeleteConfirmDialog } = useTableActions<any>({
+        onDelete: async (item) => {
+            optimisticRemove(item.id, async () => {
+                try {
+                    await deleteGeneralCostPayment(item.id);
+                    toast.success("Pago eliminado");
+                } catch {
+                    toast.error("Error al eliminar el pago");
+                    router.refresh();
+                }
+            });
+            return { success: true };
+        },
+        entityName: "pago",
+        entityNamePlural: "pagos",
+    });
+
+    // ─── Filtered data ───────────────────────────────────
+    const filteredData = useMemo(() => {
+        return optimisticItems.filter(m => {
+            // Date range
+            if (filters.dateRange?.from || filters.dateRange?.to) {
+                const date = startOfDay(new Date(m.payment_date));
+                const from = filters.dateRange.from ? startOfDay(filters.dateRange.from) : null;
+                const to = filters.dateRange.to ? endOfDay(filters.dateRange.to) : null;
+                if (from && to) {
+                    if (!(isAfter(date, from) || isEqual(date, from)) || !(isBefore(date, to) || isEqual(date, to))) return false;
+                } else if (from) {
+                    if (!(isAfter(date, from) || isEqual(date, from))) return false;
+                } else if (to) {
+                    if (!(isBefore(date, to) || isEqual(date, to))) return false;
+                }
             }
-        );
+            // Status facet
+            const statusFilter = filters.facetValues.status;
+            if (statusFilter?.size > 0 && !statusFilter.has(m.status)) return false;
+            // Search
+            if (filters.searchQuery) {
+                const q = filters.searchQuery.toLowerCase();
+                const searchable = [
+                    m.general_cost_name,
+                    m.category_name,
+                    m.notes,
+                    m.reference,
+                    m.wallet_name,
+                ].filter(Boolean).join(" ").toLowerCase();
+                if (!searchable.includes(q)) return false;
+            }
+            return true;
+        });
+    }, [optimisticItems, filters.dateRange, filters.facetValues, filters.searchQuery]);
+
+    // ─── Inline update handler ───────────────────────────
+    // UI-only keys used for optimistic display but not sent to DB
+    const UI_ONLY_KEYS = new Set(['general_cost_name', 'category_name', 'currency_code', 'currency_symbol', 'creator_avatar_url', 'creator_full_name']);
+
+    const handleInlineUpdate = (row: GeneralCostPaymentView, fields: Record<string, any>) => {
+        optimisticUpdate(row.id, fields, async () => {
+            const dbFields = Object.fromEntries(
+                Object.entries(fields).filter(([key]) => !UI_ONLY_KEYS.has(key))
+            );
+            try {
+                const result = await updateGeneralCostPaymentField(row.id, dbFields);
+                if (!result.success) {
+                    toast.error(result.error || "Error al actualizar");
+                }
+                router.refresh();
+            } catch {
+                toast.error("Error al actualizar el pago");
+                router.refresh();
+            }
+        });
     };
 
-    // ========================================
-    // IMPORT / EXPORT
-    // ========================================
+    // ─── Columns ─────────────────────────────────────────
+    const columns = getGeneralCostPaymentColumns({
+        onInlineUpdate: handleInlineUpdate,
+        wallets,
+    });
+
+    // ─── Panel handlers ──────────────────────────────────
+    const handleOpenForm = () => {
+        openPanel('general-cost-payment-form', {
+            concepts,
+            wallets,
+            currencies,
+            organizationId,
+        });
+    };
+
+    const handleRowClick = (payment: GeneralCostPaymentView) => {
+        openPanel('general-cost-payment-form', {
+            initialData: payment,
+            concepts,
+            wallets,
+            currencies,
+            organizationId,
+        });
+    };
+
+    const handleEdit = (payment: GeneralCostPaymentView) => {
+        openPanel('general-cost-payment-form', {
+            initialData: payment,
+            concepts,
+            wallets,
+            currencies,
+            organizationId,
+        });
+    };
+
+    // ─── Import config ────────────────────────────────────
     const paymentImportConfig: ImportConfig<any> = {
         entityLabel: "Pagos de Gastos Generales",
         entityId: "general_cost_payments",
         columns: [
-            { id: "payment_date", label: "Fecha", required: true, example: "2024-01-20" },
-            { id: "general_cost_name", label: "Concepto", required: true, example: "Alquiler Oficina" },
-            { id: "amount", label: "Monto", required: true, type: "number", example: "50000" },
+            { id: "payment_date", label: "Fecha", required: true, type: "date", example: "2024-01-20" },
+            {
+                id: "general_cost_name",
+                label: "Concepto",
+                required: false,
+                example: "Alquiler Local",
+                foreignKey: {
+                    table: 'general_costs',
+                    labelField: 'name',
+                    valueField: 'id',
+                    fetchOptions: async () => {
+                        return (concepts || []).map((c) => ({
+                            id: c.id,
+                            label: c.name,
+                        }));
+                    },
+                },
+            },
+            { id: "amount", label: "Monto", required: true, type: "number", example: "15000" },
             {
                 id: "currency_code",
                 label: "Moneda",
@@ -104,10 +222,10 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
                     fetchOptions: async () => {
                         return (currencies || []).map((c) => ({
                             id: c.id,
-                            label: `${c.name} (${c.code})`
+                            label: `${c.name} (${c.code})`,
                         }));
-                    }
-                }
+                    },
+                },
             },
             {
                 id: "wallet_name",
@@ -121,76 +239,41 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
                     fetchOptions: async () => {
                         return (wallets || []).map((w) => ({
                             id: w.id,
-                            label: w.wallet_name
+                            label: w.wallet_name,
                         }));
-                    }
-                }
+                    },
+                },
             },
+            { id: "exchange_rate", label: "Cotización", required: false, type: "number", example: "1200" },
             { id: "notes", label: "Notas", required: false },
-            { id: "reference", label: "Referencia", required: false, example: "Transferencia #123" },
+            { id: "reference", label: "Referencia", required: false, example: "Factura #456" },
         ],
         onImport: async (data) => {
             const batch = await createImportBatch(organizationId, "general_cost_payments", data.length);
-            // TODO: implementar importGeneralCostPaymentsBatch
-            toast.info("Importación de gastos generales próximamente");
-            return { success: 0, errors: ["Funcionalidad en desarrollo"], warnings: [], batchId: batch.id };
+            const result = await importGeneralCostPaymentsBatch(organizationId, data, batch.id);
+            return { success: result.success, errors: result.errors, warnings: result.warnings, batchId: batch.id };
         },
         onRevert: async (batchId) => {
-            await revertImportBatch(batchId, 'general_cost_payments');
-        }
+            await revertImportBatch(batchId, 'general_costs_payments');
+        },
     };
 
-    const handleImport = () => {
+    const handleOpenImport = () => {
         openModal(
             <BulkImportModal config={paymentImportConfig} organizationId={organizationId} />,
             {
                 size: "2xl",
                 title: "Importar Pagos de Gastos Generales",
-                description: "Importá pagos masivamente desde Excel o CSV."
+                description: "Importá pagos masivamente desde Excel o CSV.",
             }
         );
     };
 
-    // Export column definitions
-    const exportColumns: ExportColumn<GeneralCostPaymentView>[] = [
-        {
-            key: 'payment_date',
-            header: 'Fecha',
-            transform: (val) => {
-                const d = parseDateFromDB(val);
-                return d ? format(d, 'dd/MM/yyyy', { locale: es }) : '';
-            }
-        },
-        { key: 'general_cost_name', header: 'Concepto', transform: (val) => val ?? '' },
-        { key: 'category_name', header: 'Categoría', transform: (val) => val ?? 'Sin categoría' },
-        {
-            key: 'amount',
-            header: 'Monto',
-            transform: (val) => typeof val === 'number' ? val : 0
-        },
-        { key: 'currency_code', header: 'Moneda', transform: (val) => val ?? '' },
-        { key: 'wallet_name', header: 'Billetera', transform: (val) => val ?? '' },
-        {
-            key: 'status',
-            header: 'Estado',
-            transform: (val) => {
-                const map: Record<string, string> = {
-                    confirmed: 'Confirmado',
-                    pending: 'Pendiente',
-                    overdue: 'Vencido',
-                    cancelled: 'Cancelado',
-                };
-                return map[val] ?? val ?? '';
-            }
-        },
-        { key: 'reference', header: 'Referencia', transform: (val) => val ?? '' },
-        { key: 'notes', header: 'Notas', transform: (val) => val ?? '' },
-    ];
-
+    // ─── Export ───────────────────────────────────────────
     const handleExportCSV = () => {
         exportToCSV({
-            data,
-            columns: exportColumns,
+            data: filteredData,
+            columns: GENERAL_COST_EXPORT_COLUMNS,
             fileName: `gastos-generales-pagos-${format(new Date(), 'yyyy-MM-dd')}`,
         });
         toast.success('Exportación CSV descargada');
@@ -198,293 +281,98 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
 
     const handleExportExcel = () => {
         exportToExcel({
-            data,
-            columns: exportColumns,
+            data: filteredData,
+            columns: GENERAL_COST_EXPORT_COLUMNS,
             fileName: `gastos-generales-pagos-${format(new Date(), 'yyyy-MM-dd')}`,
             sheetName: 'Pagos Gastos Generales',
         });
         toast.success('Exportación Excel descargada');
     };
 
-    // Open form in view mode (read-only) when row is clicked
-    const handleRowClick = (payment: GeneralCostPaymentView) => {
-        openModal(
-            <PaymentForm
-                initialData={payment}
-                concepts={concepts}
-                wallets={wallets}
-                currencies={currencies}
-                organizationId={organizationId}
-                onSuccess={closeModal}
-                onCancel={closeModal}
-                onEdit={() => {
-                    closeModal();
-                    handleOpenForm(payment);
-                }}
-                viewMode={true}
-            />,
-            {
-                title: "Detalle del Pago",
-                description: "Información del pago de gasto general.",
-                size: "lg"
-            }
-        );
-    };
-
-    const handleDeleteClick = (payment: GeneralCostPaymentView) => {
-        setPaymentToDelete(payment);
-        setIsDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = () => {
-        if (!paymentToDelete) return;
-
-        startDeleteTransition(async () => {
-            try {
-                await deleteGeneralCostPayment(paymentToDelete.id);
-                toast.success("Pago eliminado");
-                setIsDeleteDialogOpen(false);
-            } catch (error) {
-                console.error(error);
-                toast.error("Error al eliminar el pago");
-            }
-        });
-    };
-
-    // Calculate KPI values
-    const kpiData = useMemo(() => {
-        const allItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
-        const confirmedItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
-        const pendingItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
-
-        data.forEach(p => {
-            const item = {
-                amount: Number(p.amount) || 0,
-                currency_code: p.currency_code || 'ARS',
-                exchange_rate: Number(p.exchange_rate) || 1
-            };
-            allItems.push(item);
-            if (p.status === 'confirmed') {
-                confirmedItems.push(item);
-            } else if (p.status === 'pending') {
-                pendingItems.push(item);
-            }
-        });
-
-        return {
-            allItems,
-            confirmedItems,
-            pendingItems,
-            totalPagos: data.length
-        };
-    }, [data]);
-
-    const columns: ColumnDef<GeneralCostPaymentView>[] = [
-        createDateColumn<GeneralCostPaymentView>({
-            accessorKey: "payment_date",
-            avatarUrlKey: "creator_avatar_url",
-            avatarFallbackKey: "creator_full_name",
+    // ─── Toolbar actions ─────────────────────────────────
+    const toolbarActions = [
+        { label: "Nuevo Pago", icon: Plus, onClick: handleOpenForm },
+        ...getStandardToolbarActions({
+            onImport: handleOpenImport,
+            onExportCSV: handleExportCSV,
+            onExportExcel: handleExportExcel,
         }),
-        {
-            accessorKey: "general_cost_name",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Concepto" />,
-            cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <span className="text-sm font-medium">{row.original.general_cost_name || "Gasto sin concepto"}</span>
-                    <span className="text-xs text-muted-foreground">{row.original.category_name || "Sin categoría"}</span>
-                </div>
-            ),
-            enableSorting: true,
-            enableHiding: false,
-        },
-        {
-            accessorKey: "notes",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Descripción" />,
-            cell: ({ row }) => {
-                const notes = row.original.notes;
-                const reference = row.original.reference;
-                return (
-                    <div className="max-w-[180px] truncate">
-                        {notes ? (
-                            <span className="text-sm" title={notes}>{notes}</span>
-                        ) : reference ? (
-                            <span className="text-sm text-muted-foreground" title={reference}>Ref: {reference}</span>
-                        ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                    </div>
-                );
-            },
-        },
-        createTextColumn<GeneralCostPaymentView>({
-            accessorKey: "wallet_name",
-            title: "Billetera",
-            muted: true,
-        }),
-        createMoneyColumn<GeneralCostPaymentView>({
-            accessorKey: "amount",
-            prefix: "-",
-            colorMode: "negative",
-            currencyKey: "currency_code",
-        }),
-        {
-            accessorKey: "status",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
-            cell: ({ row }) => {
-                const status = row.original.status;
-                let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
-                let className = "";
-
-                switch (status) {
-                    case "confirmed":
-                        variant = "outline";
-                        className = "bg-amount-positive/10 text-amount-positive border-amount-positive/20";
-                        break;
-                    case "pending":
-                        variant = "outline";
-                        className = "bg-amber-500/10 text-amber-600 border-amber-500/20";
-                        break;
-                    case "overdue":
-                        variant = "destructive";
-                        break;
-                    case "cancelled":
-                        variant = "secondary";
-                        break;
-                    default:
-                        variant = "secondary";
-                }
-
-                const label =
-                    status === "confirmed" ? "Confirmado" :
-                        status === "pending" ? "Pendiente" :
-                            status === "overdue" ? "Vencido" :
-                                status === "cancelled" ? "Cancelado" : status;
-
-                return (
-                    <Badge variant={variant} className={className}>
-                        {label}
-                    </Badge>
-                );
-            },
-            filterFn: (row, id, value) => {
-                return value.includes(row.getValue(id));
-            },
-        }
     ];
 
-    if (data.length === 0) {
+    // ─── Empty state ─────────────────────────────────────
+    if (optimisticItems.length === 0) {
         return (
             <>
-                <Toolbar
-                    portalToHeader
-                    actions={[
-                        { label: "Nuevo Pago", icon: Plus, onClick: () => handleOpenForm() },
-                        ...getStandardToolbarActions({
-                            onImport: handleImport,
-                            onExportCSV: handleExportCSV,
-                            onExportExcel: handleExportExcel,
-                        }),
-                    ]}
+                <Toolbar portalToHeader actions={toolbarActions} />
+                <ViewEmptyState
+                    mode="empty"
+                    icon={Receipt}
+                    viewName="Pagos de Gastos Generales"
+                    featureDescription="Registrá pagos de gastos generales para llevar control de tus egresos operativos."
+                    onAction={handleOpenForm}
+                    actionLabel="Nuevo Pago"
                 />
-                <div className="h-full flex items-center justify-center">
-                    <ViewEmptyState
-                        mode="empty"
-                        icon={Receipt}
-                        viewName="Pagos de Gastos Generales"
-                        featureDescription="No hay pagos de gastos generales registrados."
-                        onAction={() => handleOpenForm()}
-                        actionLabel="Nuevo Pago"
-                    />
-                </div>
             </>
         );
     }
 
-    const statusOptions = [
-        { label: "Confirmado", value: "confirmed" },
-        { label: "Pendiente", value: "pending" },
-        { label: "Vencido", value: "overdue" },
-        { label: "Cancelado", value: "cancelled" },
-    ];
+    // ─── No results ──────────────────────────────────────
+    if (filteredData.length === 0) {
+        return (
+            <>
+                <Toolbar
+                    portalToHeader
+                    leftActions={
+                        <>
+                            <FilterPopover filters={filters} />
+                            <SearchButton filters={filters} placeholder="Buscar pagos..." />
+                        </>
+                    }
+                    actions={toolbarActions}
+                />
+                <ViewEmptyState
+                    mode="no-results"
+                    icon={Receipt}
+                    viewName="Pagos"
+                    onResetFilters={filters.clearAll}
+                />
+            </>
+        );
+    }
 
+    // ─── Embedded toolbar ────────────────────────────────
+    const embeddedToolbar = (table: any) => (
+        <Toolbar
+            leftActions={
+                <>
+                    <FilterPopover filters={filters} />
+                    <DisplayButton table={table} />
+                    <SearchButton filters={filters} placeholder="Buscar pagos..." />
+                </>
+            }
+            actions={toolbarActions}
+        />
+    );
+
+    // ─── Render ──────────────────────────────────────────
     return (
         <>
-            <Toolbar
-                portalToHeader
-                actions={[
-                    { label: "Nuevo Pago", icon: Plus, onClick: () => handleOpenForm() },
-                    ...getStandardToolbarActions({
-                        onImport: handleImport,
-                        onExportCSV: handleExportCSV,
-                        onExportExcel: handleExportExcel,
-                    }),
-                ]}
+            <DataTable
+                columns={columns}
+                data={filteredData}
+                enableRowSelection
+                enableRowActions
+                onRowClick={handleRowClick}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onBulkDelete={handleBulkDelete}
+                initialSorting={[{ id: "payment_date", desc: true }]}
+                globalFilter={filters.searchQuery}
+                onGlobalFilterChange={filters.setSearchQuery}
+                onClearFilters={filters.clearAll}
+                embeddedToolbar={embeddedToolbar}
             />
-            <div className="space-y-6">
-                {/* KPI Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <DashboardKpiCard
-                        title="Total Gastos"
-                        items={kpiData.allItems}
-                        icon={<TrendingDown className="h-5 w-5" />}
-                        iconClassName="bg-amount-negative/10 text-amount-negative"
-                    />
-                    <DashboardKpiCard
-                        title="Confirmados"
-                        items={kpiData.confirmedItems}
-                        icon={<DollarSign className="h-5 w-5" />}
-                        iconClassName="bg-amount-positive/10 text-amount-positive"
-                    />
-                    <DashboardKpiCard
-                        title="Pendientes"
-                        items={kpiData.pendingItems}
-                        icon={<DollarSign className="h-5 w-5" />}
-                        iconClassName="bg-amber-500/10 text-amber-600"
-                    />
-                    <DashboardKpiCard
-                        title="Total Pagos"
-                        value={kpiData.totalPagos.toString()}
-                        icon={<Receipt className="h-5 w-5" />}
-                    />
-                </div>
-
-                {/* Payments Table */}
-                <DataTable
-                    columns={columns}
-                    data={data}
-                    enableRowSelection={true}
-                    enableRowActions={true}
-                    onEdit={handleOpenForm}
-                    onDelete={handleDeleteClick}
-                    onRowClick={handleRowClick}
-                    initialSorting={[{ id: "payment_date", desc: true }]}
-                />
-
-                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Se eliminará el registro del pago.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    confirmDelete();
-                                }}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                disabled={isDeleting}
-                            >
-                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Eliminar
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </div>
+            <DeleteConfirmDialog />
         </>
     );
 }
