@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ChevronDown, ArrowLeft, Sparkles, Mail, Bell, Check, MailOpen } from "lucide-react";
+import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ChevronDown, ArrowLeft, Sparkles, Mail, Bell, Check, MailOpen, Shield } from "lucide-react";
 import { useSidebarNavigation, NavItem, NavGroup } from "@/hooks/use-sidebar-navigation";
+import { useFeatureFlags } from "@/providers/feature-flags-provider";
 import { useLayoutStore } from "@/stores/layout-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
@@ -55,6 +56,7 @@ export function MobileNav() {
     const pathname = usePathname();
     const router = useRouter();
     const { contexts, getNavItems, getNavGroups } = useSidebarNavigation();
+    const { isAdmin } = useFeatureFlags();
     const { actions } = useLayoutStore();
 
     const { theme, setTheme } = useTheme();
@@ -181,8 +183,9 @@ export function MobileNav() {
         }
     }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Get current context data
-    const currentContext = allContexts.find(c => c.id === activeContextId);
+    // Get current context data (admin is not in allContexts, so fallback)
+    const currentContext = allContexts.find(c => c.id === activeContextId)
+        || (activeContextId === 'admin' ? { id: 'admin' as const, label: 'Admin', icon: Shield } : undefined);
     const currentItems = activeContextId ? getNavItems(activeContextId as any) : [];
     const currentGroups: NavGroup[] = React.useMemo(() => {
         if (activeContextId === 'organization' || activeContextId === 'project' || activeContextId === 'admin') {
@@ -371,6 +374,42 @@ export function MobileNav() {
                                         </button>
                                     );
                                 })}
+
+                                {/* Admin button — only visible to admins */}
+                                {isAdmin && (
+                                    <>
+                                        <div className="h-px bg-border/50 my-1.5 mx-2" />
+                                        <button
+                                            onClick={() => navigateToContext('admin')}
+                                            className="w-full block text-left"
+                                        >
+                                            <div
+                                                className={cn(
+                                                    "group relative flex items-center w-full rounded-lg transition-colors",
+                                                    "hover:bg-muted text-muted-foreground hover:text-foreground",
+                                                    "p-0 min-h-[44px]",
+                                                    pathname?.includes('/admin') && "text-foreground"
+                                                )}
+                                                style={pathname?.includes('/admin') ? {
+                                                    borderLeft: "2px solid var(--plan-border, rgba(255,255,255,0.1))",
+                                                    boxShadow: "var(--plan-glow, none)",
+                                                    background: `linear-gradient(90deg, var(--plan-accent, rgba(255,255,255,0.06)), transparent 70%), hsl(var(--secondary))`,
+                                                } : undefined}
+                                            >
+                                                <div className={cn(
+                                                    "w-8 h-8 flex items-center justify-center shrink-0",
+                                                    pathname?.includes('/admin') ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                                                )}>
+                                                    <Shield className="h-4 w-4" />
+                                                </div>
+                                                <span className="text-lg font-medium truncate flex-1 ml-2">
+                                                    Admin
+                                                </span>
+                                                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors mr-2" />
+                                            </div>
+                                        </button>
+                                    </>
+                                )}
                             </nav>
                         </div>
                     </div>

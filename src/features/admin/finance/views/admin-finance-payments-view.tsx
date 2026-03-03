@@ -10,8 +10,11 @@
 
 import { useMemo } from "react";
 import { useRouter } from "@/i18n/routing";
-import { Plus, CreditCard } from "lucide-react";
+import { Plus, CreditCard, TrendingDown, CalendarDays } from "lucide-react";
+import { startOfMonth, endOfMonth, isAfter, isBefore, isEqual, startOfDay, format } from "date-fns";
+import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { MetricCard } from "@/components/cards";
 
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
@@ -57,6 +60,36 @@ export function AdminFinancePaymentsView({ payments }: AdminFinancePaymentsViewP
             return true;
         }),
         [optimisticItems, filters.facetValues]);
+
+    // ─── KPI Calculations ────────────────────────────────
+    const kpiData = useMemo(() => {
+        const now = new Date();
+        const monthStart = startOfMonth(now);
+        const monthEnd = endOfMonth(now);
+
+        const allItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
+        const monthItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
+
+        filteredPayments.forEach(p => {
+            const amt = Math.abs(Number(p.amount) || 0);
+            if (amt === 0) return;
+
+            const item = {
+                amount: amt,
+                currency_code: (p.currency || 'ARS').toUpperCase(),
+            };
+            allItems.push(item);
+
+            // Current month check
+            const payDate = startOfDay(new Date(p.created_at));
+            if ((isAfter(payDate, monthStart) || isEqual(payDate, monthStart)) &&
+                (isBefore(payDate, monthEnd) || isEqual(payDate, monthEnd))) {
+                monthItems.push(item);
+            }
+        });
+
+        return { allItems, monthItems };
+    }, [filteredPayments]);
 
     // ─── Delete ──────────────────────────────────────────
     const { handleDelete, DeleteConfirmDialog } = useTableActions<AdminPayment>({
@@ -131,6 +164,26 @@ export function AdminFinancePaymentsView({ payments }: AdminFinancePaymentsViewP
 
     return (
         <>
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 gap-4 px-6 pt-4">
+                <MetricCard
+                    title="Total Histórico"
+                    items={kpiData.allItems}
+                    icon={<TrendingDown className="h-5 w-5" />}
+                    iconClassName="bg-amount-positive/10 text-amount-positive"
+                    size="default"
+                    compact
+                />
+                <MetricCard
+                    title={`Total ${format(new Date(), 'MMMM yyyy', { locale: es })}`}
+                    items={kpiData.monthItems}
+                    icon={<CalendarDays className="h-5 w-5" />}
+                    iconClassName="bg-primary/10 text-primary"
+                    size="default"
+                    compact
+                />
+            </div>
+
             <DataTable
                 columns={columns}
                 data={filteredPayments}
