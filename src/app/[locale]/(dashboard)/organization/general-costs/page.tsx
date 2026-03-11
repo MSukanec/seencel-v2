@@ -2,10 +2,11 @@ import { Metadata } from "next";
 import {
     getGeneralCostCategories,
     getGeneralCosts,
+    getGeneralCostConceptStats,
     getGeneralCostPayments,
     getGeneralCostsDashboard,
-    getActiveOrganizationId
 } from "@/features/general-costs/actions";
+import { requireAuthContext } from "@/lib/auth";
 import { getOrganizationFinancialData } from "@/features/organization/queries";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
@@ -29,21 +30,21 @@ export const metadata: Metadata = {
     robots: "noindex, nofollow",
 };
 
-export default async function GeneralCostsPage() {
-    const organizationId = await getActiveOrganizationId();
-
-    if (!organizationId) {
-        return (
-            <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                <p className="text-muted-foreground">No active organization found.</p>
-            </div>
-        );
-    }
+export default async function GeneralCostsPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ view?: string; q?: string }>;
+}) {
+    const { orgId: organizationId } = await requireAuthContext();
+    const params = await searchParams;
+    const activeTab = params.view || "dashboard";
+    const initialSearchQuery = params.q || "";
 
     try {
-        const [categories, concepts, payments, dashboardData, financialData] = await Promise.all([
+        const [categories, concepts, conceptStats, payments, dashboardData, financialData] = await Promise.all([
             getGeneralCostCategories(organizationId),
             getGeneralCosts(organizationId),
+            getGeneralCostConceptStats(organizationId),
             getGeneralCostPayments(organizationId),
             getGeneralCostsDashboard(organizationId),
             getOrganizationFinancialData(organizationId)
@@ -53,7 +54,7 @@ export default async function GeneralCostsPage() {
         const currencies = financialData.currencies.map(c => ({ id: c.id, name: c.name, code: c.code, symbol: c.symbol }));
 
         return (
-            <Tabs defaultValue="dashboard" syncUrl="view" className="h-full flex flex-col">
+            <Tabs defaultValue={activeTab} syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
                     title="Gastos Generales"
@@ -80,7 +81,7 @@ export default async function GeneralCostsPage() {
                             <GeneralCostsDashboardView data={dashboardData} payments={payments} />
                         </TabsContent>
                         <TabsContent value="concepts" className={tabContentClass}>
-                            <GeneralCostsConceptsView data={concepts} categories={categories} organizationId={organizationId} />
+                            <GeneralCostsConceptsView data={concepts} conceptStats={conceptStats} categories={categories} organizationId={organizationId} />
                         </TabsContent>
                         <TabsContent value="payments" className={tabContentClass}>
                             <GeneralCostsPaymentsView
@@ -89,10 +90,11 @@ export default async function GeneralCostsPage() {
                                 wallets={wallets}
                                 currencies={currencies}
                                 organizationId={organizationId}
+                                initialSearchQuery={initialSearchQuery}
                             />
                         </TabsContent>
                         <TabsContent value="settings" className={tabContentClass}>
-                            <GeneralCostsSettingsView categories={categories} organizationId={organizationId} />
+                            <GeneralCostsSettingsView />
                         </TabsContent>
                     </ContentLayout>
                 </PageWrapper>

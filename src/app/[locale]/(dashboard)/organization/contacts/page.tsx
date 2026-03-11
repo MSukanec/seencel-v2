@@ -1,4 +1,4 @@
-import { getActiveOrganizationId } from "@/features/general-costs/actions";
+import { requireAuthContext } from "@/lib/auth";
 import { getContactCategories, getOrganizationContacts } from "@/actions/contacts";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -38,11 +38,7 @@ export async function generateMetadata({
 }
 
 export default async function ContactsPage() {
-    const organizationId = await getActiveOrganizationId();
-
-    if (!organizationId) {
-        redirect('/');
-    }
+    const { orgId: organizationId } = await requireAuthContext();
 
     const t = await getTranslations('Contacts');
 

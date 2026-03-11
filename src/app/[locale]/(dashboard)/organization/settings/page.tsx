@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { getDashboardData } from "@/features/organization/queries";
-import { getActiveOrganizationId } from "@/features/general-costs/actions";
+import { requireAuthContext } from "@/lib/auth";
 import { getIndexTypes } from "@/features/advanced/queries";
 import { OrganizationDetailsForm } from "@/features/organization/components/forms/organization-details-form";
 import { OrganizationLocationManager } from "@/features/organization/components/location-manager";
@@ -36,7 +36,7 @@ export default async function OrganizationSettingsPage() {
             return <div className="p-8">Organization not found.</div>;
         }
 
-        const organizationId = await getActiveOrganizationId();
+        const { orgId: organizationId } = await requireAuthContext();
         const indexTypes = organizationId ? await getIndexTypes(organizationId) : [];
 
         return (

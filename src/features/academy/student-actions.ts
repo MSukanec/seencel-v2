@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { CourseWithDetails } from "@/features/academy/types";
 
 export async function getCourses(): Promise<CourseWithDetails[]> {
@@ -109,7 +110,7 @@ export async function getCourseContent(courseId: string) {
 export async function getUserEnrollments(): Promise<Set<string>> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return new Set();
     }
@@ -146,7 +147,7 @@ export async function getUserEnrollments(): Promise<Set<string>> {
 export async function getCoursesWithProgress(): Promise<Set<string>> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return new Set();
 
     const { data: internalUser } = await supabase
@@ -178,7 +179,7 @@ export async function getCoursesWithProgress(): Promise<Set<string>> {
 export async function getUserLessonMarkers(courseId: string) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return [];
     }
@@ -230,7 +231,7 @@ export async function getUserLessonMarkers(courseId: string) {
 export async function getUserLessonProgress(courseId: string) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return [];
     }
@@ -279,7 +280,7 @@ export async function getUserLessonProgress(courseId: string) {
 export async function getLastViewedLesson(courseId: string) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return null;
     }
@@ -327,7 +328,7 @@ export async function getLastViewedLesson(courseId: string) {
 export async function markLessonCompleted(lessonId: string) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -370,7 +371,7 @@ export async function markLessonCompleted(lessonId: string) {
 export async function toggleLessonCompleted(lessonId: string) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -423,7 +424,7 @@ export async function toggleLessonCompleted(lessonId: string) {
 export async function updateLessonPosition(lessonId: string, positionSec: number) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -464,7 +465,7 @@ export async function updateLessonPosition(lessonId: string, positionSec: number
 export async function getUserLessonSummaries(courseId: string) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return [];
     }
@@ -533,7 +534,7 @@ export interface LessonSummaryWithDetails {
 export async function getUserLessonSummariesWithDetails(courseId: string): Promise<LessonSummaryWithDetails[]> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return [];
     }
@@ -590,7 +591,7 @@ export async function getUserLessonSummariesWithDetails(courseId: string): Promi
 export async function saveLessonSummary(lessonId: string, body: string) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -653,7 +654,7 @@ export async function saveLessonSummary(lessonId: string, body: string) {
 export async function createLessonMarker(lessonId: string, body: string, timeSec: number) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -695,7 +696,7 @@ export async function createLessonMarker(lessonId: string, body: string, timeSec
 export async function updateLessonMarker(markerId: string, body: string) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -719,7 +720,7 @@ export async function updateLessonMarker(markerId: string, body: string) {
 export async function deleteLessonMarker(markerId: string) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -751,7 +752,7 @@ export interface CourseOverviewData {
 export async function getCourseOverviewData(courseId: string): Promise<CourseOverviewData | null> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return null;
     }
@@ -808,7 +809,7 @@ export interface MarkerWithDetails {
 export async function getLatestUserMarkersWithDetails(courseId: string, limit: number = 3): Promise<MarkerWithDetails[]> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return [];
     }

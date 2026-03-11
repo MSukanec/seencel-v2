@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Settings, Package } from "lucide-react";
-import { getUserOrganizations } from "@/features/organization/queries";
+import { requireAuthContext } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { Badge } from "@/components/ui/badge";
@@ -55,8 +55,8 @@ export default async function TaskDetailPage({ params, searchParams }: TaskDetai
         const { view = "general" } = await searchParams;
 
         // Get current user's org using the standard helper
-        const { activeOrgId } = await getUserOrganizations();
-        if (!activeOrgId) redirect("/");
+        const { orgId } = await requireAuthContext();
+        if (!orgId) redirect("/");
 
         // Fetch task data
         const task = await getTaskById(taskId);
@@ -67,10 +67,10 @@ export default async function TaskDetailPage({ params, searchParams }: TaskDetai
             getTaskRecipes(taskId),
             getTaskDivisions(),
             getUnits(),
-            getMaterialsForOrganization(activeOrgId),
-            getLaborTypesWithPrices(activeOrgId),
+            getMaterialsForOrganization(orgId),
+            getLaborTypesWithPrices(orgId),
             getCurrencies(),
-            getOrganizationContacts(activeOrgId),
+            getOrganizationContacts(orgId),
         ]);
 
         // Load resources for each recipe in parallel
@@ -120,7 +120,7 @@ export default async function TaskDetailPage({ params, searchParams }: TaskDetai
                                 task={task}
                                 divisions={divisions}
                                 units={units}
-                                organizationId={activeOrgId}
+                                organizationId={orgId}
                             />
                         </ContentLayout>
                     </TabsContent>
@@ -132,7 +132,7 @@ export default async function TaskDetailPage({ params, searchParams }: TaskDetai
                                 task={task}
                                 recipes={recipes}
                                 recipeResourcesMap={recipeResourcesMap}
-                                organizationId={activeOrgId}
+                                organizationId={orgId}
                                 isAdminMode={false}
                                 catalogMaterials={catalogMaterials}
                                 catalogLaborTypes={catalogLaborTypes}

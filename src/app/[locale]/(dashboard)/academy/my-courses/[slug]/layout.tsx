@@ -1,7 +1,7 @@
 import { getCourseBySlug, getUserEnrollments } from "@/features/academy/student-actions";
 import { notFound, redirect } from "next/navigation";
 import { StudentCourseTabs } from "@/features/academy/components/student-course-tabs";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { PageWrapper } from "@/components/layout";
 import { Video, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,9 @@ export default async function StudentCourseLayout({ children, params }: CourseLa
     const { slug, locale } = await params;
 
     // Require authentication
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
 
-    if (!user) {
+    if (!authUser) {
         redirect('/auth/login');
     }
 

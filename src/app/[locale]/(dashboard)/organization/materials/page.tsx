@@ -13,7 +13,7 @@ import { MaterialsPaymentsView } from "@/features/materials/views/materials-paym
 import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
 import { MaterialsSettingsView } from "@/features/materials/views/materials-settings-view";
 
-import { getUserOrganizations } from "@/features/organization/queries";
+import { requireAuthContext } from "@/lib/auth";
 import {
     getOrgMaterialPayments,
     getOrgMaterialRequirements,
@@ -66,11 +66,7 @@ export default async function OrganizationMaterialsPage({ params, searchParams }
         const resolvedSearchParams = await searchParams;
         const defaultTab = resolvedSearchParams.view || "overview";
 
-        const { activeOrgId } = await getUserOrganizations();
-
-        if (!activeOrgId) {
-            redirect("/");
-        }
+        const { orgId } = await requireAuthContext();
 
         // Fetch ALL org data in parallel (no project filter)
         const [
@@ -86,14 +82,14 @@ export default async function OrganizationMaterialsPage({ params, searchParams }
             catalogCategories,
             catalogCategoryHierarchy,
         ] = await Promise.all([
-            getOrgMaterialPayments(activeOrgId),
-            getOrgMaterialPurchasesAction(activeOrgId),
-            getOrganizationFinancialData(activeOrgId),
-            getOrgMaterialRequirements(activeOrgId),
-            getOrgPurchaseOrders(activeOrgId),
-            getProvidersForProject(activeOrgId),
-            getMaterialTypes(activeOrgId),
-            getMaterialsForOrganization(activeOrgId),
+            getOrgMaterialPayments(orgId),
+            getOrgMaterialPurchasesAction(orgId),
+            getOrganizationFinancialData(orgId),
+            getOrgMaterialRequirements(orgId),
+            getOrgPurchaseOrders(orgId),
+            getProvidersForProject(orgId),
+            getMaterialTypes(orgId),
+            getMaterialsForOrganization(orgId),
             getUnitsForMaterialCatalog(),
             getMaterialCategoriesForCatalog(),
             getMaterialCategoryHierarchy(),
@@ -122,12 +118,12 @@ export default async function OrganizationMaterialsPage({ params, searchParams }
                     }
                 >
                     <TabsContent value="overview" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <MaterialsOverviewView orgId={activeOrgId} payments={payments} />
+                        <MaterialsOverviewView orgId={orgId} payments={payments} />
                     </TabsContent>
 
                     <TabsContent value="requirements" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <MaterialsRequirementsView
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             requirements={requirements}
                             providers={providers}
                             financialData={financialData}
@@ -136,7 +132,7 @@ export default async function OrganizationMaterialsPage({ params, searchParams }
 
                     <TabsContent value="orders" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <MaterialsOrdersView
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             orders={orders}
                             providers={providers}
                             financialData={financialData}
@@ -146,7 +142,7 @@ export default async function OrganizationMaterialsPage({ params, searchParams }
 
                     <TabsContent value="payments" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <MaterialsPaymentsView
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             payments={payments}
                             purchases={purchases}
                             financialData={financialData}
@@ -161,7 +157,7 @@ export default async function OrganizationMaterialsPage({ params, searchParams }
                                 units={catalogUnits as any}
                                 categories={catalogCategories as any}
                                 categoryHierarchy={catalogCategoryHierarchy as any}
-                                orgId={activeOrgId}
+                                orgId={orgId}
                                 isAdminMode={false}
                                 providers={providers}
                             />
@@ -169,7 +165,7 @@ export default async function OrganizationMaterialsPage({ params, searchParams }
                     )}
 
                     <TabsContent value="settings" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <MaterialsSettingsView materialTypes={materialTypes} organizationId={activeOrgId} />
+                        <MaterialsSettingsView materialTypes={materialTypes} organizationId={orgId} />
                     </TabsContent>
                 </PageWrapper>
             </Tabs>

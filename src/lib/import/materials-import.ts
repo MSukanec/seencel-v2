@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import { parseFlexibleDate } from "./date-utils";
 
@@ -15,7 +16,7 @@ export async function importMaterialPaymentsBatch(
     batchId: string
 ) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     if (!user) throw new Error("Unauthorized");
 
@@ -187,7 +188,7 @@ export async function importMaterialsCatalogBatch(
     batchId: string
 ) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     if (!user) throw new Error("Unauthorized");
 

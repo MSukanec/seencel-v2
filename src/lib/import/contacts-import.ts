@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 
 /**
@@ -9,7 +10,7 @@ import { revalidatePath } from "next/cache";
 
 export async function importContactsBatch(organizationId: string, contacts: any[], batchId: string) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     if (!user) throw new Error("Unauthorized");
 

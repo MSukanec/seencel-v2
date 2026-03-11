@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { capturePayPalOrder, getPayPalOrderDetails } from '@/lib/paypal/client';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/auth';
 import { getFeatureFlag } from '@/actions/feature-flags';
 
 export async function POST(request: NextRequest) {
     try {
-        const supabase = await createClient();
-
         // Verify user is authenticated
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
+        const authUser = await getAuthUser();
+        if (!authUser) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

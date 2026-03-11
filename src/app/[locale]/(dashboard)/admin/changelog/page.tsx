@@ -3,7 +3,7 @@ import { PageWrapper, ContentLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 
 interface PageProps {
     params: Promise<{ locale: string }>;
@@ -13,9 +13,8 @@ export default async function ChangelogPage({ params }: PageProps) {
     const { locale } = await params;
     setRequestLocale(locale);
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/auth/login');
+    const authUser = await getAuthUser();
+    if (!authUser) redirect('/auth/login');
 
     return (
         <PageWrapper

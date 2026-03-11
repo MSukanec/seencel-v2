@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { OrganizationExternalActor } from "./types";
 
 /**
@@ -33,18 +34,18 @@ export async function getExternalActorsByOrganization(organizationId: string) {
  * Reemplaza la antigua getMyClientPortals().
  */
 export async function getMyExternalActorAccess() {
-    const supabase = await createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const authUser = await getAuthUser();
+    if (!authUser) {
         return { data: [], error: "No authenticated user" };
     }
+
+    const supabase = await createClient();
 
     // Resolver users.id desde auth_id
     const { data: userData } = await supabase
         .schema('iam').from("users")
         .select("id")
-        .eq("auth_id", user.id)
+        .eq("auth_id", authUser.id)
         .single();
 
     if (!userData) {

@@ -16,31 +16,9 @@ import {
 import { generateGeneralCostsInsights } from "@/features/insights/logic/general-costs";
 import { CHART_COLORS } from "@/components/charts/chart-config";
 
-export async function getActiveOrganizationId(): Promise<string | null> {
-    const supabase = await createClient();
-
-    // 1. Get Current User
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    // 2. Get User Preferences
-    const { data: userData } = await supabase
-        .schema('iam').from('users')
-        .select('id')
-        .eq('auth_id', user.id)
-        .single();
-
-    if (!userData) return null;
-
-    // Cross-schema: user_preferences esta en iam
-    const { data: prefData } = await supabase
-        .schema('iam').from('user_preferences')
-        .select('last_organization_id')
-        .eq('user_id', userData.id)
-        .single();
-
-    return prefData?.last_organization_id || null;
-}
+// NOTE: getActiveOrganizationId() was removed (Marzo 2026).
+// Use requireAuthContext() or getAuthContext() from @/lib/auth instead.
+// The page.tsx already resolves orgId and passes it to all views/actions.
 
 // --- Categories ---
 
@@ -83,6 +61,103 @@ export async function getGeneralCosts(organizationId: string): Promise<GeneralCo
     return data as GeneralCost[];
 }
 
+export async function getGeneralCostConceptStats(organizationId: string) {
+    const supabase = await createClient();
+
+    // Get stats for last 12 months grouped by concept
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    const fromDate = twelveMonthsAgo.toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+        .schema('finance').from('general_costs_payments')
+        .select(`
+            general_cost_id,
+            amount,
+            payment_date,
+            currency:currencies(code, symbol)
+        `)
+        .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
+        .not('general_cost_id', 'is', null)
+        .gte('payment_date', fromDate);
+
+    if (error || !data) return {};
+
+    // Aggregate by concept
+    const statsMap: Record<string, {
+        general_cost_id: string;
+        total_payments: number;
+        total_amount: number;
+        last_payment_date: string | null;
+        currency_code: string | null;
+        currency_symbol: string | null;
+    }> = {};
+
+    for (const row of data) {
+        const id = row.general_cost_id!;
+        if (!statsMap[id]) {
+            statsMap[id] = {
+                general_cost_id: id,
+                total_payments: 0,
+                total_amount: 0,
+                last_payment_date: null,
+                currency_code: (row.currency as any)?.code ?? null,
+                currency_symbol: (row.currency as any)?.symbol ?? null,
+            };
+        }
+        statsMap[id].total_payments++;
+        statsMap[id].total_amount += Number(row.amount);
+        if (!statsMap[id].last_payment_date || row.payment_date > statsMap[id].last_payment_date!) {
+            statsMap[id].last_payment_date = row.payment_date;
+        }
+    }
+
+    return statsMap;
+}
+
+/**
+ * Fetch detail data for a specific concept: recent payments + monthly evolution.
+ * Used by the concept detail panel.
+ */
+export async function getConceptDetailData(conceptId: string, organizationId: string) {
+    const supabase = await createClient();
+
+    const [recentRes, monthlyRes] = await Promise.all([
+        // Recent payments for this concept
+        supabase
+            .schema('finance').from('general_costs_payments_view')
+            .select('id, payment_date, amount, currency_code, currency_symbol, status, wallet_name')
+            .eq('organization_id', organizationId)
+            .eq('general_cost_id', conceptId)
+            .order('payment_date', { ascending: false })
+            .limit(10),
+        // Monthly aggregation for chart
+        supabase
+            .schema('finance').from('general_costs_payments')
+            .select('payment_date, amount')
+            .eq('organization_id', organizationId)
+            .eq('general_cost_id', conceptId)
+            .eq('is_deleted', false)
+            .order('payment_date', { ascending: true }),
+    ]);
+
+    const recentPayments = recentRes.data || [];
+
+    // Aggregate monthly for chart
+    const monthlyMap: Record<string, number> = {};
+    for (const row of (monthlyRes.data || [])) {
+        const month = row.payment_date.substring(0, 7); // YYYY-MM
+        monthlyMap[month] = (monthlyMap[month] || 0) + Number(row.amount);
+    }
+    const monthlyData = Object.entries(monthlyMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .slice(-12) // Last 12 months
+        .map(([month, amount]) => ({ month: `${month}-01`, amount }));
+
+    return { recentPayments, monthlyData };
+}
+
 // --- Payments ---
 
 export async function getGeneralCostPayments(organizationId: string): Promise<GeneralCostPaymentView[]> {
@@ -106,7 +181,7 @@ export async function getGeneralCostPayments(organizationId: string): Promise<Ge
 export async function getGeneralCostsDashboard(organizationId: string): Promise<EnhancedDashboardData> {
     const supabase = await createClient();
 
-    const [monthlySummaryRes, byCategoryRes, recentPaymentsRes] = await Promise.all([
+    const [monthlySummaryRes, byCategoryRes, recentPaymentsRes, fixedCostsRes, allRecurringRes, lastPaymentsRes] = await Promise.all([
         supabase
             .schema('finance').from('general_costs_monthly_summary_view')
             .select('*')
@@ -122,12 +197,37 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
             .select('*')
             .eq('organization_id', organizationId)
             .order('payment_date', { ascending: false })
-            .limit(10) // 10 most recent
+            .limit(10), // 10 most recent
+        // Fixed costs: recurring WITH expected_amount (for KPI card)
+        supabase
+            .schema('finance').from('general_costs')
+            .select('id, name, expected_amount, recurrence_interval, expected_day')
+            .eq('organization_id', organizationId)
+            .eq('is_recurring', true)
+            .eq('is_deleted', false)
+            .not('expected_amount', 'is', null),
+        // All recurring: for obligations status (regardless of expected_amount)
+        supabase
+            .schema('finance').from('general_costs')
+            .select('id, name, expected_amount, recurrence_interval, expected_day')
+            .eq('organization_id', organizationId)
+            .eq('is_recurring', true)
+            .eq('is_deleted', false),
+        // Last payment per concept (for obligation status)
+        supabase
+            .schema('finance').from('general_costs_payments')
+            .select('general_cost_id, payment_date')
+            .eq('organization_id', organizationId)
+            .eq('is_deleted', false)
+            .order('payment_date', { ascending: false }),
     ]);
 
     const monthlySummary = (monthlySummaryRes.data || []) as GeneralCostMonthlySummary[];
     const byCategory = (byCategoryRes.data || []) as GeneralCostByCategory[];
     const recentPayments = (recentPaymentsRes.data || []) as GeneralCostPaymentView[];
+    const fixedCostsConcepts = fixedCostsRes.data || [];
+    const allRecurringConcepts = allRecurringRes.data || [];
+    const allPayments = lastPaymentsRes.data || [];
 
     // --- KPI Calculations ---
     const totalPaymentsCount = monthlySummary.reduce((acc, curr) => acc + curr.payments_count, 0);
@@ -140,30 +240,100 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
     const totalAmountAllMonths = sortedSummary.reduce((acc, curr) => acc + curr.total_amount, 0);
     const avgMonthly = sortedSummary.length > 0 ? totalAmountAllMonths / sortedSummary.length : 0;
 
-    // Concentration (Top Category) - need to aggregate by category first
-    const aggregatedByCategory = Object.values(
-        byCategory.reduce((acc, c) => {
-            const key = c.category_id || 'other';
-            if (!acc[key]) {
-                acc[key] = {
-                    category_id: c.category_id,
-                    category_name: c.category_name || "Otros",
-                    total_amount: 0
-                };
-            }
-            acc[key].total_amount += c.total_amount;
-            return acc;
-        }, {} as Record<string, { category_id: string | null; category_name: string; total_amount: number }>)
-    ).sort((a, b) => b.total_amount - a.total_amount);
+    // Mensualize helper
+    const mensualize = (amount: number, interval: string) => {
+        const multiplier = interval === 'quarterly' ? 1 / 3
+            : interval === 'yearly' ? 1 / 12
+                : interval === 'weekly' ? 4.33
+                    : 1;
+        return amount * multiplier;
+    };
 
-    const topCategory = aggregatedByCategory[0];
-    const concentrationPercent = topCategory && totalAmountAllMonths > 0
-        ? Math.round((topCategory.total_amount / totalAmountAllMonths) * 100)
-        : 0;
+    // Fixed Monthly Costs — sum expected_amount mensualized
+    const fixedMonthlyCosts = fixedCostsConcepts.reduce((acc: number, c: any) => {
+        return acc + mensualize(Number(c.expected_amount) || 0, c.recurrence_interval || 'monthly');
+    }, 0);
 
-    // Total Expense (Sum of all visible months or year to date? Standard is usually YTD or All time in view)
-    // For now, let's show the sum of the fetched history (last 12 months)
+    // Total Expense
     const totalExpense = totalAmountAllMonths;
+
+    // --- Trends ---
+    const monthlyAmounts = sortedSummary.map(m => m.total_amount);
+    const prevMonth = sortedSummary.length >= 2 ? sortedSummary[sortedSummary.length - 2] : null;
+
+    const calcTrend = (current: number, previous: number | null) => {
+        if (!previous || previous === 0) return { value: 0, direction: 'neutral' as const };
+        const pct = Math.round(((current - previous) / previous) * 100);
+        return {
+            value: Math.abs(pct),
+            direction: pct > 0 ? 'up' as const : pct < 0 ? 'down' as const : 'neutral' as const,
+        };
+    };
+
+    const totalExpenseTrend = calcTrend(lastMonth.total_amount, prevMonth?.total_amount ?? null);
+
+    // Avg trend: compare last 3 months avg vs previous 3 months avg
+    const last3 = sortedSummary.slice(-3);
+    const prev3 = sortedSummary.slice(-6, -3);
+    const avgLast3 = last3.length > 0 ? last3.reduce((s, m) => s + m.total_amount, 0) / last3.length : 0;
+    const avgPrev3 = prev3.length > 0 ? prev3.reduce((s, m) => s + m.total_amount, 0) / prev3.length : 0;
+    const avgTrend = calcTrend(avgLast3, avgPrev3 || null);
+
+    // --- Fixed Costs Breakdown (top concepts by mensualized amount) ---
+    const fixedCostsBreakdown = fixedCostsConcepts
+        .map((c: any) => ({
+            name: c.name as string,
+            amount: mensualize(Number(c.expected_amount) || 0, c.recurrence_interval || 'monthly'),
+        }))
+        .sort((a: any, b: any) => b.amount - a.amount)
+        .slice(0, 5);
+
+    // --- Recurring Obligations Status ---
+    // Build last payment map per concept
+    const lastPaymentMap: Record<string, string> = {};
+    for (const p of allPayments) {
+        if (p.general_cost_id && !lastPaymentMap[p.general_cost_id]) {
+            lastPaymentMap[p.general_cost_id] = p.payment_date;
+        }
+    }
+
+    const now = new Date();
+    const currentDay = now.getDate();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const recurringObligations = allRecurringConcepts.map((c: any) => {
+        const lastPayment = lastPaymentMap[c.id] || null;
+        const expectedDay = c.expected_day || null;
+
+        // Determine status
+        let status: 'on_track' | 'pending' | 'overdue' = 'pending';
+        if (lastPayment) {
+            const lastDate = new Date(lastPayment);
+            const isThisMonth = lastDate.getMonth() === currentMonth && lastDate.getFullYear() === currentYear;
+            if (isThisMonth) {
+                status = 'on_track';
+            } else if (expectedDay && currentDay > expectedDay) {
+                status = 'overdue';
+            }
+        } else if (expectedDay && currentDay > expectedDay) {
+            status = 'overdue';
+        }
+
+        return {
+            id: c.id as string,
+            name: c.name as string,
+            expectedAmount: Number(c.expected_amount) || 0,
+            recurrenceInterval: (c.recurrence_interval || 'monthly') as string,
+            expectedDay,
+            status,
+            lastPaymentDate: lastPayment,
+        };
+    }).sort((a, b) => {
+        // Overdue first, then pending, then on_track
+        const order: Record<string, number> = { overdue: 0, pending: 1, on_track: 2 };
+        return (order[a.status] ?? 1) - (order[b.status] ?? 1);
+    });
 
     // Insights Generation
     const insights = generateGeneralCostsInsights({
@@ -189,11 +359,16 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
                 value: totalPaymentsCount,
                 description: `≈ ${Math.round(totalPaymentsCount / (sortedSummary.length || 1))} pagos por mes`
             },
-            expenseConcentration: {
-                label: "Concentración del Gasto",
-                value: `${concentrationPercent}%`,
-                description: topCategory?.category_name || "Sin datos"
+            fixedMonthlyCosts: {
+                label: "Costos Fijos Mensuales",
+                value: fixedMonthlyCosts,
+                description: `${allRecurringConcepts.length} conceptos recurrentes`
             }
+        },
+        trends: {
+            monthlyAmounts,
+            totalExpenseTrend,
+            avgTrend,
         },
         charts: {
             monthlyEvolution: sortedSummary.map(m => ({
@@ -218,6 +393,8 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
                 color: CHART_COLORS.categorical[index % CHART_COLORS.categorical.length]
             })).sort((a, b) => b.value - a.value)
         },
+        fixedCostsBreakdown,
+        recurringObligations,
         insights: insights,
         recentActivity: recentPayments
     };
@@ -293,7 +470,9 @@ export async function createGeneralCost(data: Partial<GeneralCost>) {
             category_id: data.category_id,
             is_recurring: data.is_recurring || false,
             recurrence_interval: data.recurrence_interval,
-            expected_day: data.expected_day
+            expected_day: data.expected_day,
+            expected_amount: data.expected_amount,
+            expected_currency_id: data.expected_currency_id
         })
         .select()
         .single();
@@ -313,7 +492,9 @@ export async function updateGeneralCost(id: string, data: Partial<GeneralCost>) 
             category_id: data.category_id,
             is_recurring: data.is_recurring,
             recurrence_interval: data.recurrence_interval,
-            expected_day: data.expected_day
+            expected_day: data.expected_day,
+            expected_amount: data.expected_amount,
+            expected_currency_id: data.expected_currency_id
         })
         .eq('id', id)
         .select()
@@ -326,11 +507,14 @@ export async function updateGeneralCost(id: string, data: Partial<GeneralCost>) 
 
 export async function deleteGeneralCost(id: string) {
     const supabase = await createClient();
-
-    // Use RPC function with SECURITY DEFINER to bypass RLS
-    // The function still verifies permissions internally
+    // Soft delete — Rule: NUNCA .delete() real
     const { error } = await supabase
-        .rpc('soft_delete_general_cost', { p_cost_id: id });
+        .schema('finance').from('general_costs')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString()
+        })
+        .eq('id', id);
 
     if (error) throw new Error(sanitizeError(error));
     revalidatePath('/organization/general-costs');
@@ -499,11 +683,13 @@ export async function updateGeneralCostPayment(id: string, data: Partial<General
 
 export async function deleteGeneralCostPayment(id: string) {
     const supabase = await createClient();
-    // TODO: Investigate RLS issue with soft delete UPDATE
-    // Using hard DELETE temporarily until resolved
+    // Soft delete — Rule: NUNCA .delete() real
     const { error } = await supabase
         .schema('finance').from('general_costs_payments')
-        .delete()
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString()
+        })
         .eq('id', id);
 
     if (error) throw new Error(sanitizeError(error));
@@ -561,5 +747,6 @@ export async function updateGeneralCostPaymentField(
         return { success: false, error: "Error al actualizar el pago" };
     }
 
+    revalidatePath('/organization/general-costs');
     return { success: true };
 }

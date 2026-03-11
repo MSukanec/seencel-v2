@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { UserProfile } from '@/types/user';
+import { getAuthUser } from '@/lib/auth';
 
 // ============================================================================
 // User Profile Query
@@ -11,8 +12,8 @@ export async function getUserProfile(authId?: string): Promise<{ profile: UserPr
     // 1. Resolve Auth ID (skip auth.getUser() if provided by caller)
     let resolvedAuthId = authId;
     if (!resolvedAuthId) {
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-        if (authError || !authUser) return { profile: null, error: "Not authenticated" };
+        const authUser = await getAuthUser();
+        if (!authUser) return { profile: null, error: "Not authenticated" };
         resolvedAuthId = authUser.id;
     }
 
@@ -79,8 +80,8 @@ export async function getUserProfile(authId?: string): Promise<{ profile: UserPr
 export async function checkIsAdmin(): Promise<boolean> {
     const supabase = await createClient();
 
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-    if (authError || !authUser) return false;
+    const authUser = await getAuthUser();
+    if (!authUser) return false;
 
     const { data: userData, error } = await supabase
         .schema('iam').from('users')
@@ -108,8 +109,8 @@ export async function checkIsAdmin(): Promise<boolean> {
 export async function checkIsBetaTester(): Promise<boolean> {
     const supabase = await createClient();
 
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-    if (authError || !authUser) return false;
+    const authUser = await getAuthUser();
+    if (!authUser) return false;
 
     const { data: userData, error } = await supabase
         .schema('iam').from('users')
@@ -141,8 +142,8 @@ export async function checkUserRoles(authId?: string): Promise<{ isAdmin: boolea
     // Resolve Auth ID (skip auth.getUser() if provided by caller)
     let resolvedAuthId = authId;
     if (!resolvedAuthId) {
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-        if (authError || !authUser) return { isAdmin: false, isBetaTester: false };
+        const authUser = await getAuthUser();
+        if (!authUser) return { isAdmin: false, isBetaTester: false };
         resolvedAuthId = authUser.id;
     }
 
@@ -176,7 +177,7 @@ export async function checkUserRoles(authId?: string): Promise<{ isAdmin: boolea
 export async function getUserTimezone(): Promise<string | null> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return null;
 
     const { data: publicUser } = await supabase

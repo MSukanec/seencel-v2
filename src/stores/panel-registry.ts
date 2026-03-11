@@ -110,4 +110,8 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
         component: dynamic(() => import('@/features/general-costs/forms/general-costs-payment-form').then(mod => ({ default: mod.GeneralCostsPaymentForm }))),
         defaultOptions: { size: 'lg' },
     },
+    'general-cost-concept-detail': {
+        component: dynamic(() => import('@/features/general-costs/components/general-cost-concept-detail-panel').then(mod => ({ default: mod.GeneralCostConceptDetailPanel }))),
+        defaultOptions: { size: 'lg' },
+    },
 };

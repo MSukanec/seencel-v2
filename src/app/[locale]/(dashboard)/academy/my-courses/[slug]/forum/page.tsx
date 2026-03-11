@@ -1,7 +1,7 @@
 import { getCourseBySlug } from "@/features/academy/student-actions";
 import { getForumCategories, getForumThreads } from "@/actions/forum";
 import { CourseForumView } from "@/features/academy/views";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from "next/navigation";
 
@@ -26,8 +26,7 @@ export default async function CourseForumPage({ params }: PageProps) {
     ]);
 
     // Get current user ID
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
 
     return (
         <CourseForumView
@@ -35,7 +34,7 @@ export default async function CourseForumPage({ params }: PageProps) {
             courseSlug={slug}
             categories={categories}
             threads={threads}
-            currentUserId={user?.id}
+            currentUserId={authUser?.id}
         />
     );
 }

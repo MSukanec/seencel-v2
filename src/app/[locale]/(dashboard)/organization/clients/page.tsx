@@ -8,7 +8,7 @@ import {
     getPaymentsByOrganization,
     getOrganizationContracts,
 } from "@/features/clients/queries";
-import { getUserOrganizations } from "@/features/organization/queries";
+import { requireAuthContext } from "@/lib/auth";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper } from "@/components/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,8 +43,8 @@ export default async function OrganizationClientsPage({ searchParams }: PageProp
     const defaultTab = resolvedSearchParams.view || "overview";
 
     try {
-        const { activeOrgId } = await getUserOrganizations();
-        if (!activeOrgId) {
+        const { orgId } = await requireAuthContext();
+        if (!orgId) {
             return (
                 <div className="h-full w-full flex items-center justify-center">
                     <ErrorDisplay
@@ -66,13 +66,13 @@ export default async function OrganizationClientsPage({ searchParams }: PageProp
             projects,
             contractsRes,
         ] = await Promise.all([
-            getClientsByOrganization(activeOrgId),
-            getFinancialSummaryByOrganization(activeOrgId),
-            getCommitmentsByOrganization(activeOrgId),
-            getPaymentsByOrganization(activeOrgId),
-            getOrganizationFinancialData(activeOrgId),
-            getActiveOrganizationProjects(activeOrgId),
-            getOrganizationContracts(activeOrgId),
+            getClientsByOrganization(orgId),
+            getFinancialSummaryByOrganization(orgId),
+            getCommitmentsByOrganization(orgId),
+            getPaymentsByOrganization(orgId),
+            getOrganizationFinancialData(orgId),
+            getActiveOrganizationProjects(orgId),
+            getOrganizationContracts(orgId),
         ]);
 
         const clients = clientsRes.data || [];
@@ -111,7 +111,7 @@ export default async function OrganizationClientsPage({ searchParams }: PageProp
                     <TabsContent value="contracts" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ClientsContractsView
                             contracts={contracts}
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             projects={projects.map(p => ({ id: p.id, name: p.name }))}
                         />
                     </TabsContent>
@@ -121,7 +121,7 @@ export default async function OrganizationClientsPage({ searchParams }: PageProp
                             clients={clients}
                             payments={payments}
                             financialData={financialData}
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             projects={projects.map(p => ({ id: p.id, name: p.name }))}
                         />
                     </TabsContent>
@@ -130,7 +130,7 @@ export default async function OrganizationClientsPage({ searchParams }: PageProp
                             data={payments}
                             clients={clients}
                             financialData={financialData}
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             projects={projects.map(p => ({ id: p.id, name: p.name }))}
                         />
                     </TabsContent>

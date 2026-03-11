@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 
 // =============================================================================
@@ -147,7 +148,7 @@ export async function getCurrentUserAndOrg(): Promise<{ userId: string | null; o
         const supabase = await createClient();
 
         // Get auth user
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) return { userId: null, orgId: null };
 
         // Get internal user and their active org
@@ -185,7 +186,7 @@ export async function cleanupTestPurchase(email: string, orgId: string): Promise
         const supabase = await createClient();
 
         // Verificar que hay un usuario autenticado
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) {
             return { success: false, message: "No autenticado" };
         }
@@ -475,7 +476,7 @@ export async function getSystemErrors(hours: number = 24): Promise<{ success: bo
         const supabase = await createClient();
 
         // Verificar autenticación
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) {
             return { success: false, error: "No autenticado" };
         }
@@ -648,7 +649,7 @@ export async function sendAdminMessage(userId: string, message: string): Promise
         const supabase = await createClient();
 
         // Verificar autenticación
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) {
             return { success: false, error: "No autenticado" };
         }

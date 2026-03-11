@@ -12,7 +12,8 @@ import { LaborPaymentsView } from "@/features/labor/views/labor-payments-view";
 import { LaborCatalogView } from "@/features/labor/views/labor-catalog-view";
 import { LaborSettingsView } from "@/features/labor/views/labor-settings-view";
 
-import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
+import { requireAuthContext } from "@/lib/auth";
+import { getOrganizationFinancialData } from "@/features/organization/queries";
 import { getLaborPaymentsByOrg, getLaborTypes, getOrgLaborView, getLaborCategories } from "@/features/labor/actions";
 import { getOrganizationContacts } from "@/features/clients/queries";
 import { getSystemLaborLevels, getSystemLaborRoles, getSystemLaborTypes, getUnitsForLabor } from "@/features/admin/queries";
@@ -56,11 +57,7 @@ export default async function OrganizationLaborPage({ params, searchParams }: Pa
         const resolvedSearchParams = await searchParams;
         const defaultTab = resolvedSearchParams.view || "overview";
 
-        const { activeOrgId } = await getUserOrganizations();
-
-        if (!activeOrgId) {
-            redirect("/");
-        }
+        const { orgId } = await requireAuthContext();
 
         // Fetch ALL org data in parallel (no project filter)
         const [
@@ -75,12 +72,12 @@ export default async function OrganizationLaborPage({ params, searchParams }: Pa
             catalogTypes,
             catalogUnits,
         ] = await Promise.all([
-            getLaborPaymentsByOrg(activeOrgId),
+            getLaborPaymentsByOrg(orgId),
             getLaborTypes(),
-            getOrgLaborView(activeOrgId),
-            getOrganizationFinancialData(activeOrgId),
-            getOrganizationContacts(activeOrgId),
-            getLaborCategories(activeOrgId),
+            getOrgLaborView(orgId),
+            getOrganizationFinancialData(orgId),
+            getOrganizationContacts(orgId),
+            getLaborCategories(orgId),
             getSystemLaborLevels(),
             getSystemLaborRoles(),
             getSystemLaborTypes(),
@@ -117,12 +114,12 @@ export default async function OrganizationLaborPage({ params, searchParams }: Pa
                     }
                 >
                     <TabsContent value="overview" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <LaborOverviewView orgId={activeOrgId} payments={payments} />
+                        <LaborOverviewView orgId={orgId} payments={payments} />
                     </TabsContent>
 
                     <TabsContent value="team" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <LaborTeamView
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             workers={workers}
                             laborTypes={laborTypes}
                             contacts={contacts}
@@ -131,7 +128,7 @@ export default async function OrganizationLaborPage({ params, searchParams }: Pa
 
                     <TabsContent value="payments" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <LaborPaymentsView
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             payments={payments}
                             laborTypes={laborTypes}
                             workers={workers}
@@ -155,7 +152,7 @@ export default async function OrganizationLaborPage({ params, searchParams }: Pa
 
                     <TabsContent value="settings" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <LaborSettingsView
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             laborTypes={catalogCategories as any}
                         />
                     </TabsContent>

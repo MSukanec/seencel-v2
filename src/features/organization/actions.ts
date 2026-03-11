@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
@@ -37,7 +38,7 @@ export async function switchOrganization(organizationId: string) {
     const supabase = await createClient();
 
     // 1. Get Current User
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         throw new Error("Not authenticated");
     }
@@ -96,7 +97,7 @@ export async function createOrganization(
     const supabase = await createClient();
 
     // 1. Get Current User
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: "No autenticado" };
     }
@@ -168,7 +169,7 @@ export async function createOrganization(
 export async function fetchUserOrganizationsLight(): Promise<{ id: string; name: string; logo_url: string | null }[]> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return [];
 
     const { data: userData } = await supabase

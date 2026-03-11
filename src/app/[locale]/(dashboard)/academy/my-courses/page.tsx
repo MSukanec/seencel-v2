@@ -4,7 +4,7 @@ import { CoursesContent } from "@/features/academy/components/courses-content";
 import { PageWrapper } from "@/components/layout";
 import { Video } from "lucide-react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 
 // ✅ METADATA OBLIGATORIA
@@ -27,10 +27,9 @@ export default async function MyCoursesPage({ params }: { params: Promise<{ loca
     const t = await getTranslations({ locale, namespace: 'Learning' });
 
     // Require authentication
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
 
-    if (!user) {
+    if (!authUser) {
         redirect('/auth/login');
     }
 

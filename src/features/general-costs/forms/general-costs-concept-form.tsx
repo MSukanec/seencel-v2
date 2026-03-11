@@ -9,7 +9,10 @@ import {
     NotesField,
     SelectField,
     SwitchField,
+    AmountField,
+    CurrencyField,
 } from "@/components/shared/forms/fields";
+import { useFormData } from "@/stores/organization-store";
 import { GeneralCost, GeneralCostCategory } from "@/features/general-costs/types";
 import { createGeneralCost, updateGeneralCost } from "@/features/general-costs/actions";
 
@@ -52,6 +55,19 @@ export function GeneralCostsConceptForm({
     const [isRecurring, setIsRecurring] = useState(initialData?.is_recurring ?? false);
     const [recurrenceInterval, setRecurrenceInterval] = useState(initialData?.recurrence_interval || "monthly");
     const [expectedDay, setExpectedDay] = useState(String(initialData?.expected_day || "1"));
+    const [expectedAmount, setExpectedAmount] = useState(initialData?.expected_amount?.toString() || "");
+    const [expectedCurrencyId, setExpectedCurrencyId] = useState(initialData?.expected_currency_id || "");
+
+    // Currencies from org store
+    const { currencies } = useFormData();
+
+    // Set default currency if not set
+    useEffect(() => {
+        if (!expectedCurrencyId && currencies.length > 0) {
+            const defaultCurrency = currencies.find(c => c.is_default) || currencies[0];
+            if (defaultCurrency) setExpectedCurrencyId(defaultCurrency.id);
+        }
+    }, [currencies, expectedCurrencyId]);
 
     // ─── Panel Meta ──────────────────────────────────────
     useEffect(() => {
@@ -69,7 +85,7 @@ export function GeneralCostsConceptForm({
     }, [isEditing, setPanelMeta]);
 
     // ─── Category options ────────────────────────────────
-    const categoryOptions = categories.map((cat) => ({
+    const categoryOptions = (categories ?? []).map((cat) => ({
         value: cat.id,
         label: cat.name,
     }));
@@ -96,6 +112,8 @@ export function GeneralCostsConceptForm({
                     is_recurring: isRecurring,
                     recurrence_interval: isRecurring ? recurrenceInterval : undefined,
                     expected_day: isRecurring ? Number(expectedDay) || undefined : undefined,
+                    expected_amount: isRecurring && expectedAmount ? parseFloat(expectedAmount) : null,
+                    expected_currency_id: isRecurring && expectedCurrencyId ? expectedCurrencyId : null,
                 };
 
                 if (isEditing && initialData) {
@@ -145,21 +163,36 @@ export function GeneralCostsConceptForm({
                 />
 
                 {isRecurring && (
-                    <div className="grid grid-cols-2 gap-4">
-                        <SelectField
-                            label="Frecuencia"
-                            value={recurrenceInterval}
-                            onChange={setRecurrenceInterval}
-                            options={RECURRENCE_OPTIONS}
-                            placeholder="Seleccionar frecuencia"
-                        />
-                        <TextField
-                            label="Día esperado"
-                            value={expectedDay}
-                            onChange={setExpectedDay}
-                            placeholder="1-31"
-                            helpText="Día del mes aproximado"
-                        />
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <SelectField
+                                label="Frecuencia"
+                                value={recurrenceInterval}
+                                onChange={setRecurrenceInterval}
+                                options={RECURRENCE_OPTIONS}
+                                placeholder="Seleccionar frecuencia"
+                            />
+                            <TextField
+                                label="Día esperado"
+                                value={expectedDay}
+                                onChange={setExpectedDay}
+                                placeholder="1-31"
+                                helpText="Día del mes aproximado"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <AmountField
+                                label="Monto Esperado"
+                                value={expectedAmount}
+                                onChange={setExpectedAmount}
+                                helpText="Cuánto esperás pagar cada período"
+                            />
+                            <CurrencyField
+                                value={expectedCurrencyId}
+                                onChange={setExpectedCurrencyId}
+                                currencies={currencies.map(c => ({ id: c.id, name: c.name, code: c.code, symbol: c.symbol }))}
+                            />
+                        </div>
                     </div>
                 )}
 

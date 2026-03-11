@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 
 export interface UserNotification {
     id: string;
@@ -18,17 +19,16 @@ export interface UserNotification {
 }
 
 export async function getUserNotifications(): Promise<{ notifications: UserNotification[] }> {
-    const supabase = await createClient();
+    const authUser = await getAuthUser();
+    if (!authUser) return { notifications: [] };
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { notifications: [] };
+    const supabase = await createClient();
 
     // Get public user ID
     const { data: userData } = await supabase
         .schema('iam').from('users')
         .select('id')
-        .eq('auth_id', user.id)
+        .eq('auth_id', authUser.id)
         .single();
 
     if (!userData) return { notifications: [] };
@@ -70,17 +70,16 @@ export async function getUserNotifications(): Promise<{ notifications: UserNotif
 }
 
 export async function getUnreadNotificationsCount(): Promise<number> {
-    const supabase = await createClient();
+    const authUser = await getAuthUser();
+    if (!authUser) return 0;
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return 0;
+    const supabase = await createClient();
 
     // Get public user ID
     const { data: userData } = await supabase
         .schema('iam').from('users')
         .select('id')
-        .eq('auth_id', user.id)
+        .eq('auth_id', authUser.id)
         .single();
 
     if (!userData) return 0;

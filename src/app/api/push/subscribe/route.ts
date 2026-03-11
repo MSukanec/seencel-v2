@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 
 /**
  * POST /api/push/subscribe
@@ -7,13 +8,13 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function POST(request: NextRequest) {
     try {
-        const supabase = await createClient();
-
         // Get authenticated user
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }
+
+        const supabase = await createClient();
 
         // Get public user ID (users.id, not auth_id — Rule 6)
         const { data: userData } = await supabase
@@ -67,13 +68,13 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
     try {
-        const supabase = await createClient();
-
         // Get authenticated user
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }
+
+        const supabase = await createClient();
 
         // Get public user ID
         const { data: userData } = await supabase

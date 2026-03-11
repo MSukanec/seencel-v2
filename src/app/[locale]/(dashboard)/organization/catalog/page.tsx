@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { getUserOrganizations } from "@/features/organization/queries";
+import { requireAuthContext } from "@/lib/auth";
 import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskActions, getTaskElements, getTaskCosts, getTaskUsageCounts } from "@/features/tasks/queries";
 import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy, getProvidersForProject } from "@/features/materials/queries";
 import { getUnitsForOrganization, getUnitCategories } from "@/features/units/queries";
@@ -55,10 +55,10 @@ const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transp
 
 export default async function TechnicalCatalogPage({ params, searchParams }: CatalogPageProps) {
     try {
-        const { activeOrgId } = await getUserOrganizations();
+        const { orgId } = await requireAuthContext();
         const resolvedSearchParams = await searchParams;
 
-        if (!activeOrgId) {
+        if (!orgId) {
             redirect("/");
         }
 
@@ -82,23 +82,23 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             taskUsageMap,
             { data: contacts },
         ] = await Promise.all([
-            getTasksGroupedByDivision(activeOrgId),
+            getTasksGroupedByDivision(orgId),
             getUnits(),
-            getTaskDivisions(activeOrgId),
+            getTaskDivisions(orgId),
             getTaskActions(),
             getTaskElements(),
-            getMaterialsForOrganization(activeOrgId),
+            getMaterialsForOrganization(orgId),
             getMaterialCategoriesForCatalog(),
             getUnitsForMaterialCatalog(),
             getMaterialCategoryHierarchy(),
-            getLaborTypesWithPrices(activeOrgId),
+            getLaborTypesWithPrices(orgId),
             getCurrencies(),
-            getProvidersForProject(activeOrgId),
-            getUnitsForOrganization(activeOrgId),
+            getProvidersForProject(orgId),
+            getUnitsForOrganization(orgId),
             getUnitCategories(),
-            getTaskCosts(activeOrgId),
-            getTaskUsageCounts(activeOrgId),
-            getOrganizationContacts(activeOrgId),
+            getTaskCosts(orgId),
+            getTaskUsageCounts(orgId),
+            getOrganizationContacts(orgId),
         ]);
 
         // Get default currency (first one or USD)
@@ -167,7 +167,7 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                         <ContentLayout variant="wide">
                             <TasksCatalogView
                                 groupedTasks={enrichedGroupedTasks}
-                                orgId={activeOrgId}
+                                orgId={orgId}
                                 units={taskUnitsResult.data}
                                 divisions={divisionsResult.data}
                                 kinds={actionsResult.data}
@@ -180,7 +180,7 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                             <TasksDivisionsView
                                 divisions={divisionsResult.data}
                                 taskCounts={taskCounts}
-                                organizationId={activeOrgId}
+                                organizationId={orgId}
                             />
                         </ContentLayout>
                     </TabsContent>
@@ -190,7 +190,7 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                             units={materialUnits}
                             categories={materialCategories}
                             categoryHierarchy={categoryHierarchy}
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             isAdminMode={false}
                             providers={providers}
                         />
@@ -199,7 +199,7 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                         <LaborTypesView
                             laborTypes={laborTypesWithPrices}
                             currencies={currencies}
-                            orgId={activeOrgId}
+                            orgId={orgId}
                             defaultCurrencyId={defaultCurrencyId}
                         />
                     </TabsContent>
@@ -208,7 +208,7 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                             <UnitsCatalogView
                                 units={catalogUnits}
                                 categories={unitCategories}
-                                orgId={activeOrgId}
+                                orgId={orgId}
                             />
                         </ContentLayout>
                     </TabsContent>

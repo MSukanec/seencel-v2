@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-01T21:32:52.143Z
+> Generated: 2026-03-10T23:31:35.891Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -263,6 +263,8 @@
 | recurrence_interval | text | ✓ |  |  |
 | expected_day | int2 | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
+| expected_amount | numeric | ✓ |  |  |
+| expected_currency_id | uuid | ✓ |  | FK → currencies.id |
 
 ### `finance.general_costs_payments`
 
@@ -285,6 +287,7 @@
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
+| import_batch_id | uuid | ✓ |  |  |
 
 ### `finance.indirect_costs`
 

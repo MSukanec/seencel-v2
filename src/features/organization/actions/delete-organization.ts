@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { sanitizeError } from '@/lib/error-utils';
 
@@ -18,7 +19,7 @@ export async function deleteOrganization(
     const supabase = await createClient();
 
     // 1. Get current auth user
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) {
         return { success: false, error: "No autenticado" };
     }

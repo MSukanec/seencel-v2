@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { Currency } from "@/types/currency";
 
 /**
@@ -18,7 +19,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
     const supabase = await createClient();
 
     // Get current user for access context detection
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     const currentUserId = user?.id;
 
     // Resolve internal user ID from auth_id for membership/actor checks

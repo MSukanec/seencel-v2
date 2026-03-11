@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -34,8 +35,8 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
     const supabase = await createClient();
 
     // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const user = await getAuthUser();
+    if (!user) {
         return { success: false, error: "No autenticado" };
     }
 
@@ -256,8 +257,8 @@ export async function uploadTransferReceipt(formData: FormData) {
     }
 
     // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const user = await getAuthUser();
+    if (!user) {
         return { success: false, error: "No autenticado" };
     }
 

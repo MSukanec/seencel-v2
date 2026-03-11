@@ -1,11 +1,10 @@
 import { PageWrapper } from "@/components/layout";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { setRequestLocale } from 'next-intl/server';
-import { getUserProfile } from "@/features/users/queries";
+import { getAuthUser } from "@/lib/auth";
+import { getUserProfile, getUserTimezone } from "@/features/users/queries";
 import { getUserOrganizations, getRecentOrganizationsCount } from "@/features/organization/queries";
 import { getActiveHeroSections } from "@/features/hero-sections/queries";
-import { getUserTimezone } from "@/features/users/queries";
 import { getRecentPublicCourses } from "@/features/academy/queries";
 import { HubView } from "@/features/hub";
 import { LayoutDashboard } from "lucide-react";
@@ -14,25 +13,23 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
     const { locale } = await params;
     setRequestLocale(locale);
 
-    // Require authentication
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    // Require authentication (single source of truth: auth.ts)
+    const authUser = await getAuthUser();
+    if (!authUser) {
         redirect('/auth/login');
     }
 
     // Fetch only necessary data
     const [
         { profile },
-        { organizations, activeOrgId },
+        { organizations, activeOrgId: orgId },
         heroSlides,
         userTimezone,
         recentCourses,
         recentOrgsCount
     ] = await Promise.all([
-        getUserProfile(),
-        getUserOrganizations(),
+        getUserProfile(authUser.id),
+        getUserOrganizations(authUser.id),
         getActiveHeroSections('hub_hero'),
         getUserTimezone(),
         getRecentPublicCourses(2),
@@ -40,7 +37,7 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
     ]);
 
     // Derived data
-    const activeOrg = organizations.find(o => o.id === activeOrgId);
+    const activeOrg = organizations.find((o: any) => o.id === orgId);
     const activeOrgName = activeOrg?.name;
     const activeOrgLogo = activeOrg?.logo_url || null;
 
@@ -48,7 +45,7 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
         <PageWrapper type="page" title="Hub" icon={<LayoutDashboard />}>
             <HubView
                 user={profile}
-                activeOrgId={activeOrgId}
+                activeOrgId={orgId}
                 activeOrgName={activeOrgName}
                 activeOrgLogo={activeOrgLogo}
                 heroSlides={heroSlides}

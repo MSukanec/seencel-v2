@@ -24,6 +24,8 @@ export interface GeneralCost {
     is_recurring: boolean;
     recurrence_interval: string | null;
     expected_day: number | null;
+    expected_amount: number | null;
+    expected_currency_id: string | null;
 
     // Virtual/Joined fields
     category?: GeneralCostCategory;
@@ -107,12 +109,30 @@ export interface EnhancedDashboardData {
         totalExpense: DashboardKpi;
         monthlyAverage: DashboardKpi;
         totalPayments: DashboardKpi;
-        expenseConcentration: DashboardKpi;
+        fixedMonthlyCosts: DashboardKpi;
+    };
+    /** Trend data for sparklines and comparisons */
+    trends: {
+        monthlyAmounts: number[];          // Last 12 months of total amounts (for sparklines)
+        totalExpenseTrend: { value: number; direction: 'up' | 'down' | 'neutral' };
+        avgTrend: { value: number; direction: 'up' | 'down' | 'neutral' };
     };
     charts: {
         monthlyEvolution: { month: string; amount: number }[];
         categoryDistribution: { name: string; value: number; color?: string }[];
     };
+    /** Top recurring concepts breakdown for fixed costs card */
+    fixedCostsBreakdown: { name: string; amount: number }[];
+    /** Recurring concepts with their obligation status */
+    recurringObligations: {
+        id: string;
+        name: string;
+        expectedAmount: number;
+        recurrenceInterval: string;
+        expectedDay: number | null;
+        status: 'on_track' | 'pending' | 'overdue';
+        lastPaymentDate: string | null;
+    }[];
     insights: Insight[];
     recentActivity: GeneralCostPaymentView[];
 }

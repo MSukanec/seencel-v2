@@ -1,6 +1,6 @@
 "use client";
 
-import { CardBase } from "./card-base";
+import { CardBase } from "../base/card-base";
 import { cn } from "@/lib/utils";
 import { MoreHorizontal, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";

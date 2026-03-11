@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import { completeOnboardingStep } from "@/features/onboarding/actions";
 
@@ -10,7 +11,7 @@ export async function saveLastActiveProject(projectId: string) {
     const supabase = await createClient();
 
     // Get current auth user
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) return;
 
     // Get PUBLIC user ID from users table
@@ -74,7 +75,7 @@ export async function saveLastActiveProject(projectId: string) {
 
 export async function fetchLastActiveProject(organizationId: string) {
     const supabase = await createClient();
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
 
     if (!authUser) return null;
 
@@ -101,7 +102,7 @@ export async function fetchLastActiveProject(organizationId: string) {
 export async function createProject(formData: FormData) {
     const supabase = await createClient();
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) return { error: "Not authenticated" };
 
     const organizationId = formData.get("organization_id")?.toString();
@@ -548,7 +549,7 @@ export async function createProjectType(
     const supabase = await createClient();
 
     // Get user ID for created_by
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) return { error: "Not authenticated" };
 
     // Get public user -> organization member ID
@@ -676,7 +677,7 @@ export async function createProjectModality(
     const supabase = await createClient();
 
     // Get user ID for created_by
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) return { error: "Not authenticated" };
 
     // Get public user -> organization member ID

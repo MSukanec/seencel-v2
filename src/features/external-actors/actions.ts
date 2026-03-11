@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { createExternalActorSchema, updateExternalActorSchema } from "./types";
 
 // ===============================================
@@ -106,7 +107,7 @@ export async function removeExternalActorAction(actorId: string) {
 export async function checkExternalActorAccess(orgId: string): Promise<{ isActive: boolean }> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { isActive: false };
 
     // Resolve internal user id

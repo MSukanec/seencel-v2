@@ -4,7 +4,7 @@ import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getFinancialMovements } from "@/features/organization/queries";
-import { getActiveOrganizationId } from "@/features/general-costs/actions";
+import { requireAuthContext } from "@/lib/auth";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
 import { getClientsByOrganization } from "@/features/clients/queries";
 import { DollarSign } from "lucide-react";
@@ -36,10 +36,7 @@ export default async function FinancePage({ params, searchParams }: { params: Pr
     const defaultTab = resolvedSearch.view || "overview";
     const t = await getTranslations({ locale, namespace: 'MegaMenu.Finance' });
 
-    const orgId = await getActiveOrganizationId();
-    if (!orgId) {
-        redirect('/');
-    }
+    const { orgId } = await requireAuthContext();
 
     const supabase = await createClient();
 

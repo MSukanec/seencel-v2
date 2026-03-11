@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import { optimizeImage } from "@/lib/image-optimizer";
 
@@ -16,8 +17,8 @@ export async function uploadOrganizationLogo(formData: FormData) {
 
     try {
         // 1. Authenticate
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) throw new Error("Unauthorized");
+        const user = await getAuthUser();
+        if (!user) throw new Error("Unauthorized");
 
         // 2. Optimize Image
         const arrayBuffer = await file.arrayBuffer();

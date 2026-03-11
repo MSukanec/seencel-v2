@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { getUserOrganizations } from "@/features/organization/queries";
+import { requireAuthContext } from "@/lib/auth";
 import { getOrganizationProjects } from "@/features/projects/queries";
 import { getProjectTypes, getProjectModalities } from "@/features/projects/actions";
 import { fetchLastActiveProject } from "@/features/projects/actions";
@@ -37,18 +37,15 @@ export default async function ProjectsPage({
     const { locale } = await params;
     const t = await getTranslations('Project');
 
-    const { activeOrgId } = await getUserOrganizations();
-    if (!activeOrgId) {
-        redirect({ href: '/organization', locale });
-    }
+    const { orgId } = await requireAuthContext();
 
     try {
         const [projects, projectTypes, projectModalities, lastActiveProjectId, planFeatures] = await Promise.all([
-            getOrganizationProjects(activeOrgId),
-            getProjectTypes(activeOrgId),
-            getProjectModalities(activeOrgId),
-            fetchLastActiveProject(activeOrgId),
-            getOrganizationPlanFeatures(activeOrgId)
+            getOrganizationProjects(orgId),
+            getProjectTypes(orgId),
+            getProjectModalities(orgId),
+            fetchLastActiveProject(orgId),
+            getOrganizationPlanFeatures(orgId)
         ]);
 
         // Get max projects from plan (-1 = unlimited)
@@ -76,7 +73,7 @@ export default async function ProjectsPage({
                         <ContentLayout variant="wide">
                             <ProjectsListView
                                 projects={projects}
-                                organizationId={activeOrgId}
+                                organizationId={orgId}
                                 lastActiveProjectId={lastActiveProjectId}
                                 maxActiveProjects={maxActiveProjects}
                                 projectTypes={projectTypes}
@@ -89,7 +86,7 @@ export default async function ProjectsPage({
                     <TabsContent value="settings" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
                             <ProjectsSettingsView
-                                organizationId={activeOrgId}
+                                organizationId={orgId}
                                 initialTypes={projectTypes}
                                 initialModalities={projectModalities}
                             />

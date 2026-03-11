@@ -31,6 +31,7 @@ interface BaseAreaChartProps {
     tooltipFormatter?: (value: number) => string;
     tooltipLabelFormatter?: (value: string) => string;
     gradient?: boolean;
+    showYAxis?: boolean;
     config?: ChartConfig;
     /**
      * If true (default), uses useMoney for formatting.
@@ -55,6 +56,7 @@ export function BaseAreaChart({
     tooltipFormatter,
     tooltipLabelFormatter,
     gradient = true,
+    showYAxis = true,
     config = {
         [yKey]: {
             label: "Valor",
@@ -90,7 +92,7 @@ export function BaseAreaChart({
             )}
             style={height ? { height } : undefined}
         >
-            <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+            <AreaChart data={data} margin={{ top: 8, right: 0, left: 0, bottom: 4 }}>
                 <defs>
                     {gradient && (
                         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -109,18 +111,31 @@ export function BaseAreaChart({
                 )}
                 <XAxis
                     dataKey={xKey}
-                    tickFormatter={xAxisFormatter}
                     fontSize={CHART_DEFAULTS.fontSize}
                     tickLine={false}
                     axisLine={false}
-                    minTickGap={30}
+                    interval={0}
+                    tick={({ x, y, payload, index }: any) => {
+                        const label = xAxisFormatter ? xAxisFormatter(payload.value) : payload.value;
+                        const isFirst = index === 0;
+                        const isLast = index === data.length - 1;
+                        const anchor = isFirst ? 'start' : isLast ? 'end' : 'middle';
+                        return (
+                            <text x={x} y={y + 12} textAnchor={anchor} fontSize={CHART_DEFAULTS.fontSize} fill="currentColor" className="text-muted-foreground">
+                                {label}
+                            </text>
+                        );
+                    }}
                 />
-                <YAxis
-                    tickFormatter={effectiveYAxisFormatter}
-                    fontSize={CHART_DEFAULTS.fontSize}
-                    tickLine={false}
-                    axisLine={false}
-                />
+                {showYAxis && (
+                    <YAxis
+                        tickFormatter={effectiveYAxisFormatter}
+                        fontSize={CHART_DEFAULTS.fontSize}
+                        tickLine={false}
+                        axisLine={false}
+                        width={55}
+                    />
+                )}
                 <ChartTooltip
                     cursor={{ stroke: `var(--color-${yKey})`, strokeWidth: 1, strokeDasharray: '4 4' }}
                     content={

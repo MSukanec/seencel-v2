@@ -1,21 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { getCountries } from "@/features/countries/queries";
 import OnboardingForm from "./onboarding-form";
 
 export default async function OnboardingPage() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
 
-    if (!user) {
+    if (!authUser) {
         const { redirect } = await import('next/navigation');
         return redirect('/login');
     }
 
     // Guard anti-repetición: si ya completó onboarding, redirigir al hub
+    const supabase = await createClient();
     const { data: internalUser } = await supabase
         .schema('iam').from('users')
         .select('id, full_name, signup_completed, user_data(first_name, last_name, country)')
-        .eq('auth_id', user.id)
+        .eq('auth_id', authUser.id)
         .single();
 
     if (internalUser?.signup_completed) {

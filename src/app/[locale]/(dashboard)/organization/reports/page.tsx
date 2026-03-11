@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getActiveOrganizationId } from "@/features/general-costs/actions";
+import { requireAuthContext } from "@/lib/auth";
 import { getOrganizationProjects } from "@/features/projects/queries";
 import { getOrganizationPdfTheme } from "@/features/organization/actions/pdf-settings";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
@@ -18,11 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ReportsPage() {
-    const organizationId = await getActiveOrganizationId();
-
-    if (!organizationId) {
-        redirect("/auth/sign-in");
-    }
+    const { orgId: organizationId } = await requireAuthContext();
 
     try {
         // Fetch projects and PDF theme in parallel

@@ -6,20 +6,20 @@
 // ============================================================================
 
 // Base (internal — used by presets, not directly by features)
-export { CardBase } from "./card-base";
+export { CardBase } from "./base/card-base";
 
 // Presets — these are the public API
-export { MetricCard } from "./metric-card";
-export type { MetricCardProps, CurrencyBreakdownItem } from "./metric-card";
+export { MetricCard } from "./presets/metric-card";
+export type { MetricCardProps, CurrencyBreakdownItem } from "./presets/metric-card";
 
-export { ChartCard } from "./chart-card";
+export { ChartCard } from "./presets/chart-card";
 
-export { ListCard } from "./list-card";
-export type { ListCardItem } from "./list-card";
+export { ListCard } from "./presets/list-card";
+export type { ListCardItem } from "./presets/list-card";
 
-export { InfoCard } from "./info-card";
+export { InfoCard } from "./presets/info-card";
 
-export { InsightCard } from "./insight-card";
-export type { Insight, InsightSeverity } from "./insight-card";
+export { InsightCard } from "./presets/insight-card";
+export type { Insight, InsightSeverity } from "./presets/insight-card";
 
-export { Sparkline } from "./sparkline";
+export { Sparkline } from "./base/sparkline";

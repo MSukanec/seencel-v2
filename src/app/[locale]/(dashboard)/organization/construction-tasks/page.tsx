@@ -10,7 +10,7 @@ import { ConstructionTasksView } from "@/features/construction-tasks/views/const
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
 import { ConstructionTasksSettingsView } from "@/features/construction-tasks/views/construction-tasks-settings-view";
 import { getOrganizationConstructionTasks, getOrganizationConstructionDependencies } from "@/features/construction-tasks/queries";
-import { getUserOrganizations } from "@/features/organization/queries";
+import { requireAuthContext } from "@/lib/auth";
 import { getOrganizationTasks, getTasksGroupedByDivision, getTaskDivisions, getUnits, getTaskActions, getTaskElements } from "@/features/tasks/queries";
 
 // ============================================================================
@@ -52,11 +52,7 @@ export default async function OrganizationConstructionTasksPage({ params, search
         const resolvedSearchParams = await searchParams;
         const defaultTab = resolvedSearchParams.view || "tasks";
 
-        const { activeOrgId } = await getUserOrganizations();
-
-        if (!activeOrgId) {
-            redirect("/");
-        }
+        const { orgId } = await requireAuthContext();
 
         // Fetch ALL org construction tasks and catalog data in parallel
         const [
@@ -71,8 +67,8 @@ export default async function OrganizationConstructionTasksPage({ params, search
         ] = await Promise.all([
             getOrganizationConstructionTasks(),
             getOrganizationConstructionDependencies(),
-            getOrganizationTasks(activeOrgId),
-            getTasksGroupedByDivision(activeOrgId),
+            getOrganizationTasks(orgId),
+            getTasksGroupedByDivision(orgId),
             getTaskDivisions(),
             getUnits(),
             getTaskActions(),
@@ -113,7 +109,7 @@ export default async function OrganizationConstructionTasksPage({ params, search
                     <TabsContent value="tasks" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
                             <ConstructionTasksView
-                                organizationId={activeOrgId}
+                                organizationId={orgId}
                                 tasks={tasks}
                                 initialDependencies={initialDependencies}
                                 catalogTasks={catalogTasks}
@@ -127,7 +123,7 @@ export default async function OrganizationConstructionTasksPage({ params, search
                             <ContentLayout variant="wide">
                                 <TasksCatalogView
                                     groupedTasks={catalogGroupedTasks}
-                                    orgId={activeOrgId}
+                                    orgId={orgId}
                                     units={unitsResult.data}
                                     divisions={divisionsResult.data}
                                     kinds={actionsResult.data}
@@ -140,7 +136,7 @@ export default async function OrganizationConstructionTasksPage({ params, search
 
                     <TabsContent value="settings" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ConstructionTasksSettingsView
-                            organizationId={activeOrgId}
+                            organizationId={orgId}
                         />
                     </TabsContent>
                 </PageWrapper>

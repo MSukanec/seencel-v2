@@ -14,6 +14,7 @@ import { ProfileNotificationsView } from "@/features/users/views/profile-notific
 import { PreferencesView } from "@/features/users/views/profile-preferences-view";
 
 // Queries
+import { requireAuthContext } from "@/lib/auth";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getUserProfile, checkIsAdmin } from "@/features/users/queries";
 import { getUserTimezone } from "@/features/users/queries";
@@ -67,7 +68,7 @@ export default async function ProfilePage({ searchParams }: PageProps) {
             checkIsAdmin(),
         ]);
 
-        const { organizations, activeOrgId, currentUserId } = orgData as any;
+        const { organizations, orgId, currentUserId } = orgData as any;
         const { profile } = profileData;
         const { profile: billingProfile } = billingData;
 
@@ -109,7 +110,7 @@ export default async function ProfilePage({ searchParams }: PageProps) {
                     <TabsContent value="organization" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ProfileOrganizationsView
                             organizations={organizations}
-                            activeOrgId={activeOrgId}
+                            orgId={orgId}
                             currentUserId={currentUserId}
                             isAdmin={isAdmin}
                         />

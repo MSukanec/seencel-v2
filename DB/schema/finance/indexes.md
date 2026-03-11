@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-01T21:32:52.143Z
+> Generated: 2026-03-10T23:31:35.891Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [FINANCE] Indexes (135, excluding PKs)
+## [FINANCE] Indexes (136, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -56,6 +56,7 @@
 | general_cost_categories | uq_gc_categories_system_name | `CREATE UNIQUE INDEX uq_gc_categories_system_name ON finance.general_cost_cate...` |
 | general_costs | idx_general_costs_org_deleted | `CREATE INDEX idx_general_costs_org_deleted ON finance.general_costs USING btr...` |
 | general_costs_payments | idx_gc_payments_general_cost | `CREATE INDEX idx_gc_payments_general_cost ON finance.general_costs_payments U...` |
+| general_costs_payments | idx_gc_payments_import_batch | `CREATE INDEX idx_gc_payments_import_batch ON finance.general_costs_payments U...` |
 | general_costs_payments | idx_gc_payments_org_date | `CREATE INDEX idx_gc_payments_org_date ON finance.general_costs_payments USING...` |
 | general_costs_payments | idx_gc_payments_status_org | `CREATE INDEX idx_gc_payments_status_org ON finance.general_costs_payments USI...` |
 | general_costs_payments | idx_gc_payments_wallet | `CREATE INDEX idx_gc_payments_wallet ON finance.general_costs_payments USING b...` |

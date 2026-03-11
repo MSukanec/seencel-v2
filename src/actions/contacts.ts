@@ -1,5 +1,7 @@
 "use server";
 
+import { getAuthUser } from '@/lib/auth';
+
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Contact, ContactWithRelations, ContactCategory } from "@/types/contact";
 import { revalidatePath } from "next/cache";
@@ -295,9 +297,9 @@ export async function createContactCategory(organizationId: string, name: string
     const supabase = await createClient();
 
     // 1. Get Auth User
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-        console.error("Error getting user for createContactCategory:", authError);
+    const user = await getAuthUser();
+    if (!user) {
+        console.error("Error getting user for createContactCategory");
         throw new Error("Authentication failed");
     }
 

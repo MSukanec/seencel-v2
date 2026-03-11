@@ -8,15 +8,15 @@
 
 ---
 
-## Paso 1: Crear Categorías (Ajustes)
+## Paso 1: Crear Categorías (desde Conceptos)
 
-**Qué hace**: Va a `Gastos Generales > Ajustes` y crea categorías como "Servicios", "Seguros", "Alquileres".
+**Qué hace**: En `Gastos Generales > Conceptos`, usa el botón "..." del toolbar para crear categorías como "Servicios", "Seguros", "Alquileres".
 
-- **Tabla**: `finance.general_cost_categories` → columnas: `name`, `description`, `is_system`, `organization_id`
+- **Tabla**: `finance.general_cost_categories` → columnas: `name`, `description`, `organization_id`
 - **Action**: `createGeneralCostCategory()` en `features/general-costs/actions.ts`
-- **Form**: `CategoryFormDialog` en `features/general-costs/forms/general-costs-category-form.tsx`
-- **View**: `GeneralCostsSettingsView` en `features/general-costs/views/general-costs-settings-view.tsx`
-- **Estado**: ✅ Funciona — Usa `SettingsSection` + `CategoryListItem`. Sistema provee categorías default (`is_system = true`). Categorías system no se pueden editar ni eliminar.
+- **Form**: `GeneralCostsCategoryForm` (Panel sm) en `features/general-costs/forms/general-costs-category-form.tsx`
+- **Toolbar**: Split button en `GeneralCostsConceptsView` — acción secundaria "Nueva Categoría" (FolderPlus)
+- **Estado**: ✅ Funciona — Categorías son org-owned (migradas de `is_system`). Se crean/editan desde el popover "..." del toolbar en la tab Conceptos.
 
 ---
 
@@ -26,10 +26,11 @@
 
 - **Tabla**: `finance.general_costs` → columnas: `name`, `description`, `category_id`, `is_recurring`, `recurrence_interval`, `expected_day`
 - **Action**: `createGeneralCost()` / `updateGeneralCost()` / `deleteGeneralCost()` en `actions.ts`
-- **Form**: `ConceptFormDialog` en `forms/general-costs-concept-form.tsx`
+- **Form**: `GeneralCostsConceptForm` (Panel md) en `forms/general-costs-concept-form.tsx`
 - **View**: `GeneralCostsConceptsView` en `views/general-costs-concepts-view.tsx`
-- **Columns**: `getGeneralCostConceptColumns()` en `tables/general-costs-concept-columns.tsx`
-- **Estado**: ✅ Funciona — DataTable con columnas de factory. Toolbar con "Nuevo Concepto". Delete con `useTableActions`.
+- **List Item**: `GeneralCostListItem` en `components/shared/list-item/items/general-cost-list-item.tsx`
+- **Stats**: `getGeneralCostConceptStats()` — total pagos, monto acumulado, último pago por concepto
+- **Estado**: ✅ Funciona — Accordion por categoría con `GeneralCostListItem`. Cada concepto muestra stats de pago (total, monto, último pago). Click en concepto navega al tab Pagos con filtro client-side (sin recarga). Toolbar con búsqueda y "Nuevo Concepto".
 
 ---
 
@@ -40,16 +41,16 @@
 - **Tabla**: `finance.general_costs_payments` → columnas: `amount`, `currency_id`, `exchange_rate`, `payment_date`, `wallet_id`, `general_cost_id`, `status`, `notes`, `reference`
 - **Vista SQL**: `finance.general_costs_payments_view` → JOIN con `general_costs`, `general_cost_categories`, `currencies`, `organization_wallets`, `users`
 - **Action**: `createGeneralCostPayment()` / `updateGeneralCostPayment()` / `deleteGeneralCostPayment()` en `actions.ts`
-- **Form**: `PaymentFormDialog` en `forms/general-costs-payment-form.tsx`
+- **Form**: `GeneralCostsPaymentForm` (Panel lg) en `forms/general-costs-payment-form.tsx`
 - **View**: `GeneralCostsPaymentsView` en `views/general-costs-payments-view.tsx`
 - **Columns**: `getGeneralCostPaymentColumns()` en `tables/general-costs-payment-columns.tsx`
-- **Estado**: ✅ Funciona — Column factories (date, entity, text, wallet, money, status). Filtros (estado, fecha, búsqueda). Delete bulk. Export CSV/Excel.
+- **Estado**: ✅ Funciona — Column factories (date, entity, text, wallet, money, status). Filtros (estado, fecha, búsqueda). Delete bulk. Export CSV/Excel. Import masivo.
 
 ### Flujo de inline editing en tabla de pagos:
 - **Fecha**: Editable via inline DatePicker (`createDateColumn` con `editable: true`)
 - **Estado**: Editable via Popover+Command (`createStatusColumn` con `editable: true`)
 - **Billetera**: Editable via Popover+Command (`createWalletColumn` con `editable: true`)
-- **Estado actual del inline update**: ⚠️ Handler existe pero muestra toast "Edición inline próximamente" (TODO en `handleInlineUpdate`)
+- **Estado**: ✅ Funcional — `updateGeneralCostPaymentField()` con resolución wallet_name → wallet_id
 
 ---
 

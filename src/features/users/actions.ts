@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { optimizeImage } from '@/lib/image-optimizer';
 import { sanitizeError } from '@/lib/error-utils';
@@ -45,7 +46,7 @@ async function getPublicUserId(supabase: any, authId: string) {
 export async function updateUserProfile(formData: FormData) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("Not authenticated");
 
     const firstName = formData.get('first_name') as string;
@@ -101,7 +102,7 @@ export async function updateUserProfile(formData: FormData) {
 export async function updateUserPreferences(preferences: UserPreferencesUpdate) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data: publicUser } = await supabase
@@ -150,7 +151,7 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdate) 
 export async function uploadAvatar(formData: FormData): Promise<ActionResponse> {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
 
         if (!user) throw new Error("Unauthorized");
 
@@ -222,7 +223,7 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResponse> 
 
 export async function removeAvatar() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("Unauthorized");
 
     const userId = await getPublicUserId(supabase, user.id);
@@ -242,7 +243,7 @@ export async function removeAvatar() {
 
 export async function restoreProviderAvatar() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("Unauthorized");
 
     const userId = await getPublicUserId(supabase, user.id);

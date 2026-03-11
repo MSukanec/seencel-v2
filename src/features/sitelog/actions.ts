@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 
 import { SiteLog, SiteLogType } from "./types";
@@ -189,8 +190,8 @@ export async function createSiteLogType(organizationId: string, name: string, de
     const supabase = await createClient();
 
     // 1. Get Auth User
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const user = await getAuthUser();
+    if (!user) {
         throw new Error("Authentication failed");
     }
 
@@ -232,7 +233,7 @@ export async function updateSiteLogType(id: string, name: string, description?: 
         .update({
             name,
             description,
-            updated_by: (await supabase.auth.getUser()).data.user?.id
+            updated_by: (await getAuthUser())?.id
         })
         .eq('id', id);
 
@@ -265,7 +266,7 @@ export async function deleteSiteLogType(id: string, replacementId?: string) {
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
-            updated_by: (await supabase.auth.getUser()).data.user?.id
+            updated_by: (await getAuthUser())?.id
         })
         .eq('id', id);
 
@@ -293,7 +294,7 @@ export async function createSiteLog(formData: FormData) {
     const isPublic = formData.get('is_public') === 'true';
 
     // Get current user for created_by
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     if (!user) return { error: "No autorizado" };
 
@@ -437,7 +438,7 @@ export async function deleteSiteLog(logId: string, projectId: string) {
     const supabase = await createClient();
 
     // 1. Get Auth User
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { error: "No autorizado" };
 
     // 2. Soft Delete

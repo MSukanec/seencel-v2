@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import type { AIAnalysisResult, AIAnalyzedTask } from "@/features/ai/types";
 import { createImportBatch } from "@/lib/import";
@@ -23,7 +24,7 @@ export async function importAITasksBatch(
     analysisResult: AIAnalysisResult,
 ): Promise<{ success: number; errors: any[]; warnings?: string[]; batchId?: string }> {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("Unauthorized");
 
     // Get member ID for audit

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
-import { getUserOrganizations } from "@/features/organization/queries";
+import { requireAuthContext } from "@/lib/auth";
 import { getQuote, getQuoteItems, getQuoteResources, getChangeOrdersByContract, getContractSummary } from "@/features/quotes/queries";
 import { getOrganizationTasks, getUnits, getTaskDivisions } from "@/features/tasks/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -40,16 +40,13 @@ export default async function QuoteDetailAppPage({
     const { view } = (await searchParams) || {};
     const defaultTab = view || "overview";
 
-    const { activeOrgId } = await getUserOrganizations();
-    if (!activeOrgId) {
-        redirect("/");
-    }
+    const { orgId } = await requireAuthContext();
 
     try {
         // 1. Fetch quote base data
         const quote = await getQuote(quoteId);
 
-        if (!quote || quote.organization_id !== activeOrgId) {
+        if (!quote || quote.organization_id !== orgId) {
             notFound();
         }
 
@@ -63,7 +60,7 @@ export default async function QuoteDetailAppPage({
         // 2. Parallel fetch for all dependencies
         const promises: any[] = [
             getQuoteItems(quoteId),
-            getOrganizationTasks(activeOrgId),
+            getOrganizationTasks(orgId),
             getUnits(),
             getTaskDivisions(),
             supabase.schema("finance").from("currencies").select("id, name, symbol").order("name"),
@@ -71,7 +68,7 @@ export default async function QuoteDetailAppPage({
             // All org contacts for the client dropdown (quotes can target ANY contact, not just project_clients)
             supabase.schema("contacts").from("contacts_view")
                 .select("id, full_name, resolved_avatar_url, company_name")
-                .eq("organization_id", activeOrgId)
+                .eq("organization_id", orgId)
                 .order("full_name", { ascending: true }),
         ];
 

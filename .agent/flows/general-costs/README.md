@@ -17,25 +17,25 @@ Sin Gastos Generales, Carlos lleva todo en una planilla aparte y no tiene visibi
 
 | Concepto | Qué es | Tabla |
 |----------|--------|-------|
-| **Categoría** | Agrupación de gastos (ej: "Servicios", "Seguros") | `finance.general_cost_categories` |
-| **Concepto** | Gasto específico recurrente o eventual (ej: "Alquiler Oficina") | `finance.general_costs` |
+| **Categoría** | Agrupación de gastos (ej: "Servicios", "Seguros"). Org-owned, se gestionan desde toolbar de Conceptos | `finance.general_cost_categories` |
+| **Concepto** | Gasto específico recurrente o eventual (ej: "Alquiler Oficina"). Vista Accordion con stats | `finance.general_costs` |
 | **Pago** | Registro de un pago concreto vinculado a un concepto | `finance.general_costs_payments` |
-| **Allocación** | Distribución porcentual de un pago a proyectos | `finance.general_cost_payment_allocations` |
-| **Recurrencia** | Intervalo esperado del gasto (mensual, trimestral, etc.) | `general_costs.recurrence_interval` |
-| **Día esperado** | Día del mes en que se espera el pago | `general_costs.expected_day` |
+| **Allocación** | Distribución porcentual de un pago a proyectos (🚧 sin UI) | `finance.general_cost_payment_allocations` |
+| **Recurrencia** | Intervalo esperado del gasto (mensual, trimestral, etc.) — informativo | `general_costs.recurrence_interval` |
+| **Día esperado** | Día del mes en que se espera el pago — informativo | `general_costs.expected_day` |
 
 ## Flujo resumido
 
 ```
 Crear Categorías → Definir Conceptos → Registrar Pagos → Dashboard KPIs + Análisis
-       ↓                 ↓                    ↓                    ↓
-  general_cost      general_costs      general_costs        Vistas SQL:
-  _categories     (is_recurring,       _payments          - payments_view
-                  expected_day)      (wallet, moneda,     - monthly_summary
-                                      estado, monto)      - by_category
+  (toolbar "...")      (Accordion)        (DataTable)         (Vistas SQL)
+  general_cost       general_costs      general_costs        - payments_view
+  _categories      (is_recurring,       _payments            - monthly_summary
+                   expected_day)      (wallet, moneda,       - by_category
+                                      estado, monto)
                                           ↓
                                    payment_allocations
-                                   (% por proyecto)
+                                   (% por proyecto — 🚧)
 ```
 
 ## Documentos en esta carpeta

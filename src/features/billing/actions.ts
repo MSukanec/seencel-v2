@@ -3,13 +3,14 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 
 export async function updateBillingProfile(formData: FormData) {
     const supabase = await createClient();
 
     // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: "Not authenticated" };
     }
@@ -180,7 +181,7 @@ export async function activateFreeSubscription(input: FreeSubscriptionInput): Pr
     const supabase = await createClient();
 
     // Get current user
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) {
         return { success: false, error: "Not authenticated" };
     }

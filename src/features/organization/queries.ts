@@ -1,23 +1,23 @@
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/auth';
 import { subDays } from 'date-fns';
 
 export async function getDashboardData() {
-    const supabase = await createClient();
+    const authUser = await getAuthUser();
+    if (!authUser) return { error: "User not authenticated." };
 
-    // 1. Get Current User
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: "User not authenticated." };
+    const supabase = await createClient();
 
     // 1b. Get Public User ID from 'users' table
     const { data: userData, error: userError } = await supabase
         .schema('iam').from('users')
         .select('id')
-        .eq('auth_id', user.id)
+        .eq('auth_id', authUser.id)
         .single();
 
     if (userError || !userData) {
         console.error("Public user/preferences record not found:", JSON.stringify(userError, null, 2));
-        return { error: `Setup Required: No public 'users' record or preferences found for Auth ID ${user.id}.` };
+        return { error: `Setup Required: No public 'users' record or preferences found for Auth ID ${authUser.id}.` };
     }
 
     const publicUserId = userData.id;
@@ -185,7 +185,7 @@ export async function getDashboardData() {
     ]);
 
     return {
-        user,
+        user: authUser,
         organization,
         projects: projectsRes.data || [],
         stats: {
@@ -209,9 +209,9 @@ export async function getUserOrganizations(authId?: string) {
     // 1. Resolve Auth ID (skip auth.getUser() if provided by caller)
     let resolvedAuthId = authId;
     if (!resolvedAuthId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return { organizations: [], activeOrgId: null };
-        resolvedAuthId = user.id;
+        const authUser = await getAuthUser();
+        if (!authUser) return { organizations: [], activeOrgId: null };
+        resolvedAuthId = authUser.id;
     }
 
     // 2. Get Public User ID & Preferences (required for all subsequent queries)
@@ -359,17 +359,15 @@ export async function getUserOrganizations(authId?: string) {
 }
 
 export async function getFinancialMovements() {
-    const supabase = await createClient();
-
-    // 1. Get Current User
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: "User not authenticated." };
+    const authUser = await getAuthUser();
+    if (!authUser) return { error: "User not authenticated." };
 
     // 2. Fetcy Org ID (Simplified for now, assuming robust context later)
+    const supabase = await createClient();
     const { data: userData } = await supabase
         .schema('iam').from('users')
         .select('id')
-        .eq('auth_id', user.id)
+        .eq('auth_id', authUser.id)
         .single();
 
     if (!userData) return { error: "User profile not found." };

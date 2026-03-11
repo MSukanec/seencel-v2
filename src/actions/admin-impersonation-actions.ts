@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { checkUserRoles } from "@/features/users/queries";
 import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
@@ -14,7 +15,7 @@ async function getAdminUserId() {
     if (!isAdmin) throw new Error("Unauthorized: admin role required");
 
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data: publicUser } = await supabase

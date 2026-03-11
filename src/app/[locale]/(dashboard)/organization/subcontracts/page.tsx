@@ -9,10 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubcontractsOverviewView } from "@/features/subcontracts/views/subcontracts-overview-view";
 import { SubcontractsListView } from "@/features/subcontracts/views/subcontracts-list-view";
 import { SubcontractsPaymentsView } from "@/features/subcontracts/views/subcontracts-payments-view";
-import { getOrganizationFinancialData, getUserOrganizations } from "@/features/organization/queries";
+import { getOrganizationFinancialData } from "@/features/organization/queries";
 import { getSubcontractsByOrganization, getSubcontractPaymentsByOrganization } from "@/features/subcontracts/queries";
 import { getIndexTypes } from "@/features/advanced/queries";
 import { getOrganizationContacts } from "@/actions/contacts";
+import { requireAuthContext } from "@/lib/auth";
 
 // ============================================
 // METADATA (SEO)
@@ -35,19 +36,15 @@ export default async function SubcontractsPage({ params }: { params: Promise<{ l
     const t = await getTranslations('Subcontracts');
 
     try {
-        const { activeOrgId } = await getUserOrganizations();
-
-        if (!activeOrgId) {
-            redirect("/");
-        }
+        const { orgId } = await requireAuthContext();
 
         // Fetch Data in Parallel
         const [financialData, providers, subcontracts, payments, indexTypes] = await Promise.all([
-            getOrganizationFinancialData(activeOrgId),
-            getOrganizationContacts(activeOrgId),
-            getSubcontractsByOrganization(activeOrgId),
-            getSubcontractPaymentsByOrganization(activeOrgId),
-            getIndexTypes(activeOrgId)
+            getOrganizationFinancialData(orgId),
+            getOrganizationContacts(orgId),
+            getSubcontractsByOrganization(orgId),
+            getSubcontractPaymentsByOrganization(orgId),
+            getIndexTypes(orgId)
         ]);
 
         return (
@@ -82,7 +79,7 @@ export default async function SubcontractsPage({ params }: { params: Promise<{ l
                     >
                         <ContentLayout variant="wide" className="h-full">
                             <SubcontractsListView
-                                organizationId={activeOrgId}
+                                organizationId={orgId}
                                 initialSubcontracts={subcontracts}
                                 payments={payments}
                                 providers={providers.map((p: any) => ({
@@ -112,7 +109,7 @@ export default async function SubcontractsPage({ params }: { params: Promise<{ l
                                 data={payments}
                                 subcontracts={subcontracts}
                                 financialData={financialData}
-                                orgId={activeOrgId}
+                                orgId={orgId}
                             />
                         </ContentLayout>
                     </TabsContent>

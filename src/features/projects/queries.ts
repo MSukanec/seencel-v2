@@ -1,11 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { Project } from "@/types/project";
 
 export async function getLastActiveProject(organizationId: string) {
-    const supabase = await createClient();
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
 
     if (!authUser) return null;
+
+    const supabase = await createClient();
 
     // Get PUBLIC user ID from users table
     const { data: userData } = await supabase

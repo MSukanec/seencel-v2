@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-01T21:32:52.143Z
+> Generated: 2026-03-10T23:31:35.891Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -439,7 +439,7 @@ can_mutate_org(organization_id, 'finance.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_deleted = false) AND can_view_org(organization_id, 'finance.view'::text))
+can_view_org(organization_id, 'finance.view'::text)
 ```
 
 ### `general_costs_payments` (4 policies)
@@ -481,7 +481,7 @@ can_mutate_org(organization_id, 'finance.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_deleted = false) AND can_view_org(organization_id, 'finance.view'::text))
+can_view_org(organization_id, 'finance.view'::text)
 ```
 
 ### `indirect_costs` (3 policies)

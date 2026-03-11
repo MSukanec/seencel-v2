@@ -4,7 +4,7 @@ import { getPlans } from "@/actions/plans";
 import { getFeatureFlag, getPlanPurchaseFlags, getPaymentMethodFlags } from "@/actions/feature-flags";
 import { getCountries } from "@/features/countries/queries";
 import { getCourseBySlug } from "@/features/academy/queries";
-import { getUserOrganizations } from "@/features/organization/queries";
+import { getAuthContext } from "@/lib/auth";
 import { getExchangeRate, getUserCountryCode, getUpgradeProration } from "@/features/billing/queries";
 import { checkIsAdmin } from "@/features/users/queries";
 import { getOrganizationSeatStatus } from "@/features/team/actions";
@@ -111,12 +111,14 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
         }
     }
 
+    // Get auth context for orgId (checkout doesn't necessarily require auth)
+    const authCtx = await getAuthContext();
+
     // Fetch data based on product type
-    const [plans, countries, course, userOrgs, exchangeRate, userCountryCode, purchaseFlags, paymentMethodFlags, isAdmin] = await Promise.all([
+    const [plans, countries, course, exchangeRate, userCountryCode, purchaseFlags, paymentMethodFlags, isAdmin] = await Promise.all([
         getPlans(),
         getCountries(),
         isCourse ? getCourseBySlug(productSlug) : Promise.resolve(null),
-        getUserOrganizations(),
         getExchangeRate("USD", "ARS"),
         getUserCountryCode(),
         getPlanPurchaseFlags(),
@@ -146,7 +148,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
                     initialPlanSlug={isUpgrade ? (upgradeData?.targetPlanSlug || params.target) : productSlug}
                     initialCycle={isUpgrade ? upgradeData?.billingPeriod : (cycle as "monthly" | "annual")}
                     countries={countries}
-                    organizationId={isUpgrade ? params.org : (isSeats ? params.org : (userOrgs.activeOrgId || undefined))}
+                    organizationId={isUpgrade ? params.org : (isSeats ? params.org : (authCtx?.orgId || undefined))}
                     exchangeRate={exchangeRate}
                     userCountryCode={userCountryCode}
                     purchaseFlags={purchaseFlags}

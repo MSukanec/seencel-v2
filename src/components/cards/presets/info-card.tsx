@@ -1,6 +1,6 @@
 "use client";
 
-import { CardBase } from "./card-base";
+import { CardBase } from "../base/card-base";
 
 // ============================================================================
 // INFO CARD — Simple contextual data (non-numeric)

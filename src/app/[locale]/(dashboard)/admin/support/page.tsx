@@ -4,6 +4,7 @@ import { PageWrapper, ContentLayout } from "@/components/layout";
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { SupportInboxView } from "@/features/admin/support/components/support-inbox-view";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +20,10 @@ export default async function SupportPage({ params }: PageProps) {
     const { locale } = await params;
     setRequestLocale(locale);
 
+    const authUser = await getAuthUser();
+    if (!authUser) redirect('/auth/login');
+
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/auth/login');
     // Fetch feedback data
     const { data: feedback } = await supabase
         .schema('iam').from('feedback')

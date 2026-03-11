@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import { OnboardingChecklist, DEFAULT_ONBOARDING_CHECKLIST } from "./checklist/types";
 
@@ -16,7 +17,7 @@ import { OnboardingChecklist, DEFAULT_ONBOARDING_CHECKLIST } from "./checklist/t
  */
 export async function getOnboardingProgress() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     if (!user) return { checklist: DEFAULT_ONBOARDING_CHECKLIST, completed: 0, total: 3, isDismissed: false };
 
@@ -90,7 +91,7 @@ export async function getOnboardingProgress() {
  */
 export async function dismissOnboardingChecklist() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     if (!user) return { success: false };
 

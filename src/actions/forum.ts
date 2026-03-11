@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 
 // Types
@@ -135,7 +136,7 @@ async function getOrCreateCourseCategory(courseId: string): Promise<string> {
     }
 
     // Get user's organization
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data: profile } = await supabase
@@ -317,7 +318,7 @@ export async function createThread(
 ): Promise<{ success: boolean; threadId?: string; error?: string }> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -376,7 +377,7 @@ export async function createPost(
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -431,7 +432,7 @@ export async function updatePost(
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -455,7 +456,7 @@ export async function updatePost(
 export async function deletePost(postId: string): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }
@@ -533,7 +534,7 @@ export async function toggleThreadLock(threadId: string): Promise<{ success: boo
 export async function markAsAnswer(postId: string): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: 'Not authenticated' };
     }

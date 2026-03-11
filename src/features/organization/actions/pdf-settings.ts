@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { optimizeImage } from "@/lib/image-optimizer";
 
@@ -54,7 +55,7 @@ export type PdfGlobalTheme = {
 
 async function getActiveOrganizationId() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return null;
 
     const { data: userData } = await supabase

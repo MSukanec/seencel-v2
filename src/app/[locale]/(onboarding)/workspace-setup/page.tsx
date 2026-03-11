@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { checkPendingInvitation } from "@/actions/invitation-actions";
@@ -13,18 +14,19 @@ export default async function WorkspaceSetupPage({
     const params = await searchParams;
     const isNewOrg = params.new === "true";
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
 
-    if (!user) {
+    if (!authUser) {
         return redirect('/login');
     }
 
+    const supabase = await createClient();
+
     // Parallel: orgs + admin check + invitations + feature flag + currencies
     const [{ organizations, activeOrgId }, isAdmin, pendingInvitation, orgCreationFlag, currenciesResult] = await Promise.all([
-        getUserOrganizations(user.id),
+        getUserOrganizations(authUser.id),
         checkIsAdmin(),
-        isNewOrg ? Promise.resolve(null) : checkPendingInvitation(user.email || ''),
+        isNewOrg ? Promise.resolve(null) : checkPendingInvitation(authUser.email || ''),
         supabase.schema('public').from('feature_flags').select('status').eq('key', 'org_creation_enabled').single(),
         supabase.schema('finance').from('currencies').select('id, code, name, symbol, country').order('name'),
     ]);

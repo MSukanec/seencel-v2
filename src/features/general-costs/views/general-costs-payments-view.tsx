@@ -8,8 +8,8 @@
  * Orquesta hooks + columnas + UI. No contiene lógica de negocio.
  */
 
-import { useMemo } from "react";
-import { Plus, Receipt, CircleDot } from "lucide-react";
+import { useMemo, useRef, useEffect, useCallback } from "react";
+import { Plus, Receipt, CircleDot, Wallet, Coins, FileText, FolderOpen } from "lucide-react";
 import { format, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";
@@ -42,6 +42,7 @@ interface GeneralCostsPaymentsViewProps {
     wallets: { id: string; wallet_name: string }[];
     currencies: { id: string; name: string; code: string; symbol: string }[];
     organizationId: string;
+    initialSearchQuery?: string;
 }
 
 // ─── Component ───────────────────────────────────────────
@@ -52,6 +53,7 @@ export function GeneralCostsPaymentsView({
     wallets,
     currencies,
     organizationId,
+    initialSearchQuery = "",
 }: GeneralCostsPaymentsViewProps) {
     const router = useRouter();
     const { openPanel } = usePanel();
@@ -67,13 +69,49 @@ export function GeneralCostsPaymentsView({
         getItemId: (m) => m.id,
     });
 
+    // ─── Facet options (built from props) ─────────────────
+    const walletOptions = useMemo(
+        () => wallets.map(w => ({ label: w.wallet_name, value: w.id })),
+        [wallets]
+    );
+    const currencyOptions = useMemo(
+        () => currencies.map(c => ({ label: `${c.code} (${c.symbol})`, value: c.id })),
+        [currencies]
+    );
+    const conceptOptions = useMemo(
+        () => concepts.map(c => ({ label: c.name, value: c.id })),
+        [concepts]
+    );
+    const categoryOptions = useMemo(() => {
+        const seen = new Map<string, string>();
+        for (const c of concepts) {
+            if (c.category_id && c.category?.name && !seen.has(c.category_id)) {
+                seen.set(c.category_id, c.category.name);
+            }
+        }
+        return Array.from(seen.entries()).map(([id, name]) => ({ label: name, value: id }));
+    }, [concepts]);
+
     // ─── Filters ─────────────────────────────────────────
     const filters = useTableFilters({
         facets: [
             { key: "status", title: "Estado", icon: CircleDot, options: GENERAL_COST_STATUS_OPTIONS },
+            { key: "concept", title: "Concepto", icon: FileText, options: conceptOptions },
+            { key: "category", title: "Categoría", icon: FolderOpen, options: categoryOptions },
+            { key: "wallet", title: "Billetera", icon: Wallet, options: walletOptions },
+            { key: "currency", title: "Moneda", icon: Coins, options: currencyOptions },
         ],
         enableDateRange: true,
     });
+
+    // Pre-set search from URL param (e.g. coming from Concepts tab)
+    const initializedRef = useRef(false);
+    useEffect(() => {
+        if (initialSearchQuery && !initializedRef.current) {
+            initializedRef.current = true;
+            filters.setSearchQuery(initialSearchQuery);
+        }
+    }, [initialSearchQuery]);
 
     // ─── Delete actions ──────────────────────────────────
     const { handleDelete, handleBulkDelete, DeleteConfirmDialog } = useTableActions<any>({
@@ -112,6 +150,18 @@ export function GeneralCostsPaymentsView({
             // Status facet
             const statusFilter = filters.facetValues.status;
             if (statusFilter?.size > 0 && !statusFilter.has(m.status)) return false;
+            // Concept facet
+            const conceptFilter = filters.facetValues.concept;
+            if (conceptFilter?.size > 0 && (!m.general_cost_id || !conceptFilter.has(m.general_cost_id))) return false;
+            // Category facet
+            const categoryFilter = filters.facetValues.category;
+            if (categoryFilter?.size > 0 && (!m.category_id || !categoryFilter.has(m.category_id))) return false;
+            // Wallet facet
+            const walletFilter = filters.facetValues.wallet;
+            if (walletFilter?.size > 0 && !walletFilter.has(m.wallet_id)) return false;
+            // Currency facet
+            const currencyFilter = filters.facetValues.currency;
+            if (currencyFilter?.size > 0 && !currencyFilter.has(m.currency_id)) return false;
             // Search
             if (filters.searchQuery) {
                 const q = filters.searchQuery.toLowerCase();
@@ -130,9 +180,9 @@ export function GeneralCostsPaymentsView({
 
     // ─── Inline update handler ───────────────────────────
     // UI-only keys used for optimistic display but not sent to DB
-    const UI_ONLY_KEYS = new Set(['general_cost_name', 'category_name', 'currency_code', 'currency_symbol', 'creator_avatar_url', 'creator_full_name']);
+    const UI_ONLY_KEYS = useMemo(() => new Set(['general_cost_name', 'category_name', 'currency_code', 'currency_symbol', 'creator_avatar_url', 'creator_full_name']), []);
 
-    const handleInlineUpdate = (row: GeneralCostPaymentView, fields: Record<string, any>) => {
+    const handleInlineUpdate = useCallback((row: GeneralCostPaymentView, fields: Record<string, any>) => {
         optimisticUpdate(row.id, fields, async () => {
             const dbFields = Object.fromEntries(
                 Object.entries(fields).filter(([key]) => !UI_ONLY_KEYS.has(key))
@@ -148,13 +198,13 @@ export function GeneralCostsPaymentsView({
                 router.refresh();
             }
         });
-    };
+    }, [optimisticUpdate, router, UI_ONLY_KEYS]);
 
-    // ─── Columns ─────────────────────────────────────────
-    const columns = getGeneralCostPaymentColumns({
-        onInlineUpdate: handleInlineUpdate,
-        wallets,
-    });
+    // ─── Columns (memoized to prevent TanStack Table recalculation) ──
+    const columns = useMemo(
+        () => getGeneralCostPaymentColumns({ onInlineUpdate: handleInlineUpdate, wallets }),
+        [handleInlineUpdate, wallets]
+    );
 
     // ─── Panel handlers ──────────────────────────────────
     const handleOpenForm = () => {

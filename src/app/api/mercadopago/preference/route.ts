@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMPClient } from '@/lib/mercadopago/client';
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/auth';
 import { getFeatureFlag } from '@/actions/feature-flags';
 
 export async function POST(request: NextRequest) {
     try {
-        const supabase = await createClient();
-
         // Verify user is authenticated
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
+        const authUser = await getAuthUser();
+        if (!authUser) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        const supabase = await createClient();
 
         // Check if MP is enabled (same pattern as PayPal)
         // When disabled (mp_enabled = false): use sandbox credentials
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
         const { data: internalUser } = await supabase
             .schema('iam').from('users')
             .select('id, email, full_name')
-            .eq('auth_id', user.id)
+            .eq('auth_id', authUser.id)
             .single();
 
         if (!internalUser) {
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
                     }
                 ],
                 payer: {
-                    email: internalUser.email || user.email || '',
+                    email: internalUser.email || authUser.email || '',
                     name: internalUser.full_name || '',
                 },
                 external_reference: externalReference,
@@ -184,7 +185,7 @@ export async function POST(request: NextRequest) {
                 init_point: preference.init_point || null,
                 status: 'pending',
                 product_type: productType,
-                payer_email: internalUser.email || user.email || '',
+                payer_email: internalUser.email || authUser.email || '',
                 seats_quantity: productType === 'seats' ? (seatsQuantity || 1) : null,
                 is_sandbox: sandboxMode,
                 is_test: isTestMode,

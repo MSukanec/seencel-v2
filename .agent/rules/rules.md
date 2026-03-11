@@ -5,7 +5,7 @@ trigger: always_on
 # 📐 SEENCEL RULES — Biblia del Agente
 
 > **LEÉ ESTO CADA VEZ QUE TRABAJAS.** Si una regla te pide más contexto, seguí el 📖 link.
-> Actualizado: Febrero 2026
+> Actualizado: Marzo 2026
 
 ---
 
@@ -46,6 +46,27 @@ Antes de crear/modificar tablas: **leer `DB/schema/`**. No presuponer columnas n
 - El agente **NUNCA** ejecuta SQL ni pega SQL en chat. Scripts en carpeta `/DB`.
 
 📖 **Detalle:** Skill [Políticas RLS y Auditoría Supabase](../../.gemini/antigravity/skills/rls-policies-supabase/SKILL.md)
+
+---
+
+## 2.5 AUTH — Autenticación Centralizada (auth.ts)
+
+`src/lib/auth.ts` es la **ÚNICA fuente de verdad** para resolver identidad en Server Components, Server Actions y API Routes. Usa `React.cache()` para deduplicar: N llamadas por request = 1 ejecución real.
+
+| Función | Uso | Retorna |
+|---------|-----|--------|
+| `getAuthUser()` | Solo necesitás el auth user | `User \| null` |
+| `getAuthContext()` | Necesitás userId + orgId | `{ authId, userId, orgId } \| null` |
+| `requireAuthContext()` | Página que REQUIERE auth + org (redirect si falta) | `{ authId, userId, orgId }` |
+
+### Reglas:
+- ⛔ **NUNCA** llamar `supabase.auth.getUser()` directamente en server-side (excepto `middleware.ts` y `auth.ts` mismo)
+- ⛔ **NUNCA** importar `getAuthUser` en componentes `"use client"` — rompe el build (`next/headers` es solo server)
+- ✅ Client hooks usan `createClient()` de `@/lib/supabase/client` + `supabase.auth.getUser()`
+- ✅ Primero resolver auth con `getAuthUser()`, DESPUÉS crear `createClient()` para data queries
+- ✅ En Actions: `const user = await getAuthUser(); if (!user) return { error: "..." };`
+
+📖 **Fuente:** `src/lib/auth.ts`
 
 ---
 
@@ -212,7 +233,7 @@ Para vistas de edición inline (nombre, descripción, etc): usar `useAutoSave` d
 | **Layout queries** | Queries solo en `page.tsx`, NO en layouts | Fetch en `layout.tsx` |
 | **Monolithic prefetch** | Queries paralelas con `Promise.all` | Un mega-query que trae todo |
 | **Imágenes** | `compressImage()` antes de upload | Subir originales |
-| **Auth redundante** | Una sola verificación por request | `getUser()` en cada componente |
+| **Auth redundante** | `getAuthUser()` de `@/lib/auth` (cached por request) | `supabase.auth.getUser()` directo en server-side |
 | **Queries ilimitadas** | Paginar o limitar resultados | `.select("*")` sin `.limit()` |
 | **Optimistic updates** | Actualizar UI inmediatamente, rollback en error | Esperar respuesta para actualizar |
 | **Prefetch** | Prefetch en hover/viewport para rutas frecuentes | Sin prefetch |

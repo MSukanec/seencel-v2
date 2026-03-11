@@ -12,6 +12,7 @@ import { PendingInvitationChecker } from "@/features/team/components/pending-inv
 import { RevokedAccessChecker } from "@/features/external-actors/components/revoked-access-checker";
 import type { ExternalActorType } from "@/features/external-actors/types";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 
 // Next.js detects this layout as dynamic automatically because it uses
 // cookies (Supabase createClient). No need for force-dynamic.
@@ -22,9 +23,9 @@ export default async function DashboardLayout({
 }: {
     children: React.ReactNode;
 }) {
-    // ── Phase 0: Single auth check (was called 3x independently) ──
-    const supabaseAuth = await createClient();
-    const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+    // ── Phase 0: Cached auth check — React.cache() deduplicates across
+    // all layouts and pages in this request ──
+    const authUser = await getAuthUser();
     if (!authUser) {
         const { redirect } = await import('next/navigation');
         return redirect('/login');

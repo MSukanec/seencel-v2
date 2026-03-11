@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, Shield, User, Building, Settings2, CreditCard } from "lucide-react";
 import { getTranslations } from 'next-intl/server';
+import { requireAuthContext } from "@/lib/auth";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { CreateOrganizationButton } from "@/features/organization/components/create-organization-button";
 import { OrganizationsList } from "@/features/organization/components/organizations-list";
@@ -54,7 +55,7 @@ export default async function SettingsPage({
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
     const t = await getTranslations('Settings');
-    const { organizations, activeOrgId, currentUserId } = (await getUserOrganizations()) as unknown as { organizations: Organization[], activeOrgId: string | null, currentUserId: string };
+    const { organizations, orgId, currentUserId } = (await getUserOrganizations()) as unknown as { organizations: Organization[], orgId: string | null, currentUserId: string };
     const { profile } = await getUserProfile();
     const countries = await getCountries();
     const { profile: billingProfile } = await getBillingProfile();
@@ -162,7 +163,7 @@ export default async function SettingsPage({
                                     ) : (
                                         <OrganizationsList
                                             organizations={organizations}
-                                            activeOrgId={activeOrgId}
+                                            orgId={orgId}
                                             currentUserId={currentUserId}
                                         />
                                     )}

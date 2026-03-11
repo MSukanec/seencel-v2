@@ -5,7 +5,7 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMoney } from "@/hooks/use-money";
 import type { MoneyInput } from "@/lib/money";
-import { Sparkline } from "./sparkline";
+import { Sparkline } from "../base/sparkline";
 
 // ============================================================================
 // METRIC CARD — Displays a single important number (KPI)

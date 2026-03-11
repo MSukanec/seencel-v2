@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import { getUserNotifications } from "./queries";
 
@@ -14,7 +15,7 @@ export async function markNotificationAsRead(notificationId: string) {
     const supabase = await createClient();
 
     // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: "Not authenticated" };
     }
@@ -49,7 +50,7 @@ export async function markAllNotificationsAsRead() {
     const supabase = await createClient();
 
     // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: "Not authenticated" };
     }

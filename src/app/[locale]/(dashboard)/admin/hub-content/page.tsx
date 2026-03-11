@@ -3,7 +3,7 @@ import { Sparkles, Bell } from "lucide-react";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { getHeroSections } from "@/features/hero-sections/queries";
 import { CarouselManagementView } from "@/features/hero-sections/components/carousel-management-view";
 
@@ -15,9 +15,8 @@ export default async function HubContentPage({ params }: PageProps) {
     const { locale } = await params;
     setRequestLocale(locale);
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/auth/login');
+    const authUser = await getAuthUser();
+    if (!authUser) redirect('/auth/login');
 
     // Fetch carousel slides
     const slides = await getHeroSections('hub_hero');

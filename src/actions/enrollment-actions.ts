@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 
 export interface CreateEnrollmentData {
@@ -139,7 +140,7 @@ export async function isUserEnrolledInCourse(courseId: string): Promise<boolean>
     const supabase = await createClient();
 
     // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return false;
 
     // Get internal user ID

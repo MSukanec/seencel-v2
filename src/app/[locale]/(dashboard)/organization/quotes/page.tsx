@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { redirect } from "@/i18n/routing";
-import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
+import { requireAuthContext } from "@/lib/auth";
+import { getOrganizationFinancialData } from "@/features/organization/queries";
 import { getOrganizationQuotes } from "@/features/quotes/queries";
 import { QuotesListView } from "@/features/quotes/views/quotes-list-view";
 import { createClient } from "@/lib/supabase/server";
@@ -26,22 +26,19 @@ export default async function QuotesPage({
     const { locale } = await params;
     const resolvedParams = await searchParams;
 
-    const { activeOrgId } = await getUserOrganizations();
-    if (!activeOrgId) {
-        redirect({ href: "/organization", locale });
-    }
+    const { orgId } = await requireAuthContext();
 
     try {
         const supabase = await createClient();
 
         const [quotes, financialData, contactsResult, projectsResult] = await Promise.all([
-            getOrganizationQuotes(activeOrgId),
-            getOrganizationFinancialData(activeOrgId),
+            getOrganizationQuotes(orgId),
+            getOrganizationFinancialData(orgId),
             // contacts_view tiene resolved_avatar_url (Google OAuth + uploads propios)
             supabase
                 .schema('projects').from("contacts_view")
                 .select("id, full_name, resolved_avatar_url")
-                .eq("organization_id", activeOrgId)
+                .eq("organization_id", orgId)
                 .eq("is_deleted", false)
                 .order("full_name")
                 .limit(500),
@@ -49,7 +46,7 @@ export default async function QuotesPage({
             supabase
                 .schema('projects').from("projects_view")
                 .select("id, name, image_url, color")
-                .eq("organization_id", activeOrgId)
+                .eq("organization_id", orgId)
                 .eq("is_deleted", false)
                 .eq("status", "active")
                 .order("name")
@@ -69,7 +66,7 @@ export default async function QuotesPage({
             <PageWrapper type="page" title="Presupuestos" icon={<FileText />}>
                 <ContentLayout variant="wide">
                     <QuotesListView
-                        organizationId={activeOrgId}
+                        organizationId={orgId}
                         projectId={null}
                         quotes={quotes}
                         financialData={financialData}

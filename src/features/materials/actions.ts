@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -26,7 +27,7 @@ const createMaterialPaymentSchema = z.object({
 
 export async function createMaterialPaymentAction(input: z.infer<typeof createMaterialPaymentSchema> | FormData) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     // Handling FormData input if necessary
     let payload = input as any;
@@ -125,7 +126,7 @@ const updateMaterialPaymentSchema = createMaterialPaymentSchema.partial().extend
 
 export async function updateMaterialPaymentAction(input: z.infer<typeof updateMaterialPaymentSchema> | FormData) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     let payload = input as any;
     let paymentId: string | null = null;

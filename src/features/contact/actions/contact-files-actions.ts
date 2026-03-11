@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 
 // Helper: map MIME type to DB-allowed file_type
@@ -103,7 +104,7 @@ export async function linkContactFile(
 ) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("Unauthorized");
 
     const dbType = getDbFileType(fileData.type);

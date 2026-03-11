@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -26,7 +27,7 @@ const createSubcontractPaymentSchema = z.object({
 
 export async function createSubcontractPaymentAction(input: z.infer<typeof createSubcontractPaymentSchema> | FormData) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     // Handling FormData input
     let payload = input as any;
@@ -308,7 +309,7 @@ const createSubcontractSchema = z.object({
 
 export async function createQuickSubcontractAction(organizationId: string, projectId: string, title: string) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     const { data, error } = await supabase
         .schema('finance').from('subcontracts')
@@ -344,7 +345,7 @@ export async function createQuickSubcontractAction(organizationId: string, proje
 
 export async function createSubcontractAction(input: z.infer<typeof createSubcontractSchema>) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     const { data, error } = await supabase
         .schema('finance').from('subcontracts')

@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 
 export interface Coupon {
@@ -72,7 +73,7 @@ export async function createCoupon(input: CreateCouponInput): Promise<{ success:
     const supabase = await createClient();
 
     // Get current user auth info
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
 
     // Get public user ID from users table
     let createdBy: string | null = null;

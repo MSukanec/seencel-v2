@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 
 export interface PlanFeatures {
     can_invite_members: boolean;
@@ -61,7 +62,7 @@ export async function getCurrentOrganizationInfo(): Promise<{ organizationId: st
     const supabase = await createClient();
 
     // 1. Get Current User
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return { organizationId: null, planId: null };
 
     // 2. Get User's active organization ID from preferences
@@ -219,7 +220,7 @@ export async function isOrganizationFounder(): Promise<boolean> {
     const supabase = await createClient();
 
     // 1. Get Current User
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return false;
 
     // 2. Get User's active organization ID from preferences

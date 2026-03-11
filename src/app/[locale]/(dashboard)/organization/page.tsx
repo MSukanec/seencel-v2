@@ -7,7 +7,7 @@ import {
     getRecentFiles,
     getActivityFeedItems,
 } from "@/actions/widget-actions";
-import { getActiveOrganizationId } from "@/features/general-costs/actions";
+import { requireAuthContext } from "@/lib/auth";
 import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { createClient } from "@/lib/supabase/server";
 import { OrganizationDashboardView } from "@/features/organization/views/organization-dashboard-view";
@@ -53,13 +53,8 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
     const defaultTab = view === 'activity' ? 'activity' : 'overview';
 
     try {
-        const orgId = await getActiveOrganizationId();
+        const { orgId } = await requireAuthContext();
 
-        // Guard: If user has no active org, redirect to Hub
-        if (!orgId) {
-            const { redirect } = await import('next/navigation');
-            return redirect('/hub');
-        }
         const supabase = await createClient();
 
         // Phase 1: Page-level queries (layout, org name, plan features)

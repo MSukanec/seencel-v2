@@ -1,6 +1,6 @@
 "use client";
 
-import { CardBase } from "./card-base";
+import { CardBase } from "../base/card-base";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import { Link } from "@/i18n/routing";

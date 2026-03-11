@@ -19,6 +19,8 @@
 
 **RLS**: 3 políticas — view (`finance.view`), create/update (`finance.manage`)
 
+> **NOTA (Marzo 2026)**: Las categorías `is_system` fueron migradas a org-owned. Ya no existen categorías de sistema.
+
 ---
 
 ### `finance.general_costs`
@@ -32,6 +34,8 @@
 | is_recurring | bool | — | ¿Gasto recurrente? |
 | recurrence_interval | text? | — | "monthly", "quarterly", etc. |
 | expected_day | smallint? | — | Día esperado del pago |
+| expected_amount | numeric? | — | Monto esperado por período |
+| expected_currency_id | uuid? | → `currencies.id` | Moneda del monto esperado |
 | is_deleted / deleted_at | bool / timestamptz | — | Soft delete |
 | created_by / updated_by | uuid? | — | Auditoría |
 
@@ -78,7 +82,7 @@
 
 | Vista | Uso | Tablas JOIN |
 |-------|-----|-------------|
-| `finance.general_costs_payments_view` | Lectura enriquecida de pagos | payments + general_costs + categories + currencies + wallets + users |
+| `finance.general_costs_payments_view` | Lectura enriquecida de pagos | payments + general_costs + categories + currencies + wallets + users. Incluye `expected_amount`, `expected_currency_id/code/symbol`, `expected_day` del concepto |
 | `finance.general_costs_monthly_summary_view` | Resumen mensual (total + count) | payments agrupados por mes |
 | `finance.general_costs_by_category_view` | Gasto por categoría por mes | payments + costs + categories |
 
@@ -99,11 +103,13 @@
 ### Queries (Server Actions)
 | Función | Archivo | Qué hace |
 |---------|---------|----------|
-| `getActiveOrganizationId()` | `actions.ts` | Obtiene org activa del JWT |
 | `getGeneralCostCategories()` | `actions.ts` | Lista categorías activas |
 | `getGeneralCosts()` | `actions.ts` | Lista conceptos con categoría |
 | `getGeneralCostPayments()` | `actions.ts` | Lista pagos (vista SQL) |
-| `getGeneralCostsDashboard()` | `actions.ts` | KPIs + charts + insights |
+| `getGeneralCostConceptStats()` | `actions.ts` | Stats por concepto: total pagos, monto, último pago, moneda |
+| `getGeneralCostsDashboard()` | `actions.ts` | KPIs (totalExpense, monthlyAverage, totalPayments, **fixedMonthlyCosts**) + charts + insights. Query recurrentes con `expected_amount` para calcular costos fijos mensualizados |
+
+> **Nota**: `getActiveOrganizationId()` fue eliminada (Marzo 2026). El `page.tsx` usa `requireAuthContext()` de `@/lib/auth` y pasa `orgId` a todas las views/actions.
 
 ### Mutations (Server Actions)
 | Función | Archivo | Qué hace |
@@ -117,12 +123,13 @@
 | `createGeneralCostPayment()` | `actions.ts` | Crea pago (con media upload) |
 | `updateGeneralCostPayment()` | `actions.ts` | Edita pago (con media upload) |
 | `deleteGeneralCostPayment()` | `actions.ts` | Soft delete pago |
+| `updateGeneralCostPaymentField()` | `actions.ts` | Inline editing (fecha, estado, billetera) |
 
 ### Forms
 | Archivo | Tipo | Qué hace |
 |---------|------|----------|
 | `general-costs-category-form.tsx` | Panel ✅ | CRUD de categorías (FolderOpen, sm) |
-| `general-costs-concept-form.tsx` | Panel ✅ | CRUD de conceptos con recurrencia (FileText, md) |
+| `general-costs-concept-form.tsx` | Panel ✅ | CRUD de conceptos con recurrencia + monto esperado (`AmountField` + `CurrencyField` vía `useFormData()`) (FileText, md) |
 | `general-costs-payment-form.tsx` | Panel ✅ | CRUD de pagos con moneda, billetera, attachments (Receipt, lg) |
 
 ### Import
@@ -133,15 +140,15 @@
 ### Views
 | Archivo | Qué muestra |
 |---------|-------------|
-| `general-costs-dashboard-view.tsx` | KPIs + Charts + Insights + Actividad Reciente |
-| `general-costs-concepts-view.tsx` | DataTable de conceptos |
-| `general-costs-payments-view.tsx` | DataTable de pagos con filtros, bulk delete, export, import masivo |
-| `general-costs-settings-view.tsx` | SettingsSection con CategoryListItem |
+| `general-costs-dashboard-view.tsx` | 4 KPIs (`MetricCard`: Gasto Total, Promedio Mensual, Total Pagos, **Costos Fijos Mensuales**) + 2 charts (`ChartCard` + `LazyAreaChart`/`LazyDonutChart`) + Insights + Actividad Reciente. Sin toolbar/filtro global (datos server-side). Chart con padding uniforme `p-4`, `height={260}` |
+| `general-costs-concepts-view.tsx` | Accordion por categoría con `GeneralCostListItem` + stats + recurrence badges (Al día/Pendiente/Vencido). Dropdown "..." en header con Editar/Eliminar categoría (usa `<div role="button">` para evitar `<button>` anidado en AccordionTrigger). Toolbar split button: Nuevo Concepto + Nueva Categoría |
+| `general-costs-payments-view.tsx` | DataTable memoizada (`useCallback`/`useMemo`). 6 facets (Estado, Concepto, Categoría, Billetera, Moneda) + Fechas con presets. Bulk delete, export, import masivo |
+| `general-costs-settings-view.tsx` | Placeholder vacío |
 
 ### Tables (Column Definitions)
 | Archivo | Columnas |
 |---------|----------|
-| `general-costs-concept-columns.tsx` | Nombre, Descripción, Categoría, Recurrencia |
+| `general-costs-concept-columns.tsx` | Nombre, Descripción, Categoría, Recurrencia _(no usado actualmente — vista es Accordion)_ |
 | `general-costs-payment-columns.tsx` | Fecha, Concepto, Descripción, Billetera, Monto, Estado |
 
 ### Page
@@ -154,7 +161,7 @@
 ## 5. Cadena de datos
 
 ```
-auth.uid() → users.id → organization_members.user_id
+requireAuthContext() → orgId
            → can_view_org(org_id, 'finance.view')
            → SELECT finance.general_costs_payments_view
            → JOINs: payments ← general_costs ← categories

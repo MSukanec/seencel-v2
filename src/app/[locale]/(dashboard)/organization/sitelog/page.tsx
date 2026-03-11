@@ -4,7 +4,7 @@ import { FileText, Settings } from "lucide-react";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { getActiveOrganizationId } from "@/features/general-costs/actions";
+import { requireAuthContext } from "@/lib/auth";
 import { getSiteLogTypes, getSiteLogsForOrganization } from "@/features/sitelog/actions";
 import { SitelogEntriesView } from "@/features/sitelog/views/sitelog-entries-view";
 import { SitelogSettingsView } from "@/features/sitelog/views/sitelog-settings-view";
@@ -38,7 +38,7 @@ export default async function OrganizationSitelogPage({ params }: Props) {
     setRequestLocale(locale);
 
     try {
-        const organizationId = await getActiveOrganizationId();
+        const { orgId: organizationId } = await requireAuthContext();
         if (!organizationId) return null;
 
         const [types, logs] = await Promise.all([

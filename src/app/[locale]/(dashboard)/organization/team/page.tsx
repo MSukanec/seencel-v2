@@ -1,4 +1,4 @@
-import { getActiveOrganizationId } from "@/features/general-costs/actions";
+import { requireAuthContext } from "@/lib/auth";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
 import { getOrganizationSeatStatus, getExternalActorsForOrg } from "@/features/team/actions";
 import { getOrganizationPlanFeatures, getPlans } from "@/actions/plans";
@@ -20,33 +20,13 @@ interface PageProps {
 }
 
 export default async function OrganizationSettingsPage({ searchParams }: PageProps) {
-    const orgId = await getActiveOrganizationId();
+    const { orgId, userId } = await requireAuthContext();
     const params = await searchParams;
     const validTabs = ["members", "permissions", "billing"] as const;
     const requestedTab = params.tab || "members";
     const initialTab = validTabs.includes(requestedTab as any) ? requestedTab : "members";
 
-    if (!orgId) {
-        redirect('/');
-    }
-
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-        redirect('/');
-    }
-
-    // Resolve public user ID from auth_id (organizations & members use users.id, not auth_id)
-    const { data: publicUser } = await supabase
-        .schema('iam').from('users')
-        .select('id')
-        .eq('auth_id', user.id)
-        .single();
-
-    if (!publicUser) {
-        redirect('/');
-    }
 
     const [data, planFeatures, seatStatusResult, plans, purchaseFlags, isAdmin, externalActorsResult] = await Promise.all([
         getOrganizationSettingsData(orgId),
@@ -92,7 +72,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
                     </TabsList>
                 }
             >
-                <SettingsClient data={data} organizationId={orgId} currentUserId={publicUser.id} ownerId={ownerId} canInviteMembers={canInviteMembers} seatStatus={seatStatus} plans={plans} purchaseFlags={purchaseFlags} isAdmin={isAdmin} externalActors={externalActors} maxExternalAdvisors={maxExternalAdvisors} />
+                <SettingsClient data={data} organizationId={orgId} currentUserId={userId} ownerId={ownerId} canInviteMembers={canInviteMembers} seatStatus={seatStatus} plans={plans} purchaseFlags={purchaseFlags} isAdmin={isAdmin} externalActors={externalActors} maxExternalAdvisors={maxExternalAdvisors} />
             </PageWrapper>
         </Tabs>
     );

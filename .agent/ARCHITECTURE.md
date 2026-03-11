@@ -167,6 +167,20 @@ components/
 - `supabase/` → Cliente de base de datos
 - `date-utils.ts` → Formateo de fechas
 
+### `/lib/auth.ts` — Identidad Centralizada ✅ AUDITADO
+
+**¿Qué es?** Capa de autenticación server-side con `React.cache()`. Toda resolución de identidad server-side pasa por aquí.
+
+**Estado:** ✅ Auditado y migrado 100% (Marzo 2026)
+
+| Función | Propósito |
+|---------|-----------|
+| `getAuthUser()` | Auth user de Supabase (cached por request) |
+| `getAuthContext()` | authId + userId + orgId (cached por request) |
+| `requireAuthContext()` | Igual pero redirect automático si falta auth/org |
+
+**Regla:** Solo para Server Components, Actions y API Routes. Los Client Components usan `supabase.auth.getUser()` del client Supabase (`@/lib/supabase/client`).
+
 ---
 
 ### `/types/` - Definiciones

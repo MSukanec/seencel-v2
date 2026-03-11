@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getInvitationByToken } from "@/features/team/actions";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { AcceptInvitationClient } from "./accept-invitation-client";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -81,12 +82,12 @@ export default async function AcceptInvitationPage({ searchParams }: Props) {
     }
 
     // Check if user is authenticated
-    const supabase = await createClient();
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
 
     // Check if the invited email is already registered in Seencel
     // (to show only "Iniciar Sesión" instead of both buttons)
     let emailAlreadyRegistered = false;
+    const supabase = await createClient();
     if (!authUser && inv.email) {
         const { data: existingUser } = await supabase
             .schema('iam').from('users')

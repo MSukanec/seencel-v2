@@ -7,7 +7,7 @@ import { AdminDashboardView } from "@/features/admin/components/admin-dashboard-
 import { AdminActivityView } from "@/features/admin/components/admin-activity-view";
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 
 interface PageProps {
     params: Promise<{ locale: string }>;
@@ -17,9 +17,8 @@ export default async function AdminPage({ params }: PageProps) {
     const { locale } = await params;
     setRequestLocale(locale);
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/auth/login');
+    const authUser = await getAuthUser();
+    if (!authUser) redirect('/auth/login');
 
     const [dashboardData, activityLogs, userJourneys] = await Promise.all([
         getAdminDashboardData(),

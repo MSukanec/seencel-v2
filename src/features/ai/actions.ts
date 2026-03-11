@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { chatCompletion } from "./ai-client";
 import { logAIUsage, incrementAIUsage, checkAIUsageLimit } from "./ai-services";
 import { IMPORT_ANALYZER_SYSTEM_PROMPT, RECIPE_SUGGESTER_SYSTEM_PROMPT } from "./prompts";
@@ -34,7 +35,7 @@ export async function analyzeExcelStructure(
 
         // Obtener usuario actual para logs
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
 
         // Build context: header row + data rows (limited to maxRows for cost control)
         const headerRow = rows[headerRowIndex] || [];
@@ -168,7 +169,7 @@ export async function suggestRecipe({
     try {
         // Obtener usuario actual
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
 
         if (!user) {
             return { success: false, error: "Usuario no autenticado" };

@@ -2,6 +2,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 
 // =============================================================================
 // TYPES
@@ -92,7 +93,7 @@ export async function getMonitoringDashboard(): Promise<{
 }> {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) return { success: false, error: "No autenticado" };
 
         const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -178,7 +179,7 @@ export async function getEnrichedSystemErrors(hours: number = 48): Promise<{
 }> {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) return { success: false, error: "No autenticado" };
 
         const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
@@ -232,7 +233,7 @@ export async function getOpsAlerts(statusFilter?: string): Promise<{
 }> {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) return { success: false, error: "No autenticado" };
 
         let query = supabase
@@ -299,7 +300,7 @@ export async function getOpsRepairActions(): Promise<{
 }> {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) return { success: false, error: "No autenticado" };
 
         const { data, error } = await supabase
@@ -337,7 +338,7 @@ export async function executeOpsRepair(alertId: string, actionId: string): Promi
 }> {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) return { success: false, error: "No autenticado" };
 
         // Obtener el users.id (no auth_id)
@@ -376,7 +377,7 @@ export async function resolveOpsAlert(alertId: string): Promise<{
 }> {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) return { success: false, error: "No autenticado" };
 
         const { data: userData } = await supabase
@@ -416,7 +417,7 @@ export async function ackOpsAlert(alertId: string): Promise<{
 }> {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) return { success: false, error: "No autenticado" };
 
         const { data: userData } = await supabase
@@ -456,7 +457,7 @@ export async function runOpsChecks(): Promise<{
 }> {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) return { success: false, error: "No autenticado" };
 
         const { error } = await supabase.schema('ops').rpc('ops_run_all_checks');

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 
 export interface BillingProfile {
     id: string;
@@ -21,17 +22,16 @@ export interface BillingProfile {
 }
 
 export async function getBillingProfile(): Promise<{ profile: BillingProfile | null }> {
-    const supabase = await createClient();
+    const authUser = await getAuthUser();
+    if (!authUser) return { profile: null };
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { profile: null };
+    const supabase = await createClient();
 
     // Get public user ID
     const { data: userData } = await supabase
         .schema('iam').from('users')
         .select('id')
-        .eq('auth_id', user.id)
+        .eq('auth_id', authUser.id)
         .single();
 
     if (!userData) return { profile: null };
@@ -107,10 +107,10 @@ export async function getExchangeRate(from = "USD", to = "ARS"): Promise<number>
  * @returns Country code like 'AR', 'US', 'UY', or null if not found
  */
 export async function getUserCountryCode(): Promise<string | null> {
-    const supabase = await createClient();
-
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) return null;
+
+    const supabase = await createClient();
 
     // Get user's country from user_data -> countries
     const { data } = await supabase

@@ -1,5 +1,7 @@
 "use server";
 
+import { getAuthUser } from '@/lib/auth';
+
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
@@ -1801,7 +1803,7 @@ export async function getRecipeResources(recipeId: string): Promise<RecipeResour
 export async function rateRecipe(data: TaskRecipeRatingFormData) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: "No autenticado" };
     }

@@ -1,5 +1,6 @@
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth";
 import { sanitizeError } from "@/lib/error-utils";
 import {
     ProjectClientView,
@@ -26,26 +27,8 @@ const s3Client = new S3Client({
  * Helper to get the current authenticated user's active organization
  */
 async function getActiveOrganizationId() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const { data: userData } = await supabase
-        .schema('iam').from('users')
-        .select('id')
-        .eq('auth_id', user.id)
-        .single();
-
-    if (!userData) return null;
-
-    // Cross-schema: user_preferences está en iam
-    const { data: prefData } = await supabase
-        .schema('iam').from('user_preferences')
-        .select('last_organization_id')
-        .eq('user_id', userData.id)
-        .single();
-
-    return prefData?.last_organization_id || null;
+    const ctx = await getAuthContext();
+    return ctx?.orgId ?? null;
 }
 
 export async function getClients(projectId: string | null) {

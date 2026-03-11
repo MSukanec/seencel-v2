@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import type { SeatStatus, PurchaseSeatsInput, ExternalActorDetail } from "./types";
 import { EXTERNAL_ACTOR_TYPE_LABELS, ADVISOR_ACTOR_TYPES } from "./types";
@@ -28,7 +29,7 @@ export async function sendInvitationAction(
     const supabase = await createClient();
 
     // 1. Auth
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) {
         return { success: false, error: "No autenticado" };
     }
@@ -244,7 +245,7 @@ export async function revokeInvitationAction(
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) return { success: false, error: "No autenticado" };
 
     const { data: currentUser } = await supabase
@@ -293,7 +294,7 @@ export async function resendInvitationAction(
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) return { success: false, error: "No autenticado" };
 
     const { data: currentUser } = await supabase
@@ -396,7 +397,7 @@ export async function acceptInvitationAction(
     const supabase = await createClient();
 
     // 1. Auth
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) {
         return { success: false, error: 'No autenticado' };
     }
@@ -652,7 +653,7 @@ export async function updateMemberRoleAction(
 ) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("No autenticado");
 
     // Resolve public user ID from auth ID
@@ -743,7 +744,7 @@ export async function removeMemberAction(
 ) {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) throw new Error("No autenticado");
 
     // Resolve public user ID from auth ID
@@ -861,7 +862,7 @@ export async function purchaseMemberSeats(
 ): Promise<{ success: boolean; paymentId?: string; error?: string }> {
     const supabase = await createClient();
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) {
         return { success: false, error: "Not authenticated" };
     }
@@ -926,7 +927,7 @@ export async function addExternalCollaboratorAction(
     const supabase = await createClient();
 
     // 1. Auth
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) {
         return { success: false, error: 'No autenticado' };
     }
@@ -1123,7 +1124,7 @@ export async function addExternalCollaboratorWithProjectAction(input: {
     const supabase = await createClient();
 
     // 1. Auth
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) {
         return { success: false, error: 'No autenticado' };
     }
@@ -1367,7 +1368,7 @@ export async function removeExternalActorAction(
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) return { success: false, error: 'No autenticado' };
 
     const { data: currentUser } = await supabase
@@ -1416,7 +1417,7 @@ export async function reactivateExternalActorAction(
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) return { success: false, error: 'No autenticado' };
 
     const { data: currentUser } = await supabase

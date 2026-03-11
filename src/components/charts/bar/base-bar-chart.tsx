@@ -26,6 +26,7 @@ interface BaseBarChartProps {
     chartClassName?: string; // Class for the ChartContainer
     color?: string; // Now used as a fallback if not in config
     showGrid?: boolean;
+    showYAxis?: boolean;
     yAxisFormatter?: (value: number) => string;
     xAxisFormatter?: (value: string) => string;
     /** Custom tooltip formatter. If not provided, uses useMoney().format */
@@ -53,6 +54,7 @@ export function BaseBarChart({
     chartClassName,
     color = "var(--primary)", // Default to primary
     showGrid = true,
+    showYAxis = true,
     yAxisFormatter,
     xAxisFormatter,
     tooltipFormatter,
@@ -98,15 +100,17 @@ export function BaseBarChart({
                     tickLine={false}
                     axisLine={false}
                 />
-                <YAxis
-                    type={layout === 'vertical' ? 'category' : 'number'}
-                    dataKey={layout === 'vertical' ? xKey : undefined}
-                    tickFormatter={effectiveYAxisFormatter}
-                    fontSize={CHART_DEFAULTS.fontSize}
-                    tickLine={false}
-                    axisLine={false}
-                    width={layout === 'vertical' ? 100 : undefined}
-                />
+                {showYAxis && (
+                    <YAxis
+                        type={layout === 'vertical' ? 'category' : 'number'}
+                        dataKey={layout === 'vertical' ? xKey : undefined}
+                        tickFormatter={effectiveYAxisFormatter}
+                        fontSize={CHART_DEFAULTS.fontSize}
+                        tickLine={false}
+                        axisLine={false}
+                        width={layout === 'vertical' ? 100 : undefined}
+                    />
+                )}
                 <ChartTooltip
                     cursor={{ fill: 'var(--muted)', opacity: 0.1 }}
                     content={<ChartTooltipContent formatter={effectiveTooltipFormatter as any} hideLabel={false} />}

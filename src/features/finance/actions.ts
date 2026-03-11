@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 
 export interface MovementAttachment {
     id: string;
@@ -254,7 +255,7 @@ export async function createCurrencyExchange(
     const supabase = await createClient();
 
     // Get current authenticated user
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: "Usuario no autenticado" };
     }
@@ -360,7 +361,7 @@ export async function createWalletTransfer(
     const supabase = await createClient();
 
     // Get current authenticated user
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         return { success: false, error: "Usuario no autenticado" };
     }

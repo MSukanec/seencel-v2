@@ -4,6 +4,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { projectClientSchema, clientRoleSchema, clientCommitmentSchema } from "./types";
@@ -17,7 +18,7 @@ import { projectClientSchema, clientRoleSchema, clientCommitmentSchema } from ".
  * Returns null if not authenticated.
  */
 async function getAuthenticatedUserId(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string | null> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     return user?.id ?? null;
 }
 
@@ -287,7 +288,7 @@ export async function createCommitmentAction(input: z.infer<typeof createCommitm
     const supabase = await createClient();
 
     // Get current user for `created_by` (optional, relies on trigger/default usually, or we set it)
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     // We need to fetch the member id for the user for `created_by`, skipping for now to keep it simple, 
     // assuming backend triggers or RLS handles current_user linking if strict.
@@ -513,7 +514,7 @@ const createPaymentSchema = z.object({
 
 export async function createPaymentAction(input: z.infer<typeof createPaymentSchema>) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     // Handling FormData input if necessary
     let payload = input as any;
@@ -697,7 +698,7 @@ const updatePaymentSchema = createPaymentSchema.partial().extend({
 
 export async function updatePaymentAction(input: z.infer<typeof updatePaymentSchema>) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
 
     // Handling FormData input
     let payload = input as any;
@@ -900,7 +901,7 @@ export async function inviteClientToProjectAction(
     const supabase = await createClient();
 
     // 1. Auth — get current user
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) {
         return { success: false, error: "No autenticado" };
     }
@@ -1017,7 +1018,7 @@ export async function sendClientInvitationAction(
     const supabase = await createClient();
 
     // 1. Auth
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authUser = await getAuthUser();
     if (!authUser) return { success: false, error: "No autenticado" };
 
     // 2. Load the project_client + contact email

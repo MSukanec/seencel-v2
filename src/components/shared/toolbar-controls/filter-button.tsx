@@ -4,6 +4,11 @@ import * as React from "react"
 import { Check, ListFilter, CalendarDays, X, ChevronRight, Search } from "lucide-react"
 import { DateRange } from "react-day-picker"
 import { es } from "date-fns/locale"
+import {
+    startOfDay, endOfDay, startOfWeek, endOfWeek,
+    startOfMonth, endOfMonth, startOfYear, endOfYear,
+    subDays, subWeeks, subMonths, subYears,
+} from "date-fns"
 
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -140,7 +145,69 @@ function FacetSubPanel({
     )
 }
 
-// ─── Sub-Panel: Date Range ───────────────────────────────
+// ─── Sub-Panel: Date Range with Presets ─────────────────
+
+interface DatePreset {
+    label: string
+    getRange: () => { from: Date; to: Date } | undefined
+}
+
+const DATE_PRESETS: DatePreset[] = [
+    {
+        label: "Todo",
+        getRange: () => undefined,
+    },
+    {
+        label: "Hoy",
+        getRange: () => ({ from: startOfDay(new Date()), to: endOfDay(new Date()) }),
+    },
+    {
+        label: "Ayer",
+        getRange: () => {
+            const yesterday = subDays(new Date(), 1)
+            return { from: startOfDay(yesterday), to: endOfDay(yesterday) }
+        },
+    },
+    {
+        label: "Esta semana",
+        getRange: () => ({
+            from: startOfWeek(new Date(), { weekStartsOn: 1 }),
+            to: endOfWeek(new Date(), { weekStartsOn: 1 }),
+        }),
+    },
+    {
+        label: "Semana pasada",
+        getRange: () => {
+            const lastWeek = subWeeks(new Date(), 1)
+            return {
+                from: startOfWeek(lastWeek, { weekStartsOn: 1 }),
+                to: endOfWeek(lastWeek, { weekStartsOn: 1 }),
+            }
+        },
+    },
+    {
+        label: "Este mes",
+        getRange: () => ({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) }),
+    },
+    {
+        label: "Mes pasado",
+        getRange: () => {
+            const lastMonth = subMonths(new Date(), 1)
+            return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) }
+        },
+    },
+    {
+        label: "Este año",
+        getRange: () => ({ from: startOfYear(new Date()), to: endOfYear(new Date()) }),
+    },
+    {
+        label: "Año pasado",
+        getRange: () => {
+            const lastYear = subYears(new Date(), 1)
+            return { from: startOfYear(lastYear), to: endOfYear(lastYear) }
+        },
+    },
+]
 
 function DateSubPanel({
     dateRange,
@@ -149,32 +216,58 @@ function DateSubPanel({
     dateRange?: { from?: Date; to?: Date }
     onChange: (range: { from?: Date; to?: Date } | undefined) => void
 }) {
+    // Determine active preset
+    const activePresetLabel = React.useMemo(() => {
+        if (!dateRange?.from && !dateRange?.to) return "Todo"
+        for (const preset of DATE_PRESETS) {
+            const range = preset.getRange()
+            if (!range) continue
+            if (
+                dateRange.from && dateRange.to &&
+                startOfDay(dateRange.from).getTime() === startOfDay(range.from).getTime() &&
+                startOfDay(dateRange.to).getTime() === startOfDay(range.to).getTime()
+            ) {
+                return preset.label
+            }
+        }
+        return null // Custom range
+    }, [dateRange])
+
     return (
-        <div>
-            <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange?.from}
-                selected={{ from: dateRange?.from, to: dateRange?.to }}
-                onSelect={(range: DateRange | undefined) => {
-                    onChange(range ? { from: range.from, to: range.to } : undefined)
-                }}
-                numberOfMonths={2}
-                locale={es}
-                className="rounded-md"
-            />
-            {(dateRange?.from || dateRange?.to) && (
-                <div className="border-t border-border/50 p-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-muted-foreground hover:text-destructive"
-                        onClick={() => onChange(undefined)}
+        <div className="flex">
+            {/* Presets sidebar */}
+            <div className="w-[130px] border-r border-border/50 py-1 shrink-0">
+                {DATE_PRESETS.map((preset) => (
+                    <div
+                        key={preset.label}
+                        className={cn(
+                            "px-3 py-1.5 text-sm cursor-pointer transition-colors",
+                            activePresetLabel === preset.label
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-foreground/80 hover:bg-muted/50"
+                        )}
+                        onClick={() => onChange(preset.getRange())}
                     >
-                        Limpiar fechas
-                    </Button>
-                </div>
-            )}
+                        {preset.label}
+                    </div>
+                ))}
+            </div>
+
+            {/* Calendar */}
+            <div>
+                <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={{ from: dateRange?.from, to: dateRange?.to }}
+                    onSelect={(range: DateRange | undefined) => {
+                        onChange(range ? { from: range.from, to: range.to } : undefined)
+                    }}
+                    numberOfMonths={2}
+                    locale={es}
+                    className="rounded-md"
+                />
+            </div>
         </div>
     )
 }
@@ -345,8 +438,11 @@ export function FilterPopover({
                             <div
                                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 cursor-pointer text-sm text-muted-foreground hover:text-destructive transition-colors"
                                 onClick={() => {
-                                    filters.clearAll()
+                                    setHoveredKey(null)
+                                    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
                                     setOpen(false)
+                                    // Defer filter clear so popover closes instantly
+                                    requestAnimationFrame(() => filters.clearAll())
                                 }}
                             >
                                 <X className="h-3.5 w-3.5" />
