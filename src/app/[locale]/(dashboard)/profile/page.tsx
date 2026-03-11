@@ -110,7 +110,7 @@ export default async function ProfilePage({ searchParams }: PageProps) {
                     <TabsContent value="organization" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ProfileOrganizationsView
                             organizations={organizations}
-                            orgId={orgId}
+                            activeOrgId={orgId}
                             currentUserId={currentUserId}
                             isAdmin={isAdmin}
                         />

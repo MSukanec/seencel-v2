@@ -163,7 +163,7 @@ export default async function SettingsPage({
                                     ) : (
                                         <OrganizationsList
                                             organizations={organizations}
-                                            orgId={orgId}
+                                            activeOrgId={orgId}
                                             currentUserId={currentUserId}
                                         />
                                     )}
