@@ -31,6 +31,7 @@ import { DataTablePagination } from "./data-table-pagination";
 import { DataTableSkeleton } from "./data-table-skeleton";
 import { cn } from "@/lib/utils";
 import { DataTableRowActions } from "./data-table-row-actions";
+import { DataTableContextMenuWrapper } from "./data-table-context-menu";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,8 @@ interface DataTableProps<TData, TValue> {
     initialSorting?: SortingState;
     enableRowActions?: boolean;
     enableAttachmentIndicator?: boolean;
+    /** Enable right-click context menu on rows (Linear-style) */
+    enableContextMenu?: boolean;
     onView?: (row: TData) => void;
     onEdit?: (row: TData) => void;
     onDuplicate?: (row: TData) => void;
@@ -151,6 +154,7 @@ export function DataTable<TData, TValue>({
     meta,
     enableRowActions = false,
     enableAttachmentIndicator = true,
+    enableContextMenu = false,
     onView,
     onEdit,
     onDuplicate,
@@ -304,7 +308,7 @@ export function DataTable<TData, TValue>({
             baseColumns.unshift(selectionColumn);
         }
 
-        if (enableRowActions) {
+        if (enableRowActions && !enableContextMenu) {
             baseColumns.push({
                 id: "actions",
                 header: () => <span className="sr-only">Acciones</span>,
@@ -340,7 +344,7 @@ export function DataTable<TData, TValue>({
         }
 
         return baseColumns;
-    }, [columns, enableRowSelection, enableRowActions, onView, onEdit, onDuplicate, onDelete, customActions]);
+    }, [columns, enableRowSelection, enableRowActions, enableContextMenu, enableAttachmentIndicator, onView, onEdit, onDuplicate, onDelete, customActions]);
 
     const table = useReactTable({
         data,
@@ -435,7 +439,7 @@ export function DataTable<TData, TValue>({
                                                         <TableHead
                                                             key={header.id}
                                                             className={cn(
-                                                                "h-11 text-[11px] font-medium text-muted-foreground relative",
+                                                                "h-11 text-[11px] font-medium text-muted-foreground relative group/header",
                                                                 !(isSelecting && isLast) && "overflow-hidden",
                                                                 isFirst ? "px-4" : isLast ? "px-6" : "px-4"
                                                             )}
@@ -662,7 +666,7 @@ export function DataTable<TData, TValue>({
                                         table.getRowModel().rows.map((row) => {
                                             const isSelected = row.getIsSelected();
 
-                                            return (
+                                            const rowContent = (
                                                 <TableRow
                                                     key={row.id}
                                                     data-state={isSelected && "selected"}
@@ -692,6 +696,26 @@ export function DataTable<TData, TValue>({
                                                     })}
                                                 </TableRow>
                                             );
+
+                                            // Wrap with context menu if enabled
+                                            if (enableContextMenu) {
+                                                return (
+                                                    <DataTableContextMenuWrapper
+                                                        key={row.id}
+                                                        row={row}
+                                                        table={table}
+                                                        onView={onView}
+                                                        onEdit={onEdit}
+                                                        onDuplicate={onDuplicate}
+                                                        onDelete={onDelete}
+                                                        customActions={customActions}
+                                                    >
+                                                        {rowContent}
+                                                    </DataTableContextMenuWrapper>
+                                                );
+                                            }
+
+                                            return rowContent;
                                         })
                                     ) : (
                                         <TableRow>

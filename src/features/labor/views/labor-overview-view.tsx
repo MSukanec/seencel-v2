@@ -6,7 +6,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { LazyAreaChart as BaseAreaChart, LazyDonutChart as BaseDonutChart } from "@/components/charts/lazy-charts";
-import { CHART_COLORS } from "@/components/charts/chart-config";
+import { CHART_COLORS, capitalizeMonth } from "@/components/charts/chart-config";
 import {
     DollarSign,
     TrendingUp,
@@ -72,7 +72,7 @@ export function LaborOverviewView({
     const monthlyEvolution = useMemo(() => {
         const data = Object.entries(kpiData.monthlyTotals)
             .map(([month, amount]) => ({
-                month: format(parseISO(month + '-01'), 'MMM yy', { locale: es }),
+                month: capitalizeMonth(format(parseISO(month + '-01'), 'MMM yy', { locale: es })),
                 amount,
             }))
             .sort((a, b) => a.month.localeCompare(b.month));

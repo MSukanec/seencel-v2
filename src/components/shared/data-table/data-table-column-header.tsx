@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Column } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown, EyeOff } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,40 +22,35 @@ export function DataTableColumnHeader<TData, TValue>({
     title,
     className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
-    const [isHovered, setIsHovered] = useState(false);
-
     if (!column.getCanSort()) {
         return <div className={cn("flex items-center h-7 text-xs font-medium text-muted-foreground", className)}>{title}</div>;
     }
 
+    const isSorted = column.getIsSorted();
+
     return (
-        <div className={cn("flex items-center space-x-2 w-full", className)}>
+        <div className={cn("flex items-center w-full", className)}>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="sm"
+                    <button
                         className={cn(
-                            "h-7 data-[state=open]:bg-accent hover:bg-muted/50",
-                            !className?.includes("justify-end") && "-ml-3"
+                            "flex items-center h-7 w-full rounded-md px-2 -mx-2 cursor-pointer",
+                            "hover:bg-muted/50 data-[state=open]:bg-accent",
+                            "transition-colors duration-100",
+                            className?.includes("justify-end") && "justify-end"
                         )}
-                        onMouseEnter={() => setIsHovered(true)}
-                        onMouseLeave={() => setIsHovered(false)}
                     >
                         <span className="text-xs font-medium">{title}</span>
-                        {column.getIsSorted() === "desc" ? (
-                            <ArrowDown className="ml-1.5 h-3.5 w-3.5 text-foreground" />
-                        ) : column.getIsSorted() === "asc" ? (
-                            <ArrowUp className="ml-1.5 h-3.5 w-3.5 text-foreground" />
+                        {isSorted === "desc" ? (
+                            <ArrowDown className="ml-1.5 h-3.5 w-3.5 text-foreground shrink-0" />
+                        ) : isSorted === "asc" ? (
+                            <ArrowUp className="ml-1.5 h-3.5 w-3.5 text-foreground shrink-0" />
                         ) : (
                             <ArrowUpDown
-                                className={cn(
-                                    "ml-1.5 h-3.5 w-3.5 text-muted-foreground/40 transition-opacity duration-150",
-                                    isHovered ? "opacity-100" : "opacity-0"
-                                )}
+                                className="ml-1.5 h-3.5 w-3.5 text-muted-foreground/50 shrink-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-150"
                             />
                         )}
-                    </Button>
+                    </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                     <DropdownMenuItem onClick={() => column.toggleSorting(false)}>

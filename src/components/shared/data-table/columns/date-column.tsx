@@ -20,7 +20,7 @@ import { es } from "date-fns/locale";
 import { DataTableColumnHeader } from "../data-table-column-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { UnifiedDatePicker } from "@/components/shared/unified-date-picker";
 
 export interface DateColumnOptions<TData> {
     /** Column accessor key */
@@ -90,16 +90,8 @@ function EditableDateCell<TData>({
     onUpdate: (row: TData, newDate: Date) => Promise<void> | void;
 }) {
     const [open, setOpen] = React.useState(false);
-    const [calendarMonth, setCalendarMonth] = React.useState(dateToFormat);
 
-    React.useEffect(() => {
-        if (open) {
-            setCalendarMonth(dateToFormat);
-        }
-    }, [open, dateToFormat]);
-
-    const handleSelect = async (date: Date | undefined) => {
-        if (!date) return;
+    const handleSelect = async (date: Date) => {
         await onUpdate(row, date);
         setOpen(false);
     };
@@ -133,23 +125,16 @@ function EditableDateCell<TData>({
                 </button>
             </PopoverTrigger>
             <PopoverContent
-                className="w-auto p-0"
+                className="w-[320px] p-0"
                 align="start"
                 side="bottom"
                 onClick={(e) => e.stopPropagation()}
             >
-                <Calendar
-                    mode="single"
-                    captionLayout="dropdown"
-                    showInput
-                    month={calendarMonth}
-                    onMonthChange={setCalendarMonth}
-                    selected={dateToFormat}
-                    onSelect={handleSelect}
-                    locale={es}
-                    fromYear={2020}
-                    toYear={new Date().getFullYear() + 1}
-                    initialFocus
+                <UnifiedDatePicker
+                    mode="day"
+                    modes={["day"]}
+                    value={dateToFormat}
+                    onSelectDay={handleSelect}
                 />
             </PopoverContent>
         </Popover>

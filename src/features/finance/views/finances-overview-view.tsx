@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { FinanceDashboardProvider, useFinanceDashboard } from "@/features/finance/context/finance-dashboard-context";
-import { MetricCard, ChartCard, InsightCard } from "@/components/cards";
+import { MetricCard, ContentCard } from "@/components/cards";
+import { InsightCard } from "@/features/insights/components/insight-card";
 import { BaseDualAreaChart } from "@/components/charts/area/base-dual-area-chart";
 import { BaseDonutChart } from "@/components/charts/pie/base-donut-chart";
 import { TrendingUp, TrendingDown, BarChart3, PieChart, Activity, Wallet, Lightbulb, Banknote } from "lucide-react";
@@ -221,7 +222,7 @@ function FinancesDashboardContent() {
 
             {/* ── Charts Row ────────────────────────────────── */}
             <div className="grid gap-6 lg:grid-cols-2 items-start [&>*]:min-w-0">
-                <ChartCard
+                <ContentCard
                     title="Evolución Financiera"
                     description="Ingresos vs Egresos por mes"
                     icon={<BarChart3 className="w-4 h-4" />}
@@ -244,9 +245,9 @@ function FinancesDashboardContent() {
                             Sin datos de movimientos
                         </div>
                     )}
-                </ChartCard>
+                </ContentCard>
 
-                <ChartCard
+                <ContentCard
                     title="Saldo por Billetera"
                     description="Balance actual por cuenta"
                     icon={<PieChart className="w-4 h-4" />}
@@ -264,12 +265,12 @@ function FinancesDashboardContent() {
                             Sin datos de movimientos
                         </div>
                     )}
-                </ChartCard>
+                </ContentCard>
             </div>
 
             {/* ── Insights + Activity ───────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ChartCard
+                <ContentCard
                     title="Insights Financieros"
                     description="Análisis automático de tu situación"
                     icon={<Lightbulb className="w-4 h-4" />}
@@ -285,9 +286,9 @@ function FinancesDashboardContent() {
                             No hay insights en este momento
                         </div>
                     )}
-                </ChartCard>
+                </ContentCard>
 
-                <ChartCard
+                <ContentCard
                     title="Actividad Reciente"
                     description="Últimos movimientos registrados"
                     icon={<Activity className="w-4 h-4" />}
@@ -336,7 +337,7 @@ function FinancesDashboardContent() {
                             Sin actividad reciente
                         </div>
                     )}
-                </ChartCard>
+                </ContentCard>
             </div>
         </div>
     );

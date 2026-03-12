@@ -13,6 +13,7 @@ import { useMoney } from "@/hooks/use-money";
 import { Badge } from "@/components/ui/badge";
 import { DetailSection } from "@/components/shared/forms/detail-field";
 import { LazyAreaChart } from "@/components/charts/lazy-charts";
+import { capitalizeMonth } from "@/components/charts/chart-config";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseDateFromDB } from "@/lib/timezone-data";
 import { format } from "date-fns";
@@ -125,7 +126,7 @@ export function GeneralCostConceptDetailPanel({
     const formatChartLabel = (value: string) => {
         try {
             const date = new Date(value);
-            return format(date, "MMM yy", { locale: es });
+            return capitalizeMonth(format(date, "MMM yy", { locale: es }));
         } catch {
             return value;
         }

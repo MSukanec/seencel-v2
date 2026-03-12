@@ -24,7 +24,7 @@ import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { exportToCSV, exportToExcel } from "@/lib/export";
 import { createImportBatch, revertImportBatch, importGeneralCostPaymentsBatch, type ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
-import { deleteGeneralCostPayment, updateGeneralCostPaymentField } from "../actions";
+import { deleteGeneralCostPayment, updateGeneralCostPaymentField, duplicateGeneralCostPayment, getPaymentAttachments, linkPaymentAttachment } from "../actions";
 import {
     getGeneralCostPaymentColumns,
     GENERAL_COST_STATUS_OPTIONS,
@@ -119,7 +119,6 @@ export function GeneralCostsPaymentsView({
             optimisticRemove(item.id, async () => {
                 try {
                     await deleteGeneralCostPayment(item.id);
-                    toast.success("Pago eliminado");
                 } catch {
                     toast.error("Error al eliminar el pago");
                     router.refresh();
@@ -200,10 +199,38 @@ export function GeneralCostsPaymentsView({
         });
     }, [optimisticUpdate, router, UI_ONLY_KEYS]);
 
+    // ─── Attachment handlers ─────────────────────────────
+    const fetchAttachments = useCallback(async (row: GeneralCostPaymentView) => {
+        return await getPaymentAttachments(row.id);
+    }, []);
+
+    const handleAttachmentsChange = useCallback(async (row: GeneralCostPaymentView, files: any[]) => {
+        // Link any new files (those without a DB id yet)
+        for (const file of files) {
+            if (file.id?.startsWith('upload-')) {
+                await linkPaymentAttachment(row.id, organizationId, {
+                    path: file.path,
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    bucket: file.bucket,
+                });
+            }
+        }
+    }, [organizationId]);
+
     // ─── Columns (memoized to prevent TanStack Table recalculation) ──
     const columns = useMemo(
-        () => getGeneralCostPaymentColumns({ onInlineUpdate: handleInlineUpdate, wallets }),
-        [handleInlineUpdate, wallets]
+        () => getGeneralCostPaymentColumns({
+            onInlineUpdate: handleInlineUpdate,
+            wallets,
+            concepts,
+            currencies,
+            fetchAttachments,
+            onAttachmentsChange: handleAttachmentsChange,
+            organizationId,
+        }),
+        [handleInlineUpdate, wallets, concepts, currencies, fetchAttachments, handleAttachmentsChange, organizationId]
     );
 
     // ─── Panel handlers ──────────────────────────────────
@@ -224,6 +251,16 @@ export function GeneralCostsPaymentsView({
             currencies,
             organizationId,
         });
+    };
+
+    const handleDuplicate = async (payment: GeneralCostPaymentView) => {
+        const result = await duplicateGeneralCostPayment(payment.id);
+        if (result.success) {
+            toast.success("Pago duplicado correctamente");
+            router.refresh();
+        } else {
+            toast.error(result.error || "Error al duplicar el pago");
+        }
     };
 
     const handleEdit = (payment: GeneralCostPaymentView) => {
@@ -411,9 +448,10 @@ export function GeneralCostsPaymentsView({
                 columns={columns}
                 data={filteredData}
                 enableRowSelection
-                enableRowActions
+                enableContextMenu
                 onRowClick={handleRowClick}
                 onEdit={handleEdit}
+                onDuplicate={handleDuplicate}
                 onDelete={handleDelete}
                 onBulkDelete={handleBulkDelete}
                 initialSorting={[{ id: "payment_date", desc: true }]}

@@ -7,10 +7,12 @@
  * - Optional prefix (+/-)
  * - Optional color mode (positive/negative)
  * - Optional exchange rate subtitle
+ * - Inline editing via click-to-input (no popover)
  */
 
 "use client";
 
+import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../data-table-column-header";
 import { useMoney } from "@/hooks/use-money";
@@ -53,10 +55,111 @@ export interface MoneyColumnOptions<TData> {
     signPositiveValue?: string | number;
     /** Column width in px (default: 130) */
     size?: number;
+    /** Show currency symbol before amount (default: true). Set to false when currency has its own column. */
+    showCurrencySymbol?: boolean;
+    /** Enable inline editing (default: false) */
+    editable?: boolean;
+    /** Callback when amount changes (required if editable) */
+    onUpdate?: (row: TData, newValue: number) => Promise<void> | void;
+}
+
+// ─── Editable Money Cell ─────────────────────────────────
+
+function EditableMoneyCell<TData>({
+    row,
+    options,
+}: {
+    row: { original: TData };
+    options: MoneyColumnOptions<TData>;
+}) {
+    const money = useMoney();
+    const {
+        accessorKey,
+        currencyKey = "currency_symbol",
+        align = "right",
+        showCurrencySymbol = true,
+        onUpdate,
+    } = options;
+
+    const amount = Number((row.original as any)[accessorKey]) || 0;
+    const currencySymbol = (row.original as any)[currencyKey] || money.config.functionalCurrencySymbol;
+
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [editValue, setEditValue] = React.useState("");
+    const inputRef = React.useRef<HTMLInputElement>(null);
+
+    // Format for display
+    const formattedNumber = Math.abs(amount).toLocaleString('es-AR', {
+        minimumFractionDigits: money.config.decimalPlaces,
+        maximumFractionDigits: money.config.decimalPlaces,
+    });
+    const displayAmount = showCurrencySymbol
+        ? `${currencySymbol} ${formattedNumber}`
+        : formattedNumber;
+
+    const handleStartEditing = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditValue(amount.toString());
+        setIsEditing(true);
+        // Focus after render
+        setTimeout(() => inputRef.current?.select(), 10);
+    };
+
+    const handleSave = async () => {
+        const parsed = parseFloat(editValue.replace(/\./g, '').replace(',', '.'));
+        if (!isNaN(parsed) && parsed !== amount && onUpdate) {
+            await onUpdate(row.original, parsed);
+        }
+        setIsEditing(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            handleSave();
+        }
+        if (e.key === "Escape") {
+            setIsEditing(false);
+        }
+    };
+
+    if (isEditing) {
+        return (
+            <div className={cn("flex", align === "right" ? "justify-end" : "justify-start")} onClick={(e) => e.stopPropagation()}>
+                <input
+                    ref={inputRef}
+                    type="text"
+                    inputMode="decimal"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleSave}
+                    className={cn(
+                        "w-28 h-7 px-2 text-sm font-mono text-right bg-background border border-border rounded-md",
+                        "focus:outline-none focus:ring-1 focus:ring-ring",
+                    )}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className={cn("flex flex-col", align === "right" ? "items-end text-right" : "items-start")}>
+            <button
+                className={cn(
+                    "text-sm font-medium cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition-all whitespace-nowrap",
+                    "border border-transparent hover:border-dashed hover:border-border hover:bg-[#2a2b2d]",
+                )}
+                onClick={handleStartEditing}
+            >
+                {displayAmount}
+            </button>
+        </div>
+    );
 }
 
 /**
- * Internal cell component that uses the useMoney hook
+ * Internal cell component that uses the useMoney hook — read-only
  */
 function MoneyCell<TData>({
     row,
@@ -77,6 +180,7 @@ function MoneyCell<TData>({
         align = "right",
         signKey,
         signPositiveValue,
+        showCurrencySymbol = true,
     } = options;
 
     const amount = Number((row.original as any)[accessorKey]) || 0;
@@ -124,10 +228,13 @@ function MoneyCell<TData>({
     }
 
     // Format amount (uses org's decimal preferences automatically)
-    const displayAmount = `${displayPrefix}${currencySymbol} ${Math.abs(amount).toLocaleString('es-AR', {
+    const formattedNumber = Math.abs(amount).toLocaleString('es-AR', {
         minimumFractionDigits: money.config.decimalPlaces,
         maximumFractionDigits: money.config.decimalPlaces,
-    })}`;
+    });
+    const displayAmount = showCurrencySymbol
+        ? `${displayPrefix}${currencySymbol} ${formattedNumber}`
+        : `${displayPrefix}${formattedNumber}`;
 
     const showRate = showExchangeRate && exchangeRate > 1;
 
@@ -158,6 +265,8 @@ export function createMoneyColumn<TData>(
         align = "right",
         enableSorting = true,
         size = 130,
+        editable = false,
+        onUpdate,
     } = options;
 
     return {
@@ -169,7 +278,12 @@ export function createMoneyColumn<TData>(
                 className={align === "right" ? "justify-end" : undefined}
             />
         ),
-        cell: ({ row }) => <MoneyCell row={row} options={options} />,
+        cell: ({ row }) => {
+            if (editable && onUpdate) {
+                return <EditableMoneyCell row={row} options={options} />;
+            }
+            return <MoneyCell row={row} options={options} />;
+        },
         enableSorting,
         size,
     };

@@ -159,20 +159,20 @@ export function BaseDualAreaChart({
                     <XAxis
                         dataKey={xKey}
                         tickFormatter={xAxisFormatter}
-                        fontSize={11}
+                        fontSize={CHART_DEFAULTS.fontSize}
                         tickLine={false}
                         axisLine={false}
                         minTickGap={20}
-                        tick={{ fill: '#a1a1aa' }}
+                        tick={{ fill: 'currentColor', className: 'text-muted-foreground' }}
                         dy={4}
                     />
                     <YAxis
                         tickFormatter={effectiveYAxisFormatter}
-                        fontSize={11}
+                        fontSize={CHART_DEFAULTS.fontSize}
                         tickLine={false}
                         axisLine={false}
                         width={40}
-                        tick={{ fill: '#a1a1aa' }}
+                        tick={{ fill: 'currentColor', className: 'text-muted-foreground' }}
                     />
                     <ChartTooltip
                         cursor={{ stroke: `var(--color-${primaryKey})`, strokeWidth: 1, strokeDasharray: '4 4' }}
@@ -180,7 +180,7 @@ export function BaseDualAreaChart({
                     />
                     {/* Secondary Area - with subtle gradient fill */}
                     <Area
-                        type="monotone"
+                        type="natural"
                         dataKey={secondaryKey}
                         name={secondaryLabel}
                         stroke={`var(--color-${secondaryKey}, ${secondaryColor})`}
@@ -191,7 +191,7 @@ export function BaseDualAreaChart({
                     />
                     {/* Primary Area - with gradient fill (rendered on top) */}
                     <Area
-                        type="monotone"
+                        type="natural"
                         dataKey={primaryKey}
                         name={primaryLabel}
                         stroke={`var(--color-${primaryKey}, ${primaryColor})`}

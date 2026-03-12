@@ -48,6 +48,7 @@ export interface GeneralCostPayment {
     created_by: string | null;
     is_deleted: boolean;
     deleted_at: string | null;
+    covers_period: string | null;
 }
 
 export interface GeneralCostPaymentView {
@@ -55,6 +56,7 @@ export interface GeneralCostPaymentView {
     organization_id: string;
     payment_date: string;
     payment_month: string;
+    covers_period: string | null;
     amount: number;
     currency_id: string;
     currency_code?: string;
@@ -133,6 +135,12 @@ export interface EnhancedDashboardData {
         status: 'on_track' | 'pending' | 'overdue';
         lastPaymentDate: string | null;
     }[];
+    /** Heatmap matrix: recurring concepts × months */
+    heatmapData: {
+        rows: { id: string; label: string }[];
+        columns: { key: string; label: string }[];
+        data: Record<string, Record<string, number>>;
+    };
     insights: Insight[];
     recentActivity: GeneralCostPaymentView[];
 }

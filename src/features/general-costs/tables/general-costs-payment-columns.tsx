@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { type ColumnDef } from "@tanstack/react-table";
 import {
     createDateColumn,
     createTextColumn,
@@ -8,6 +8,10 @@ import {
     createStatusColumn,
     createEntityColumn,
     createWalletColumn,
+    createCurrencyColumn,
+    createExchangeRateColumn,
+    createPeriodColumn,
+    createAttachmentColumn,
     type StatusOption,
 } from "@/components/shared/data-table/columns";
 import type { ExportColumn } from "@/lib/export";
@@ -38,12 +42,27 @@ const STATUS_LABELS: Record<string, string> = Object.fromEntries(
 interface PaymentColumnsOptions {
     onInlineUpdate?: (row: GeneralCostPaymentView, updates: Record<string, any>) => Promise<void> | void;
     wallets?: { id: string; wallet_name: string }[];
+    concepts?: { id: string; name: string; category?: { name: string } | null }[];
+    currencies?: { id: string; name: string; code: string; symbol: string }[];
+    /** Fetch existing attachments for a row */
+    fetchAttachments?: (row: GeneralCostPaymentView) => Promise<any[]>;
+    /** Called when attachments change (upload/remove) */
+    onAttachmentsChange?: (row: GeneralCostPaymentView, files: any[]) => void;
+    /** Organization ID for attachment upload path */
+    organizationId?: string;
 }
 
 export function getGeneralCostPaymentColumns(
     options: PaymentColumnsOptions = {}
 ): ColumnDef<GeneralCostPaymentView>[] {
-    const { onInlineUpdate, wallets = [] } = options;
+    const { onInlineUpdate, wallets = [], concepts = [], currencies = [], fetchAttachments, onAttachmentsChange, organizationId } = options;
+
+    // Build entity options for concept column
+    const conceptEntityOptions = concepts.map(c => ({
+        value: c.name,
+        label: c.name,
+        subtitle: c.category?.name || undefined,
+    }));
 
     return [
         // 1. Fecha — con avatar del creador
@@ -56,18 +75,50 @@ export function getGeneralCostPaymentColumns(
                 ? (row, newDate) => onInlineUpdate(row, { payment_date: newDate })
                 : undefined,
         }),
-        // 2. Concepto — entidad con nombre + categoría como subtítulo
+        // 2. Concepto — entidad con nombre + categoría, editable inline
         createEntityColumn<GeneralCostPaymentView>({
             accessorKey: "general_cost_name",
             title: "Concepto",
+            emptyValue: "Sin concepto",
             getSubtitle: (row) => row.category_name || "Sin categoría",
+            editable: !!onInlineUpdate,
+            entityOptions: conceptEntityOptions,
+            editSearchPlaceholder: "Buscar concepto...",
+            emptySearchMessage: "No hay conceptos creados aún.",
+            manageRoute: { pathname: "/organization/general-costs" as const, query: { view: "concepts" } },
+            manageLabel: "Gestionar conceptos",
+            onUpdate: onInlineUpdate
+                ? (row, newValue) => {
+                    // Find the concept to get its ID and category
+                    const concept = concepts.find(c => c.name === newValue);
+                    if (concept) {
+                        onInlineUpdate(row, {
+                            general_cost_id: concept.id,
+                            general_cost_name: concept.name,
+                            category_name: concept.category?.name || null,
+                        });
+                    }
+                }
+                : undefined,
         }),
-        // 3. Descripción — notas o referencia
+        // 3. Período — solo visible/editable cuando concepto es recurrente
+        createPeriodColumn<GeneralCostPaymentView>({
+            editable: !!onInlineUpdate,
+            onUpdate: onInlineUpdate
+                ? (row, newValue) => onInlineUpdate(row, { covers_period: newValue })
+                : undefined,
+            manageRoute: { pathname: "/organization/general-costs" as const, query: { view: "concepts" } },
+        }),
+        // 4. Descripción — notas o referencia
         createTextColumn<GeneralCostPaymentView>({
             accessorKey: "notes",
             title: "Descripción",
             secondary: true,
             emptyValue: "-",
+            editable: !!onInlineUpdate,
+            onUpdate: onInlineUpdate
+                ? (row, newValue) => onInlineUpdate(row, { notes: newValue })
+                : undefined,
         }),
         // 4. Billetera — icono + nombre, auto-sized, inline editable
         createWalletColumn<GeneralCostPaymentView>({
@@ -78,14 +129,46 @@ export function getGeneralCostPaymentColumns(
                 ? (row, newValue) => onInlineUpdate(row, { wallet_name: newValue })
                 : undefined,
         }),
-        // 5. Monto — negativo (es gasto)
+        // 5. Moneda — símbolo + código, inline editable
+        createCurrencyColumn<GeneralCostPaymentView>({
+            accessorKey: "currency_code",
+            editable: !!onInlineUpdate,
+            currencyOptions: currencies.map(c => ({
+                value: c.code,
+                label: `${c.name} (${c.symbol})`,
+                symbol: c.symbol,
+            })),
+            onUpdate: onInlineUpdate
+                ? (row, newValue) => {
+                    const currency = currencies.find(c => c.code === newValue);
+                    if (currency) {
+                        onInlineUpdate(row, {
+                            currency_id: currency.id,
+                            currency_code: currency.code,
+                            currency_symbol: currency.symbol,
+                        });
+                    }
+                }
+                : undefined,
+        }),
+        // 6. Monto — con símbolo de moneda, editable inline
         createMoneyColumn<GeneralCostPaymentView>({
             accessorKey: "amount",
-            prefix: "-",
-            colorMode: "negative",
-            currencyKey: "currency_code",
+            colorMode: "none",
+            showExchangeRate: false,
+            editable: !!onInlineUpdate,
+            onUpdate: onInlineUpdate
+                ? (row, newValue) => onInlineUpdate(row, { amount: newValue })
+                : undefined,
         }),
-        // 6. Estado — con inline editing
+        // 7. Tasa de cambio — editable inline
+        createExchangeRateColumn<GeneralCostPaymentView>({
+            editable: !!onInlineUpdate,
+            onUpdate: onInlineUpdate
+                ? (row, newValue) => onInlineUpdate(row, { exchange_rate: newValue })
+                : undefined,
+        }),
+        // 7. Estado — con inline editing
         createStatusColumn<GeneralCostPaymentView>({
             accessorKey: "status",
             title: "Estado",
@@ -94,6 +177,17 @@ export function getGeneralCostPaymentColumns(
             onUpdate: onInlineUpdate
                 ? (row, newValue) => onInlineUpdate(row, { status: newValue })
                 : undefined,
+        }),
+        // 8. Adjuntos — editable inline con popover
+        createAttachmentColumn<GeneralCostPaymentView>({
+            editable: !!fetchAttachments,
+            bucket: "private-assets",
+            folderPath: organizationId
+                ? `organizations/${organizationId}/finance/general-costs`
+                : "",
+            maxSizeMB: 5,
+            fetchAttachments,
+            onFilesChange: onAttachmentsChange,
         }),
     ];
 }

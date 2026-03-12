@@ -14,7 +14,6 @@ import { createClient } from "@/lib/supabase/server";
 // Views - imported directly without intermediary
 import { FinancesOverviewView } from "@/features/finance/views/finances-overview-view";
 import { FinancesMovementsView } from "@/features/finance/views/finances-movements-view";
-import { FinancesSettingsView } from "@/features/finance/views/finances-settings-view";
 import { FinancesCapitalView } from "@/features/finance/views/finances-capital-view";
 
 // Reusable tab trigger style
@@ -198,9 +197,6 @@ export default async function FinancePage({ params, searchParams }: { params: Pr
                         <TabsTrigger value="capital" className={tabTriggerClass}>
                             Socios
                         </TabsTrigger>
-                        <TabsTrigger value="settings" className={tabTriggerClass}>
-                            Configuración
-                        </TabsTrigger>
                     </TabsList>
                 }
             >
@@ -238,21 +234,6 @@ export default async function FinancePage({ params, searchParams }: { params: Pr
                             participants={capitalParticipants}
                             wallets={capitalWallets}
                             organizationId={orgId}
-                        />
-                    </ContentLayout>
-                </TabsContent>
-
-                {/* Settings Tab */}
-                <TabsContent value="settings" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                    <ContentLayout variant="settings">
-                        <FinancesSettingsView
-                            organizationId={orgId}
-                            preferences={settingsData.preferences}
-                            orgCurrencies={settingsData.contactCurrencies}
-                            orgWallets={settingsData.contactWallets}
-                            availableCurrencies={settingsData.availableCurrencies}
-                            availableWallets={settingsData.availableWallets}
-                            subscription={settingsData.subscription}
                         />
                     </ContentLayout>
                 </TabsContent>

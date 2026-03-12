@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
-import { Settings, MapPin, FileText, TrendingUp } from "lucide-react";
+import { Settings, MapPin, FileText, TrendingUp, DollarSign } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { getDashboardData } from "@/features/organization/queries";
 import { requireAuthContext } from "@/lib/auth";
 import { getIndexTypes } from "@/features/advanced/queries";
+import { getOrganizationSettingsData } from "@/actions/organization-settings";
 import { OrganizationDetailsForm } from "@/features/organization/components/forms/organization-details-form";
 import { OrganizationLocationManager } from "@/features/organization/components/location-manager";
 import { BrandPdfTemplates } from "@/features/organization/components/brand/brand-pdf-templates";
 import { AdvancedIndicesView } from "@/features/advanced/views/advanced-indices-view";
+import { FinancesSettingsView } from "@/features/finance/views/finances-settings-view";
 
 // ============================================================================
 // Metadata
@@ -27,8 +29,10 @@ export async function generateMetadata(): Promise<Metadata> {
 // Page Component
 // ============================================================================
 
-export default async function OrganizationSettingsPage() {
+export default async function OrganizationSettingsPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
     try {
+        const resolvedSearch = await searchParams;
+        const defaultTab = resolvedSearch.view || "general";
         const data = await getDashboardData();
         const organization = data.organization;
 
@@ -37,10 +41,13 @@ export default async function OrganizationSettingsPage() {
         }
 
         const { orgId: organizationId } = await requireAuthContext();
-        const indexTypes = organizationId ? await getIndexTypes(organizationId) : [];
+        const [indexTypes, settingsData] = await Promise.all([
+            organizationId ? getIndexTypes(organizationId) : [],
+            getOrganizationSettingsData(organizationId),
+        ]);
 
         return (
-            <Tabs defaultValue="general" className="h-full flex flex-col">
+            <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
                     title="Configuración"
@@ -62,6 +69,10 @@ export default async function OrganizationSettingsPage() {
                             <TabsTrigger value="indices" className="gap-2">
                                 <TrendingUp className="h-4 w-4" />
                                 Índices Económicos
+                            </TabsTrigger>
+                            <TabsTrigger value="finance" className="gap-2">
+                                <DollarSign className="h-4 w-4" />
+                                Finanzas
                             </TabsTrigger>
                         </TabsList>
                     }
@@ -98,6 +109,21 @@ export default async function OrganizationSettingsPage() {
                             </ContentLayout>
                         </TabsContent>
                     )}
+
+                    {/* Tab: Finanzas */}
+                    <TabsContent value="finance" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ContentLayout variant="settings">
+                            <FinancesSettingsView
+                                organizationId={organizationId}
+                                preferences={settingsData.preferences}
+                                orgCurrencies={settingsData.contactCurrencies}
+                                orgWallets={settingsData.contactWallets}
+                                availableCurrencies={settingsData.availableCurrencies}
+                                availableWallets={settingsData.availableWallets}
+                                subscription={settingsData.subscription}
+                            />
+                        </ContentLayout>
+                    </TabsContent>
                 </PageWrapper>
             </Tabs>
         );

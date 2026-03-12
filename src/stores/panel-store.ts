@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import type { LucideIcon } from 'lucide-react';
 
 export type PanelSize = 'sm' | 'md' | 'lg' | 'xl';
+export type PanelMode = 'panel' | 'modal';
 
 const MAX_STACK_DEPTH = 2;
 
@@ -40,6 +41,8 @@ export interface PanelMeta {
     size?: PanelSize;
     icon?: LucideIcon;
     footer?: PanelFooterConfig;
+    /** Container mode: 'modal' (centered, default) or 'panel' (right drawer) */
+    mode?: PanelMode;
 }
 
 // ============================================================================
@@ -58,6 +61,7 @@ interface PanelItem {
     size?: PanelSize;
     icon?: LucideIcon;
     footer?: PanelFooterConfig;
+    mode?: PanelMode;
     isSubmitting?: boolean;
     beforeClose?: () => Promise<boolean> | boolean;
 }
@@ -68,6 +72,10 @@ interface PanelItem {
 
 interface PanelStore {
     stack: PanelItem[];
+    /** When true, form stays open after success for rapid creation */
+    createAnother: boolean;
+    /** Brief success flash indicator for 'create another' */
+    successFlash: boolean;
 
     // Core actions
     openPanel: (panelId: string, props?: Record<string, unknown>) => void;
@@ -81,6 +89,11 @@ interface PanelStore {
     // Form-footer bridge
     setSubmitting: (isSubmitting: boolean) => void;
 
+    // Create another toggle
+    toggleCreateAnother: () => void;
+    /** Trigger a brief success animation on the modal */
+    triggerSuccessFlash: () => void;
+
     // Dirty form guard
     setBeforeClose: (handler: (() => Promise<boolean> | boolean) | undefined) => void;
 }
@@ -89,6 +102,8 @@ const generateId = () => Math.random().toString(36).substring(7);
 
 export const usePanel = create<PanelStore>((set, get) => ({
     stack: [],
+    createAnother: false,
+    successFlash: false,
 
     openPanel: (panelId, props) => {
         const { stack } = get();
@@ -187,5 +202,14 @@ export const usePanel = create<PanelStore>((set, get) => ({
             newStack[lastIndex] = { ...newStack[lastIndex], beforeClose: handler };
             return { stack: newStack };
         });
+    },
+
+    toggleCreateAnother: () => {
+        set((state) => ({ createAnother: !state.createAnother }));
+    },
+
+    triggerSuccessFlash: () => {
+        set({ successFlash: true });
+        setTimeout(() => set({ successFlash: false }), 800);
     },
 }));

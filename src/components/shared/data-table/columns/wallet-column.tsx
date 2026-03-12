@@ -4,25 +4,18 @@
  *
  * Renders a compact column with Wallet icon + name.
  * Auto-sizes to content (NOT fillWidth like text columns).
- * Optionally supports inline editing via Popover + Command.
+ * Optionally supports inline editing via Popover + shared WalletPopoverContent.
  */
 
 "use client";
 
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Check, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-    Command,
-    CommandInput,
-    CommandGroup,
-    CommandItem,
-    CommandList,
-    CommandEmpty,
-} from "@/components/ui/command";
 import { DataTableColumnHeader } from "../data-table-column-header";
+import { WalletPopoverContent } from "@/components/shared/popovers";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────
@@ -100,28 +93,12 @@ function EditableWalletCell<TData>({
                 </button>
             </PopoverTrigger>
             <PopoverContent className="w-48 p-0" align="start" onClick={(e) => e.stopPropagation()}>
-                <Command>
-                    <CommandInput placeholder="Buscar billetera..." className="h-8 text-xs" />
-                    <CommandList>
-                        <CommandEmpty>No encontrada</CommandEmpty>
-                        <CommandGroup>
-                            {walletOptions.map((option) => (
-                                <CommandItem
-                                    key={option.value}
-                                    value={option.value}
-                                    onSelect={() => handleSelect(option.value)}
-                                    className="flex items-center gap-2 text-xs"
-                                >
-                                    <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <span className="flex-1">{option.label}</span>
-                                    {currentValue === option.value && (
-                                        <Check className="h-3.5 w-3.5 text-muted-foreground" />
-                                    )}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
+                <WalletPopoverContent
+                    options={walletOptions}
+                    currentValue={currentValue}
+                    onSelect={handleSelect}
+                    onOpenChange={setOpen}
+                />
             </PopoverContent>
         </Popover>
     );
@@ -173,5 +150,20 @@ export function createWalletColumn<TData>(
         },
         enableSorting,
         ...(size ? { size } : {}),
+        // Context menu metadata for right-click menus
+        ...(editable && onUpdate && walletOptions.length > 0 ? {
+            meta: {
+                contextMenu: {
+                    label: title,
+                    icon: Wallet,
+                    options: walletOptions.map(o => ({
+                        value: o.value,
+                        label: o.label,
+                    })),
+                    currentValueKey: accessorKey,
+                    onSelect: (row: TData, value: string) => onUpdate(row, value),
+                },
+            },
+        } : {}),
     };
 }

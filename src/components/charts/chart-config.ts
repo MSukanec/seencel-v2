@@ -8,24 +8,24 @@ export const CHART_COLORS = {
     primaryGradientStart: "var(--primary)", // Opacity handled in component
     primaryGradientEnd: "var(--primary)",
 
-    // Semantic
-    success: "var(--chart-6)", // Emerald
-    warning: "#f59e0b", // amber-500
-    danger: "var(--chart-8)", // Rose
-    info: "var(--chart-5)", // Cyan
-    neutral: "#71717a", // zinc-500
+    // Semantic — uses CSS variables from globals.css
+    success: "var(--semantic-positive)",
+    warning: "var(--semantic-warning)",
+    danger: "var(--semantic-negative)",
+    info: "var(--semantic-info)",
+    neutral: "var(--semantic-neutral)",
 
     // Categorical Palette (uses CSS variables for theming)
     // Order matters: used sequentially in multi-series charts
     categorical: [
-        "var(--chart-1)", // Violet
-        "var(--chart-2)", // Pink
-        "var(--chart-3)", // Orange
-        "var(--chart-4)", // Yellow
-        "var(--chart-5)", // Cyan
-        "var(--chart-6)", // Emerald
-        "var(--chart-7)", // Indigo
-        "var(--chart-8)", // Rose
+        "var(--chart-1)", // Oliva — Primary
+        "var(--chart-2)", // Lavanda — Secondary
+        "var(--chart-3)", // Naranja — Warm accent
+        "var(--chart-4)", // Oro — Highlight
+        "var(--chart-5)", // Cyan — Cool contrast
+        "var(--chart-6)", // Violeta
+        "var(--chart-7)", // Índigo
+        "var(--chart-8)", // Rosa — Alert
     ]
 };
 
@@ -65,8 +65,8 @@ export const CHART_GRADIENTS = {
 };
 
 export const CHART_DEFAULTS = {
-    animationDuration: 1000,
-    fontSize: 12,
+    animationDuration: 2000,
+    fontSize: 10,
     fontFamily: "var(--font-sans)",
     gridColor: "hsl(var(--border))",
     // Gradient intensity for area fills
@@ -107,4 +107,13 @@ export const formatCompactNumber = (value: number) => {
 // Helper to get color by index (cycles through palette)
 export const getChartColor = (index: number): string => {
     return CHART_COLORS.categorical[index % CHART_COLORS.categorical.length];
+};
+
+/**
+ * Capitalize first letter of a month label.
+ * date-fns with locale 'es' returns lowercase months ("ene 26").
+ * This converts to "Ene 26" for cleaner chart display.
+ */
+export const capitalizeMonth = (label: string): string => {
+    return label.charAt(0).toUpperCase() + label.slice(1);
 };

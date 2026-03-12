@@ -97,49 +97,49 @@ export function PageHeader({
         >
             {/* DESKTOP LAYOUT (Hidden on Mobile) */}
             <div className="hidden md:block">
-                {/* Row 1: Title + Tabs + Actions */}
-                <div className="px-8 h-[50px] flex items-center justify-between gap-4">
-                    {/* Left: Breadcrumb + Title + Tabs */}
+                {/* Row 1: Title + Tabs (centered) + Actions */}
+                <div className="px-8 h-[50px] flex items-center justify-between gap-4 relative">
+                    {/* Left: Breadcrumb + Title */}
                     <div className="flex items-center gap-0 h-full">
                         {/* Breadcrumb: Org / Project */}
                         <HeaderOrgProjectSelector />
 
-                        {/* Separator between breadcrumb and title */}
-                        <div className="h-5 w-px bg-border/60 mx-2" />
+                        {/* Breadcrumb separator */}
+                        <span className="text-sm text-muted-foreground mx-1.5">/</span>
 
                         <div className="flex items-center gap-1.5">
                             {backButton}
-                            {icon ? (
-                                React.cloneElement(icon as any, {
-                                    className: cn("h-4 w-4 text-muted-foreground", (icon as any).props?.className)
-                                })
-                            ) : ActiveIcon ? (
-                                <ActiveIcon className="h-4 w-4 text-muted-foreground" />
-                            ) : null}
                             <h1 className="text-sm font-medium text-foreground">
                                 {activeItem?.title || titleItem?.label}
                             </h1>
                         </div>
-
-                        {/* Tabs inline with title - Full Height */}
-                        {tabs && (
-                            <div className={cn(
-                                "flex items-center border-l border-border/50 pl-4 h-full",
-                                // TabList
-                                "[&_[role=tablist]]:!bg-transparent [&_[role=tablist]]:!p-0 [&_[role=tablist]]:!gap-0 [&_[role=tablist]]:!h-full [&_[role=tablist]]:!items-end",
-                                // TabTrigger - Base
-                                "[&_[role=tab]]:!relative [&_[role=tab]]:!h-[calc(100%-6px)] [&_[role=tab]]:!rounded-t-lg [&_[role=tab]]:!rounded-b-none",
-                                "[&_[role=tab]]:!bg-transparent [&_[role=tab]]:!border-none",
-                                "[&_[role=tab]]:!px-5 [&_[role=tab]]:!text-muted-foreground [&_[role=tab]]:!shadow-none",
-                                "[&_[role=tab]]:!cursor-pointer [&_[role=tab]]:!transition-all [&_[role=tab]]:!duration-200",
-                                // TabTrigger - Active: same background as page content
-                                "[&_[role=tab][data-state=active]]:!text-foreground [&_[role=tab][data-state=active]]:!bg-background",
-                                "[&_[role=tab][data-state=active]]:!shadow-none",
-                            )}>
-                                {tabs}
-                            </div>
-                        )}
                     </div>
+
+                    {/* Center: Tabs — chip style, absolutely centered */}
+                    {tabs && (
+                        <div className={cn(
+                            "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+                            "flex items-center",
+                            // Container pill background
+                            "[&_[role=tablist]]:!bg-muted/50 [&_[role=tablist]]:!backdrop-blur-sm",
+                            "[&_[role=tablist]]:!p-1 [&_[role=tablist]]:!gap-0.5",
+                            "[&_[role=tablist]]:!h-auto [&_[role=tablist]]:!items-center",
+                            "[&_[role=tablist]]:!rounded-full [&_[role=tablist]]:!border [&_[role=tablist]]:!border-border/30",
+                            // TabTrigger - Base: chip style
+                            "[&_[role=tab]]:!relative [&_[role=tab]]:!h-auto",
+                            "[&_[role=tab]]:!rounded-full",
+                            "[&_[role=tab]]:!bg-transparent [&_[role=tab]]:!border-none",
+                            "[&_[role=tab]]:!px-4 [&_[role=tab]]:!py-1.5 [&_[role=tab]]:!text-xs [&_[role=tab]]:!font-medium",
+                            "[&_[role=tab]]:!text-muted-foreground [&_[role=tab]]:!shadow-none",
+                            "[&_[role=tab]]:!cursor-pointer [&_[role=tab]]:!transition-all [&_[role=tab]]:!duration-200",
+                            "[&_[role=tab]:hover]:!text-foreground [&_[role=tab]:hover]:!bg-muted/80",
+                            // TabTrigger - Active: solid chip
+                            "[&_[role=tab][data-state=active]]:!text-foreground [&_[role=tab][data-state=active]]:!bg-background",
+                            "[&_[role=tab][data-state=active]]:!shadow-sm",
+                        )}>
+                            {tabs}
+                        </div>
+                    )}
 
                     {/* Right: Quick Access + Actions + Avatar */}
                     <div id="page-header-actions" className="flex items-center gap-1.5">

@@ -14,8 +14,6 @@
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "../data-table-column-header";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export interface TextColumnOptions<TData> {
@@ -70,23 +68,22 @@ function EditableTextCell<TData>({
     onUpdate: (row: TData, newValue: string) => Promise<void> | void;
     placeholder?: string;
 }) {
-    const [open, setOpen] = React.useState(false);
+    const [isEditing, setIsEditing] = React.useState(false);
     const [editValue, setEditValue] = React.useState(value || "");
     const inputRef = React.useRef<HTMLInputElement>(null);
 
-    React.useEffect(() => {
-        if (open) {
-            setEditValue(value || "");
-            // Focus input after popover opens
-            setTimeout(() => inputRef.current?.select(), 50);
-        }
-    }, [open, value]);
+    const handleStartEditing = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditValue(value || "");
+        setIsEditing(true);
+        setTimeout(() => inputRef.current?.select(), 10);
+    };
 
     const handleSave = async () => {
         if (editValue !== (value || "")) {
             await onUpdate(row, editValue);
         }
-        setOpen(false);
+        setIsEditing(false);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -95,38 +92,44 @@ function EditableTextCell<TData>({
             handleSave();
         }
         if (e.key === "Escape") {
-            setOpen(false);
+            setIsEditing(false);
         }
     };
 
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <button
-                    className={cn(
-                        "text-left cursor-pointer rounded px-1 -mx-1 transition-colors hover:bg-muted/50",
-                        secondary
-                            ? "text-xs font-[450] text-muted-foreground"
-                            : muted ? "text-muted-foreground" : "font-medium",
-                        !value && "text-muted-foreground italic"
-                    )}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {value || emptyValue}
-                </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-2" align="start" onClick={(e) => e.stopPropagation()}>
-                <Input
+    if (isEditing) {
+        return (
+            <div onClick={(e) => e.stopPropagation()}>
+                <input
                     ref={inputRef}
+                    type="text"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onBlur={handleSave}
                     placeholder={placeholder || "Escribir..."}
-                    className="h-8 text-sm"
+                    className={cn(
+                        "w-full h-7 px-2 text-sm bg-background border border-border rounded-md",
+                        "focus:outline-none focus:ring-1 focus:ring-ring",
+                    )}
                 />
-            </PopoverContent>
-        </Popover>
+            </div>
+        );
+    }
+
+    return (
+        <button
+            className={cn(
+                "text-left cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition-all truncate block max-w-full",
+                "border border-transparent hover:border-dashed hover:border-border hover:bg-[#2a2b2d]",
+                secondary
+                    ? "text-xs font-[450] text-muted-foreground"
+                    : muted ? "text-muted-foreground" : "font-medium",
+                !value && "text-muted-foreground italic"
+            )}
+            onClick={handleStartEditing}
+        >
+            {value || emptyValue}
+        </button>
     );
 }
 

@@ -1,28 +1,42 @@
 "use client";
 
 /**
- * General Costs — Payment Form (Panel)
- * Standard 19.0 - Self-Contained Panel Form
+ * General Costs — Payment Form (Modal)
+ * Hybrid Chip Form — Linear-inspired
  *
- * Supports edit mode with Field Factories.
- * View mode is handled by a separate detail panel if needed.
+ * Layout:
+ * ┌─────────────────────────────────┐
+ * │ Header (icon + title)           │
+ * ├─────────────────────────────────┤
+ * │ Chips (metadata)                │
+ * │─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │
+ * │ Hero: Amount (big, bg accent)   │
+ * │                                 │
+ * │ Exchange rate (borderless)      │
+ * │ Notes (borderless textarea)     │
+ * │ Reference (borderless)          │
+ * │ Upload                          │
+ * ├─────────────────────────────────┤
+ * │ Footer (cancel + submit)        │
+ * └─────────────────────────────────┘
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { usePanel } from "@/stores/panel-store";
-import { Receipt } from "lucide-react";
+import { Receipt, FileText } from "lucide-react";
 import { toast } from "sonner";
 import {
-    AmountField,
-    DateField,
-    SelectField,
-    WalletField,
-    CurrencyField,
-    ExchangeRateField,
-    NotesField,
-    ReferenceField,
-    UploadField,
-} from "@/components/shared/forms/fields";
+    ChipRow,
+    SelectChip,
+    StatusChip,
+    WalletChip,
+    CurrencyChip,
+    DateChip,
+    PeriodChip,
+    AttachmentChip,
+} from "@/components/shared/chips";
+import type { StatusOption } from "@/components/shared/chips";
+import type { PeriodGranularity } from "@/components/shared/chips";
 import type { UploadedFile } from "@/hooks/use-file-upload";
 import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import { GeneralCost, GeneralCostPaymentView } from "@/features/general-costs/types";
@@ -42,12 +56,19 @@ interface PaymentFormProps {
 
 // ─── Status options ──────────────────────────────────────
 
-const STATUS_OPTIONS = [
-    { value: "confirmed", label: "Confirmado" },
-    { value: "pending", label: "Pendiente" },
-    { value: "overdue", label: "Vencido" },
-    { value: "cancelled", label: "Cancelado" },
+const STATUS_OPTIONS: StatusOption[] = [
+    { value: "confirmed", label: "Confirmado", variant: "positive" },
+    { value: "pending", label: "Pendiente", variant: "warning" },
+    { value: "overdue", label: "Vencido", variant: "negative" },
+    { value: "cancelled", label: "Cancelado", variant: "neutral" },
 ];
+
+/** Format amount with thousand separators for display (AR format: 150.000,50) */
+function formatAmountDisplay(raw: string): string {
+    const [integer, decimal] = raw.split(".");
+    const formatted = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return decimal !== undefined ? `${formatted},${decimal}` : formatted;
+}
 
 // ─── Component ───────────────────────────────────────────
 
@@ -60,7 +81,7 @@ export function GeneralCostsPaymentForm({
     onSuccess,
     formId,
 }: PaymentFormProps) {
-    const { closePanel, setPanelMeta } = usePanel();
+    const { closePanel, setPanelMeta, createAnother, triggerSuccessFlash } = usePanel();
     const isEditing = !!initialData;
     const [isLoading, setIsLoading] = useState(false);
     const uploadCleanupRef = useRef<(() => void) | null>(null);
@@ -72,18 +93,64 @@ export function GeneralCostsPaymentForm({
     const [generalCostId, setGeneralCostId] = useState(initialData?.general_cost_id || "");
     const [amount, setAmount] = useState(initialData?.amount?.toString() || "");
     const [status, setStatus] = useState(initialData?.status || "confirmed");
-    const [currencyId, setCurrencyId] = useState(initialData?.currency_id || currencies[0]?.id || "");
-    const [walletId, setWalletId] = useState(initialData?.wallet_id || wallets[0]?.id || "");
+    const [currencyId, setCurrencyId] = useState(initialData?.currency_id || currencies?.[0]?.id || "");
+    const [walletId, setWalletId] = useState(initialData?.wallet_id || wallets?.[0]?.id || "");
     const [notes, setNotes] = useState(initialData?.notes || "");
     const [reference, setReference] = useState(initialData?.reference || "");
     const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate?.toString() || "");
     const [files, setFiles] = useState<UploadedFile[]>([]);
+    const [coversPeriod, setCoversPeriod] = useState(
+        initialData?.covers_period || ""
+    );
+
+    // Reset form for "create another"
+    const resetForm = () => {
+        setAmount("");
+        setNotes("");
+        setReference("");
+        setFiles([]);
+        setExchangeRate("");
+        setPaymentDate(new Date());
+        setCoversPeriod("");
+    };
+
+    // ─── Derived state ───────────────────────────────────
+    const selectedConcept = useMemo(
+        () => (concepts || []).find(c => c.id === generalCostId),
+        [concepts, generalCostId]
+    );
+    const isRecurring = selectedConcept?.is_recurring ?? false;
+
+    const periodGranularity = useMemo((): PeriodGranularity => {
+        switch (selectedConcept?.recurrence_interval) {
+            case 'monthly': return 'month';
+            case 'quarterly': return 'quarter';
+            case 'yearly': return 'year';
+            default: return 'month';
+        }
+    }, [selectedConcept?.recurrence_interval]);
+
+    const selectedCurrency = currencies?.find(c => c.id === currencyId);
+    const currencySymbol = selectedCurrency?.symbol || "$";
+
+    // Auto-set/clear covers_period when concept changes
+    useEffect(() => {
+        if (isRecurring && !coversPeriod) {
+            const d = paymentDate || new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            setCoversPeriod(`${y}-${m}-01`);
+        }
+        if (!isRecurring && coversPeriod) {
+            setCoversPeriod("");
+        }
+    }, [isRecurring]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ─── Panel Meta ──────────────────────────────────────
     useEffect(() => {
         setPanelMeta({
             icon: Receipt,
-            title: isEditing ? "Editar Pago" : "Nuevo Pago",
+            title: isEditing ? "Editar Pago" : "Nuevo Pago de Gastos Generales",
             description: isEditing
                 ? "Modificá los datos del pago de gasto general."
                 : "Registrá un pago de gasto general.",
@@ -94,11 +161,29 @@ export function GeneralCostsPaymentForm({
         });
     }, [isEditing, setPanelMeta]);
 
-    // ─── Concept options ─────────────────────────────────
-    const conceptOptions = [
-        { value: "", label: "Sin concepto (Varios)" },
-        ...concepts.map((c) => ({ value: c.id, label: c.name })),
-    ];
+    // ─── Chip options ────────────────────────────────────
+    const conceptChipOptions = useMemo(() =>
+        (concepts || []).map((c) => ({
+            value: c.id,
+            label: c.name,
+            icon: <FileText className="h-3.5 w-3.5 text-muted-foreground" />,
+        })),
+        [concepts]
+    );
+
+    const walletChipOptions = useMemo(() =>
+        (wallets || []).map((w) => ({ value: w.id, label: w.wallet_name })),
+        [wallets]
+    );
+
+    const currencyChipOptions = useMemo(() =>
+        (currencies || []).map((c) => ({
+            value: c.id,
+            label: `${c.name} (${c.symbol})`,
+            symbol: c.symbol,
+        })),
+        [currencies]
+    );
 
     // ─── Submit ──────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
@@ -130,6 +215,7 @@ export function GeneralCostsPaymentForm({
                 notes: notes || undefined,
                 reference: reference || undefined,
                 exchange_rate: exchangeRate ? parseFloat(exchangeRate) : undefined,
+                covers_period: isRecurring && coversPeriod ? coversPeriod : undefined,
                 media_files: files && files.length > 0 ? files : undefined,
             };
 
@@ -144,7 +230,14 @@ export function GeneralCostsPaymentForm({
                 toast.success("Pago registrado");
             }
             onSuccess?.();
-            closePanel();
+
+            // If "create another" is active and we're creating (not editing), reset form
+            if (createAnother && !isEditing) {
+                triggerSuccessFlash();
+                resetForm();
+            } else {
+                closePanel();
+            }
         } catch {
             toast.error("Error al guardar el pago");
         } finally {
@@ -154,94 +247,114 @@ export function GeneralCostsPaymentForm({
 
     // ─── Render ──────────────────────────────────────────
     return (
-        <form id={formId} onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Fecha */}
-                <DateField
-                    label="Fecha de Pago"
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col flex-1">
+            {/* ── Chips: Metadata ───────────────────────── */}
+            <ChipRow>
+                <DateChip
                     value={paymentDate}
                     onChange={(d) => d && setPaymentDate(d)}
-                    required
                 />
-
-                {/* Estado */}
-                <SelectField
-                    label="Estado"
+                <SelectChip
+                    value={generalCostId}
+                    onChange={setGeneralCostId}
+                    options={conceptChipOptions}
+                    icon={<FileText className="h-3.5 w-3.5 text-muted-foreground" />}
+                    emptyLabel="Concepto"
+                    searchPlaceholder="Buscar concepto..."
+                    popoverWidth={240}
+                />
+                <PeriodChip
+                    value={coversPeriod}
+                    onChange={setCoversPeriod}
+                    granularity={periodGranularity}
+                    disabled={!isRecurring}
+                />
+                <StatusChip
                     value={status}
                     onChange={setStatus}
                     options={STATUS_OPTIONS}
-                    placeholder="Seleccionar estado"
                 />
-
-                {/* Concepto — full width */}
-                <SelectField
-                    label="Concepto"
-                    value={generalCostId}
-                    onChange={setGeneralCostId}
-                    options={conceptOptions}
-                    placeholder="Buscar concepto..."
-                    searchable
-                    clearable
-                    className="md:col-span-2"
-                />
-
-                {/* Billetera */}
-                <WalletField
+                <WalletChip
                     value={walletId}
                     onChange={setWalletId}
-                    wallets={wallets.map((w) => ({ id: w.id, name: w.wallet_name }))}
-                    required
+                    options={walletChipOptions}
                 />
-
-                {/* Monto */}
-                <AmountField
-                    value={amount}
-                    onChange={setAmount}
-                />
-
-                {/* Moneda */}
-                <CurrencyField
+                <CurrencyChip
                     value={currencyId}
                     onChange={setCurrencyId}
-                    currencies={currencies}
-                    required
+                    options={currencyChipOptions}
                 />
-
-                {/* Cotización */}
-                <ExchangeRateField
-                    value={exchangeRate}
-                    onChange={setExchangeRate}
-                />
-
-                {/* Notas — full width */}
-                <NotesField
-                    value={notes}
-                    onChange={setNotes}
-                    placeholder="Descripción del pago..."
-                    rows={2}
-                    className="md:col-span-2"
-                />
-
-                {/* Referencia — full width */}
-                <ReferenceField
-                    value={reference}
-                    onChange={setReference}
-                    placeholder="Nro. de recibo, factura, etc."
-                    className="md:col-span-2"
-                />
-
-                {/* Comprobante — full width */}
-                <UploadField
-                    label="Comprobante"
-                    mode="multi-file"
+                <AttachmentChip
                     value={files}
-                    onChange={(f) => setFiles(Array.isArray(f) ? f : f ? [f] : [])}
+                    onChange={setFiles}
                     bucket="private-assets"
                     folderPath={`organizations/${organizationId}/finance/general-costs`}
                     maxSizeMB={5}
-                    className="md:col-span-2"
                     cleanupRef={uploadCleanupRef}
                 />
+            </ChipRow>
+
+            {/* ── Separator ─────────────────────────────── */}
+            <div className="border-t border-border/30 my-4" />
+
+            {/* ── Hero: Amount ──────────────────────────── */}
+            <div className="-mx-5 px-5 py-4 border-y border-border/20" style={{ background: "color-mix(in oklch, var(--sidebar), black 15%)" }}>
+                <div className="flex items-center gap-3">
+                    <span className="text-2xl font-light text-muted-foreground select-none">
+                        {currencySymbol}
+                    </span>
+                    <input
+                        type="text"
+                        inputMode="decimal"
+                        value={amount ? formatAmountDisplay(amount) : ""}
+                        onChange={(e) => {
+                            // Strip thousand separators (dots), convert decimal comma to dot
+                            const raw = e.target.value.replace(/\./g, "").replace(",", ".");
+                            if (raw === "" || /^\d*\.?\d*$/.test(raw)) setAmount(raw);
+                        }}
+                        placeholder="0.00"
+                        className="flex-1 bg-transparent text-4xl font-semibold text-foreground placeholder:text-muted-foreground/40 outline-none border-none"
+                        autoFocus
+                    />
+                    {/* Exchange rate inline */}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="select-none">Tasa de Cambio</span>
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            value={exchangeRate ? formatAmountDisplay(exchangeRate) : ""}
+                            onChange={(e) => {
+                                const raw = e.target.value.replace(/\./g, "").replace(",", ".");
+                                if (raw === "" || /^\d*\.?\d*$/.test(raw)) setExchangeRate(raw);
+                            }}
+                            placeholder="1,0000"
+                            className="w-20 bg-transparent text-xs text-muted-foreground placeholder:text-muted-foreground/30 outline-none border-none text-right font-mono"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Borderless fields ─────────────────────── */}
+            <div className="flex-1 mt-4 space-y-1">
+                {/* Notes */}
+                <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Agregar notas o descripción..."
+                    rows={3}
+                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 outline-none border-none resize-none leading-relaxed"
+                />
+
+                {/* Reference — subtle, secondary */}
+                <div className="border-t border-border/10 pt-2 mt-1">
+                    <input
+                        type="text"
+                        value={reference}
+                        onChange={(e) => setReference(e.target.value)}
+                        placeholder="# Nro. de recibo o referencia"
+                        className="w-full bg-transparent text-xs text-muted-foreground placeholder:text-muted-foreground/30 outline-none border-none"
+                    />
+                </div>
             </div>
         </form>
     );

@@ -213,10 +213,10 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
             .eq('organization_id', organizationId)
             .eq('is_recurring', true)
             .eq('is_deleted', false),
-        // Last payment per concept (for obligation status)
+        // All payments for recurring concepts (heatmap + obligation status)
         supabase
             .schema('finance').from('general_costs_payments')
-            .select('general_cost_id, payment_date')
+            .select('general_cost_id, payment_date, amount, exchange_rate, covers_period')
             .eq('organization_id', organizationId)
             .eq('is_deleted', false)
             .order('payment_date', { ascending: false }),
@@ -395,6 +395,41 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
         },
         fixedCostsBreakdown,
         recurringObligations,
+        // --- Heatmap: recurring concepts × months ---
+        heatmapData: (() => {
+            // Build last 12 month columns
+            const now = new Date();
+            const cols: { key: string; label: string }[] = [];
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const label = d.toLocaleDateString('es-AR', { month: 'short', year: '2-digit' }).replace('.', '');
+                cols.push({ key, label });
+            }
+
+            // Rows = all recurring concepts
+            const heatRows = allRecurringConcepts.map((c: any) => ({
+                id: c.id as string,
+                label: c.name as string,
+            }));
+
+            // Build matrix: concept.id → month_key → total amount
+            const matrix: Record<string, Record<string, number>> = {};
+            for (const p of allPayments) {
+                if (!p.general_cost_id) continue;
+                // Use covers_period if available, otherwise fallback to payment_date
+                const periodDate = p.covers_period ? new Date(p.covers_period) : new Date(p.payment_date);
+                const monthKey = `${periodDate.getFullYear()}-${String(periodDate.getMonth() + 1).padStart(2, '0')}`;
+                // Only include months in our range
+                if (!cols.some(c => c.key === monthKey)) continue;
+
+                if (!matrix[p.general_cost_id]) matrix[p.general_cost_id] = {};
+                const amount = Number(p.amount) * (Number(p.exchange_rate) || 1);
+                matrix[p.general_cost_id][monthKey] = (matrix[p.general_cost_id][monthKey] || 0) + amount;
+            }
+
+            return { rows: heatRows, columns: cols, data: matrix };
+        })(),
         insights: insights,
         recentActivity: recentPayments
     };
@@ -540,6 +575,7 @@ export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentV
             notes: data.notes,
             reference: data.reference,
             exchange_rate: data.exchange_rate,
+            covers_period: data.covers_period || null,
         })
         .select()
         .single();
@@ -603,6 +639,47 @@ export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentV
     return newPayment;
 }
 
+export async function duplicateGeneralCostPayment(paymentId: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    // 1. Fetch the original payment
+    const { data: original, error: fetchError } = await supabase
+        .schema('finance').from('general_costs_payments')
+        .select('*')
+        .eq('id', paymentId)
+        .single();
+
+    if (fetchError || !original) {
+        return { success: false, error: "No se encontró el pago original" };
+    }
+
+    // 2. Insert a copy (strip system fields, set today as date, mark as pending)
+    const today = new Date().toISOString().split('T')[0];
+    const { error: insertError } = await supabase
+        .schema('finance').from('general_costs_payments')
+        .insert({
+            organization_id: original.organization_id,
+            general_cost_id: original.general_cost_id,
+            amount: original.amount,
+            currency_id: original.currency_id,
+            wallet_id: original.wallet_id,
+            payment_date: today,
+            status: 'pending',
+            notes: original.notes ? `${original.notes} (copia)` : '(copia)',
+            reference: original.reference,
+            exchange_rate: original.exchange_rate,
+            covers_period: original.covers_period,
+        });
+
+    if (insertError) {
+        console.error('[duplicateGeneralCostPayment] Error:', insertError);
+        return { success: false, error: "Error al duplicar el pago" };
+    }
+
+    revalidatePath('/organization/general-costs');
+    return { success: true };
+}
+
 export async function updateGeneralCostPayment(id: string, data: Partial<GeneralCostPaymentView> & { media_files?: any[] }) {
     const supabase = await createClient();
     const { data: updatedPayment, error } = await supabase
@@ -617,6 +694,7 @@ export async function updateGeneralCostPayment(id: string, data: Partial<General
             notes: data.notes,
             reference: data.reference,
             exchange_rate: data.exchange_rate,
+            covers_period: data.covers_period !== undefined ? (data.covers_period || null) : undefined,
         })
         .eq('id', id)
         .select()
@@ -725,7 +803,7 @@ export async function updateGeneralCostPaymentField(
             if (wallet) {
                 dbFields.wallet_id = wallet.id;
             }
-        } else if (['status', 'payment_date', 'notes', 'reference', 'general_cost_id'].includes(key)) {
+        } else if (['status', 'payment_date', 'notes', 'reference', 'general_cost_id', 'amount', 'exchange_rate', 'currency_id', 'wallet_id', 'covers_period'].includes(key)) {
             // Direct DB-safe fields
             dbFields[key] = value;
         }
@@ -745,6 +823,108 @@ export async function updateGeneralCostPaymentField(
     if (error) {
         console.error('[updateGeneralCostPaymentField] Error:', error);
         return { success: false, error: "Error al actualizar el pago" };
+    }
+
+    revalidatePath('/organization/general-costs');
+    return { success: true };
+}
+
+// ─── Inline Attachment Management ────────────────────────
+
+/**
+ * Fetch existing attachments for a specific payment as UploadedFile[]
+ * (compatible with AttachmentChip)
+ */
+export async function getPaymentAttachments(paymentId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('media_links')
+        .select(`
+            media_file_id,
+            media_files!inner (
+                id,
+                file_name,
+                file_path,
+                file_type,
+                file_size,
+                bucket
+            )
+        `)
+        .eq('general_cost_payment_id', paymentId);
+
+    if (error || !data) {
+        console.error('[getPaymentAttachments] Error:', error);
+        return [];
+    }
+
+    // Convert to UploadedFile format
+    return data.map((link: any) => {
+        const f = link.media_files;
+        const { data: { publicUrl } } = supabase.storage.from(f.bucket).getPublicUrl(f.file_path);
+
+        return {
+            id: f.id,
+            url: publicUrl,
+            path: f.file_path,
+            name: f.file_name || 'archivo',
+            type: f.file_type || 'other',
+            size: f.file_size || 0,
+            bucket: f.bucket,
+        };
+    });
+}
+
+/**
+ * Link an uploaded file to a payment (creates media_files + media_links)
+ */
+export async function linkPaymentAttachment(
+    paymentId: string,
+    organizationId: string,
+    file: { path: string; name: string; type: string; size: number; bucket: string }
+) {
+    const supabase = await createClient();
+
+    const dbType = file.type?.startsWith('image/')
+        ? 'image'
+        : file.type === 'application/pdf'
+            ? 'pdf'
+            : 'other';
+
+    // 1. Create media_file record
+    const { data: fileData, error: fileError } = await supabase
+        .from('media_files')
+        .insert({
+            organization_id: organizationId,
+            bucket: file.bucket,
+            file_path: file.path,
+            file_name: file.name,
+            file_type: dbType,
+            file_size: file.size,
+            is_public: false,
+        })
+        .select()
+        .single();
+
+    if (fileError || !fileData) {
+        console.error('[linkPaymentAttachment] media_files error:', fileError);
+        return { success: false, error: 'Error al registrar archivo' };
+    }
+
+    // 2. Create media_link
+    const { error: linkError } = await supabase
+        .from('media_links')
+        .insert({
+            media_file_id: fileData.id,
+            organization_id: organizationId,
+            general_cost_payment_id: paymentId,
+            category: 'financial',
+            visibility: 'private',
+        });
+
+    if (linkError) {
+        console.error('[linkPaymentAttachment] media_links error:', linkError);
+        return { success: false, error: 'Error al vincular archivo' };
     }
 
     revalidatePath('/organization/general-costs');

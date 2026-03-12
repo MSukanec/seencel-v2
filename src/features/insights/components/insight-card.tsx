@@ -48,10 +48,10 @@ export function InsightCard({ insight, onAction, onDismiss }: InsightCardProps) 
 
     const getColors = () => {
         switch (insight.severity) {
-            case 'warning': return "border-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
-            case 'critical': return "border-amount-negative/20 text-amount-negative hover:bg-amount-negative/10";
-            case 'positive': return "border-amount-positive/20 text-amount-positive hover:bg-amount-positive/10";
-            default: return "border-blue-500/20 text-blue-700 dark:text-blue-400 hover:bg-blue-500/10";
+            case 'warning': return "border-semantic-warning/20 text-semantic-warning hover:bg-semantic-warning/10";
+            case 'critical': return "border-semantic-negative/20 text-semantic-negative hover:bg-semantic-negative/10";
+            case 'positive': return "border-semantic-positive/20 text-semantic-positive hover:bg-semantic-positive/10";
+            default: return "border-primary/20 text-primary hover:bg-primary/10";
         }
     };
 

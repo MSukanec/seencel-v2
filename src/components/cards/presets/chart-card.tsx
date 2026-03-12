@@ -18,7 +18,7 @@ import {
 // Usage: Wraps any chart from components/charts/ with title + actions
 // ============================================================================
 
-interface ChartCardProps {
+interface ContentCardProps {
     title: string;
     description?: string;
     icon?: React.ReactNode;
@@ -30,6 +30,10 @@ interface ChartCardProps {
     headerAction?: React.ReactNode;
     /** Optional footer (insights, legends, etc.) */
     footer?: React.ReactNode;
+    /** KPI value displayed prominently — uses standardized styling */
+    value?: React.ReactNode;
+    /** Badge/trend element displayed below the value */
+    badge?: React.ReactNode;
     /** Expand callback */
     onExpand?: () => void;
     /** Refresh callback */
@@ -38,7 +42,7 @@ interface ChartCardProps {
     compact?: boolean;
 }
 
-export function ChartCard({
+export function ContentCard({
     title,
     description,
     icon,
@@ -48,10 +52,12 @@ export function ChartCard({
     contentClassName,
     headerAction,
     footer,
+    value,
+    badge,
     onExpand,
     onRefresh,
     compact = false,
-}: ChartCardProps) {
+}: ContentCardProps) {
     const hasMenuActions = onExpand || onRefresh;
 
     return (
@@ -87,8 +93,16 @@ export function ChartCard({
                     ) : undefined
                 }
             />
-            <CardBase.Body className={cn("overflow-hidden", contentClassName)}>
-                {children}
+            <CardBase.Body className={cn("overflow-hidden", value && "flex flex-col", contentClassName)}>
+                {value && (
+                    <div className="shrink-0">
+                        <p className="text-5xl font-bold tracking-tight">{value}</p>
+                        <div className="min-h-[24px] mt-0.5">{badge}</div>
+                    </div>
+                )}
+                <div className={cn(value && "flex-1 min-h-0 flex flex-col justify-end")}>
+                    {children}
+                </div>
             </CardBase.Body>
             {footer && <CardBase.Footer>{footer}</CardBase.Footer>}
         </CardBase>

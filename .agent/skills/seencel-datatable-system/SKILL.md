@@ -19,13 +19,14 @@ features/[feature]/
 src/components/shared/
 ├── data-table/
 │   ├── data-table.tsx              ← Componente DataTable principal
-│   ├── columns/                    ← 7 Column Factories
+│   ├── columns/                    ← 8 Column Factories
 │   │   ├── date-column.tsx         ← createDateColumn
 │   │   ├── text-column.tsx         ← createTextColumn
 │   │   ├── money-column.tsx        ← createMoneyColumn
 │   │   ├── status-column.tsx       ← createStatusColumn
 │   │   ├── project-column.tsx      ← createProjectColumn
 │   │   ├── entity-column.tsx       ← createEntityColumn
+│   │   ├── wallet-column.tsx       ← createWalletColumn
 │   │   ├── percent-column.tsx      ← createPercentColumn
 │   │   ├── column-builder.ts       ← createColumns (utility)
 │   │   └── index.ts                ← Re-exports
@@ -37,6 +38,10 @@ src/components/shared/
 │   ├── data-table-pagination.tsx    ← Paginación
 │   ├── data-table-skeleton.tsx      ← Loading skeleton
 │   ├── inline-editable-cell.tsx     ← Dashed-border numeric cells
+│   └── index.ts
+├── popovers/                        ← Shared Popover Content Components
+│   ├── wallet-popover-content.tsx   ← WalletPopoverContent
+│   ├── currency-popover-content.tsx ← CurrencyPopoverContent
 │   └── index.ts
 ├── toolbar-controls/
 │   ├── filter-button.tsx            ← FilterPopover (facets + dates)
@@ -56,8 +61,8 @@ src/hooks/
 
 Importar SIEMPRE desde:
 ```tsx
-import { createDateColumn, createTextColumn, createMoneyColumn, createStatusColumn, createProjectColumn, createEntityColumn, createPercentColumn } from "@/components/shared/data-table/columns";
-import type { StatusOption, ProjectOption } from "@/components/shared/data-table/columns";
+import { createDateColumn, createTextColumn, createMoneyColumn, createStatusColumn, createProjectColumn, createEntityColumn, createWalletColumn, createPercentColumn } from "@/components/shared/data-table/columns";
+import type { StatusOption, ProjectOption, EntityOption } from "@/components/shared/data-table/columns";
 ```
 
 ### 2.1 `createDateColumn<TData>(options)`
@@ -151,12 +156,37 @@ import type { StatusOption, ProjectOption } from "@/components/shared/data-table
 | `title` | `string` | `"Tipo"` | Título |
 | `labels` | `Record<string, string>` | — | Map valor→label |
 | `getSubtitle` | `(row) => string` | — | Subtítulo |
+| `emptyValue` | `string` | `"—"` | Texto cuando vacío |
 | `showAvatar` | `boolean` | `false` | Con `DataTableAvatarCell` |
+| `editable` | `boolean` | `false` | Command popover |
+| `entityOptions` | `EntityOption[]` | `[]` | Opciones para editar |
+| `editSearchPlaceholder` | `string` | `"Buscar..."` | Placeholder del search |
+| `onUpdate` | `(row, newValue) => void` | — | Callback |
 | `size` | `number` | — | Ancho |
 
-**Ideal para**: Columnas "Tipo" que muestran label mapeado + concepto como subtítulo.
+**EntityOption**: `{ value: string, label: string, subtitle?: string }`
 
-### 2.7 `createPercentColumn<TData>(options)`
+**Ideal para**: Columnas "Concepto" o "Tipo" que muestran label mapeado + subtítulo, con edición inline via Command popover.
+
+### 2.7 `createWalletColumn<TData>(options)`
+
+| Prop | Tipo | Default | Descripción |
+|------|------|---------|-------------|
+| `accessorKey` | `string` | `"wallet_name"` | Campo |
+| `title` | `string` | `"Billetera"` | Título |
+| `enableSorting` | `boolean` | `true` | Habilitar sorting |
+| `editable` | `boolean` | `false` | Popover inline |
+| `walletOptions` | `WalletOption[]` | `[]` | Opciones para editar |
+| `onUpdate` | `(row, newValue) => void` | — | Callback |
+| `size` | `number` | auto | Ancho |
+
+**WalletOption**: `{ value: string, label: string }`
+
+**Visual**: Ícono Wallet + nombre. Si `editable`, borde dashed on hover + Popover con `WalletPopoverContent` (shared component, incluye footer action "Gestionar billeteras").
+
+> ⛔ `createWalletColumn` **NO** recibe `footerAction` como prop — el footer action vive dentro de `WalletPopoverContent`.
+
+### 2.8 `createPercentColumn<TData>(options)`
 
 | Prop | Tipo | Default | Descripción |
 |------|------|---------|-------------|
@@ -380,6 +410,64 @@ import { InlineEditableCell } from "@/components/shared/data-table/inline-editab
 />
 ```
 
+### 6.5 Shared Popover Content Components (🚨 OBLIGATORIO)
+
+Los popovers de selección que se usan **tanto en chips como en column factories** usan **Shared Popover Content Components** de `@/components/shared/popovers/`.
+
+```tsx
+import { WalletPopoverContent, CurrencyPopoverContent } from "@/components/shared/popovers";
+```
+
+| Componente | Uso | Consumidores |
+|-----------|-----|-------------|
+| `WalletPopoverContent` | Selector de billeteras | `wallet-chip` + `wallet-column` |
+| `CurrencyPopoverContent` | Selector de monedas | `currency-chip` |
+
+**Interfaz común:**
+
+| Prop | Tipo | Descripción |
+|------|------|-------------|
+| `options` | `{ value, label }[]` | Lista de opciones |
+| `currentValue` | `string` | Valor seleccionado |
+| `onSelect` | `(value: string) => void` | Callback al seleccionar |
+| `onOpenChange` | `(open: boolean) => void` | Para cerrar el popover |
+
+**Características integradas:**
+- Búsqueda (CommandInput)
+- Empty state ("No encontrada")
+- Check en opción seleccionada
+- **Footer action** (ej: "Gestionar billeteras") con navegación a Settings > Finanzas
+- `useRouter` interno — no necesita props de navegación
+
+**Uso en Column Factory (wallet-column.tsx):**
+```tsx
+<PopoverContent>
+  <WalletPopoverContent
+    options={walletOptions}
+    currentValue={currentValue}
+    onSelect={handleSelect}
+    onOpenChange={setOpen}
+  />
+</PopoverContent>
+```
+
+**Uso en Chip (wallet-chip.tsx):**
+```tsx
+<ChipBase ...>
+  <WalletPopoverContent
+    options={options}
+    currentValue={value}
+    onSelect={handleSelect}
+    onOpenChange={setOpen}
+  />
+</ChipBase>
+```
+
+**Reglas:**
+- ⛔ **NUNCA** duplicar contenido Command entre chip y column factory
+- ⛔ **NUNCA** pasar `footerAction` como prop desde la vista — vive dentro del componente
+- ✅ Un cambio en el shared component afecta automáticamente todos los consumidores
+
 ---
 
 ## 7. Columns File — Estructura del archivo `tables/[entity]-columns.tsx`
@@ -560,6 +648,8 @@ export function ListView({ data, ...props }: Props) {
 | `new Date(dateFromDB)` sin parsear | `parseDateFromDB()` de `@/lib/timezone-data` |
 | Toolbar duplicada en header y tabla | `embeddedToolbar` para tabla, `portalToHeader` para empty/no-results |
 | Export legacy (`DataTableExport`) | `exportToCSV` / `exportToExcel` de `@/lib/export` |
+| Duplicar Command content entre chip y column | Usar Shared Popover Content de `@/components/shared/popovers/` |
+| Pasar `footerAction` como prop de la vista | Footer action vive dentro del Shared Popover Content |
 
 ---
 
@@ -576,4 +666,5 @@ export function ListView({ data, ...props }: Props) {
 - [ ] No-results state con `ViewEmptyState mode="no-results"` + filtros en toolbar
 - [ ] `embeddedToolbar` para el estado normal con datos
 - [ ] `DeleteConfirmDialog` renderizado al final del JSX
+- [ ] Popovers de wallet/currency usan Shared Popover Content (NO duplicar Command)
 - [ ] Vista ≤ 250 líneas

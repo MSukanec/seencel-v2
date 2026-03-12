@@ -146,7 +146,7 @@ export function BaseAreaChart({
                     }
                 />
                 <Area
-                    type="monotone"
+                    type="natural"
                     dataKey={yKey}
                     stroke={`var(--color-${yKey}, ${color})`}
                     strokeWidth={2.5}

@@ -33,3 +33,4 @@ export { SegmentedField, type SegmentedFieldProps, type SegmentedOption } from "
 export { PhoneField, type PhoneFieldProps } from "./phone-field";
 export { UnitField, type UnitFieldProps, type UnitOption } from "./unit-field";
 export { TaskField, type TaskFieldProps, type CatalogTaskOption } from "./task-field";
+export { PeriodField, type PeriodFieldProps, type PeriodGranularity } from "./period-field";

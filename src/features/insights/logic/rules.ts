@@ -236,32 +236,22 @@ export const yearEndProjectionInsight: InsightRule = (context: InsightContext): 
     if (context.isShortPeriod || context.monthlyData.length < minPoints) return null;
 
     const currentMonth = context.currentMonth ?? new Date().getMonth() + 1;
-
     if (currentMonth >= 11) return null;
 
     const allValues = context.monthlyData.map(m => m.value);
-
     if (allValues.length < minPoints) return null;
 
     const projection = projectYearEndSpend(allValues, currentMonth, { minDataPoints: minPoints });
-
     if (!projection) return null;
     if (projection.direction === 'stable') return null;
 
     const changePercent = Math.abs(projection.changePercent);
     const significantThreshold = context.thresholds?.growthSignificant ?? 15;
-    // Projection is for the whole year, so we strictly use the high significance threshold (e.g. 5% or 10%)
-    // Default was 5% hardcoded, let's use 1/3 of 'significant' logic or just fixed 5?
-    // Let's us growthSignificant / 3 to align with monthly trend logic
     if (changePercent < (significantThreshold / 3)) return null;
 
     const isUp = projection.direction === 'up';
-    // We would need to pass term labels to `formatProjectionInsight` ideally, or construct string here
     const term = context.termLabels?.singular || 'gasto';
-
-    // Quick text construction instead of lib for now to support dynamic terms
     const diffText = `${Math.round(changePercent)}% ${isUp ? 'mayor' : 'menor'} a lo esperado`;
-    const description = `Se proyecta un cierre anual un ${diffText} si se mantiene la tendencia de ${term} actual.`;
 
     return {
         id: isUp ? 'year-end-projection-up' : 'year-end-projection-down',
@@ -269,21 +259,171 @@ export const yearEndProjectionInsight: InsightRule = (context: InsightContext): 
             ? (term.includes('ingres') ? 'positive' : 'warning')
             : (term.includes('ingres') ? 'warning' : 'info'),
         title: 'Proyección de cierre anual',
-        description: description,
+        description: `Se proyecta un cierre anual un ${diffText} si se mantiene la tendencia de ${term} actual.`,
         icon: 'Calendar',
         priority: 3,
         context: `Proyección basada en ${allValues.length} meses del año actual, quedan ${projection.monthsRemaining} meses.`,
         actionHint: isUp
             ? 'Considerá ajustar el presupuesto si el aumento no es planificado.'
             : 'El proyectado está por debajo del promedio histórico.',
-        actions: [
-            {
-                id: 'view-monthly-trend',
-                label: 'Ver evolución',
-                type: 'open',
-                payload: { panel: 'monthlyChart' }
-            }
-        ]
+        actions: [{
+            id: 'view-monthly-trend',
+            label: 'Ver evolución',
+            type: 'open',
+            payload: { panel: 'monthlyChart' }
+        }]
+    };
+};
+
+/**
+ * Insight 8 – Anomalía mensual
+ * Detecta meses con gasto que se desvía significativamente del promedio (>2 desviaciones estándar)
+ */
+export const monthlyAnomalyInsight: InsightRule = (context: InsightContext): Insight | null => {
+    const minPoints = context.thresholds?.minDataPoints ?? 3;
+    if (context.monthlyData.length < minPoints) return null;
+
+    const values = context.monthlyData.map(m => m.value);
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    if (mean === 0) return null;
+
+    // Calculate standard deviation
+    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    if (stdDev === 0) return null;
+
+    // Find the most anomalous month
+    let maxDeviation = 0;
+    let anomalyIndex = -1;
+
+    for (let i = 0; i < values.length; i++) {
+        const deviation = Math.abs(values[i] - mean) / stdDev;
+        if (deviation > maxDeviation) {
+            maxDeviation = deviation;
+            anomalyIndex = i;
+        }
+    }
+
+    // Only report if deviation is > 1.8σ (slightly less strict than 2σ for small datasets)
+    if (maxDeviation < 1.8 || anomalyIndex === -1) return null;
+
+    const anomalyValue = values[anomalyIndex];
+    const anomalyMonth = context.monthlyData[anomalyIndex].month;
+    const isAbove = anomalyValue > mean;
+    const deviationPercent = Math.round(((anomalyValue - mean) / mean) * 100);
+
+    // Format month name
+    const monthDate = new Date(anomalyMonth);
+    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthName = monthNames[monthDate.getMonth()] || anomalyMonth;
+
+    const term = context.termLabels?.singular || 'gasto';
+
+    return {
+        id: isAbove ? 'anomaly-spike' : 'anomaly-dip',
+        severity: isAbove ? 'warning' : 'info',
+        title: isAbove ? 'Mes con pico inusual' : 'Mes con baja inusual',
+        description: `${monthName} tuvo un ${term} ${Math.abs(deviationPercent)}% ${isAbove ? 'superior' : 'inferior'} al promedio.`,
+        icon: 'Activity',
+        priority: 2,
+        context: `Desviación de ${maxDeviation.toFixed(1)}σ respecto a la media de ${context.monthlyData.length} meses.`,
+        actionHint: isAbove
+            ? `Revisá qué conceptos impulsaron el pico en ${monthName}.`
+            : `Verificá si la baja en ${monthName} fue planificada.`,
+        actions: [{
+            id: 'view-anomaly-month',
+            label: 'Ver mes',
+            type: 'navigate',
+            payload: { tab: 'payments', filterMonth: anomalyMonth }
+        }]
+    };
+};
+
+/**
+ * Insight 9 – Eficiencia de pagos (micro-pagos)
+ * Detecta cuando hay muchos pagos pequeños que podrían consolidarse
+ */
+export const paymentEfficiencyInsight: InsightRule = (context: InsightContext): Insight | null => {
+    if (!context.paymentsByConcept || context.paymentsByConcept.length < 2) return null;
+    if (!context.monthlyData || context.monthlyData.length === 0) return null;
+
+    const totalPayments = context.paymentCount || context.paymentsByConcept.reduce((sum, c) => sum + c.paymentsCount, 0);
+    if (totalPayments < 10) return null; // Need sufficient volume
+
+    const totalMonths = context.monthCount || context.monthlyData.length || 1;
+    const paymentsPerMonth = totalPayments / totalMonths;
+
+    // If averaging more than 8 payments per month, suggest consolidation
+    if (paymentsPerMonth < 8) return null;
+
+    // Find the concept with most payments
+    const sorted = [...context.paymentsByConcept].sort((a, b) => b.paymentsCount - a.paymentsCount);
+    const topConcept = sorted[0];
+
+    return {
+        id: 'payment-efficiency',
+        severity: 'info',
+        title: 'Alta frecuencia de pagos',
+        description: `Se registran ~${Math.round(paymentsPerMonth)} pagos por mes en promedio.`,
+        icon: 'Repeat',
+        priority: 4,
+        context: `"${topConcept.conceptName}" lidera con ${topConcept.paymentsCount} pagos en el período.`,
+        actionHint: 'Considerá consolidar pagos frecuentes del mismo concepto.',
+        actions: [{
+            id: 'view-top-concept',
+            label: 'Ver concepto',
+            type: 'navigate',
+            payload: { tab: 'concepts', filterName: topConcept.conceptName }
+        }]
+    };
+};
+
+/**
+ * Insight 10 – Estacionalidad
+ * Detecta si hay meses que consistentemente tienen gastos más altos
+ */
+export const seasonalityInsight: InsightRule = (context: InsightContext): Insight | null => {
+    if (context.monthlyData.length < 6) return null; // Need at least 6 months
+
+    const values = context.monthlyData.map(m => m.value);
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    if (mean === 0) return null;
+
+    // Analyze first half vs second half of available data
+    const half = Math.floor(values.length / 2);
+    const firstHalf = values.slice(0, half);
+    const secondHalf = values.slice(half);
+
+    const avgFirst = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+    const avgSecond = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+
+    // Check for significant seasonal shift (>30%)
+    const shift = ((avgSecond - avgFirst) / avgFirst) * 100;
+    const absShift = Math.abs(shift);
+
+    if (absShift < 30) return null;
+
+    const isRising = shift > 0;
+    const term = context.termLabels?.singular || 'gasto';
+
+    return {
+        id: isRising ? 'seasonality-rising' : 'seasonality-falling',
+        severity: isRising ? 'warning' : 'positive',
+        title: isRising ? 'Tendencia estacional al alza' : 'Patrón de reducción estacional',
+        description: `Los meses recientes muestran un ${term} ${Math.round(absShift)}% ${isRising ? 'mayor' : 'menor'} que los anteriores.`,
+        icon: 'Calendar',
+        priority: 3,
+        context: `Comparando los últimos ${secondHalf.length} meses vs los ${firstHalf.length} anteriores.`,
+        actionHint: isRising
+            ? 'Evaluá si el aumento responde a estacionalidad o a un cambio estructural.'
+            : 'El patrón muestra una reducción, verificá si es sostenible.',
+        actions: [{
+            id: 'view-evolution',
+            label: 'Ver evolución',
+            type: 'open',
+            payload: { panel: 'monthlyChart' }
+        }]
     };
 };
 
@@ -293,5 +433,8 @@ export const allInsightRules: InsightRule[] = [
     concentrationNarrativeInsight,
     sustainedTrendInsight,
     yearEndProjectionInsight,
+    monthlyAnomalyInsight,
+    paymentEfficiencyInsight,
+    seasonalityInsight,
 ];
 

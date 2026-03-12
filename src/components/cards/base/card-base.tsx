@@ -52,9 +52,7 @@ export function CardBase({ children, className, compact = false, ...props }: Car
     return (
         <Card
             className={cn(
-                "flex flex-col min-w-0 overflow-hidden",
-                "bg-card border-border/50",
-                "transition-all hover:shadow-md",
+                "relative flex flex-col min-w-0 overflow-hidden",
                 !compact && "h-full",
                 className
             )}
@@ -74,7 +72,16 @@ function Header({ title, description, icon, iconClassName, action }: CardHeaderP
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
             <div className="flex items-center gap-2.5 min-w-0">
                 {icon && (
-                    <div className={cn("shrink-0 p-2 rounded-lg bg-primary/10 text-primary", iconClassName)}>
+                    <div className={cn(
+                        "shrink-0 w-9 h-9 rounded-full flex items-center justify-center",
+                        // Glass sphere effect: gradient + glow
+                        "bg-gradient-to-b from-primary/20 via-primary/10 to-primary/5",
+                        "text-primary",
+                        // Volumetric border + inner glow
+                        "ring-1 ring-primary/20",
+                        "shadow-[0_1px_2px_0_rgba(0,0,0,0.2),inset_0_1px_1px_0_rgba(255,255,255,0.1)]",
+                        iconClassName
+                    )}>
                         {icon}
                     </div>
                 )}
@@ -116,7 +123,7 @@ function Body({ children, className, noPadding = false }: CardBodyProps) {
 
 function Footer({ children, className }: CardFooterProps) {
     return (
-        <div className={cn("px-4 py-2.5 border-t border-border/50 bg-muted/20", className)}>
+        <div className={cn("px-4 py-2.5 border-t border-border/30", className)}>
             {children}
         </div>
     );

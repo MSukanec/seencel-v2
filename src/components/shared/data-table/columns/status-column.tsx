@@ -3,7 +3,7 @@
  * Standard 19.4 - Reusable Status Column (Linear-style)
  * 
  * Renders a colored dot + plain text label.
- * Supports inline editing via Popover + Command.
+ * Supports inline editing via Popover + StatusPopoverContent (shared).
  * Uses semantic CSS variables from globals.css for consistent theming.
  */
 
@@ -11,16 +11,10 @@
 
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Check, CheckCircle2, Clock, XCircle, Circle } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Circle } from "lucide-react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-    Command,
-    CommandInput,
-    CommandGroup,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command";
+import { StatusPopoverContent } from "@/components/shared/popovers";
 import { DataTableColumnHeader } from "../data-table-column-header";
 import { cn } from "@/lib/utils";
 
@@ -120,27 +114,11 @@ function EditableStatusCell<TData>({
                 </button>
             </PopoverTrigger>
             <PopoverContent className="w-48 p-0" align="start" onClick={(e) => e.stopPropagation()}>
-                <Command>
-                    <CommandInput placeholder="Cambiar estado..." className="h-8 text-xs" />
-                    <CommandList>
-                        <CommandGroup>
-                            {options.map((option) => (
-                                <CommandItem
-                                    key={option.value}
-                                    value={option.value}
-                                    onSelect={() => handleSelect(option.value)}
-                                    className="flex items-center gap-2 text-xs"
-                                >
-                                    <StatusIcon variant={option.variant} />
-                                    <span className="flex-1">{option.label}</span>
-                                    {currentValue === option.value && (
-                                        <Check className="h-3.5 w-3.5 text-muted-foreground" />
-                                    )}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
+                <StatusPopoverContent
+                    options={options}
+                    currentValue={currentValue}
+                    onSelect={handleSelect}
+                />
             </PopoverContent>
         </Popover>
     );
@@ -200,6 +178,22 @@ export function createStatusColumn<TData>(
         },
         enableSorting,
         size,
+        // Context menu metadata for right-click menus
+        ...(editable && onUpdate ? {
+            meta: {
+                contextMenu: {
+                    label: title,
+                    icon: Circle,
+                    options: statusOptions.map(o => ({
+                        value: o.value,
+                        label: o.label,
+                        icon: <StatusIcon variant={o.variant} />,
+                    })),
+                    currentValueKey: accessorKey,
+                    onSelect: (row: TData, value: string) => onUpdate(row, value),
+                },
+            },
+        } : {}),
         ...(enableFiltering ? {
             filterFn: (row: any, id: string, value: string[]) => {
                 return value.includes(row.getValue(id));

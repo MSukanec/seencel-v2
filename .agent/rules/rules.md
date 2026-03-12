@@ -93,14 +93,33 @@ features/[feature]/
 ### Column Factories OBLIGATORIOS:
 
 | Factory | Propósito |
-|---------|----------|
+|---------|-----------|
 | `createDateColumn` | Fecha con avatar, formato localizado, inline DatePicker |
 | `createTextColumn` | Texto con truncate, subtitle, customRender, inline Input |
-| `createMoneyColumn` | Monto con +/-, colores semánticos, exchange rate |
+| `createMoneyColumn` | Monto con +/-, colores semánticos, inline Input editable |
 | `createStatusColumn` | Badge semántico (positive/negative/warning/neutral), inline Command |
 | `createProjectColumn` | Proyecto con avatar, inline Command selector |
-| `createEntityColumn` | Tipo/entidad con label mapeado + subtítulo |
+| `createEntityColumn` | Tipo/entidad con label mapeado + subtítulo, inline Command editable |
+| `createWalletColumn` | Billetera con ícono Wallet, inline Popover editable |
+| `createCurrencyColumn` | Moneda con símbolo + nombre, inline Popover editable |
+| `createExchangeRateColumn` | Tasa de cambio con font-mono, "—" si =1, inline Input editable |
+| `createPeriodColumn` | Período de recurrencia con UnifiedDatePicker, inline Popover editable |
 | `createPercentColumn` | Porcentaje alineado a derecha, font-mono |
+
+### Shared Popover Content (🚨 OBLIGATORIO):
+
+Los popovers de selección (billetera, moneda, etc.) usan **Shared Popover Content Components** de `@/components/shared/popovers/`.
+
+| Componente | Uso | Consumidores |
+|-----------|-----|-------------|
+| `WalletPopoverContent` | Selector de billeteras | `wallet-chip` + `wallet-column` |
+| `CurrencyPopoverContent` | Selector de monedas | `currency-chip` |
+
+- ⛔ **NUNCA** duplicar el contenido Command entre chip y column factory
+- ⛔ **NUNCA** hardcodear footer actions — viven dentro del componente compartido
+- Cada componente incluye footer action integrado ("Gestionar billeteras/monedas") con navegación a Settings > Finanzas
+
+📖 **Más detalle sobre Shared Popovers:** Skill [seencel-datatable-system](../skills/seencel-datatable-system/SKILL.md) sección 6.5
 
 ### Prohibiciones:
 - ⛔ Definir columnas inline en la vista → extraerlas a `tables/`
@@ -108,6 +127,7 @@ features/[feature]/
 - ⛔ Crear estados de filtro sueltos → usar `useTableFilters`
 - ⛔ Vista de más de 250 líneas
 - ⛔ Toolbar controls manuales → usar `FilterPopover`, `SearchButton`, `DisplayButton` de `@/components/shared/toolbar-controls`
+- ⛔ Duplicar contenido Command entre chip y column → usar Shared Popover Content
 
 📖 **Detalle COMPLETO (LEER SIEMPRE):** Skill [seencel-datatable-system](../skills/seencel-datatable-system/SKILL.md)
 📖 **Referencia estándar:** Finanzas > Movimientos (`finance/views/finances-movements-view.tsx` + `finance/tables/movements-columns.tsx`)
@@ -136,7 +156,7 @@ PageWrapper → ContentLayout variant="wide" → View (Fragment)
 
 ---
 
-## 5. FORMS — Panels, No Modals
+## 5. FORMS — Panels + Chips
 
 - Forms se abren con `openPanel`, **NUNCA** con `openModal`.
 - Modales solo para confirmaciones/alertas.
@@ -144,7 +164,42 @@ PageWrapper → ContentLayout variant="wide" → View (Fragment)
 - ⛔ NUNCA usar `<Input>`, `<Select>`, `<Textarea>` raw si existe Field Factory.
 - Form define su presentación con `setPanelMeta` (icon, title, description, size, footer).
 
+### Chips (metadata selectors en forms)
+
+Los forms usan **Chips** (`@/components/shared/chips`) para selectores de metadata (fecha, billetera, moneda, estado, concepto).
+
+| Chip | Import | Uso |
+|------|--------|-----|
+| `DateChip` | `@/components/shared/chips` | Selector de fecha |
+| `WalletChip` | `@/components/shared/chips` | Selector de billetera |
+| `CurrencyChip` | `@/components/shared/chips` | Selector de moneda |
+| `StatusChip` | `@/components/shared/chips` | Selector de estado |
+| `SelectChip` | `@/components/shared/chips` | Selector genérico (conceptos, categorías) |
+| `PeriodChip` | `@/components/shared/chips` | Selector de período |
+| `AttachmentChip` | `@/components/shared/chips` | Adjuntos |
+
+- Los chips de **billetera y moneda** usan Shared Popover Content (`WalletPopoverContent`, `CurrencyPopoverContent`)
+- ⛔ **NUNCA** hardcodear Command content dentro de un chip si existe Shared Popover Content
+- El footer action ("Gestionar billeteras/monedas") viene integrado en el componente compartido
+
+### Hybrid Chip Form Pattern
+
+Forms como `general-costs-payment-form.tsx` usan el patrón **Hybrid Chip Form** (Linear-style):
+```
+┌─ HEADER ─────────────────────┐  ← icon + título + descripción
+├─ BODY ───────────────────────┤
+│  Amount field (grande)       │  ← Input principal
+│  Description (textarea)      │  ← Descripción
+│  ChipRow:                    │  ← Fila de chips
+│    DateChip SelectChip       │
+│    StatusChip WalletChip     │
+│    CurrencyChip              │
+├─ FOOTER ─────────────────────┤  ← Cancelar + Submit
+└──────────────────────────────┘
+```
+
 📖 **Detalle:** Skill [seencel-panel-forms](../skills/seencel-panel-forms/SKILL.md)
+📖 **Referencia:** `general-costs/forms/general-costs-payment-form.tsx`
 
 ---
 

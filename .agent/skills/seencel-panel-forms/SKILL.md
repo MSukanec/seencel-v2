@@ -226,6 +226,70 @@ import {
 
 ---
 
+## Chips — Metadata Selectors (🚨 OBLIGATORIO en forms con metadata)
+
+Los forms usan **Chips** (`@/components/shared/chips`) para selectores de metadata compactos, estilo Linear.
+
+```tsx
+import {
+    ChipRow, DateChip, WalletChip, CurrencyChip,
+    StatusChip, SelectChip, PeriodChip, AttachmentChip,
+} from "@/components/shared/chips";
+```
+
+### Catálogo de Chips
+
+| Chip | Uso | Popover Content |
+|------|-----|----------------|
+| `DateChip` | Selector de fecha | Calendar built-in |
+| `WalletChip` | Selector de billetera | `WalletPopoverContent` (shared) |
+| `CurrencyChip` | Selector de moneda | `CurrencyPopoverContent` (shared) |
+| `StatusChip` | Selector de estado | Command built-in |
+| `SelectChip` | Selector genérico (conceptos, categorías) | Command built-in |
+| `PeriodChip` | Selector de período | Calendar range built-in |
+| `AttachmentChip` | Adjuntos | Upload built-in |
+
+### Shared Popover Content
+
+Los chips de **billetera y moneda** usan componentes compartidos de `@/components/shared/popovers/`:
+
+- `WalletPopoverContent` → incluye footer "Gestionar billeteras" con navegación a Settings > Finanzas
+- `CurrencyPopoverContent` → incluye footer "Gestionar monedas" con navegación a Settings > Finanzas
+
+> ⛔ **NUNCA** hardcodear Command content dentro de un chip si existe Shared Popover Content
+> ⛔ **NUNCA** pasar footerAction como prop — vive dentro del componente compartido
+
+### Hybrid Chip Form Pattern
+
+Forms como `general-costs-payment-form.tsx` combinan **Field Factories** para inputs principales con **Chips** para metadata:
+
+```
+┌─ HEADER ─────────────────────┐  ← icon + título + descripción
+├─ BODY ───────────────────────┤
+│  AmountField (grande)        │  ← Input principal
+│  NotesField (textarea)       │  ← Descripción
+│  ChipRow:                    │  ← Fila de chips (wrap automático)
+│    DateChip  SelectChip      │
+│    StatusChip  WalletChip    │
+│    CurrencyChip              │
+├─ FOOTER ─────────────────────┤  ← Cancelar + Submit
+└──────────────────────────────┘
+```
+
+```tsx
+<ChipRow>
+    <DateChip value={date} onChange={setDate} />
+    <SelectChip value={conceptId} onChange={setConceptId} options={conceptOptions} />
+    <StatusChip value={status} onChange={setStatus} options={statusOptions} />
+    <WalletChip value={walletId} onChange={setWalletId} options={walletOptions} />
+    <CurrencyChip value={currencyId} onChange={setCurrencyId} options={currencyOptions} />
+</ChipRow>
+```
+
+📖 **Referencia estándar:** `features/general-costs/forms/general-costs-payment-form.tsx`
+
+---
+
 ## Migración Legacy
 
 ### Estado actual
@@ -279,5 +343,7 @@ Estos patrones **siguen siendo modales** (no panels):
 - [ ] ¿NO tiene `<FormFooter>`? (el container lo maneja)
 - [ ] ¿Está registrado en `panel-registry.ts`?
 - [ ] ¿Se usan Field Factories en vez de componentes primitivos?
+- [ ] ¿Se usan Chips (`DateChip`, `WalletChip`, `CurrencyChip`, etc.) para selectores de metadata?
+- [ ] ¿Los chips de wallet/currency usan Shared Popover Content (NO Command hardcodeado)?
 - [ ] ¿La view abre con `openPanel(panelId, { datos })` sin presentación?
 - [ ] ¿Está en `features/[feature]/forms/[feature]-[entity]-form.tsx`?

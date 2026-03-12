@@ -128,7 +128,10 @@ const columns = [
 | `createDateColumn` | Fecha con avatar del creador, formato localizado |
 | `createTextColumn` | Texto con truncate, subtitle, customRender |
 | `createMoneyColumn` | Monto con auto +/-, colores, exchange rate |
+| `createStatusColumn` | Badge semántico con inline Command editable |
 | `createProjectColumn` | Proyecto con avatar de color/imagen |
+| `createEntityColumn` | Tipo/entidad con label + subtítulo, inline Command editable |
+| `createWalletColumn` | Billetera con ícono Wallet, inline Popover (`WalletPopoverContent`) |
 
 ### Columnas Separadas (OBLIGATORIO)
 
@@ -210,8 +213,9 @@ const file = await compressImage(rawFile, 'avatar'); // 'avatar' | 'cover' | 'do
 - [ ] ¿Lista vacía muestra `ViewEmptyState` con ambos modos (empty + no-results)?
 - [ ] ¿Toolbar usa `portalToHeader`?
 - [ ] ¿DataTable con columnas en archivo `tables/*-columns.tsx`?
-- [ ] ¿Column Factories (`createDateColumn`, `createTextColumn`, `createMoneyColumn`)?
+- [ ] ¿Column Factories (`createDateColumn`, `createTextColumn`, `createMoneyColumn`, `createWalletColumn`, etc.)?
 - [ ] ¿Delete usa `useTableActions` (NO AlertDialog manual)?
 - [ ] ¿Filtros usan `useTableFilters`?
 - [ ] ¿Toasts para feedback, no mensajes inline?
 - [ ] ¿Imágenes comprimidas antes de upload?
+- [ ] ¿Popovers de selección usan Shared Popover Content (`@/components/shared/popovers/`) cuando aplica?

@@ -27,28 +27,49 @@ export function generateGeneralCostsInsights(context: GeneralCostsInsightsContex
     const currentMonthData = sortedSummary[sortedSummary.length - 1];
     const previousMonthData = sortedSummary[sortedSummary.length - 2];
 
+    // Aggregate payments by concept for efficiency insight
+    const conceptPaymentMap: Record<string, { name: string; count: number }> = {};
+    for (const p of recentPayments) {
+        const name = p.general_cost_name || 'Sin concepto';
+        if (!conceptPaymentMap[name]) {
+            conceptPaymentMap[name] = { name, count: 0 };
+        }
+        conceptPaymentMap[name].count++;
+    }
+    const paymentsByConcept = Object.values(conceptPaymentMap).map(c => ({
+        conceptName: c.name,
+        paymentsCount: c.count
+    }));
+
+    const totalPaymentCount = sortedSummary.reduce((sum, m) => sum + m.payments_count, 0);
+
     const ruleContext: InsightContext = {
         // Current Period Stats (Last Month)
         totalGasto: currentMonthData?.total_amount || 0,
+        totalValue: sortedSummary.reduce((sum, m) => sum + m.total_amount, 0),
         currentMonth: currentMonthData ? new Date(currentMonthData.payment_month).getMonth() + 1 : undefined,
 
         // Time Series
         monthlyData: monthlyData,
 
-        // Category Data (This is usually "Total over the viewed period", but legacy rules expect Current Period Slice vs Previous)
-        // Our 'byCategory' view usually aggregates the WHOLE selection.
-        // If we want "Growth Explained", we ideally need 'byCategory' split by period.
-        // Currently, our 'byCategory' input is just a list. 
-        // LIMITATION: We might lack granular "Previous Month Category Data" if the view provides aggregate.
-        // For now, we map what we have to enable Concentration/Trend rules which use 'categoryData'.
+        // Category Data
         categoryData: byCategory.map(c => ({ name: c.category_name || 'Otros', value: c.total_amount })),
 
         // Payments Info
-        paymentCount: currentMonthData?.payments_count || 0,
+        paymentCount: totalPaymentCount,
+        paymentsByConcept,
 
         // Meta
         monthCount: sortedSummary.length,
-        isShortPeriod: false
+        isShortPeriod: false,
+
+        // Term labels for Spanish
+        termLabels: {
+            singular: 'gasto',
+            plural: 'gastos',
+            verbIncrease: 'aumenta',
+            verbDecrease: 'disminuye'
+        }
     };
 
     // 2. Execution: Run all rules
