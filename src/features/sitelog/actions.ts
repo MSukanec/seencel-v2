@@ -109,11 +109,13 @@ async function enrichSiteLogs(
             .from('media_links')
             .select(`
                 site_log_id,
-                media_file:media_files(
-                    id, is_public, file_type, file_name, bucket, file_path
+                media_file:media_files!inner(
+                    id, is_public, file_type, file_name, bucket, file_path, is_deleted
                 )
             `)
-            .in('site_log_id', logIds);
+            .in('site_log_id', logIds)
+            .eq('is_deleted', false)
+            .eq('media_files.is_deleted', false);
         if (links) {
             for (const link of links) {
                 if (!link.media_file) continue;

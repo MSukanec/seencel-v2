@@ -848,10 +848,13 @@ export async function getPaymentAttachments(paymentId: string) {
                 file_path,
                 file_type,
                 file_size,
-                bucket
+                bucket,
+                is_deleted
             )
         `)
-        .eq('general_cost_payment_id', paymentId);
+        .eq('general_cost_payment_id', paymentId)
+        .eq('is_deleted', false)
+        .eq('media_files.is_deleted', false);
 
     if (error || !data) {
         console.error('[getPaymentAttachments] Error:', error);

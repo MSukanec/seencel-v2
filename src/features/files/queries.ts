@@ -19,9 +19,11 @@ export async function getFiles(organizationId: string, projectId?: string | null
         .from('media_links')
         .select(`
             *,
-            media_files (*)
+            media_files!inner (*)
         `)
         .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
+        .eq('media_files.is_deleted', false)
         .order('created_at', { ascending: false });
 
     // Filter by project if provided
@@ -97,6 +99,7 @@ export async function getFolders(organizationId: string, projectId?: string | nu
         .from('media_links')
         .select('folder_id')
         .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
         .in('folder_id', folderIds);
 
     const countMap: Record<string, number> = {};

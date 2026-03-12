@@ -457,6 +457,8 @@ export async function getRecentFiles(
                 )
             `)
             .eq('organization_id', orgId)
+            .eq('is_deleted', false)
+            .eq('media_files.is_deleted', false)
             .order('created_at', { ascending: false })
             .limit(limit);
 

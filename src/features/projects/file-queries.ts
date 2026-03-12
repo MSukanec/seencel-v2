@@ -10,9 +10,11 @@ export async function getProjectFiles(projectId: string) {
         .from('media_links')
         .select(`
             *,
-            media_files (*)
+            media_files!inner (*)
         `)
         .eq('project_id', projectId)
+        .eq('is_deleted', false)
+        .eq('media_files.is_deleted', false)
         .order('created_at', { ascending: false });
 
     if (error) {

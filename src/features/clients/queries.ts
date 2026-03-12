@@ -233,7 +233,7 @@ async function enrichPaymentsWithMedia(payments: any[]) {
         .from('media_links')
         .select(`
             client_payment_id,
-            media_file:media_files (
+            media_file:media_files!inner (
                 id,
                 bucket,
                 file_path,
@@ -242,7 +242,9 @@ async function enrichPaymentsWithMedia(payments: any[]) {
                 file_size
             )
         `)
-        .in('client_payment_id', paymentIds);
+        .in('client_payment_id', paymentIds)
+        .eq('is_deleted', false)
+        .eq('media_files.is_deleted', false);
 
     if (!mediaLinks || mediaLinks.length === 0) {
         // No media, return payments as-is with empty attachments

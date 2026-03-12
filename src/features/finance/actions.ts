@@ -64,7 +64,9 @@ export async function getMovementAttachments(
                 created_at
             )
         `)
-        .eq(column, movementId);
+        .eq(column, movementId)
+        .eq('is_deleted', false)
+        .eq('media_files.is_deleted', false);
 
     if (error) {
         console.error("Error fetching movement attachments:", error);
