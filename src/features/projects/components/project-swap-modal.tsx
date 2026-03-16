@@ -18,18 +18,23 @@ import { toast } from "sonner";
 interface ProjectSwapModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    /** The project the user wants to activate */
+    /** The project the user wants to create/activate */
     projectToActivate: {
         id: string;
         name: string;
     };
-    /** List of currently active projects (excluding the one being activated) */
-    activeProjects: Project[];
+    /** List of currently active/planning projects (excluding the one being activated) */
+    activeProjects: (Project & { status?: string })[];
     /** Max allowed by plan */
     maxAllowed: number;
     /** Called after successful swap */
     onSwapSuccess?: (activatedId: string, deactivatedId: string) => void;
 }
+
+const STATUS_LABELS: Record<string, string> = {
+    active: "Activo",
+    planning: "Planificación",
+};
 
 export function ProjectSwapModal({
     open,
@@ -63,7 +68,7 @@ export function ProjectSwapModal({
             } else {
                 const deactivatedProject = activeProjects.find(p => p.id === selectedProjectId);
                 toast.success(
-                    `"${projectToActivate.name}" activado. "${deactivatedProject?.name}" pasó a Inactivo.`,
+                    `"${deactivatedProject?.name}" pasó a Inactivo. Ahora podés crear tu nuevo proyecto.`,
                     { id: toastId }
                 );
                 onSwapSuccess?.(projectToActivate.id, selectedProjectId);
@@ -82,33 +87,34 @@ export function ProjectSwapModal({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader>
-                    <div className="flex items-center gap-2 text-amber-500 mb-1">
+                    <div className="flex items-center gap-2 text-semantic-warning mb-1">
                         <AlertTriangle className="h-5 w-5" />
                         <span className="text-sm font-medium">Límite de plan alcanzado</span>
                     </div>
-                    <DialogTitle>Intercambiar proyecto activo</DialogTitle>
+                    <DialogTitle>Liberar espacio para un nuevo proyecto</DialogTitle>
                     <DialogDescription>
-                        Tu plan permite un máximo de <strong>{maxAllowed} proyecto{maxAllowed !== 1 ? "s" : ""} activo{maxAllowed !== 1 ? "s" : ""}</strong>.
-                        Para activar <strong>&quot;{projectToActivate.name}&quot;</strong>, seleccioná cuál proyecto activo querés pasar a Inactivo.
+                        Tu plan permite un máximo de <strong>{maxAllowed} proyecto{maxAllowed !== 1 ? "s" : ""}</strong> activo{maxAllowed !== 1 ? "s" : ""} o en planificación simultáneamente.
+                        Para continuar, seleccioná un proyecto existente para pasarlo a <strong>Inactivo</strong>.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="py-4 space-y-4">
-                    {/* Active Project Select — reusable field factory */}
+                    {/* Project Select — sin tooltip */}
                     <ProjectField
                         value={selectedProjectId}
                         onChange={setSelectedProjectId}
                         projects={activeProjects}
                         label="¿Cuál proyecto querés pasar a Inactivo?"
-                        placeholder="Seleccioná un proyecto activo..."
-                        emptyMessage="No hay proyectos activos para intercambiar."
+                        tooltip={null}
+                        placeholder="Seleccioná un proyecto..."
+                        emptyMessage="No hay proyectos para intercambiar."
                         required={false}
                         allowNone={false}
                     />
 
                     {/* Preview of what will happen */}
                     {selectedProject && (
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-semantic-warning/10 border border-semantic-warning/20">
                             {selectedProject.image_url ? (
                                 <img
                                     src={selectedProject.image_url}
@@ -122,9 +128,16 @@ export function ProjectSwapModal({
                                 />
                             )}
                             <div className="flex-1">
-                                <p className="text-sm font-medium">{selectedProject.name}</p>
+                                <p className="text-sm font-medium">
+                                    {selectedProject.name}
+                                    {(selectedProject as any).status && (
+                                        <span className="text-xs text-muted-foreground ml-1.5">
+                                            ({STATUS_LABELS[(selectedProject as any).status] || (selectedProject as any).status})
+                                        </span>
+                                    )}
+                                </p>
                                 <p className="text-xs text-muted-foreground">
-                                    Pasará a <span className="text-orange-500 font-medium">Inactivo</span>
+                                    Pasará a <span className="text-semantic-warning font-medium">Inactivo</span>
                                 </p>
                             </div>
                         </div>
@@ -138,7 +151,7 @@ export function ProjectSwapModal({
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
-                        <Crown className="h-3.5 w-3.5 text-amber-500" />
+                        <Crown className="h-3.5 w-3.5 text-semantic-warning" />
                         Upgrade a PRO para más proyectos
                     </a>
                     <div className="flex gap-2 ml-auto">
@@ -153,7 +166,7 @@ export function ProjectSwapModal({
                             onClick={handleSwap}
                             disabled={!selectedProjectId || isSwapping}
                         >
-                            {isSwapping ? "Intercambiando..." : "Intercambiar"}
+                            {isSwapping ? "Intercambiando..." : "Confirmar"}
                         </Button>
                     </div>
                 </DialogFooter>

@@ -37,14 +37,6 @@ export function LayoutSwitcher({
         }
     }, [user]);
 
-    // Prevent hydration mismatch by rendering a default state initially
-    if (!mounted) {
-        return (
-            <div className="flex min-h-screen flex-col bg-background opacity-0">
-                {children}
-            </div>
-        );
-    }
 
     // Always use Sidebar Layout - Mega Menu is deprecated
     // ContextSidebarProvider eliminated - now using Zustand store

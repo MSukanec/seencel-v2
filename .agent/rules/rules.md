@@ -134,23 +134,56 @@ Los popovers de selección (billetera, moneda, etc.) usan **Shared Popover Conte
 
 ---
 
-## 4. PÁGINAS — Estructura Obligatoria
+## 4. PÁGINAS — Estructura Obligatoria (Sidebar-First)
 
-- `page.tsx` = Server Component. Fetch + `PageWrapper` + Tabs.
+> **Decisión de Marzo 2026:** Las tabs en header se eliminan. Toda navegación de secciones se resuelve con **rutas reales** + **sidebar drill-down** (como Vercel).
+
+### Patrón para páginas con múltiples secciones:
+
+```
+app/[locale]/(dashboard)/organization/[feature]/
+├── layout.tsx      ← Auth + PageWrapper (SIN ContentLayout)
+├── page.tsx        ← ContentLayout variant="wide" + Sub-página raíz
+├── [section1]/
+│   └── page.tsx    ← ContentLayout variant según necesidad
+└── [section2]/
+    └── page.tsx    ← ContentLayout variant="settings" (si es config)
+```
+
+### Reglas:
+- `layout.tsx` = Auth + `PageWrapper` con title/icon. **SIN** `ContentLayout` (va en cada sub-página).
+- Cada sub-página es un `page.tsx` Server Component independiente con `generateMetadata`.
 - `generateMetadata` obligatorio con `robots: "noindex, nofollow"`.
 - `try/catch` con `ErrorDisplay` en toda página con fetch.
-- `ContentLayout variant="wide"` en page.tsx, **NO** en la View.
-- `ViewEmptyState` de `@/components/shared/empty-state` (NUNCA el viejo).
-- `TabsContent` con clases: `flex-1 m-0 overflow-hidden data-[state=inactive]:hidden`.
+- `ViewEmptyState` de `@/components/shared/empty-state` con 3 modos (`empty`, `no-results`, `context-empty`).
+  - ⛔ **NUNCA** usar `EmptyState` de `ui/` ni `DataTableEmptyState` — fueron eliminados.
+  - **Icon Match**: El ícono DEBE coincidir con el del sidebar (`use-sidebar-navigation.ts`).
+  - **Quick Start Packs**: Opcionalmente pasar `quickStartPacks` en `mode="empty"` para templates de inicio rápido.
+  - **Smart Docs Button**: Pasar `docsPath`, el componente verifica `@/lib/docs-registry.ts` antes de mostrar el botón.
+  - **No-results guard**: Solo mostrar `mode="no-results"` con `filters.hasActiveFilters`.
+  - 📖 **Detalle COMPLETO:** Skill [seencel-ui-patterns](../skills/seencel-ui-patterns/SKILL.md) sección 1
+- ⛔ **PROHIBIDO**: Usar `<Tabs>` / `<TabsContent>` para secciones de página. Las tabs solo son válidas para controles DENTRO de una vista (ej: currency selector).
 
-### Layout Pattern (GOTCHA):
-```
-PageWrapper → ContentLayout variant="wide" → View (Fragment)
-                                               ├── Toolbar portalToHeader
-                                               └── DataTable | ViewEmptyState
-```
-- `ContentLayout` SIEMPRE en `page.tsx`, NUNCA en la View.
-- `ViewEmptyState` en early return con Fragment, SIN div wrapper.
+### Sidebar Navigation:
+- Cada página con sub-secciones define `children` en `use-sidebar-navigation.ts`.
+- El sidebar muestra drill-down automático: `← NombrePágina` + lista de sub-páginas.
+- Las rutas deben registrarse en `src/i18n/routing.ts` con ES/EN.
+
+### Header:
+- El header solo contiene: breadcrumb centrado (`Página / SubPágina`), CurrencyModeSelector (si aplica), DocsButton.
+- ⛔ **SIN tabs, SIN avatar, SIN notificaciones** en el header.
+- Avatar y notificaciones están en el bottom del sidebar.
+
+### Referencia implementada:
+- **Proyectos**: `projects/layout.tsx` (solo PageWrapper) + `projects/page.tsx` (variant="wide") + `projects/settings/page.tsx` (variant="settings") — ContentLayout desacoplado
+- **Gastos Generales**: `general-costs/layout.tsx` + `page.tsx`, `payments/page.tsx`, `concepts/page.tsx`
+- **Configuración**: `settings/layout.tsx` + 6 sub-páginas
+- **Avanzado**: `advanced/layout.tsx` + 2 sub-páginas
+
+### ContentLayout desacoplado:
+- `ContentLayout` se aplica **en cada sub-página**, NO en el layout compartido
+- Permite `variant="wide"` para listas/tablas y `variant="settings"` para config en el mismo feature
+- ⛔ PROHIBIDO poner `ContentLayout` en `layout.tsx` — cada sub-página define su propia variante
 
 📖 **Detalle:** Skill [seencel-page-layout](../skills/seencel-page-layout/SKILL.md)
 
@@ -300,22 +333,55 @@ Para vistas de edición inline (nombre, descripción, etc): usar `useAutoSave` d
 
 ---
 
-## 12. TOOLBAR — Reglas
+## 12. TOOLBAR — ToolbarCard Inline + Header Actions
 
-- `<Toolbar portalToHeader />` SIEMPRE.
-- Acciones en `actions={[{ label, icon, onClick }]}`, NUNCA botones custom.
-- Búsqueda built-in del Toolbar, NUNCA input custom.
-- Stats/badges en `leftActions`.
-- Currency selector en `leftActions` para Overview views.
+> **Decisión de Marzo 2026:** El `Toolbar` con `portalToHeader` es legacy. Se reemplaza por `ToolbarCard` inline + `PageHeaderActionPortal`.
+
+### Patrón actual:
+- `ToolbarCard` de `@/components/shared/toolbar-controls`: wrapper inline con `bg-card rounded-xl border border-border/50`
+- Dentro: `FilterPopover` + `SearchButton` a la izquierda, `ViewToggle` con `ml-auto` a la derecha
+- Acción primaria ("Nuevo X") se porta al header con `PageHeaderActionPortal`
+- ⛔ NO usar `Toolbar` con `portalToHeader` — es el patrón viejo
+- ⛔ NO crear inputs de búsqueda custom — usar `SearchButton`
+
+### Context Menu (Right-Click) OBLIGATORIO en DataTables:
+- `enableContextMenu` en `<DataTable>`
+- Callbacks: `onView` (navegar), `onEdit` (abrir panel), `onDelete` (confirmar)
+- "Eliminar" en context menu es **gris como el resto** — NO rojo/destructive
+- Si hay vista grid/cards: wrappear cada card con `ContextMenu` de shadcn con las mismas acciones
+
+### Dialog estilizado como Panel:
+- `Dialog` comparte estética con Panels: gradiente sidebar, `border-border/50`, `rounded-xl`, `shadow-2xl`
+- ⛔ NO usar `Dialog` para forms — solo para confirmaciones/alertas
 
 📖 **Detalle:** Skill [seencel-ui-patterns](../skills/seencel-ui-patterns/SKILL.md)
 
 ---
 
+## 12.5. SIDEBAR — Estética
+
+> **Decisión de Marzo 2026:** Sidebar limpio y minimalista, sin efectos volumétricos.
+
+### Reglas de estilo:
+- **Accordion groups**: Labels en `uppercase`, `text-[11px]`, `font-semibold`, color `muted-foreground/60`. Sin bordes, sin fondo, sin sombras.
+- **Nav items activos**: Solo `bg-secondary text-foreground`. SIN gradientes, SIN `box-shadow`, SIN `border-left` de color, SIN animaciones de reflejo.
+- **Nav items inactivos**: `text-muted-foreground`, hover con `bg-muted`.
+- **"Visión General"**: Es un `SidebarNavButton` normal, SIN wrapper card.
+- ⛔ **PROHIBIDO**: `bg-sidebar-accent`, `boxShadow: inset`, `borderLeftColor: var(--plan-border)`, gradientes `linear-gradient` en nav items.
+- ⛔ **PROHIBIDO**: Animaciones `plan-border-reflection`, efectos `glow`.
+
+### Estructura del sidebar:
+- **Top**: Org selector
+- **Body (scroll)**: Visión General + Planificador (standalone) → Acordeones (GESTIÓN, CONSTRUCCIÓN, FINANZAS) → Items con drill-down
+- **Bottom (fijo)**: Admin + Volver al Hub → Plan badge → Avatar + Notificaciones (inline)
+
+---
+
 ## 13. PROCESO AL TRABAJAR EN UN FEATURE
 
-1. **Leer** `features/<feature>/TABLES.md` → esquema real de DB.
-2. **Leer** `features/<feature>/README.md` → contexto funcional.
-3. **Verificar** que la vista cumple las reglas de este archivo.
-4. Si se detecta código legacy o violación → **avisar al usuario**.
-5. Si se hace un cambio importante → actualizar `README.md` del feature.
+1. **Ejecutar** `npm run db:schema` → actualizar archivos en `DB/schema/`.
+2. **Leer** `DB/schema/<schema>/` → tablas, RLS, triggers, índices, vistas (fuente de verdad).
+3. **Leer** `features/<feature>/README.md` → contexto funcional (si existe).
+4. **Verificar** que la vista cumple las reglas de este archivo.
+5. Si se detecta código legacy o violación → **avisar al usuario**.
+6. Si se hace un cambio importante con lógica de negocio compleja → documentar en `README.md` del feature (opcional).

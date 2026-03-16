@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-10T23:31:35.891Z
+> Generated: 2026-03-15T18:32:16.410Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -7,4 +7,4 @@
 
 | Table | Trigger | Timing | Events | Action |
 |-------|---------|--------|--------|--------|
-| forum_posts | trg_update_thread_activity | AFTER | DELETE, INSERT | EXECUTE FUNCTION community.update_forum_thread_activity() |
+| forum_posts | trg_update_thread_activity | AFTER | INSERT, DELETE | EXECUTE FUNCTION community.update_forum_thread_activity() |

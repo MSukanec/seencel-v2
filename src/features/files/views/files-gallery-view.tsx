@@ -2,8 +2,9 @@
 
 import { useState, useRef, useCallback, useMemo } from "react";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
+import { useTableFilters } from "@/hooks/use-table-filters";
 import { useMultiSelect } from "@/hooks/use-multi-select";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { useActiveProjectId, useLayoutStore } from "@/stores/layout-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,16 +15,6 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
     FileText,
@@ -43,8 +34,8 @@ import {
     Presentation,
     Play,
     Trash2,
-    CalendarDays,
     Upload,
+    Table2,
     // Module icons
     BookOpen,
     DollarSign,
@@ -59,19 +50,18 @@ import {
     Building2,
     MoreHorizontal,
 } from "lucide-react";
-import { FileItem, Folder } from "../types";
-import { FileListItem } from "@/components/shared/list-item";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
-import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
-import { DateRangeFilter, DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
+import { FileItem, SavedView, SavedViewFilters } from "../types";
+import { PageHeaderActionPortal } from "@/components/layout";
+import { EntityContextMenu } from "@/components/shared/entity-context-menu";
+import { ToolbarCard, FilterPopover, SearchButton, DisplayButton, ViewsTabs, ActiveFiltersBar, ViewEditorBar } from "@/components/shared/toolbar-controls";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { getFilesColumns, flattenFileItem, type FileTableRow } from "../tables/files-columns";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { deleteFile } from "../actions";
-import { FilesUploadForm } from "../forms/files-upload-form";
-import { FilesFoldersView } from "./files-folders-view";
-import { MoveToFolderDialog } from "../forms/move-to-folder-dialog";
+import { deleteFile, createSavedView, updateSavedView, deleteSavedView } from "../actions";
 import { parseDateFromDB } from "@/lib/timezone-data";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 
 
@@ -93,7 +83,7 @@ import "yet-another-react-lightbox/plugins/thumbnails.css";
 // TYPES & HELPERS
 // ============================================================================
 
-type ViewMode = "explore" | "folders" | "recent";
+type ViewMode = "explore" | "table";
 
 /** Detect file category from MIME type or file_type field */
 function getFileCategory(fileType: string): "image" | "video" | "pdf" | "spreadsheet" | "presentation" | "code" | "archive" | "document" {
@@ -136,6 +126,62 @@ function getFileUrl(file: { signed_url?: string; bucket: string; file_path: stri
     return `${supabaseUrl}/storage/v1/object/public/${file.bucket}/${file.file_path}`;
 }
 
+/** Shared context menu actions for file items — used in both grid and table views */
+function getFileContextActions() {
+    return [
+        {
+            label: "Copiar link",
+            icon: <Copy className="h-3.5 w-3.5" />,
+            onClick: (data: FileTableRow | FileItem) => {
+                const file = 'media_files' in data ? data.media_files : data;
+                const url = getFileUrl(file as any);
+                navigator.clipboard.writeText(url);
+                toast.success("Link copiado al portapapeles");
+            },
+        },
+        {
+            label: "Enviar por WhatsApp",
+            icon: <MessageCircle className="h-3.5 w-3.5" />,
+            onClick: (data: FileTableRow | FileItem) => {
+                const file = 'media_files' in data ? data.media_files : data;
+                const url = getFileUrl(file as any);
+                window.open(`https://wa.me/?text=${encodeURIComponent(url)}`, "_blank");
+            },
+        },
+        {
+            label: "Enviar por mail",
+            icon: <Mail className="h-3.5 w-3.5" />,
+            onClick: (data: FileTableRow | FileItem) => {
+                const mediaFiles = 'media_files' in data ? data.media_files : data;
+                const url = getFileUrl(mediaFiles as any);
+                const fileName = (mediaFiles as any).file_name || "archivo";
+                window.open(`mailto:?subject=${encodeURIComponent(fileName)}&body=${encodeURIComponent(url)}`, "_blank");
+            },
+        },
+        {
+            label: "Abrir en nueva pestaña",
+            icon: <ExternalLink className="h-3.5 w-3.5" />,
+            onClick: (data: FileTableRow | FileItem) => {
+                const file = 'media_files' in data ? data.media_files : data;
+                window.open(getFileUrl(file as any), "_blank");
+            },
+        },
+        {
+            label: "Descargar",
+            icon: <Download className="h-3.5 w-3.5" />,
+            onClick: (data: FileTableRow | FileItem) => {
+                const mediaFiles = 'media_files' in data ? data.media_files : data;
+                const url = getFileUrl(mediaFiles as any);
+                const fileName = (mediaFiles as any).file_name || "archivo";
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = fileName;
+                a.click();
+            },
+        },
+    ];
+}
+
 function formatFileDate(dateStr: string | null | undefined): string {
     if (!dateStr) return "";
     const date = parseDateFromDB(dateStr);
@@ -173,7 +219,7 @@ function getSourceModule(item: FileItem): string {
 /** Spanish labels for source modules */
 const MODULE_LABELS: Record<string, string> = {
     sitelog: "Bitácora",
-    clients: "Clientes",
+    clients: "Pagos",
     materials: "Materiales",
     subcontracts: "Subcontratos",
     general_costs: "Gastos Generales",
@@ -206,7 +252,7 @@ const MODULE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
 
 /** Spanish labels for category field */
 const CATEGORY_LABELS: Record<string, string> = {
-    document: "Documento",
+    document: "Archivo",
     photo: "Foto",
     other: "Otro",
     general: "General",
@@ -237,67 +283,7 @@ function getModuleLabel(module: string): string {
     return MODULE_LABELS[module] || module;
 }
 
-// ============================================================================
-// DATE GROUPING HELPER
-// ============================================================================
 
-interface DateGroup {
-    label: string;
-    items: FileItem[];
-}
-
-function groupFilesByDate(files: FileItem[]): DateGroup[] {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const weekStart = new Date(today);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday
-    const lastWeekStart = new Date(weekStart);
-    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-
-    const groups = new Map<string, FileItem[]>();
-    const groupOrder: string[] = [];
-
-    const addToGroup = (label: string, item: FileItem) => {
-        if (!groups.has(label)) {
-            groups.set(label, []);
-            groupOrder.push(label);
-        }
-        groups.get(label)!.push(item);
-    };
-
-    for (const item of files) {
-        const dateStr = item.media_files.created_at;
-        const date = parseDateFromDB(dateStr);
-        if (!date) {
-            addToGroup("Sin fecha", item);
-            continue;
-        }
-
-        const fileDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-        if (fileDay.getTime() === today.getTime()) {
-            addToGroup("Hoy", item);
-        } else if (fileDay.getTime() === yesterday.getTime()) {
-            addToGroup("Ayer", item);
-        } else if (fileDay >= weekStart) {
-            addToGroup("Esta semana", item);
-        } else if (fileDay >= lastWeekStart) {
-            addToGroup("Semana pasada", item);
-        } else {
-            // Group by month + year
-            const monthLabel = date.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
-            const capitalizedLabel = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
-            addToGroup(capitalizedLabel, item);
-        }
-    }
-
-    return groupOrder.map((label) => ({
-        label,
-        items: groups.get(label)!,
-    }));
-}
 
 // ============================================================================
 // FILE CARD (Grid / Masonry)
@@ -410,99 +396,23 @@ function FileCard({ item, onClick, onDelete, projectName, projectColor }: FileCa
                 </div>
             )}
 
-            {/* Hover Overlay with actions */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 z-20">
-                <div className="flex gap-2">
-                    {/* Share Dropdown */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 hover:bg-white/30 transition-colors cursor-pointer">
-                                <Share2 className="h-4 w-4 text-white" />
-                            </div>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="center" side="top" className="min-w-[180px]" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuItem
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(url);
-                                    toast.success("Link copiado al portapapeles");
-                                }}
-                            >
-                                <Copy className="h-4 w-4 mr-2" />
-                                Copiar link
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(`https://wa.me/?text=${encodeURIComponent(url)}`, "_blank");
-                                }}
-                            >
-                                <MessageCircle className="h-4 w-4 mr-2" />
-                                WhatsApp
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(`mailto:?subject=${encodeURIComponent(file.file_name)}&body=${encodeURIComponent(url)}`, "_blank");
-                                }}
-                            >
-                                <Mail className="h-4 w-4 mr-2" />
-                                Email
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(url, "_blank");
-                                }}
-                            >
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Abrir en nueva pestaña
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
 
-                    {/* Download */}
-                    <a
-                        href={url}
-                        download
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 hover:bg-white/30 transition-colors"
+
+            {/* Project Badge (top-left) — only visible on hover */}
+            {projectName && (
+                <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <Badge
+                        variant="secondary"
+                        className="backdrop-blur-md bg-black/40 text-white border-0 text-[10px] font-medium gap-1.5"
                     >
-                        <Download className="h-4 w-4 text-white" />
-                    </a>
-
-                    {/* Delete */}
-                    {onDelete && (
-                        <div
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete(item);
-                            }}
-                            className="w-10 h-10 rounded-full bg-red-500/30 backdrop-blur-md flex items-center justify-center border border-red-400/40 hover:bg-red-500/50 transition-colors cursor-pointer"
-                        >
-                            <Trash2 className="h-4 w-4 text-white" />
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Project Badge (top-left) */}
-            {projectName && (() => {
-                const initials = projectName.split(/\s+/).map(w => w[0]).join("").toUpperCase();
-                return (
-                    <div className="absolute top-2 left-2 z-10">
-                        <Badge
-                            variant="secondary"
-                            className="backdrop-blur-md text-white border-0 text-[10px] font-medium"
+                        <span
+                            className="w-2 h-2 rounded-full shrink-0"
                             style={{ backgroundColor: projectColor || 'hsl(var(--primary))' }}
-                        >
-                            <span className="sm:hidden">{initials}</span>
-                            <span className="hidden sm:inline">{projectName}</span>
-                        </Badge>
-                    </div>
-                );
-            })()}
+                        />
+                        {projectName}
+                    </Badge>
+                </div>
+            )}
 
             {/* Module Badge (top-right) */}
             <div className="absolute top-2 right-2 z-10">
@@ -513,15 +423,6 @@ function FileCard({ item, onClick, onDelete, projectName, projectColor }: FileCa
                     {getModuleLabel(getSourceModule(item))}
                 </Badge>
             </div>
-
-            {/* Date text (bottom-left) */}
-            {formatFileDate(file.created_at) && (
-                <div className="absolute bottom-2 left-2 z-10">
-                    <span className="text-[10px] font-medium text-white/80 drop-shadow-md">
-                        {formatFileDate(file.created_at)}
-                    </span>
-                </div>
-            )}
         </div>
     );
 }
@@ -588,26 +489,23 @@ function buildLightboxSlides(files: FileItem[]) {
 
 interface FileGalleryProps {
     files: FileItem[];
-    folders?: Folder[];
     organizationId?: string;
     maxFileSizeMb?: number;
     onRefresh?: () => void;
     /** Org projects for badge display and filtering */
-    projects?: { id: string; name: string }[];
+    projects?: { id: string; name: string; color?: string | null; image_url?: string | null }[];
+    /** Saved views for this entity */
+    savedViews?: SavedView[];
 }
 
-export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb = 50, onRefresh, projects = [] }: FileGalleryProps) {
-    const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
-    const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
-    const [dateRange, setDateRange] = useState<DateRangeFilterValue | undefined>(undefined);
+export function FileGallery({ files, organizationId, maxFileSizeMb = 50, onRefresh, projects = [], savedViews = [] }: FileGalleryProps) {
     const [viewMode, setViewMode] = useState<ViewMode>("explore");
-    const [searchQuery, setSearchQuery] = useState("");
     const activeProjectId = useActiveProjectId();
     const [lightboxIndex, setLightboxIndex] = useState(-1);
     const [deleteTarget, setDeleteTarget] = useState<FileItem | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [moveTarget, setMoveTarget] = useState<FileItem | null>(null);
-    const debounceRef = useRef<NodeJS.Timeout | null>(null);
+    const [activeViewId, setActiveViewId] = useState<string | null>(null);
+    const [localViews, setLocalViews] = useState<SavedView[]>(savedViews);
 
     // Optimistic list for instant delete feedback
     const { optimisticItems: optimisticFiles, removeItem } = useOptimisticList({
@@ -615,74 +513,17 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
         getItemId: (item) => item.id,
     });
 
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
 
-    // Open upload modal
+    // Open upload panel
     const handleUpload = useCallback(() => {
-        openModal(
-            <FilesUploadForm
-                organizationId={organizationId!}
-                maxFileSizeMb={maxFileSizeMb}
-                folders={folders}
-                projects={projects}
-                activeProjectId={activeProjectId}
-            />,
-            {
-                title: "Subir Documentos",
-                description: "Arrastrá o seleccioná los documentos que querés subir a tu organización.",
-                size: "md",
-            }
-        );
-    }, [openModal, organizationId, maxFileSizeMb, folders, projects, activeProjectId]);
-
-    // Debounced search (300ms)
-    const debouncedSearch = useCallback((value: string) => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => {
-            setSearchQuery(value);
-        }, 300);
-    }, []);
-
-    const filteredFiles = useMemo(() => optimisticFiles.filter((item) => {
-        // Text search
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            if (!item.media_files.file_name.toLowerCase().includes(query)) {
-                return false;
-            }
-        }
-        // Type filter
-        if (selectedTypes.size > 0) {
-            const fileType = item.media_files.file_type;
-            let matchesType = false;
-            if (selectedTypes.has("images") && getFileCategory(fileType) === "image") matchesType = true;
-            if (selectedTypes.has("docs") && !["image", "video"].includes(getFileCategory(fileType))) matchesType = true;
-            if (selectedTypes.has("videos") && getFileCategory(fileType) === "video") matchesType = true;
-            if (!matchesType) return false;
-        }
-        // Module filter
-        if (selectedModules.size > 0) {
-            const module = getSourceModule(item);
-            if (!selectedModules.has(module)) return false;
-        }
-        // Date range filter
-        if (dateRange?.from || dateRange?.to) {
-            const fileDate = item.media_files.created_at ? new Date(item.media_files.created_at) : null;
-            if (!fileDate) return false;
-            if (dateRange.from && fileDate < dateRange.from) return false;
-            if (dateRange.to) {
-                const endOfTo = new Date(dateRange.to);
-                endOfTo.setHours(23, 59, 59, 999);
-                if (fileDate > endOfTo) return false;
-            }
-        }
-        // Project context filter (automatic from header selector)
-        if (activeProjectId) {
-            const pid = item.project_id;
-            if (pid !== activeProjectId) return false;
-        }
-        return true;
-    }), [optimisticFiles, searchQuery, selectedTypes, selectedModules, activeProjectId, dateRange]);
+        openPanel('files-upload-form', {
+            organizationId: organizationId!,
+            maxFileSizeMb,
+            projects,
+            activeProjectId,
+        });
+    }, [openPanel, organizationId, maxFileSizeMb, projects, activeProjectId]);
 
     // Compute available modules from data
     const moduleFilterOptions = useMemo(() => {
@@ -696,9 +537,69 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
             .map(([mod]) => ({
                 label: getModuleLabel(mod),
                 value: mod,
-                icon: MODULE_ICONS[mod] || MoreHorizontal,
             }));
     }, [optimisticFiles]);
+
+    // Type filter options
+    const typeFilterOptions = [
+        { label: "Imágenes", value: "images" },
+        { label: "Archivos", value: "docs" },
+        { label: "Videos", value: "videos" },
+    ];
+
+    // Filters (standard hook)
+    const filters = useTableFilters({
+        facets: [
+            { key: "type", title: "Tipo", icon: FileText, options: typeFilterOptions },
+            ...(moduleFilterOptions.length > 1
+                ? [{ key: "module", title: "Herramienta", icon: FolderOpen, options: moduleFilterOptions }]
+                : []),
+        ],
+        enableDateRange: true,
+    });
+
+    const filteredFiles = useMemo(() => optimisticFiles.filter((item) => {
+        // Text search
+        if (filters.searchQuery) {
+            const query = filters.searchQuery.toLowerCase();
+            if (!item.media_files.file_name.toLowerCase().includes(query)) {
+                return false;
+            }
+        }
+        // Type filter
+        const typeFilter = filters.facetValues.type;
+        if (typeFilter?.size > 0) {
+            const fileType = item.media_files.file_type;
+            let matchesType = false;
+            if (typeFilter.has("images") && getFileCategory(fileType) === "image") matchesType = true;
+            if (typeFilter.has("docs") && !["image", "video"].includes(getFileCategory(fileType))) matchesType = true;
+            if (typeFilter.has("videos") && getFileCategory(fileType) === "video") matchesType = true;
+            if (!matchesType) return false;
+        }
+        // Module filter
+        const moduleFilter = filters.facetValues.module;
+        if (moduleFilter?.size > 0) {
+            const module = getSourceModule(item);
+            if (!moduleFilter.has(module)) return false;
+        }
+        // Date range filter
+        if (filters.dateRange?.from || filters.dateRange?.to) {
+            const fileDate = item.media_files.created_at ? new Date(item.media_files.created_at) : null;
+            if (!fileDate) return false;
+            if (filters.dateRange.from && fileDate < filters.dateRange.from) return false;
+            if (filters.dateRange.to) {
+                const endOfTo = new Date(filters.dateRange.to);
+                endOfTo.setHours(23, 59, 59, 999);
+                if (fileDate > endOfTo) return false;
+            }
+        }
+        // Project context filter (automatic from header selector)
+        if (activeProjectId) {
+            const pid = item.project_id;
+            if (pid !== activeProjectId) return false;
+        }
+        return true;
+    }), [optimisticFiles, filters.searchQuery, filters.facetValues, filters.dateRange, activeProjectId]);
 
     // Project name map for badges
     const projectNameMap = useMemo(() => {
@@ -746,7 +647,7 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
             });
         }
 
-        toast.success(`${ids.length} ${ids.length === 1 ? "documento eliminado" : "documentos eliminados"}`);
+        toast.success(`${ids.length} ${ids.length === 1 ? "archivo eliminado" : "archivos eliminados"}`);
     }, [multiSelect, removeItem]);
 
     // Bulk download handler
@@ -766,46 +667,29 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
     // Lightbox slides
     const slides = useMemo(() => buildLightboxSlides(filteredFiles), [filteredFiles]);
 
-    // FacetedFilter options
-    const typeFilterOptions = [
-        { label: "Imágenes", value: "images", icon: ImageIcon },
-        { label: "Documentos", value: "docs", icon: FileText },
-        { label: "Videos", value: "videos", icon: Film },
-    ];
-
-    // View mode tabs
+    // View mode tabs (without "Carpetas")
     const viewModeOptions = [
         { label: "Explorar", value: "explore", icon: Search },
-        { label: "Carpetas", value: "folders", icon: FolderOpen },
-        { label: "Recientes", value: "recent", icon: CalendarDays },
+        { label: "Tabla", value: "table", icon: Table2 },
     ];
 
-    const handleTypeSelect = (value: string) => {
-        setSelectedTypes((prev) => {
-            const next = new Set(prev);
-            if (next.has(value)) next.delete(value);
-            else next.add(value);
-            return next;
-        });
-    };
+    // Table columns (memoized)
+    const tableColumns = useMemo(
+        () => getFilesColumns({ projects }),
+        [projects]
+    );
 
-    const handleModuleSelect = (value: string) => {
-        setSelectedModules((prev) => {
-            const next = new Set(prev);
-            if (next.has(value)) next.delete(value);
-            else next.add(value);
-            return next;
-        });
-    };
+    // Flatten data for table (column factories need flat accessorKeys)
+    const projectMap = useMemo(() => {
+        const map = new Map<string, { name: string; color?: string | null; image_url?: string | null }>();
+        for (const p of projects) map.set(p.id, p);
+        return map;
+    }, [projects]);
 
-    const hasFilters = searchQuery !== "" || selectedTypes.size > 0 || selectedModules.size > 0 || !!dateRange;
-
-    const handleResetFilters = () => {
-        setSearchQuery("");
-        setSelectedTypes(new Set());
-        setSelectedModules(new Set());
-        setDateRange(undefined);
-    };
+    const tableData = useMemo(
+        () => filteredFiles.map(f => flattenFileItem(f, projectMap)),
+        [filteredFiles, projectMap]
+    );
 
     const handleDeleteRequest = useCallback((item: FileItem) => {
         setDeleteTarget(item);
@@ -831,177 +715,380 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
         setDeleteTarget(null);
     }, [deleteTarget, removeItem]);
 
-    return (
-        <div className="h-full flex flex-col">
-            {/* Toolbar - Portaled to Header */}
-            <Toolbar
-                portalToHeader
-                searchQuery={searchQuery}
-                onSearchChange={debouncedSearch}
-                searchPlaceholder="Buscar documentos..."
-                actions={[
-                    {
-                        label: "Subir Documento",
-                        icon: Upload,
-                        onClick: handleUpload,
-                    },
-                ]}
-                selectedCount={multiSelect.selectedCount}
-                onClearSelection={multiSelect.clearSelection}
-                onSelectAll={multiSelect.selectAll}
-                totalCount={filteredFiles.length}
-                onBulkDelete={handleBulkDelete}
-                bulkActions={
-                    <>
-                        <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="gap-2">
-                            <Trash2 className="h-4 w-4" />
-                            Eliminar
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={handleBulkDownload} className="gap-2">
-                            <Download className="h-4 w-4" />
-                            Descargar
-                        </Button>
-                    </>
-                }
-                leftActions={
-                    <div className="flex items-center gap-2">
-                        <ToolbarTabs
-                            value={viewMode}
-                            onValueChange={(v) => setViewMode(v as ViewMode)}
-                            options={viewModeOptions}
-                        />
-                        <FacetedFilter
-                            title="Tipo"
-                            options={typeFilterOptions}
-                            selectedValues={selectedTypes}
-                            onSelect={handleTypeSelect}
-                            onClear={() => setSelectedTypes(new Set())}
-                        />
-                        {moduleFilterOptions.length > 1 && (
-                            <FacetedFilter
-                                title="Módulo"
-                                options={moduleFilterOptions}
-                                selectedValues={selectedModules}
-                                onSelect={handleModuleSelect}
-                                onClear={() => setSelectedModules(new Set())}
-                            />
-                        )}
-                        <DateRangeFilter
-                            title="Fecha"
-                            value={dateRange}
-                            onChange={setDateRange}
-                        />
-                    </div>
-                }
-            />
+    // ─── Saved Views handlers ────────────────────────────────
+    const serializeCurrentFilters = useCallback((): SavedViewFilters => {
+        const facets: Record<string, string[]> = {};
+        for (const [key, set] of Object.entries(filters.facetValues)) {
+            if (set.size > 0) facets[key] = Array.from(set);
+        }
+        return {
+            search: filters.searchQuery || undefined,
+            facets: Object.keys(facets).length > 0 ? facets : undefined,
+            dateRange: filters.dateRange ? {
+                from: filters.dateRange.from?.toISOString(),
+                to: filters.dateRange.to?.toISOString(),
+            } : undefined,
+        };
+    }, [filters.searchQuery, filters.facetValues, filters.dateRange]);
 
-            {/* Content */}
-            <div className="flex-1 flex flex-col min-h-0">
-                {/* Empty state: no files at all (org-wide) */}
-                {optimisticFiles.length === 0 ? (
+    const applyViewFilters = useCallback((view: SavedView) => {
+        // Clear all first
+        filters.clearAll();
+        // Apply saved filters
+        const f = view.filters;
+        if (f.search) filters.setSearchQuery(f.search);
+        if (f.facets) {
+            for (const [key, values] of Object.entries(f.facets)) {
+                for (const val of values) filters.toggleFacet(key, val);
+            }
+        }
+        if (f.dateRange) {
+            filters.setDateRange({
+                from: f.dateRange.from ? new Date(f.dateRange.from) : undefined,
+                to: f.dateRange.to ? new Date(f.dateRange.to) : undefined,
+            });
+        }
+        // Apply view mode
+        if (view.view_mode && (view.view_mode === 'explore' || view.view_mode === 'table')) {
+            setViewMode(view.view_mode);
+        }
+    }, [filters]);
+
+    const handleSelectView = useCallback((viewId: string | null) => {
+        setActiveViewId(viewId);
+        if (viewId === null) {
+            filters.clearAll();
+            return;
+        }
+        const view = localViews.find(v => v.id === viewId);
+        if (view) applyViewFilters(view);
+    }, [localViews, filters, applyViewFilters]);
+
+    const handleCreateView = useCallback(async (name: string) => {
+        if (!organizationId) return;
+        const currentFilters = serializeCurrentFilters();
+        // Optimistic: add immediately with temp ID
+        const tempId = `temp-${Date.now()}`;
+        const tempView: SavedView = {
+            id: tempId,
+            organization_id: organizationId,
+            name,
+            entity_type: 'files',
+            view_mode: viewMode,
+            filters: currentFilters,
+            is_default: false,
+            position: localViews.length,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+        setLocalViews(prev => [...prev, tempView]);
+        setActiveViewId(tempId);
+
+        const result = await createSavedView({
+            organizationId,
+            name,
+            entityType: 'files',
+            viewMode,
+            filters: currentFilters as Record<string, unknown>,
+        });
+        if (result.success && result.data) {
+            // Replace temp with real
+            setLocalViews(prev => prev.map(v => v.id === tempId ? {
+                ...v,
+                id: result.data!.id,
+                created_at: result.data!.created_at,
+                updated_at: result.data!.updated_at,
+            } : v));
+            setActiveViewId(result.data.id);
+            toast.success(`Vista "${name}" creada`);
+        } else {
+            // Rollback
+            setLocalViews(prev => prev.filter(v => v.id !== tempId));
+            setActiveViewId(null);
+            toast.error(result.error || 'Error al crear vista');
+        }
+    }, [organizationId, serializeCurrentFilters, viewMode, localViews]);
+
+    const handleRenameView = useCallback(async (viewId: string, name: string) => {
+        // Optimistic: rename immediately
+        const previousName = localViews.find(v => v.id === viewId)?.name;
+        setLocalViews(prev => prev.map(v => v.id === viewId ? { ...v, name } : v));
+
+        const result = await updateSavedView(viewId, { name });
+        if (result.success) {
+            toast.success('Vista renombrada');
+        } else {
+            // Rollback
+            if (previousName) {
+                setLocalViews(prev => prev.map(v => v.id === viewId ? { ...v, name: previousName } : v));
+            }
+            toast.error(result.error || 'Error al renombrar');
+        }
+    }, [localViews]);
+
+    const handleUpdateViewFilters = useCallback(async (viewId: string) => {
+        const currentFilters = serializeCurrentFilters();
+        // Optimistic: update immediately
+        const previousView = localViews.find(v => v.id === viewId);
+        setLocalViews(prev => prev.map(v => v.id === viewId ? { ...v, filters: currentFilters, view_mode: viewMode } : v));
+
+        const result = await updateSavedView(viewId, {
+            filters: currentFilters as Record<string, unknown>,
+            viewMode,
+        });
+        if (result.success) {
+            toast.success('Filtros actualizados');
+        } else {
+            // Rollback
+            if (previousView) {
+                setLocalViews(prev => prev.map(v => v.id === viewId ? previousView : v));
+            }
+            toast.error(result.error || 'Error al actualizar');
+        }
+    }, [serializeCurrentFilters, viewMode, localViews]);
+
+    const handleDeleteView = useCallback(async (viewId: string) => {
+        // Optimistic: remove immediately
+        const deletedView = localViews.find(v => v.id === viewId);
+        const deletedIndex = localViews.findIndex(v => v.id === viewId);
+        setLocalViews(prev => prev.filter(v => v.id !== viewId));
+        if (activeViewId === viewId) {
+            setActiveViewId(null);
+            filters.clearAll();
+        }
+
+        const result = await deleteSavedView(viewId);
+        if (result.success) {
+            toast.success('Vista eliminada');
+        } else {
+            // Rollback: restore view at original position
+            if (deletedView) {
+                setLocalViews(prev => {
+                    const restored = [...prev];
+                    restored.splice(deletedIndex, 0, deletedView);
+                    return restored;
+                });
+            }
+            toast.error(result.error || 'Error al eliminar');
+        }
+    }, [activeViewId, filters, localViews]);
+
+    // === Header action (renders in all states) ===
+    const headerAction = (
+        <PageHeaderActionPortal>
+            <Button onClick={handleUpload} size="sm">
+                <Upload className="h-4 w-4 mr-2" />
+                Subir Archivo
+            </Button>
+        </PageHeaderActionPortal>
+    );
+
+
+
+    // === Editing view state ===
+    const [editingView, setEditingView] = useState<{ id: string | null; name: string } | null>(null);
+
+    const handleStartCreate = useCallback(() => {
+        setEditingView({ id: null, name: "" });
+    }, []);
+
+    const handleStartEdit = useCallback((viewId: string) => {
+        const view = localViews.find(v => v.id === viewId);
+        if (view) {
+            setEditingView({ id: viewId, name: view.name });
+            // Apply view filters so user sees current state
+            applyViewFilters(view);
+            setActiveViewId(viewId);
+        }
+    }, [localViews, applyViewFilters]);
+
+    const handleCancelEdit = useCallback(() => {
+        setEditingView(null);
+    }, []);
+
+    const handleSaveEditedView = useCallback(() => {
+        if (!editingView || !editingView.name.trim()) return;
+        if (editingView.id === null) {
+            // Creating new
+            handleCreateView(editingView.name.trim());
+        } else {
+            // Updating existing — rename + update filters
+            handleRenameView(editingView.id, editingView.name.trim());
+            handleUpdateViewFilters(editingView.id);
+        }
+        setEditingView(null);
+    }, [editingView, handleCreateView, handleRenameView, handleUpdateViewFilters]);
+
+    // === Toolbar ===
+    const toolbar = (
+        <ToolbarCard
+            left={
+                <ViewsTabs
+                    views={localViews}
+                    activeViewId={activeViewId}
+                    onSelectView={handleSelectView}
+                    onStartCreate={handleStartCreate}
+                    onRenameView={handleRenameView}
+                    onStartEdit={handleStartEdit}
+                    onUpdateFilters={handleUpdateViewFilters}
+                    onDeleteView={handleDeleteView}
+                />
+            }
+            right={
+                <>
+                    <SearchButton filters={filters} placeholder="Buscar archivos..." />
+                    <FilterPopover filters={filters} />
+                    <DisplayButton
+                        viewMode={viewMode}
+                        onViewModeChange={(v) => setViewMode(v as ViewMode)}
+                        viewModeOptions={viewModeOptions}
+                    />
+                </>
+            }
+            bottom={
+                <>
+                    {editingView && (
+                        <ViewEditorBar
+                            name={editingView.name}
+                            onNameChange={(name) => setEditingView(prev => prev ? { ...prev, name } : null)}
+                            onCancel={handleCancelEdit}
+                            onSave={handleSaveEditedView}
+                        />
+                    )}
+                    {!editingView && (
+                        <ActiveFiltersBar
+                            filters={filters}
+                            addFilterSlot={<FilterPopover filters={filters} variant="plus" />}
+                            onSaveView={handleStartCreate}
+                        />
+                    )}
+                </>
+            }
+        />
+    );
+
+    // === EARLY RETURN: Empty State (no files at all) ===
+    if (optimisticFiles.length === 0) {
+        return (
+            <>
+                {headerAction}
+                <div className="h-full flex items-center justify-center">
                     <ViewEmptyState
                         mode="empty"
                         icon={FolderOpen}
-                        viewName="Documentación"
-                        featureDescription="La documentación incluye todos los documentos, imágenes y recursos que subís a tu organización. Acá vas a encontrar todo lo que tu equipo comparte."
+                        viewName="Archivos"
+                        featureDescription="Los archivos incluyen todos los documentos, imágenes y recursos que subís a tu organización. Acá vas a encontrar todo lo que tu equipo comparte."
                         onAction={handleUpload}
-                        actionLabel="Subir Documento"
+                        actionLabel="Subir Archivo"
                         actionIcon={Upload}
                         docsPath="/docs/documentacion/introduccion"
                     />
-                ) : filteredFiles.length === 0 && activeProjectId && !hasFilters ? (
-                    /* Context empty: project has no files but org does */
+                </div>
+            </>
+        );
+    }
+
+    // === EARLY RETURN: Context Empty (project has no files but org does) ===
+    if (filteredFiles.length === 0 && activeProjectId && !filters.hasActiveFilters) {
+        return (
+            <>
+                {headerAction}
+                <div className="h-full flex items-center justify-center">
                     <ViewEmptyState
                         mode="context-empty"
                         icon={FolderOpen}
-                        viewName="documentos"
+                        viewName="archivos"
                         projectName={projectNameMap[activeProjectId] || "este proyecto"}
                         onAction={handleUpload}
-                        actionLabel="Subir Documento"
+                        actionLabel="Subir Archivo"
                         actionIcon={Upload}
                         onSwitchToOrg={() => useLayoutStore.getState().actions.setActiveProjectId(null)}
                     />
-                ) : filteredFiles.length === 0 ? (
-                    /* No results: manual filters returned nothing */
+                </div>
+            </>
+        );
+    }
+
+    // === EARLY RETURN: No Results (filters active but no matches) ===
+    if (filteredFiles.length === 0) {
+        return (
+            <>
+                {headerAction}
+                <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
+                    {toolbar}
                     <ViewEmptyState
                         mode="no-results"
                         icon={FolderOpen}
-                        viewName="documentos"
+                        viewName="archivos"
                         filterContext="con esos filtros"
-                        onResetFilters={handleResetFilters}
+                        onResetFilters={filters.clearAll}
                     />
-                ) : (
-                    <>
-                        {/* Explore Mode (Grid) */}
+                </div>
+            </>
+        );
+    }
+
+    // === RENDER: Normal (has data) ===
+    return (
+        <div className="h-full flex flex-col">
+            {headerAction}
+
+            {/* Toolbar — inline ToolbarCard */}
+            <div className="mb-4">
+                {toolbar}
+            </div>
+
+            <div className="flex-1 flex flex-col min-h-0">
+                {/* Explore Mode (Grid) */}
                         {viewMode === "explore" && (
-                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1">
-                                {filteredFiles.map((item, index) => (
-                                    <FileCard
-                                        key={item.id}
-                                        item={item}
-                                        onClick={() => setLightboxIndex(index)}
-                                        onDelete={handleDeleteRequest}
-                                        projectName={item.project_id ? projectNameMap[item.project_id] : null}
-                                        projectColor={item.project_id ? projectColorMap[item.project_id] : null}
-                                    />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Folders Mode */}
-                        {viewMode === "folders" && (
-                            <FilesFoldersView
-                                folders={folders}
-                                files={filteredFiles}
-                                organizationId={organizationId!}
-                                onOpenFile={(_item, index) => setLightboxIndex(index)}
-                                onDeleteFile={handleDeleteRequest}
-                                onMoveToFolder={setMoveTarget}
-                                isSelected={multiSelect.isSelected}
-                                onToggleSelect={multiSelect.toggle}
-                                projectNameMap={projectNameMap}
-                                projectColorMap={projectColorMap}
-                            />
-                        )}
-
-                        {/* Recent Mode (grouped by date) */}
-                        {viewMode === "recent" && (
-                            <div className="space-y-6">
-                                {groupFilesByDate(filteredFiles).map((group) => (
-                                    <div key={group.label}>
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                                            <h3 className="text-sm font-semibold text-muted-foreground">
-                                                {group.label}
-                                            </h3>
-                                            <span className="text-xs text-muted-foreground/60">
-                                                {group.items.length} {group.items.length === 1 ? "documento" : "documentos"}
-                                            </span>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {group.items.map((item) => {
-                                                const globalIndex = filteredFiles.indexOf(item);
-                                                return (
-                                                    <FileListItem
-                                                        key={item.id}
+                            <Card variant="inset">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1">
+                                    {filteredFiles.map((item, index) => {
+                                        const fileUrl = getFileUrl(item.media_files);
+                                        return (
+                                            <EntityContextMenu
+                                                key={item.id}
+                                                data={item}
+                                                onView={(item) => {
+                                                    const idx = filteredFiles.findIndex(f => f.id === item.id);
+                                                    if (idx >= 0) setLightboxIndex(idx);
+                                                }}
+                                                onDelete={handleDeleteRequest}
+                                                customActions={getFileContextActions() as any}
+                                            >
+                                                <div>
+                                                    <FileCard
                                                         item={item}
-                                                        selected={multiSelect.isSelected(item.id)}
-                                                        onToggleSelect={multiSelect.toggle}
-                                                        onClick={() => setLightboxIndex(globalIndex)}
+                                                        onClick={() => setLightboxIndex(index)}
                                                         onDelete={handleDeleteRequest}
-                                                        onMoveToFolder={setMoveTarget}
                                                         projectName={item.project_id ? projectNameMap[item.project_id] : null}
                                                         projectColor={item.project_id ? projectColorMap[item.project_id] : null}
                                                     />
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                                </div>
+                                            </EntityContextMenu>
+                                        );
+                                    })}
+                                </div>
+                            </Card>
                         )}
-                    </>
-                )}
+
+
+
+                        {/* Table Mode */}
+                        {viewMode === "table" && (
+                            <DataTable
+                                columns={tableColumns}
+                                data={tableData}
+                                enableContextMenu
+                                enableRowSelection
+                                onView={(row: FileTableRow) => {
+                                    const idx = filteredFiles.findIndex(f => f.id === row.id);
+                                    if (idx >= 0) setLightboxIndex(idx);
+                                }}
+                                onDelete={(row: FileTableRow) => handleDeleteRequest(row as FileItem)}
+                                customActions={getFileContextActions() as any}
+                            />
+                        )}
             </div>
 
             {/* Lightbox */}
@@ -1072,36 +1159,17 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
                 }}
             />
 
-            {/* Delete Confirmation Dialog */}
-            <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar archivo?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Se eliminará <span className="font-medium text-foreground">{deleteTarget?.media_files.file_name}</span>.
-                            Esta acción no se puede deshacer.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDeleteConfirm}
-                            disabled={isDeleting}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                            {isDeleting ? "Eliminando..." : "Eliminar"}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-
-            {/* Move to Folder Dialog */}
-            <MoveToFolderDialog
-                open={!!moveTarget}
-                onOpenChange={(open) => !open && setMoveTarget(null)}
-                file={moveTarget}
-                folders={folders}
+            {/* Delete Confirmation */}
+            <DeleteConfirmationDialog
+                open={!!deleteTarget}
+                onOpenChange={(open) => !open && setDeleteTarget(null)}
+                onConfirm={handleDeleteConfirm}
+                title="¿Eliminar archivo?"
+                description={<>Se eliminará <span className="font-medium text-foreground">{deleteTarget?.media_files.file_name}</span>. Esta acción no se puede deshacer.</>}
+                isDeleting={isDeleting}
             />
+
+
         </div>
     );
 }

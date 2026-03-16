@@ -13,6 +13,9 @@ import { PlanCardsGrid } from "@/features/billing/components/plan-cards-grid";
 import type { Plan } from "@/actions/plans";
 import type { PlanPurchaseFlags } from "@/features/billing/components/plan-card";
 import { getPlanDisplayName } from "@/lib/plan-utils";
+import { getBillingCyclesColumns } from "../tables/billing-cycles-columns";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { useMemo } from "react";
 
 const dateFnsLocales: Record<string, Locale> = { es, en: enUS };
 
@@ -30,46 +33,7 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
     const locale = useLocale();
     const t = useTranslations("BillingSettings");
     const dateLocale = dateFnsLocales[locale] || es;
-
-    const formatCurrency = (amount: number, currency: string) => {
-        return new Intl.NumberFormat(locale, {
-            style: 'currency',
-            currency: currency,
-        }).format(amount);
-    };
-
-    const formatDate = (date: string, pattern = "d MMM yyyy") => {
-        return format(new Date(date), pattern, { locale: dateLocale });
-    };
-
-    // Badge de método de pago
-    const getProviderBadge = (provider: string | undefined | null) => {
-        const p = provider?.toLowerCase() || '';
-        if (p.includes('paypal')) return <Badge variant="outline">{t("provider.paypal")}</Badge>;
-        if (p.includes('mercadopago') || p.includes('mercado')) return <Badge variant="outline">{t("provider.mercadopago")}</Badge>;
-        if (p.includes('bank') || p.includes('transfer') || !provider) return <Badge variant="outline">{t("provider.transfer")}</Badge>;
-        return <Badge variant="outline">{provider}</Badge>;
-    };
-
-    // Helper para obtener provider del payment (puede venir como array o objeto)
-    const getProvider = (payment: { provider: string }[] | { provider: string } | null | undefined): string | undefined => {
-        if (!payment) return undefined;
-        if (Array.isArray(payment)) return payment[0]?.provider;
-        return payment.provider;
-    };
-
-    // Extraer nombre del plan del ciclo (puede ser array u objeto por join Supabase)
-    const getPlanName = (plan: { name: string }[] | { name: string } | null | undefined): string => {
-        if (!plan) return '';
-        const name = Array.isArray(plan) ? plan[0]?.name : plan.name;
-        return getPlanDisplayName(name || '');
-    };
-
-    const getStatusLabel = (status: string) => {
-        const key = status as 'active' | 'completed' | 'cancelled' | 'expired';
-        const knownStatuses = ['active', 'completed', 'cancelled', 'expired'];
-        return knownStatuses.includes(status) ? t(`status.${key}`) : status;
-    };
+    const columns = useMemo(() => getBillingCyclesColumns(t), [t]);
 
     const displayName = getPlanDisplayName(subscription?.plan?.name || '');
     const isFree = displayName === 'Esencial' || subscription?.amount === 0;
@@ -91,9 +55,9 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
                 {subscription && !isFree && (
                     <div className="text-sm text-muted-foreground">
                         {subscription.billing_period === 'one-time' ? (
-                            <p>{t("planActive", { plan: displayName, date: formatDate(subscription.expires_at, "d 'de' MMMM, yyyy") })}</p>
+                            <p>{t("planActive", { plan: displayName, date: format(new Date(subscription.expires_at), "d 'de' MMMM, yyyy", { locale: dateLocale }) })}</p>
                         ) : (
-                            <p>{t("planExpires", { plan: displayName, date: formatDate(subscription.expires_at, "d 'de' MMMM, yyyy") })}</p>
+                            <p>{t("planExpires", { plan: displayName, date: format(new Date(subscription.expires_at), "d 'de' MMMM, yyyy", { locale: dateLocale }) })}</p>
                         )}
                     </div>
                 )}
@@ -108,74 +72,11 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
                     </div>
 
                     <Card className="border shadow-sm overflow-hidden">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-muted/30">
-                                    <TableHead>{t("table.date")}</TableHead>
-                                    <TableHead>{t("table.concept")}</TableHead>
-                                    <TableHead>{t("table.start")}</TableHead>
-                                    <TableHead>{t("table.end")}</TableHead>
-                                    <TableHead>{t("table.status")}</TableHead>
-                                    <TableHead>{t("table.amount")}</TableHead>
-                                    <TableHead>{t("table.method")}</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {billingCycles.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                                            <Receipt className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                            {t("noInvoices")}
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    billingCycles.map((cycle) => {
-                                        const planName = getPlanName(cycle.plan);
-                                        const conceptLabel = cycle.product_type === 'upgrade'
-                                            ? t("concept.upgrade", { plan: planName })
-                                            : cycle.product_type === 'seat_purchase'
-                                                ? t("concept.seats")
-                                                : t("concept.subscription", { plan: planName });
-
-                                        return (
-                                            <TableRow key={cycle.id}>
-                                                <TableCell className="font-medium">
-                                                    {formatDate(cycle.created_at)}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <span className="text-sm">{conceptLabel}</span>
-                                                </TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">
-                                                    {cycle.started_at
-                                                        ? formatDate(cycle.started_at)
-                                                        : cycle.product_type === 'seat_purchase' && subscription?.started_at
-                                                            ? formatDate(subscription.started_at)
-                                                            : "—"}
-                                                </TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">
-                                                    {cycle.expires_at
-                                                        ? formatDate(cycle.expires_at)
-                                                        : cycle.product_type === 'seat_purchase' && subscription?.expires_at
-                                                            ? formatDate(subscription.expires_at)
-                                                            : "—"}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant={cycle.status === 'active' ? "success" : cycle.status === 'completed' ? "success" : "secondary"}>
-                                                        {getStatusLabel(cycle.status)}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {formatCurrency(cycle.amount, cycle.currency)}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {getProviderBadge(getProvider(cycle.payment))}
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
+                        <DataTable
+                            columns={columns}
+                            data={billingCycles}
+                            meta={{ t }}
+                        />
                     </Card>
                 </div>
             </div>

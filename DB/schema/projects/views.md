@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-10T23:31:35.891Z
+> Generated: 2026-03-15T18:32:16.410Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -167,6 +167,12 @@ SELECT p.id,
     pd.is_public,
     pd.city,
     pd.country,
+    pd.address,
+    pd.state,
+    pd.zip_code,
+    pd.lat,
+    pd.lng,
+    pd.place_id,
     pt.name AS project_type_name,
     pm.name AS project_modality_name
    FROM ((((projects.projects p

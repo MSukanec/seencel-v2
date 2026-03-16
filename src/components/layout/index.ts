@@ -17,3 +17,4 @@ export { SidebarLayout } from "./dashboard/sidebar/sidebar-layout";
 
 // Shared dashboard components
 export { HeaderTitleUpdater } from "./dashboard/shared/header-title-updater";
+export { PageHeaderActionPortal } from "./dashboard/shared/page-header-action-portal";

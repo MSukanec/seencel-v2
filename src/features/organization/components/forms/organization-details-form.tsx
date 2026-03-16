@@ -21,7 +21,9 @@ import {
     Building2,
     FileText,
     Phone,
+    MapPin,
 } from "lucide-react";
+import { OrganizationLocationSection } from "./organization-location-section";
 
 // ── Props ──
 interface OrganizationDetailsFormProps {
@@ -172,6 +174,15 @@ export function OrganizationDetailsForm({ organization }: OrganizationDetailsFor
                         placeholder="https://www.ejemplo.com"
                     />
                 </div>
+            </SettingsSection>
+
+            {/* ── Ubicación ── */}
+            <SettingsSection
+                icon={MapPin}
+                title="Ubicación de la Organización"
+                description="Busca y confirma la sede central de tu organización."
+            >
+                <OrganizationLocationSection organization={organization} />
             </SettingsSection>
 
         </SettingsSectionContainer>

@@ -25,7 +25,7 @@ export function GeneralCostsCategoryForm({
     onSuccess,
     formId,
 }: CategoryFormProps) {
-    const { closePanel, setPanelMeta } = usePanel();
+    const { closePanel, setPanelMeta, completePanel } = usePanel();
     const [isPending, startTransition] = useTransition();
     const isEditing = !!initialData;
 
@@ -72,7 +72,14 @@ export function GeneralCostsCategoryForm({
                     toast.success("Categoría creada");
                 }
                 onSuccess?.();
-                closePanel();
+                if (isEditing) {
+                    closePanel();
+                } else {
+                    completePanel(() => {
+                        setName("");
+                        setDescription("");
+                    });
+                }
             } catch {
                 toast.error("Error al guardar la categoría");
             }

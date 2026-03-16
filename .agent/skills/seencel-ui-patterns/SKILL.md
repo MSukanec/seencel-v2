@@ -11,52 +11,102 @@ description: Patrones de UI obligatorios para EmptyState, Toolbar, DataTable, To
 
 **Ubicación:** `@/components/shared/empty-state`
 
-> ⛔ **NUNCA** usar el viejo `EmptyState` de `@/components/ui/empty-state` — es legacy.
+> ⛔ **NUNCA** usar `EmptyState` de `@/components/ui/` ni `DataTableEmptyState` — fueron eliminados.
 
-### Variante A: Vista Vacía (`mode="empty"`)
+### Visual (2026 Redesign)
+
+- Dot grid pattern de fondo (sutil, adapta a theme)
+- Radial glow con `--primary` desde el centro
+- Ícono en glassmorphic card con rotating gradient border
+- Sin dashed borders, sin diagonal hatching, sin bounce animation
+
+### Variante A: Vista Vacía (`mode="empty"`) + Quick Start Packs
 
 ```tsx
-import { ViewEmptyState } from "@/components/shared/empty-state";
-import { Package } from "lucide-react";
+import { ViewEmptyState, type QuickStartPack } from "@/components/shared/empty-state";
+import { Tag, Zap } from "lucide-react";
 
-if (items.length === 0) {
-    return (
-        <ViewEmptyState
-            mode="empty"
-            icon={Package}
-            viewName="Materiales e Insumos"
-            featureDescription="Los materiales e insumos son los productos físicos y consumibles que utilizás en tus proyectos de construcción."
-            onAction={handleCreate}
-            actionLabel="Nuevo Material"
-            docsPath="/docs/materiales"  // Solo si existe documentación
-        />
-    );
+const quickStartPacks: QuickStartPack[] = [
+    {
+        id: "services",
+        icon: Zap,
+        label: "Pack Servicios",
+        description: "Luz, Gas, Internet, Agua, Teléfono",
+        onApply: async () => {
+            // Crear categoría + conceptos
+            const cat = await createCategory({ name: "Servicios" });
+            await Promise.all(["Luz", "Gas"].map(name => createItem({ category_id: cat.id, name })));
+            toast.success("Pack creado");
+        },
+    },
+];
+
+<ViewEmptyState
+    mode="empty"
+    icon={Tag}                    // ⚠️ MISMO ícono que el sidebar
+    viewName="Conceptos de Gasto"
+    featureDescription="Definí los tipos de gastos..."
+    quickStartPacks={quickStartPacks}  // Opcional — templates de inicio rápido
+    onAction={handleCreate}
+    actionLabel="Crear concepto manualmente"
+    docsPath="/docs/finanzas"     // Smart: solo muestra botón si la doc existe
+/>
+```
+
+### `QuickStartPack` — Tipo escalable
+
+```ts
+interface QuickStartPack {
+    id: string;                           // Identificador único
+    icon: LucideIcon;                     // Ícono del pack
+    label: string;                        // "Pack Servicios"
+    description: string;                  // "Luz, Gas, Internet, Agua"
+    onApply: () => Promise<void>;         // Crea los items y muestra toast
 }
 ```
 
+Cada feature define sus propios packs. El componente es genérico — no sabe de features específicos.
+
 ### Variante B: Sin Resultados (`mode="no-results"`)
+
+UI minimal: ícono pequeño en `bg-muted`, sin dot grid, sin glow. Solo info + botón.
 
 ```tsx
 <ViewEmptyState
     mode="no-results"
-    icon={Package}
-    viewName="materiales e insumos"
-    filterContext="con esa búsqueda"
-    onResetFilters={() => {
-        setSearchQuery("");
-        setSelectedCategoryId(null);
-    }}
+    icon={Tag}
+    viewName="conceptos"
+    onResetFilters={filters.clearAll}
 />
 ```
 
-### Reglas
+> ⚠️ **IMPORTANTE**: Solo mostrar `mode="no-results"` cuando hay filtros ACTIVOS:
+> ```tsx
+> if (filteredData.length === 0 && filters.hasActiveFilters) { ... }
+> ```
+> Si `data.length === 0` sin filtros y hay categorías, mostrar el accordion normal con categorías vacías.
 
-1. **Full Page Coverage**: `ViewEmptyState` reemplaza TODO el área de contenido
-2. **Early Return**: Usar `if (data.length === 0) return <ViewEmptyState />` ANTES del JSX normal
-3. **Dos modos obligatorios**: Toda vista debe manejar AMBOS modos (empty + no-results)
-4. **Icon Match**: Usar el mismo ícono de la página
-5. **docsPath**: Solo si existe documentación para ese feature
-6. **Empty Unificado**: Para tabs (ej: Materiales/Insumos), usar UN empty para todos
+### Variante C: Proyecto sin datos (`mode="context-empty"`)
+
+```tsx
+<ViewEmptyState
+    mode="context-empty"
+    icon={FolderOpen}
+    viewName="documentos"
+    projectName="Centro de Día Caldén"
+    onAction={handleCreate}
+    actionLabel="Subir Documento"
+    onSwitchToOrg={() => setActiveProjectId(null)}
+/>
+```
+
+### Reglas CRÍTICAS
+
+1. **Icon Match**: El ícono DEBE ser el mismo que usa el sidebar para esa página (ver `use-sidebar-navigation.ts`)
+2. **Smart Docs Button**: Pasa `docsPath` siempre que quieras. El componente verifica en `@/lib/docs-registry.ts` si la doc existe antes de mostrar el botón
+3. **No-results guard**: NUNCA mostrar "Sin resultados" si no hay filtros activos → usar `filters.hasActiveFilters`
+4. **Quick Start Packs**: Definirlos en la vista, no en el componente. Cada pack crea categoría + items en un `onApply` async
+5. **Docs Registry**: Al crear nueva documentación en `content/docs/es/X/`, agregar `"/docs/X"` al `Set` en `@/lib/docs-registry.ts`
 
 ---
 

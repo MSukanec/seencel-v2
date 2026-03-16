@@ -2,6 +2,7 @@
 
 import { type ColumnDef } from "@tanstack/react-table";
 import {
+    createCreatorColumn,
     createDateColumn,
     createTextColumn,
     createMoneyColumn,
@@ -65,11 +66,14 @@ export function getGeneralCostPaymentColumns(
     }));
 
     return [
-        // 1. Fecha — con avatar del creador
+        // 1. Creador — avatar + nombre
+        createCreatorColumn<GeneralCostPaymentView>({
+            avatarUrlKey: "creator_avatar_url",
+            nameKey: "creator_full_name",
+        }),
+        // 2. Fecha
         createDateColumn<GeneralCostPaymentView>({
             accessorKey: "payment_date",
-            avatarUrlKey: "creator_avatar_url",
-            avatarFallbackKey: "creator_full_name",
             editable: !!onInlineUpdate,
             onUpdate: onInlineUpdate
                 ? (row, newDate) => onInlineUpdate(row, { payment_date: newDate })

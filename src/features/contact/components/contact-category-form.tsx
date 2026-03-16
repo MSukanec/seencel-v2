@@ -1,30 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { FormFooter } from "@/components/shared/forms/form-footer";
-import { TextField } from "@/components/shared/forms/fields";
+import { useState, useEffect } from "react";
+import { usePanel } from "@/stores/panel-store";
+import { FormHeroField } from "@/components/shared/forms/fields";
 import { toast } from "sonner";
-import { useModal } from "@/stores/modal-store";
 import { createContactCategory, updateContactCategory } from "@/actions/contacts";
 import { ContactCategory } from "@/types/contact";
+import { Tag } from "lucide-react";
 
 interface ContactCategoryFormProps {
     organizationId: string;
     initialData?: ContactCategory;
     onSuccess?: (category: ContactCategory) => void;
+    /** Injected by PanelProvider — connects form to panel footer submit button */
+    formId?: string;
 }
 
-export function ContactCategoryForm({ organizationId, initialData, onSuccess }: ContactCategoryFormProps) {
-    const { closeModal } = useModal();
+export function ContactCategoryForm({ organizationId, initialData, onSuccess, formId }: ContactCategoryFormProps) {
+    const { closePanel, setPanelMeta } = usePanel();
+    const isEditing = !!initialData;
     const [name, setName] = useState(initialData?.name || "");
+
+    // 🚨 OBLIGATORIO: Self-describe via setPanelMeta
+    useEffect(() => {
+        setPanelMeta({
+            icon: Tag,
+            title: isEditing ? "Editar Categoría" : "Nueva Categoría",
+            description: isEditing
+                ? `Modificando "${initialData?.name}"`
+                : "Creá una nueva categoría para organizar tus contactos.",
+            size: "sm",
+            footer: {
+                submitLabel: isEditing ? "Guardar" : "Crear",
+            },
+        });
+    }, [isEditing, initialData?.name, setPanelMeta]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // ✅ OPTIMISTIC: Close and show success immediately
         if (onSuccess && initialData) onSuccess({ ...initialData, name });
-        closeModal();
-        toast.success(initialData ? "Categoría actualizada correctamente" : "Categoría creada correctamente");
+        closePanel();
+        toast.success(isEditing ? "Categoría actualizada correctamente" : "Categoría creada correctamente");
 
         // 🔄 BACKGROUND: Submit to server
         try {
@@ -42,22 +60,14 @@ export function ContactCategoryForm({ organizationId, initialData, onSuccess }: 
         }
     };
 
+    // 🚨 OBLIGATORIO: <form id={formId}> — conecta con el footer del container
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col max-h-full min-h-0">
-            <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
-                <TextField
-                    label="Nombre"
-                    value={name}
-                    onChange={setName}
-                    placeholder="Ej. Proveedor"
-                    required
-                    autoFocus
-                />
-            </div>
-            <FormFooter
-                onCancel={closeModal}
-                submitLabel={initialData ? "Guardar" : "Crear"}
-                className="-mx-4 -mb-4 mt-6"
+        <form id={formId} onSubmit={handleSubmit}>
+            <FormHeroField
+                value={name}
+                onChange={setName}
+                placeholder="Ej. Proveedor"
+                autoFocus
             />
         </form>
     );

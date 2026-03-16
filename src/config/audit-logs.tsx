@@ -23,133 +23,158 @@ import {
     ArrowRightLeft,
     LucideIcon,
     NotebookPen,
-    CalendarDays
+    CalendarDays,
+    Eye
 } from "lucide-react";
 
 // Module configuration with icons and colors
 export interface ModuleConfig {
-    label: string;           // Display label (for badges, etc.)
-    singularLabel: string;   // Singular form for natural sentences (e.g., "el proyecto")
+    /** Clean display name for filters, badges, UI labels (e.g. "Proyectos") */
+    displayLabel: string;
+    /** Sentence fragment with article for natural language (e.g. "un proyecto") */
+    label: string;
+    /** Singular noun without article (e.g. "proyecto") */
+    singularLabel: string;
     icon: LucideIcon;
     color: string;           // Tailwind classes for badge styling
 }
 
 export const moduleConfigs: Record<string, ModuleConfig> = {
     'projects': {
+        displayLabel: 'Proyectos',
         label: 'un proyecto',
         singularLabel: 'proyecto',
         icon: FolderKanban,
         color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
     },
     'project_data': {
+        displayLabel: 'Datos del proyecto',
         label: 'los datos del proyecto',
         singularLabel: 'datos del proyecto',
         icon: FolderKanban,
         color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
     },
     'project_types': {
+        displayLabel: 'Tipos de proyecto',
         label: 'un tipo de proyecto',
         singularLabel: 'tipo de proyecto',
         icon: Tag,
         color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
     },
     'project_modalities': {
+        displayLabel: 'Modalidades de proyecto',
         label: 'una modalidad de proyecto',
         singularLabel: 'modalidad de proyecto',
         icon: Layers,
         color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
     },
     'contacts': {
+        displayLabel: 'Contactos',
         label: 'un contacto',
         singularLabel: 'contacto',
         icon: Users,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
     'contact_categories': {
+        displayLabel: 'Categorías de contacto',
         label: 'una categoría de contacto',
         singularLabel: 'categoría de contacto',
         icon: Tag,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
     'client_payments': {
+        displayLabel: 'Pagos de cliente',
         label: 'un pago de cliente',
         singularLabel: 'pago de cliente',
         icon: Wallet,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
     'site_logs': {
+        displayLabel: 'Bitácora',
         label: 'una entrada de bitácora',
         singularLabel: 'entrada de bitácora',
         icon: NotebookPen,
         color: 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800'
     },
     'site_log_types': {
+        displayLabel: 'Tipos de bitácora',
         label: 'un tipo de bitácora',
         singularLabel: 'tipo de bitácora',
         icon: Tag,
         color: 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800'
     },
     'organization_members': {
+        displayLabel: 'Miembros',
         label: 'un miembro',
         singularLabel: 'miembro',
         icon: Users,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
     'organization_data': {
+        displayLabel: 'Organización',
         label: 'los datos de la organización',
         singularLabel: 'datos de la organización',
         icon: Building,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
     'tasks': {
+        displayLabel: 'Tareas',
         label: 'una tarea',
         singularLabel: 'tarea',
         icon: CheckSquare,
         color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
     },
     'design_documents': {
+        displayLabel: 'Documentos',
         label: 'un documento',
         singularLabel: 'documento',
         icon: FileText,
         color: 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800'
     },
     'financial_movements': {
+        displayLabel: 'Movimientos',
         label: 'un movimiento',
         singularLabel: 'movimiento financiero',
         icon: Wallet,
         color: 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800'
     },
     'import_batches': {
+        displayLabel: 'Importaciones',
         label: 'una importación',
         singularLabel: 'importación',
         icon: Upload,
         color: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800'
     },
     'general_cost_categories': {
+        displayLabel: 'Categorías de gasto',
         label: 'una categoría de gasto',
         singularLabel: 'categoría de gasto',
         icon: Tag,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
     'general_costs': {
+        displayLabel: 'Gastos generales',
         label: 'un gasto general',
         singularLabel: 'gasto general',
         icon: Receipt,
         color: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800'
     },
     'general_costs_payments': {
+        displayLabel: 'Pagos de gastos',
         label: 'un pago de gasto',
         singularLabel: 'pago de gasto',
         icon: Wallet,
         color: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800'
     },
     'organizations': {
+        displayLabel: 'Organización',
         label: 'la organización',
         singularLabel: 'organización',
         icon: Building,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
     'organization': {
+        displayLabel: 'Organización',
         label: 'la organización',
         singularLabel: 'organización',
         icon: Building,
@@ -157,30 +182,35 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Planner / Tareas Module
     'kanban_boards': {
+        displayLabel: 'Tableros',
         label: 'un tablero de tareas',
         singularLabel: 'tablero de tareas',
         icon: Kanban,
         color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
     },
     'kanban_cards': {
+        displayLabel: 'Tareas (Kanban)',
         label: 'una tarea',
         singularLabel: 'tarea',
         icon: SquareKanban,
         color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
     },
     'kanban_lists': {
+        displayLabel: 'Columnas del tablero',
         label: 'una columna del tablero',
         singularLabel: 'columna del tablero',
         icon: Kanban,
         color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
     },
     'kanban_labels': {
+        displayLabel: 'Etiquetas (Kanban)',
         label: 'una etiqueta del tablero',
         singularLabel: 'etiqueta del tablero',
         icon: Tag,
         color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
     },
     'kanban_comments': {
+        displayLabel: 'Comentarios',
         label: 'un comentario en tarea',
         singularLabel: 'comentario en tarea',
         icon: MessageSquare,
@@ -188,6 +218,7 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Calendar Module
     'calendar_events': {
+        displayLabel: 'Eventos',
         label: 'un evento',
         singularLabel: 'evento',
         icon: CalendarDays,
@@ -195,18 +226,21 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Subcontracts Module
     'subcontracts': {
+        displayLabel: 'Subcontratos',
         label: 'un subcontrato',
         singularLabel: 'subcontrato',
         icon: Receipt,
         color: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800'
     },
     'subcontract_payments': {
+        displayLabel: 'Pagos de subcontrato',
         label: 'un pago de subcontrato',
         singularLabel: 'pago de subcontrato',
         icon: Wallet,
         color: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800'
     },
     'subcontract_adjustments': {
+        displayLabel: 'Ajustes de subcontrato',
         label: 'un ajuste de subcontrato',
         singularLabel: 'ajuste de subcontrato',
         icon: ArrowRightLeft,
@@ -214,12 +248,14 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Materials Module
     'materials': {
+        displayLabel: 'Materiales',
         label: 'un material',
         singularLabel: 'material',
         icon: Layers,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
     'material_purchases': {
+        displayLabel: 'Compras de material',
         label: 'una compra de material',
         singularLabel: 'compra de material',
         icon: Receipt,
@@ -227,12 +263,14 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Quotes Module
     'quotes': {
+        displayLabel: 'Presupuestos',
         label: 'un presupuesto',
         singularLabel: 'presupuesto',
         icon: FileText,
         color: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800'
     },
     'quote_items': {
+        displayLabel: 'Items de presupuesto',
         label: 'un item de presupuesto',
         singularLabel: 'item de presupuesto',
         icon: FileText,
@@ -240,42 +278,49 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Tasks & Recipes
     'task_recipe_materials': {
+        displayLabel: 'Materiales de receta',
         label: 'un material en una receta de tarea',
         singularLabel: 'material de receta',
         icon: Layers,
         color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
     },
     'task_recipe_labor': {
+        displayLabel: 'Mano de obra de receta',
         label: 'mano de obra en una receta de tarea',
         singularLabel: 'mano de obra de receta',
         icon: Users,
         color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
     },
     'task_recipe_equipment': {
+        displayLabel: 'Equipos de receta',
         label: 'un equipo en una receta de tarea',
         singularLabel: 'equipo de receta',
         icon: Layers,
         color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
     },
     'task_recipe_subcontracts': {
+        displayLabel: 'Subcontratos de receta',
         label: 'un subcontrato en una receta de tarea',
         singularLabel: 'subcontrato de receta',
         icon: Receipt,
         color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
     },
     'task_dependencies': {
+        displayLabel: 'Dependencias de tarea',
         label: 'una dependencia de tarea',
         singularLabel: 'dependencia de tarea',
         icon: CheckSquare,
         color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
     },
     'construction_tasks': {
+        displayLabel: 'Tareas de construcción',
         label: 'una tarea de construcción',
         singularLabel: 'tarea de construcción',
         icon: CheckSquare,
         color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
     },
     'task_kinds': {
+        displayLabel: 'Tipos de tarea',
         label: 'un tipo de tarea',
         singularLabel: 'tipo de tarea',
         icon: Tag,
@@ -283,24 +328,28 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Labor
     'labor_categories': {
+        displayLabel: 'Categorías laborales',
         label: 'una categoría laboral',
         singularLabel: 'categoría laboral',
         icon: Users,
         color: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800'
     },
     'labor_levels': {
+        displayLabel: 'Niveles laborales',
         label: 'un nivel laboral',
         singularLabel: 'nivel laboral',
         icon: Users,
         color: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800'
     },
     'labor_roles': {
+        displayLabel: 'Roles laborales',
         label: 'un rol laboral',
         singularLabel: 'rol laboral',
         icon: Users,
         color: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800'
     },
     'labor_types': {
+        displayLabel: 'Tipos de mano de obra',
         label: 'un tipo de mano de obra',
         singularLabel: 'tipo de mano de obra',
         icon: Users,
@@ -308,12 +357,14 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Equipment
     'equipment': {
+        displayLabel: 'Equipos',
         label: 'un equipo',
         singularLabel: 'equipo',
         icon: Layers,
         color: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800'
     },
     'equipment_categories': {
+        displayLabel: 'Categorías de equipo',
         label: 'una categoría de equipo',
         singularLabel: 'categoría de equipo',
         icon: Tag,
@@ -321,12 +372,14 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Finance Infrastructure
     'wallets': {
+        displayLabel: 'Billeteras',
         label: 'una billetera',
         singularLabel: 'billetera',
         icon: Wallet,
         color: 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800'
     },
     'currencies': {
+        displayLabel: 'Monedas',
         label: 'una moneda',
         singularLabel: 'moneda',
         icon: ArrowRightLeft,
@@ -334,18 +387,21 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Units & Catalog
     'units': {
+        displayLabel: 'Unidades',
         label: 'una unidad',
         singularLabel: 'unidad',
         icon: Tag,
         color: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700'
     },
     'material_categories': {
+        displayLabel: 'Categorías de material',
         label: 'una categoría de material',
         singularLabel: 'categoría de material',
         icon: Tag,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
     'material_payments': {
+        displayLabel: 'Pagos de material',
         label: 'un pago de material',
         singularLabel: 'pago de material',
         icon: Wallet,
@@ -353,12 +409,14 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Construction Elements
     'construction_elements': {
+        displayLabel: 'Elementos constructivos',
         label: 'un elemento constructivo',
         singularLabel: 'elemento constructivo',
         icon: Building,
         color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
     },
     'construction_divisions': {
+        displayLabel: 'Rubros',
         label: 'un rubro',
         singularLabel: 'rubro',
         icon: Layers,
@@ -366,12 +424,14 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Clients
     'clients': {
+        displayLabel: 'Clientes',
         label: 'un cliente',
         singularLabel: 'cliente',
         icon: Users,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
     'client_commitments': {
+        displayLabel: 'Compromisos de cliente',
         label: 'un compromiso de cliente',
         singularLabel: 'compromiso de cliente',
         icon: FileText,
@@ -379,12 +439,14 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Capital
     'capital_contributions': {
+        displayLabel: 'Aportes de capital',
         label: 'un aporte de capital',
         singularLabel: 'aporte de capital',
         icon: Wallet,
         color: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800'
     },
     'capital_participants': {
+        displayLabel: 'Participantes de capital',
         label: 'un participante de capital',
         singularLabel: 'participante de capital',
         icon: Users,
@@ -392,6 +454,7 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Invitations
     'organization_invitations': {
+        displayLabel: 'Invitaciones',
         label: 'una invitación',
         singularLabel: 'invitación',
         icon: Users,
@@ -399,12 +462,14 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Change Orders
     'change_orders': {
+        displayLabel: 'Órdenes de cambio',
         label: 'una orden de cambio',
         singularLabel: 'orden de cambio',
         icon: FileText,
         color: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800'
     },
     'change_order_items': {
+        displayLabel: 'Items de orden de cambio',
         label: 'un item de orden de cambio',
         singularLabel: 'item de orden de cambio',
         icon: FileText,
@@ -412,15 +477,32 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     },
     // Media
     'media_files': {
+        displayLabel: 'Archivos',
         label: 'un archivo',
         singularLabel: 'archivo',
         icon: FileText,
         color: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700'
     },
     'media_links': {
+        displayLabel: 'Adjuntos',
         label: 'un adjunto',
         singularLabel: 'adjunto',
         icon: FileText,
+        color: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700'
+    },
+    // Saved Views
+    'saved_views': {
+        displayLabel: 'Vistas guardadas',
+        label: 'una vista guardada',
+        singularLabel: 'vista guardada',
+        icon: Eye,
+        color: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700'
+    },
+    'saved_view_filters': {
+        displayLabel: 'Filtros de vista',
+        label: 'un filtro de vista',
+        singularLabel: 'filtro de vista',
+        icon: Eye,
         color: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700'
     }
 };

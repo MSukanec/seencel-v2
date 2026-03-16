@@ -3,6 +3,7 @@
  *
  * Used for: concepts, categories, or any discrete list selector.
  * Renders an icon + label. Popover shows SelectPopoverContent.
+ * Supports inline creation via onCreateNew prop (Linear-style).
  */
 
 "use client";
@@ -36,6 +37,15 @@ export interface SelectChipProps {
     manageRoute?: { pathname: string; query?: Record<string, string> };
     /** Label for the manage action */
     manageLabel?: string;
+    /**
+     * Inline creation callback (Linear-style).
+     * When provided, shows "+ Crear: 'searchQuery'" when the query doesn't
+     * exactly match an existing option.
+     * Should create the entity and return the new ID for auto-selection.
+     */
+    onCreateNew?: (name: string) => Promise<string | undefined | void>;
+    /** Label prefix for the create action (default: "Crear") */
+    createLabel?: string;
 }
 
 // ─── Component ───────────────────────────────────────────
@@ -54,6 +64,8 @@ export function SelectChip({
     popoverWidth = 220,
     manageRoute,
     manageLabel,
+    onCreateNew,
+    createLabel,
 }: SelectChipProps) {
     const [open, setOpen] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
@@ -98,7 +110,10 @@ export function SelectChip({
                 emptyText={emptySearchText}
                 manageRoute={manageRoute}
                 manageLabel={manageLabel}
+                onCreateNew={onCreateNew}
+                createLabel={createLabel}
             />
         </ChipBase>
     );
 }
+

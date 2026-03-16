@@ -3,10 +3,10 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { useSearchParams, usePathname } from "next/navigation";
-import { CalendarDays, Plus, List, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
+import { CalendarDays, Plus, List, LayoutGrid, Calendar as CalendarIcon, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-import { PageWrapper, ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { PageWrapper, PageHeaderActionPortal } from "@/components/layout";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
@@ -261,32 +261,54 @@ export function PlannerView({
             title={t('title')}
             icon={<CalendarDays />}
         >
-            {/* Toolbar: ALWAYS visible (even in empty state, per projects pattern) */}
-            <Toolbar
-                portalToHeader
-                searchQuery={hasNoData ? undefined : searchQuery}
-                onSearchChange={hasNoData ? undefined : debouncedSetSearch}
-                searchPlaceholder="Buscar..."
-                filterContent={hasNoData ? undefined : renderFilterContent()}
-                actions={[{
-                    label: "Nuevo Evento",
-                    icon: Plus,
-                    onClick: handleCreateEvent
-                }]}
-                leftActions={
+            {/* Primary action button → portals to the top header bar */}
+            <PageHeaderActionPortal>
+                <Button
+                    size="sm"
+                    onClick={handleCreateEvent}
+                    className="gap-1.5"
+                >
+                    <Plus className="h-4 w-4" />
+                    Nuevo Evento
+                </Button>
+            </PageHeaderActionPortal>
+
+            {/* ── Unified Container ──────────────────────────────────── */}
+            <div className="flex-1 flex flex-col overflow-hidden mx-4 mb-4 rounded-xl border border-border/50 bg-card">
+
+                {/* ── Toolbar Row (container header) ─────────────────── */}
+                <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-border/30">
+                    {/* Left: View Mode Tabs */}
                     <ToolbarTabs
                         value={viewMode}
                         onValueChange={handleModeChange}
                         options={VIEW_MODE_OPTIONS}
                     />
-                }
-            />
 
-            {/* Content Area */}
-            <div className="flex-1 overflow-hidden">
-                {hasNoData ? (
-                    <ContentLayout variant="wide">
-                        <div className="h-full flex items-center justify-center">
+                    {/* Right: Contextual Filters + Search */}
+                    {!hasNoData && (
+                        <div className="flex items-center gap-2">
+                            {renderFilterContent()}
+                            {/* Inline search */}
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar..."
+                                    defaultValue={searchQuery}
+                                    onChange={(e) => debouncedSetSearch(e.target.value)}
+                                    className="h-8 w-[180px] rounded-md border border-input bg-background/50 pl-8 pr-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Content Area ───────────────────────────────────── */}
+                <div className="flex-1 overflow-auto">
+                    {hasNoData ? (
+                        /* Single unified empty state */
+                        <div className="h-full flex items-center justify-center p-8">
                             <ViewEmptyState
                                 mode="empty"
                                 icon={CalendarDays}
@@ -294,70 +316,71 @@ export function PlannerView({
                                 featureDescription="El planificador te permite organizar eventos, reuniones, tareas y fechas importantes. Creá eventos con horarios, colores y descripciones, o usá el panel para gestionar tus tareas de equipo."
                                 onAction={handleCreateEvent}
                                 actionLabel="Nuevo Evento"
-                                docsPath="/docs/agenda/introduccion"
+                                docsPath="/docs/planificador/introduccion"
                             />
                         </div>
-                    </ContentLayout>
-                ) : (
-                    <>
-                        {/* List Mode */}
-                        {viewMode === "list" && (
-                            <ContentLayout variant="wide">
-                                <PlannerList
-                                    events={filteredEvents}
-                                    totalEvents={optimisticEvents.length}
-                                    onEventClick={(e: PlannerItem) => {
-                                        openModal(
-                                            <CalendarEventForm
-                                                organizationId={organizationId}
-                                                projectId={activeProjectId}
-                                                initialData={e}
-                                                projects={projects}
-                                                onCancel={closeModal}
-                                                onOptimisticUpdate={(updated) => updateOptimisticEvent(e.id, updated)}
-                                                onRollback={() => { }}
-                                            />,
-                                            {
-                                                title: "Editar evento",
-                                                description: "Modificá los detalles del evento.",
-                                                size: 'md'
-                                            }
-                                        );
-                                    }}
-                                    onCreateEvent={handleCreateEvent}
-                                    onResetFilters={handleResetFilters}
-                                />
-                            </ContentLayout>
-                        )}
+                    ) : (
+                        <>
+                            {/* List Mode */}
+                            {viewMode === "list" && (
+                                <div className="p-4">
+                                    <PlannerList
+                                        events={filteredEvents}
+                                        totalEvents={optimisticEvents.length}
+                                        onEventClick={(e: PlannerItem) => {
+                                            openModal(
+                                                <CalendarEventForm
+                                                    organizationId={organizationId}
+                                                    projectId={activeProjectId}
+                                                    initialData={e}
+                                                    projects={projects}
+                                                    onCancel={closeModal}
+                                                    onOptimisticUpdate={(updated) => updateOptimisticEvent(e.id, updated)}
+                                                    onRollback={() => { }}
+                                                />,
+                                                {
+                                                    title: "Editar evento",
+                                                    description: "Modificá los detalles del evento.",
+                                                    size: 'md'
+                                                }
+                                            );
+                                        }}
+                                        onCreateEvent={handleCreateEvent}
+                                        onResetFilters={handleResetFilters}
+                                    />
+                                </div>
+                            )}
 
-                        {/* Kanban Mode */}
-                        {viewMode === "kanban" && (
-                            <ContentLayout variant="full">
-                                <KanbanDashboard
-                                    activeBoardData={activeBoardData}
-                                    organizationId={organizationId}
-                                    projects={projects}
-                                    searchQuery={searchQuery}
-                                    selectedPriorities={Array.from(selectedPriorities)}
-                                    selectedLabels={Array.from(selectedLabels)}
-                                    isTeamsEnabled={isTeamsEnabled}
-                                />
-                            </ContentLayout>
-                        )}
+                            {/* Kanban Mode */}
+                            {viewMode === "kanban" && (
+                                <div className="h-full">
+                                    <KanbanDashboard
+                                        activeBoardData={activeBoardData}
+                                        organizationId={organizationId}
+                                        projects={projects}
+                                        searchQuery={searchQuery}
+                                        selectedPriorities={Array.from(selectedPriorities)}
+                                        selectedLabels={Array.from(selectedLabels)}
+                                        isTeamsEnabled={isTeamsEnabled}
+                                    />
+                                </div>
+                            )}
 
-                        {/* Calendar Mode */}
-                        {viewMode === "calendar" && (
-                            <ContentLayout variant="wide">
-                                <PlannerCalendar
-                                    organizationId={organizationId}
-                                    events={filteredEvents}
-                                    projects={projects}
-                                />
-                            </ContentLayout>
-                        )}
-                    </>
-                )}
+                            {/* Calendar Mode */}
+                            {viewMode === "calendar" && (
+                                <div className="p-4">
+                                    <PlannerCalendar
+                                        organizationId={organizationId}
+                                        events={filteredEvents}
+                                        projects={projects}
+                                    />
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
         </PageWrapper>
     );
 }
+

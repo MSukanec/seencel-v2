@@ -1,20 +1,10 @@
 "use client";
 
-import { memo, useCallback } from "react";
-import { ListItem } from "../list-item-base";
+import { memo, useCallback, useMemo } from "react";
+import { ListItem, type ListItemContextMenuAction } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-    MoreHorizontal,
     Download,
-    Share2,
     Copy,
     Mail,
     MessageCircle,
@@ -202,8 +192,63 @@ export const FileListItem = memo(function FileListItem({
         formatFileDate(file.created_at),
     ].filter(Boolean);
 
+    // Build context menu actions
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] => {
+        const actions: ListItemContextMenuAction[] = [
+            {
+                label: "Copiar link",
+                icon: <Copy className="h-3.5 w-3.5" />,
+                onClick: () => {
+                    navigator.clipboard.writeText(url);
+                    toast.success("Link copiado al portapapeles");
+                },
+            },
+            {
+                label: "WhatsApp",
+                icon: <MessageCircle className="h-3.5 w-3.5" />,
+                onClick: () => window.open(`https://wa.me/?text=${encodeURIComponent(url)}`, "_blank"),
+            },
+            {
+                label: "Email",
+                icon: <Mail className="h-3.5 w-3.5" />,
+                onClick: () => window.open(`mailto:?subject=${encodeURIComponent(file.file_name)}&body=${encodeURIComponent(url)}`, "_blank"),
+            },
+            {
+                label: "Abrir en nueva pestaña",
+                icon: <ExternalLink className="h-3.5 w-3.5" />,
+                onClick: () => window.open(url, "_blank"),
+            },
+            {
+                label: "Descargar",
+                icon: <Download className="h-3.5 w-3.5" />,
+                onClick: () => {
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = file.file_name;
+                    a.click();
+                },
+            },
+        ];
+        if (onMoveToFolder) {
+            actions.push({
+                label: "Mover a carpeta",
+                icon: <FolderInput className="h-3.5 w-3.5" />,
+                onClick: () => onMoveToFolder(item),
+            });
+        }
+        if (onDelete) {
+            actions.push({
+                label: "Eliminar",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: () => onDelete(item),
+                variant: "destructive",
+            });
+        }
+        return actions;
+    }, [url, file.file_name, onMoveToFolder, onDelete, item]);
+
     return (
-        <ListItem variant="card" selected={selected} onClick={onClick}>
+        <ListItem variant="card" selected={selected} onClick={onClick} contextMenuActions={contextMenuActions}>
             {/* Selection Checkbox */}
             {onToggleSelect && (
                 <ListItem.Checkbox
@@ -258,105 +303,6 @@ export const FileListItem = memo(function FileListItem({
                     </Badge>
                 </ListItem.Badges>
             </ListItem.Content>
-
-            {/* Actions: "..." dropdown */}
-            <ListItem.Actions>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Acciones</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[180px]">
-                        {/* Share section */}
-                        <DropdownMenuItem
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                navigator.clipboard.writeText(url);
-                                toast.success("Link copiado al portapapeles");
-                            }}
-                        >
-                            <Copy className="h-4 w-4 mr-2" />
-                            Copiar link
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(`https://wa.me/?text=${encodeURIComponent(url)}`, "_blank");
-                            }}
-                        >
-                            <MessageCircle className="h-4 w-4 mr-2" />
-                            WhatsApp
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(`mailto:?subject=${encodeURIComponent(file.file_name)}&body=${encodeURIComponent(url)}`, "_blank");
-                            }}
-                        >
-                            <Mail className="h-4 w-4 mr-2" />
-                            Email
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator />
-
-                        {/* Open & Download */}
-                        <DropdownMenuItem
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(url, "_blank");
-                            }}
-                        >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Abrir en nueva pestaña
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <a
-                                href={url}
-                                download
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <Download className="h-4 w-4 mr-2" />
-                                Descargar
-                            </a>
-                        </DropdownMenuItem>
-
-                        {/* Move to folder */}
-                        {onMoveToFolder && (
-                            <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onMoveToFolder(item);
-                                    }}
-                                >
-                                    <FolderInput className="h-4 w-4 mr-2" />
-                                    Mover a carpeta
-                                </DropdownMenuItem>
-                            </>
-                        )}
-
-                        {/* Delete */}
-                        {onDelete && (
-                            <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDelete(item);
-                                    }}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Eliminar
-                                </DropdownMenuItem>
-                            </>
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </ListItem.Actions>
         </ListItem>
     );
 });

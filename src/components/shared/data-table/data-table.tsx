@@ -30,7 +30,7 @@ import { Card } from "@/components/ui/card";
 import { DataTablePagination } from "./data-table-pagination";
 import { DataTableSkeleton } from "./data-table-skeleton";
 import { cn } from "@/lib/utils";
-import { DataTableRowActions } from "./data-table-row-actions";
+// DataTableRowActions removed — all actions go through EntityContextMenu now
 import { DataTableContextMenuWrapper } from "./data-table-context-menu";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -52,20 +52,25 @@ interface DataTableProps<TData, TValue> {
     enableRowSelection?: boolean;
     bulkActions?: React.ReactNode | ((props: { table: Table<TData> }) => React.ReactNode);
     initialSorting?: SortingState;
+    /** @deprecated Use enableContextMenu instead. Kept as alias for backward compatibility. */
     enableRowActions?: boolean;
     enableAttachmentIndicator?: boolean;
-    /** Enable right-click context menu on rows (Linear-style) */
+    /** Enable right-click context menu on rows (Linear-style). Also activated by enableRowActions. */
     enableContextMenu?: boolean;
     onView?: (row: TData) => void;
     onEdit?: (row: TData) => void;
     onDuplicate?: (row: TData) => void;
     onDelete?: (row: TData) => void;
     onBulkDelete?: (rows: TData[], resetSelection: () => void) => void;
+    /** Entity parameter submenus for context menu Zone 2 (Estado, Tipo, etc.) */
+    parameters?: import("@/components/shared/entity-context-menu").EntityParameter<TData>[];
+    /** Custom actions to show in context menu Zone 3. Uses EntityCustomAction type. */
     customActions?: {
         label: string;
         icon?: React.ReactNode;
         onClick: (data: TData) => void;
-        variant?: "default" | "destructive";
+        /** Per-row visibility callback. If omitted, always visible. */
+        visible?: (data: TData) => boolean;
     }[];
     /** External global filter value (controlled by parent/Toolbar) */
     globalFilter?: string;
@@ -154,12 +159,13 @@ export function DataTable<TData, TValue>({
     meta,
     enableRowActions = false,
     enableAttachmentIndicator = true,
-    enableContextMenu = false,
+    enableContextMenu: enableContextMenuProp = false,
     onView,
     onEdit,
     onDuplicate,
     onDelete,
     onBulkDelete,
+    parameters,
     customActions,
     globalFilter: externalGlobalFilter,
     onGlobalFilterChange,
@@ -182,6 +188,9 @@ export function DataTable<TData, TValue>({
     // Embedded toolbar
     embeddedToolbar,
 }: DataTableProps<TData, TValue> & { meta?: any }) {
+    // enableRowActions is now an alias for enableContextMenu
+    const enableContextMenu = enableContextMenuProp || enableRowActions;
+
     const [sorting, setSorting] = React.useState<SortingState>(initialSorting || []);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -308,40 +317,7 @@ export function DataTable<TData, TValue>({
             baseColumns.unshift(selectionColumn);
         }
 
-        if (enableRowActions && !enableContextMenu) {
-            baseColumns.push({
-                id: "actions",
-                header: () => <span className="sr-only">Acciones</span>,
-                cell: ({ row }: { row: any }) => {
-                    // Check for attachments automatically
-                    const hasAttachments = enableAttachmentIndicator && (
-                        row.original.has_attachments === true ||
-                        (Array.isArray(row.original.attachments) && row.original.attachments.length > 0) ||
-                        (Array.isArray(row.original.media_links) && row.original.media_links.length > 0) ||
-                        (Array.isArray(row.original.files) && row.original.files.length > 0) ||
-                        (typeof row.original.image_url === 'string' && row.original.image_url.length > 0 && row.original.image_url.startsWith('http'))
-                    );
-
-                    return (
-                        <div className="flex justify-end items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                            {hasAttachments && (
-                                <Paperclip className="h-3.5 w-3.5 text-muted-foreground/70" />
-                            )}
-                            <DataTableRowActions
-                                row={row}
-                                onView={onView}
-                                onEdit={onEdit}
-                                onDuplicate={onDuplicate}
-                                onDelete={onDelete}
-                                customActions={customActions}
-                            />
-                        </div>
-                    );
-                },
-                size: 50,
-                enableHiding: false,
-            } as any);
-        }
+        // Legacy enableRowActions column removed — all row actions now go through context menu
 
         return baseColumns;
     }, [columns, enableRowSelection, enableRowActions, enableContextMenu, enableAttachmentIndicator, onView, onEdit, onDuplicate, onDelete, customActions]);
@@ -402,7 +378,7 @@ export function DataTable<TData, TValue>({
                         )}
                     </div>
                 ) : (
-                    <Card className="overflow-hidden">
+                    <Card variant="inset" className="seencel-table-inset overflow-hidden">
                         {/* Embedded Toolbar — integrated header */}
                         {embeddedToolbar && (
                             <div className="px-4 py-2.5 border-b border-border/50">
@@ -546,16 +522,25 @@ export function DataTable<TData, TValue>({
 
                                             return (
                                                 <React.Fragment key={groupValue}>
-                                                    {/* Group Header Row - styled with primary background */}
+                                                    {/* Group Header Row — looks like a normal row */}
                                                     <TableRow
-                                                        className="bg-primary/10 hover:bg-primary/15 cursor-pointer border-b"
+                                                        className="hover:bg-muted/50 cursor-pointer border-b"
                                                         onClick={() => toggleGroup(groupValue)}
                                                     >
                                                         {renderGroupHeader ? (
-                                                            // Custom render - uses colSpan for full control
-                                                            <TableCell colSpan={colSpan} className="px-4 py-3 bg-primary/10">
-                                                                {renderGroupHeader(groupValue, groupRows, isExpanded)}
-                                                            </TableCell>
+                                                            <>
+                                                                {enableRowSelection && (
+                                                                    <TableCell className="px-4 py-3 w-[40px]">
+                                                                        <ChevronRight className={cn(
+                                                                            "h-3.5 w-3.5 text-muted-foreground transition-transform",
+                                                                            isExpanded && "rotate-90"
+                                                                        )} />
+                                                                    </TableCell>
+                                                                )}
+                                                                <TableCell colSpan={enableRowSelection ? colSpan - 1 : colSpan} className="px-4 py-3">
+                                                                    {renderGroupHeader(groupValue, groupRows, isExpanded)}
+                                                                </TableCell>
+                                                            </>
                                                         ) : (
                                                             // Default render - celdas individuales alineadas con columnas visibles
                                                             <>
@@ -571,19 +556,23 @@ export function DataTable<TData, TValue>({
                                                                         : false;
 
                                                                     return (
-                                                                        <TableCell key={columnId} className="px-4 py-3 bg-primary/10">
+                                                                        <TableCell key={columnId} className="px-4 py-3">
                                                                             {isFirstColumn && groupNumberAccessor ? (
                                                                                 // First cell: only the group number
                                                                                 <span className="font-mono font-semibold text-foreground">
                                                                                     {groupNumberAccessor(groupValue, Object.keys(groupedData).indexOf(groupValue) + 1)}
                                                                                 </span>
-                                                                            ) : colIdx === 1 ? (
-                                                                                // Second cell: group name + count (this is typically the "Tarea" column)
+                                                                            ) : isFirstColumn ? (
+                                                                                // First visible column: group name + count
                                                                                 <div className="flex items-center gap-2">
-                                                                                    <span className="font-semibold text-base text-foreground">{groupValue}</span>
-                                                                                    <span className="text-muted-foreground text-sm">
-                                                                                        ({groupRows.length} {groupRows.length === 1 ? groupItemLabel.singular : groupItemLabel.plural})
+                                                                                    <span className="text-sm font-medium text-foreground">{groupValue}</span>
+                                                                                    <span className="text-xs text-muted-foreground">
+                                                                                        ({groupRows.length})
                                                                                     </span>
+                                                                                    <ChevronRight className={cn(
+                                                                                        "h-3.5 w-3.5 text-muted-foreground transition-transform",
+                                                                                        isExpanded && "rotate-90"
+                                                                                    )} />
                                                                                 </div>
                                                                             ) : isSummaryColumn && groupSummaryAccessor ? (
                                                                                 // Summary column: show group subtotal (aligned right like items)
@@ -598,15 +587,6 @@ export function DataTable<TData, TValue>({
                                                                                     <span className="font-semibold font-mono text-foreground">
                                                                                         {groupIncidenciaAccessor(groupRows)}
                                                                                     </span>
-                                                                                </div>
-                                                                            ) : isLastColumn ? (
-                                                                                // Last cell: chevron (aligned with actions column)
-                                                                                <div className="flex justify-end">
-                                                                                    {isExpanded ? (
-                                                                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                                                                    ) : (
-                                                                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                                                                    )}
                                                                                 </div>
                                                                             ) : null}
                                                                         </TableCell>
@@ -626,12 +606,13 @@ export function DataTable<TData, TValue>({
                                                         })
                                                         .map((row) => {
                                                             const isSelected = row.getIsSelected();
-                                                            return (
+                                                            const rowContent = (
                                                                 <TableRow
                                                                     key={row.id}
                                                                     data-state={isSelected && "selected"}
+                                                                    data-row-type="data"
                                                                     className={cn(
-                                                                        "group/row transition-colors hover:bg-transparent",
+                                                                        "group/row transition-colors",
                                                                         onRowClick && "cursor-pointer"
                                                                     )}
                                                                     onClick={(e) => {
@@ -656,6 +637,26 @@ export function DataTable<TData, TValue>({
                                                                     })}
                                                                 </TableRow>
                                                             );
+
+                                                            if (enableContextMenu) {
+                                                                return (
+                                                                    <DataTableContextMenuWrapper
+                                                                        key={row.id}
+                                                                        row={row}
+                                                                        table={table}
+                                                                        onView={onView}
+                                                                        onEdit={onEdit}
+                                                                        onDuplicate={onDuplicate}
+                                                                        onDelete={onDelete}
+                                                                        parameters={parameters}
+                                                                        customActions={customActions}
+                                                                    >
+                                                                        {rowContent}
+                                                                    </DataTableContextMenuWrapper>
+                                                                );
+                                                            }
+
+                                                            return rowContent;
                                                         })
                                                     }
                                                 </React.Fragment>
@@ -670,6 +671,7 @@ export function DataTable<TData, TValue>({
                                                 <TableRow
                                                     key={row.id}
                                                     data-state={isSelected && "selected"}
+                                                    data-row-type="data"
                                                     className={cn(
                                                         "group/row transition-colors",
                                                         onRowClick && "cursor-pointer"
@@ -708,6 +710,7 @@ export function DataTable<TData, TValue>({
                                                         onEdit={onEdit}
                                                         onDuplicate={onDuplicate}
                                                         onDelete={onDelete}
+                                                        parameters={parameters}
                                                         customActions={customActions}
                                                     >
                                                         {rowContent}

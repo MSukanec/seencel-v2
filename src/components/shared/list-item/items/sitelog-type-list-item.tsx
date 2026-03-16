@@ -1,15 +1,8 @@
 "use client";
 
-import { memo, useCallback } from "react";
-import { ListItem } from "../list-item-base";
-import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { memo, useMemo } from "react";
+import { ListItem, type ListItemContextMenuAction } from "../list-item-base";
+import { Pencil, Trash2 } from "lucide-react";
 import { SiteLogType } from "@/features/sitelog/types";
 
 // ============================================================================
@@ -38,11 +31,30 @@ export const SiteLogTypeListItem = memo(function SiteLogTypeListItem({
     onDelete,
 }: SiteLogTypeListItemProps) {
 
-    const handleEdit = useCallback(() => onEdit?.(type), [onEdit, type]);
-    const handleDelete = useCallback(() => onDelete?.(type), [onDelete, type]);
+    // Build context menu actions (only for editable types)
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] | undefined => {
+        if (!canEdit || (!onEdit && !onDelete)) return undefined;
+        const actions: ListItemContextMenuAction[] = [];
+        if (onEdit) {
+            actions.push({
+                label: "Editar",
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                onClick: () => onEdit(type),
+            });
+        }
+        if (onDelete) {
+            actions.push({
+                label: "Eliminar",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: () => onDelete(type),
+                variant: "destructive",
+            });
+        }
+        return actions;
+    }, [canEdit, onEdit, onDelete, type]);
 
     return (
-        <ListItem variant="card">
+        <ListItem variant="row" contextMenuActions={contextMenuActions}>
             {/* Color strip: system = gray, custom = indigo */}
             <ListItem.ColorStrip color={type.is_system ? "system" : "indigo"} />
 
@@ -61,37 +73,6 @@ export const SiteLogTypeListItem = memo(function SiteLogTypeListItem({
                     )}
                 </ListItem.Badges>
             </ListItem.Content>
-
-            {/* Actions: only for non-system types */}
-            {canEdit && (onEdit || onDelete) && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {onEdit && (
-                                <DropdownMenuItem onClick={handleEdit}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Editar
-                                </DropdownMenuItem>
-                            )}
-                            {onDelete && (
-                                <DropdownMenuItem
-                                    onClick={handleDelete}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
         </ListItem>
     );
 });

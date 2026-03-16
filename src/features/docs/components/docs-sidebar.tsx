@@ -17,28 +17,60 @@ import {
     HardHat,
     Calendar,
     FolderOpen,
-    FolderTree
+    FolderTree,
+    Receipt,
+    Hammer,
+    Briefcase,
+    BarChart3,
+    Wrench,
+    type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 import type { DocTreeItem } from "../types";
+
+// ─── Icon Registry ──────────────────────────────────────────
+// Maps icon strings from _meta.json to Lucide components.
+// If an icon is missing, it falls back to FileText gracefully.
+
+const ICON_MAP: Record<string, LucideIcon> = {
+    "rocket": Rocket,
+    "package": Package,
+    "dollar-sign": DollarSign,
+    "building": Building,
+    "building-2": Building2,
+    "clipboard-list": ClipboardList,
+    "users": Users,
+    "hard-hat": HardHat,
+    "calendar": Calendar,
+    "folder-open": FolderOpen,
+    "folder-tree": FolderTree,
+    "receipt": Receipt,
+    "file-text": FileText,
+    "hammer": Hammer,
+    "briefcase": Briefcase,
+    "bar-chart-3": BarChart3,
+    "wrench": Wrench,
+};
+
+/** Safely resolve an icon string to a Lucide component. Never returns undefined. */
+function resolveIcon(iconName?: string): LucideIcon {
+    if (!iconName) return FileText;
+    return ICON_MAP[iconName] || FileText;
+}
+
+// ─── Types ──────────────────────────────────────────────────
 
 interface DocsSidebarProps {
     tree: DocTreeItem[];
 }
 
-const iconMap: Record<string, React.ElementType> = {
-    rocket: Rocket,
-    package: Package,
-    "dollar-sign": DollarSign,
-    building: Building,
-    "building-2": Building2,
-    "clipboard-list": ClipboardList,
-    users: Users,
-    "hard-hat": HardHat,
-    calendar: Calendar,
-    "folder-open": FolderOpen,
-    "folder-tree": FolderTree,
-};
+interface SidebarSectionProps {
+    section: DocTreeItem;
+    currentPath: string;
+    locale: string;
+}
+
+// ─── Component ──────────────────────────────────────────────
 
 export function DocsSidebar({ tree }: DocsSidebarProps) {
     const pathname = usePathname();
@@ -58,16 +90,10 @@ export function DocsSidebar({ tree }: DocsSidebarProps) {
     );
 }
 
-interface SidebarSectionProps {
-    section: DocTreeItem;
-    currentPath: string;
-    locale: string;
-}
-
 function SidebarSection({ section, currentPath, locale }: SidebarSectionProps) {
     const isActive = currentPath.includes(`/docs/${section.slug}`);
     const [isOpen, setIsOpen] = useState(isActive);
-    const Icon = section.icon ? iconMap[section.icon] : FileText;
+    const Icon = resolveIcon(section.icon);
 
     return (
         <div>

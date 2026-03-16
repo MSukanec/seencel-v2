@@ -11,16 +11,17 @@
 
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { CheckCircle2, Clock, XCircle, Circle } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Circle, CircleDot } from "lucide-react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusPopoverContent } from "@/components/shared/popovers";
 import { DataTableColumnHeader } from "../data-table-column-header";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────
 
-export type StatusVariant = "positive" | "negative" | "warning" | "neutral";
+export type StatusVariant = "positive" | "negative" | "warning" | "neutral" | "info";
 
 export interface StatusOption {
     /** Value stored in DB (e.g. "confirmed") */
@@ -42,25 +43,28 @@ export interface StatusColumnOptions<TData> {
     enableSorting?: boolean;
     /** Enable filtering (default: true) */
     enableFiltering?: boolean;
-    /** Column width in px (default: 110) */
+    /** Column width in px (default: 50, or 120 if showLabel) */
     size?: number;
     /** Enable inline editing (default: false) */
     editable?: boolean;
     /** Callback when status changes (required if editable) */
     onUpdate?: (row: TData, newValue: string) => Promise<void> | void;
+    /** Show label text next to icon (default: false — icon only) */
+    showLabel?: boolean;
 }
 
-// ─── Variant → Icon + Color ──────────────────────────────
+// ─── Variant → Color Mapping ────────────────────────────
 
-const VARIANT_ICON: Record<StatusVariant, { icon: React.ElementType; className: string }> = {
+const VARIANT_CONFIG: Record<StatusVariant, { icon: React.ElementType; className: string }> = {
     positive: { icon: CheckCircle2, className: "text-amount-positive" },
     negative: { icon: XCircle, className: "text-amount-negative" },
     warning: { icon: Clock, className: "text-semantic-warning" },
-    neutral: { icon: Circle, className: "text-muted-foreground" },
+    neutral: { icon: Circle, className: "text-muted-foreground/50" },
+    info: { icon: CircleDot, className: "text-blue-400" },
 };
 
-function StatusIcon({ variant, className }: { variant: StatusVariant; className?: string }) {
-    const { icon: Icon, className: colorClass } = VARIANT_ICON[variant];
+function StatusDot({ variant, className }: { variant: StatusVariant; className?: string }) {
+    const { icon: Icon, className: colorClass } = VARIANT_CONFIG[variant];
     return <Icon className={cn("h-4 w-4", colorClass, className)} />;
 }
 
@@ -71,11 +75,13 @@ function EditableStatusCell<TData>({
     accessorKey,
     options,
     onUpdate,
+    showLabel = false,
 }: {
     row: TData;
     accessorKey: string;
     options: StatusOption[];
     onUpdate: (row: TData, newValue: string) => Promise<void> | void;
+    showLabel?: boolean;
 }) {
     const [open, setOpen] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
@@ -84,17 +90,10 @@ function EditableStatusCell<TData>({
     const label = config?.label || currentValue;
     const variant = config?.variant || "neutral";
 
-    const handleSelect = async (value: string) => {
-        if (value === currentValue) {
-            setOpen(false);
-            return;
-        }
-        setLoading(true);
-        try {
-            await onUpdate(row, value);
-        } finally {
-            setLoading(false);
-            setOpen(false);
+    const handleSelect = (value: string) => {
+        setOpen(false);
+        if (value !== currentValue) {
+            onUpdate(row, value);
         }
     };
 
@@ -103,14 +102,16 @@ function EditableStatusCell<TData>({
             <PopoverTrigger asChild>
                 <button
                     className={cn(
-                        "flex items-center gap-2 cursor-pointer rounded-md px-1.5 py-1 -mx-1.5 transition-all",
+                        "flex items-center cursor-pointer rounded-md px-1.5 py-1 -mx-1 transition-all",
+                        showLabel ? "gap-2" : "justify-center",
                         "border border-transparent hover:border-dashed hover:border-border hover:bg-[#2a2b2d]",
                         loading && "opacity-50 pointer-events-none"
                     )}
                     onClick={(e) => e.stopPropagation()}
+                    title={label}
                 >
-                    <StatusIcon variant={variant} />
-                    <span className="text-xs font-[450] text-foreground">{label}</span>
+                    <StatusDot variant={variant} />
+                    {showLabel && <span className="text-xs font-[450] text-foreground">{label}</span>}
                 </button>
             </PopoverTrigger>
             <PopoverContent className="w-48 p-0" align="start" onClick={(e) => e.stopPropagation()}>
@@ -126,16 +127,33 @@ function EditableStatusCell<TData>({
 
 // ─── Read-only Status Display ────────────────────────────
 
-function ReadOnlyStatusDisplay({ status, options }: { status: string; options: StatusOption[] }) {
+function ReadOnlyStatusDisplay({ status, options, showLabel = false }: { status: string; options: StatusOption[]; showLabel?: boolean }) {
     const config = options.find(o => o.value === status);
     const label = config?.label || status;
     const variant = config?.variant || "neutral";
 
+    if (showLabel) {
+        return (
+            <div className="flex items-center gap-2 px-1.5">
+                <StatusDot variant={variant} />
+                <span className="text-xs text-foreground">{label}</span>
+            </div>
+        );
+    }
+
     return (
-        <div className="flex items-center gap-2 px-1.5">
-            <StatusIcon variant={variant} />
-            <span className="text-xs text-foreground">{label}</span>
-        </div>
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <div className="flex items-center justify-center px-1.5">
+                        <StatusDot variant={variant} />
+                    </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                    <p>{label}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     );
 }
 
@@ -150,16 +168,19 @@ export function createStatusColumn<TData>(
         options: statusOptions,
         enableSorting = false,
         enableFiltering = true,
-        size = 110,
+        size: customSize,
         editable = false,
         onUpdate,
+        showLabel = false,
     } = options;
+
+    const size = customSize ?? (showLabel ? 120 : 50);
 
     return {
         accessorKey,
-        header: ({ column }) => (
-            <DataTableColumnHeader column={column} title={title} />
-        ),
+        header: showLabel
+            ? ({ column }) => <DataTableColumnHeader column={column} title={title} />
+            : () => null,
         cell: ({ row }) => {
             const status = (row.original as any)[accessorKey] as string;
 
@@ -170,11 +191,12 @@ export function createStatusColumn<TData>(
                         accessorKey={accessorKey}
                         options={statusOptions}
                         onUpdate={onUpdate}
+                        showLabel={showLabel}
                     />
                 );
             }
 
-            return <ReadOnlyStatusDisplay status={status} options={statusOptions} />;
+            return <ReadOnlyStatusDisplay status={status} options={statusOptions} showLabel={showLabel} />;
         },
         enableSorting,
         size,
@@ -187,7 +209,7 @@ export function createStatusColumn<TData>(
                     options: statusOptions.map(o => ({
                         value: o.value,
                         label: o.label,
-                        icon: <StatusIcon variant={o.variant} />,
+                        icon: <StatusDot variant={o.variant} />,
                     })),
                     currentValueKey: accessorKey,
                     onSelect: (row: TData, value: string) => onUpdate(row, value),

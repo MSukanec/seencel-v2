@@ -7,12 +7,10 @@ import { toast } from "sonner";
 import { SettingsSection } from "@/components/shared/settings-section";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { ContentLayout } from "@/components/layout";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
+import { useContextSidebarOverlay } from "@/stores/sidebar-store";
+import { DocsInlinePanel } from "@/features/docs/components/docs-inline-panel";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
-import { ClientForm } from "@/features/clients/forms/clients-form";
-import { InviteClientPortalForm } from "@/features/clients/forms/invite-client-portal-form";
-import { ContactForm } from "@/features/contact/forms/contact-form";
-import { CollaboratorForm } from "@/features/external-actors/forms/collaborator-form";
 import {
     deleteClientAction,
     deactivateClientAction,
@@ -28,7 +26,6 @@ import {
     reactivateCollaboratorAccessAction,
 } from "@/features/external-actors/project-access-actions";
 import { EXTERNAL_ACTOR_TYPE_LABELS } from "@/features/team/types";
-import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import {
     ParticipantListItem,
     type ParticipantItemData,
@@ -65,9 +62,21 @@ export function ProjectParticipantsView({
     projectClients,
     projectCollaborators,
 }: ProjectParticipantsViewProps) {
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
+    const { pushOverlay, hasOverlay } = useContextSidebarOverlay();
+
+    // ── Docs Overlay ─────────────────────────────────────────────────────
+    const openDocsOverlay = (docsPath: string) => {
+        if (hasOverlay) return;
+        const slug = docsPath.replace(/^\/(es\/|en\/)?docs\//, '');
+        if (!slug) return;
+        pushOverlay(
+            <DocsInlinePanel slug={slug} />,
+            { title: "Documentación" }
+        );
+    };
 
     // ── Confirmation Dialog State ────────────────────────────────────────
     const [confirmTarget, setConfirmTarget] = useState<ConfirmAction | null>(null);
@@ -92,18 +101,11 @@ export function ProjectParticipantsView({
     // ── Handlers: Vincular Cliente ──────────────────────────────────────
 
     const handleLinkClient = () => {
-        openModal(
-            <ClientForm
-                orgId={organizationId}
-                roles={clientRoles}
-                projectId={projectId}
-            />,
-            {
-                title: "Agregar Cliente",
-                description: "Vinculá un contacto existente al proyecto.",
-                size: "md",
-            }
-        );
+        openPanel('clients-client-form', {
+            orgId: organizationId,
+            roles: clientRoles,
+            projectId,
+        });
     };
 
     // ── Handlers: Editar vinculación (cambiar rol, etc.) ────────────────
@@ -112,50 +114,24 @@ export function ProjectParticipantsView({
         const clientData = projectClients.find((c) => c.id === participant.id);
         if (!clientData) return;
 
-        openModal(
-            <ClientForm
-                orgId={organizationId}
-                roles={clientRoles}
-                projectId={projectId}
-                initialData={clientData}
-                submitLabel="Guardar Cambios"
-            />,
-            {
-                title: "Editar Vinculación",
-                description: "Modificá el rol u otros datos del cliente en este proyecto.",
-                size: "md",
-            }
-        );
+        openPanel('clients-client-form', {
+            orgId: organizationId,
+            roles: clientRoles,
+            projectId,
+            initialData: clientData,
+        });
     };
 
-    // ── Handlers: Editar Contacto (AUTÓNOMO — form fetchea sus datos) ───
+    // ── Handlers: Editar Contacto (abre el panel de contacto ya registrado) ───
 
-    const handleEditContact = async (participant: ParticipantItemData) => {
+    const handleEditContact = (participant: ParticipantItemData) => {
         if (!participant.contact_id) return;
 
-        const supabase = createSupabaseClient();
-        const { data: contact, error } = await supabase
-            .schema("contacts").from("contacts")
-            .select("*, contact_categories(id, name)")
-            .eq("id", participant.contact_id)
-            .single();
-
-        if (error || !contact) {
-            toast.error("No se pudo cargar los datos del contacto");
-            return;
-        }
-
-        openModal(
-            <ContactForm
-                organizationId={organizationId}
-                initialData={contact}
-            />,
-            {
-                title: "Editar Contacto",
-                description: `Modificando a ${contact.full_name || "contacto"}`,
-                size: "lg",
-            }
-        );
+        openPanel('contact-form', {
+            organizationId,
+            initialData: { id: participant.contact_id } as any,
+            onSuccess: () => router.refresh(),
+        });
     };
 
     // ── Handlers: Deactivate (desvincular sin borrar) ───────────────────
@@ -181,20 +157,13 @@ export function ProjectParticipantsView({
     // ── Handlers: Send Invitation ───────────────────────────────────────
 
     const handleSendInvitation = (participant: ParticipantItemData) => {
-        openModal(
-            <InviteClientPortalForm
-                clientId={participant.id}
-                contactName={participant.contact_full_name}
-                contactEmail={participant.contact_email}
-                contactAvatarUrl={participant.contact_avatar_url}
-                isSeencelUser={!!participant.linked_user_id}
-            />,
-            {
-                title: "Invitar al Portal",
-                description: `Enviá una invitación a ${participant.contact_full_name || participant.contact_email || 'el cliente'} para acceder al portal del proyecto.`,
-                size: "lg",
-            }
-        );
+        openPanel('clients-invite-portal-form', {
+            clientId: participant.id,
+            contactName: participant.contact_full_name,
+            contactEmail: participant.contact_email,
+            contactAvatarUrl: participant.contact_avatar_url,
+            isSeencelUser: !!participant.linked_user_id,
+        });
     };
 
     // ── Handlers: Reactivate ────────────────────────────────────────────
@@ -224,6 +193,7 @@ export function ProjectParticipantsView({
             }
         });
     };
+
     // ── Handlers: Invitation (Reenviar / Revocar) ──────────────────────
 
     const handleResendInvitation = (participant: ParticipantItemData) => {
@@ -262,17 +232,10 @@ export function ProjectParticipantsView({
     // ── Handlers: Vincular Colaborador ──────────────────────────────────
 
     const handleLinkCollaborator = () => {
-        openModal(
-            <CollaboratorForm
-                orgId={organizationId}
-                projectId={projectId}
-            />,
-            {
-                title: "Vincular Colaborador",
-                description: "Vinculá un colaborador externo de tu organización a este proyecto.",
-                size: "md",
-            }
-        );
+        openPanel('collaborator-form', {
+            orgId: organizationId,
+            projectId,
+        });
     };
 
     // ── Confirm Action (unified) ────────────────────────────────────────
@@ -401,7 +364,7 @@ export function ProjectParticipantsView({
     const dialogProps = getConfirmDialogProps();
 
     return (
-        <ContentLayout variant="wide">
+        <ContentLayout variant="settings">
             <div className="space-y-12 pb-12">
 
                 {/* ===== CLIENTES SECTION ===== */}
@@ -419,7 +382,7 @@ export function ProjectParticipantsView({
                             label: "Documentación",
                             icon: BookOpen,
                             variant: "secondary",
-                            href: "/docs/equipo/clientes",
+                            onClick: () => openDocsOverlay("/docs/equipo/clientes"),
                         },
                     ]}
                 >
@@ -481,7 +444,7 @@ export function ProjectParticipantsView({
                                     label: "Documentación",
                                     icon: BookOpen,
                                     variant: "secondary",
-                                    href: "/docs/equipo/colaboradores",
+                                    onClick: () => openDocsOverlay("/docs/equipo/colaboradores"),
                                 },
                             ]}
                         >

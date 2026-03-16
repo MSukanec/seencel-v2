@@ -17,7 +17,7 @@ import { getStorageOverviewData, type StorageOverviewData } from "@/actions/widg
 // dashboard widget grid (via WidgetProps + initialData/autonomous fetch).
 //
 // Usage A — Files page (Server-rendered with direct props):
-//   <StorageOverviewWidget stats={stats} maxStorageMb={500} folderCount={4} />
+//   <StorageOverviewWidget stats={stats} maxStorageMb={500} />
 //
 // Usage B — Dashboard grid (via registry, autonomous):
 //   <StorageOverviewWidget initialData={prefetchedData} />
@@ -28,7 +28,6 @@ interface StorageOverviewWidgetProps extends Partial<WidgetProps> {
     /** Direct props — used when rendered in the files page */
     stats?: StorageStats;
     maxStorageMb?: number;
-    folderCount?: number;
 }
 
 // -- Helpers ------------------------------------------------------------------
@@ -59,7 +58,6 @@ function formatStorageLimit(mb: number): string {
 export function StorageOverviewWidget({
     stats: directStats,
     maxStorageMb: directMaxMb,
-    folderCount: directFolderCount,
     initialData,
 }: StorageOverviewWidgetProps) {
     const hasDirectProps = !!directStats;

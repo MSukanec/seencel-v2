@@ -126,7 +126,7 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
                         return (
                             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                                 <Icon className="h-3.5 w-3.5" />
-                                <span>{config.label}</span>
+                                <span>{config.displayLabel}</span>
                             </div>
                         );
                     }
@@ -140,7 +140,7 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
             filterFn: (row, id, value) => {
                 const rawEntity = row.original.target_table;
                 const config = moduleConfigs[rawEntity];
-                const entityLabel = config?.label || rawEntity;
+                const entityLabel = config?.displayLabel || rawEntity;
                 if (Array.isArray(value)) return value.includes(entityLabel);
                 return entityLabel.toLowerCase().includes(String(value).toLowerCase());
             },
@@ -206,8 +206,8 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
                     columnId: "target_table",
                     title: "Herramienta",
                     options: Object.entries(moduleConfigs).map(([key, config]) => ({
-                        label: config.label,
-                        value: config.label
+                        label: config.displayLabel,
+                        value: config.displayLabel
                     }))
                 },
                 {

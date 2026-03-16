@@ -1,0 +1,91 @@
+---
+title: Pagos
+description: Cómo registrar y gestionar pagos de gastos generales en SEENCEL
+---
+
+# Pagos de Gastos Generales
+
+Los **Pagos** son registros individuales de egresos asociados a un concepto de gasto. Cada pago tiene fecha, monto, moneda y billetera.
+
+## Estructura de un Pago
+
+| Campo | Descripción | Obligatorio |
+|-------|-------------|:-----------:|
+| **Monto** | Cantidad del pago | ✅ |
+| **Concepto** | A qué tipo de gasto corresponde | ✅ |
+| **Fecha** | Cuándo se realizó el pago | ✅ |
+| **Estado** | Pagado, Pendiente o Programado | ✅ |
+| **Billetera** | Desde qué cuenta/billetera salió | No |
+| **Moneda** | En qué moneda se realizó | No |
+| **Tipo de Cambio** | Conversión a moneda principal (si difiere) | No |
+| **Descripción** | Nota adicional sobre el pago | No |
+
+---
+
+## Crear un Pago
+
+Podés crear pagos de dos formas:
+
+### Manualmente
+
+1. Hacé click en **"+ Nuevo Pago"** en el header
+2. Completá el monto y seleccioná el concepto
+3. Opcionalmente ajustá fecha, billetera, moneda y estado
+4. Guardá
+
+### Importación Masiva
+
+1. Hacé click en el menú **"⋮"** junto al botón de nuevo pago
+2. Seleccioná **"Importar"**
+3. Subí tu archivo Excel o CSV
+4. Mapeá las columnas a los campos de Seencel
+5. Revisá y confirmá la importación
+
+<Callout type="info" title="Multi-Moneda">
+Si tu organización usa múltiples monedas, cada pago puede tener su propia moneda y tipo de cambio. El dashboard convierte todo a la moneda principal para los totales y análisis.
+</Callout>
+
+---
+
+## Edición Inline
+
+Podés editar pagos directamente desde la tabla sin abrir un formulario:
+
+- **Fecha**: Click en la celda → DatePicker
+- **Monto**: Click en la celda → Input numérico
+- **Estado**: Click en la celda → Selector
+- **Billetera**: Click en la celda → Selector
+- **Moneda**: Click en la celda → Selector
+- **Tipo de cambio**: Click en la celda → Input
+
+Los cambios se guardan automáticamente al confirmar.
+
+---
+
+## Filtros
+
+La barra de filtros permite encontrar pagos por:
+
+- **Búsqueda** de texto libre (concepto, descripción)
+- **Estado** (Pagado, Pendiente, Programado)
+- **Concepto** específico
+- **Categoría** del concepto
+- **Rango de fechas**
+
+---
+
+## Exportación
+
+Exportá los pagos para análisis externo:
+
+- **CSV** - Compatible con cualquier herramienta
+- **Excel** - Con formato y columnas tipadas
+
+La exportación respeta los filtros activos.
+
+---
+
+## Próximos Pasos
+
+- [¿Qué son los Gastos Generales?](/docs/gastos-generales/introduccion) - Visión general del módulo
+- [Conceptos de Gasto](/docs/gastos-generales/conceptos) - Definir tipos de gasto

@@ -1,5 +1,7 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthUser } from "@/lib/auth";
+import { parseDateFromDB } from "@/lib/timezone-data";
 import { Project } from "@/types/project";
 
 export async function getLastActiveProject(organizationId: string) {
@@ -78,6 +80,7 @@ export async function getSidebarProjects(organizationId: string) {
         .schema('projects').from('projects_view')
         .select('id, name, status, organization_id, color, custom_color_hex, use_custom_color, image_url, image_palette, use_palette_theme')
         .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
         .neq('status', 'completed')
         .order('last_active_at', { ascending: false, nullsFirst: false });
 
@@ -89,7 +92,11 @@ export async function getSidebarProjects(organizationId: string) {
     return data;
 }
 
-export async function getProjectById(projectId: string) {
+/**
+ * Cached per-request: getProjectById is called from both generateMetadata
+ * and the page component. React.cache ensures a single DB call per request.
+ */
+export const getProjectById = cache(async (projectId: string) => {
     const supabase = await createClient();
 
     const { data, error } = await supabase
@@ -102,6 +109,7 @@ export async function getProjectById(projectId: string) {
             project_modalities (id, name)
         `)
         .eq('id', projectId)
+        .eq('is_deleted', false)
         .single();
 
     if (error) {
@@ -110,7 +118,7 @@ export async function getProjectById(projectId: string) {
     }
 
     return data;
-}
+});
 
 export async function getProjectFinancialMovements(projectId: string) {
     const supabase = await createClient();
@@ -145,5 +153,63 @@ export async function getProjectFinancialMovements(projectId: string) {
     };
 }
 
+// ============================================================================
+// LOCATION QUERIES
+// ============================================================================
 
+export interface ProjectLocation {
+    id: string;
+    name: string;
+    status: string;
+    lat: number;
+    lng: number;
+    city: string | null;
+    country: string | null;
+    state: string | null;
+    address: string | null;
+    zipCode: string | null;
+    placeId: string | null;
+    imageUrl: string | null;
+    code: string | null;
+    year: number | null;
+}
 
+/**
+ * Fetches all projects with location data (lat/lng) for the map view.
+ * Excludes soft-deleted projects.
+ */
+export async function getProjectLocations(organizationId: string): Promise<ProjectLocation[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .schema('projects')
+        .from("project_data")
+        .select("lat, lng, city, country, address, state, zip_code, place_id, projects!inner(id, name, status, is_deleted, image_url, code, created_at)")
+        .eq("organization_id", organizationId)
+        .not("lat", "is", null)
+        .not("lng", "is", null);
+
+    if (error) throw error;
+
+    return (data || [])
+        .filter((pd: any) => pd.projects && !pd.projects.is_deleted)
+        .map((pd: any) => {
+            const p = pd.projects;
+            return {
+                id: p.id,
+                name: p.name,
+                status: p.status,
+                lat: Number(pd.lat),
+                lng: Number(pd.lng),
+                city: pd.city || null,
+                country: pd.country || null,
+                state: pd.state || null,
+                address: pd.address || null,
+                zipCode: pd.zip_code || null,
+                placeId: pd.place_id || null,
+                imageUrl: p.image_url || null,
+                code: p.code || null,
+                year: p.created_at ? parseDateFromDB(p.created_at)?.getFullYear() ?? null : null,
+            };
+        });
+}

@@ -47,8 +47,8 @@ export interface PeriodColumnOptions<TData> {
 // ─── Constants ───────────────────────────────────────────
 
 const MONTH_FULL = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
 ];
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -124,9 +124,9 @@ function EditablePeriodCell<TData>({
         ? (value ? formatPeriod(value, granularity) : "Sin período")
         : "Sin recurrencia";
 
-    const handleSelect = async (iso: string) => {
-        await onUpdate(row, iso);
+    const handleSelect = (iso: string) => {
         setOpen(false);
+        onUpdate(row, iso);
     };
 
     return (
@@ -171,9 +171,9 @@ function EditablePeriodCell<TData>({
                                 <div className="p-1">
                                     <button
                                         className="relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs text-muted-foreground outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
-                                        onClick={async () => {
-                                            await onUpdate(row, null);
+                                        onClick={() => {
                                             setOpen(false);
+                                            onUpdate(row, null);
                                         }}
                                     >
                                         <CalendarRange className="h-3.5 w-3.5" />

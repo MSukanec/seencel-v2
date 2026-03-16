@@ -1,17 +1,9 @@
 "use client";
 
-import { memo, useCallback } from "react";
-import { ListItem } from "../list-item-base";
+import { memo, useCallback, useMemo } from "react";
+import { ListItem, type ListItemContextMenuAction } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-    MoreHorizontal,
     Pencil,
     Trash2,
     FileText,
@@ -71,12 +63,35 @@ export const QuoteListItem = memo(function QuoteListItem({
 
     const isChangeOrder = quote.quote_type === "change_order";
 
+    // Build context menu actions
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] | undefined => {
+        if (!canEdit || (!onEdit && !onDelete)) return undefined;
+        const actions: ListItemContextMenuAction[] = [];
+        if (onEdit) {
+            actions.push({
+                label: "Editar",
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                onClick: () => onEdit(quote),
+            });
+        }
+        if (onDelete) {
+            actions.push({
+                label: "Eliminar",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: () => onDelete(quote),
+                variant: "destructive",
+            });
+        }
+        return actions;
+    }, [canEdit, onEdit, onDelete, quote]);
+
     return (
         <ListItem
             variant="card"
             selected={selected}
             onClick={onClick ? handleClick : undefined}
             className={onClick ? "cursor-pointer" : undefined}
+            contextMenuActions={contextMenuActions}
         >
             {/* Multi-select checkbox */}
             {onToggleSelect && (
@@ -153,49 +168,6 @@ export const QuoteListItem = memo(function QuoteListItem({
                     </span>
                 )}
             </div>
-
-            {/* Actions */}
-            {canEdit && (onEdit || onDelete) && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {onEdit && (
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onEdit(quote);
-                                    }}
-                                >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Editar
-                                </DropdownMenuItem>
-                            )}
-                            {onDelete && (
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDelete(quote);
-                                    }}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
         </ListItem>
     );
 });

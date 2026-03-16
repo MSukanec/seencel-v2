@@ -3,11 +3,11 @@
 import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
-import { FormFooter } from "@/components/shared/forms/form-footer";
+import { usePanel } from "@/stores/panel-store";
 import { SelectField } from "@/components/shared/forms/fields/select-field";
 import { NotesField } from "@/components/shared/forms/fields/notes-field";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
+import { UserCheck } from "lucide-react";
 import {
     linkCollaboratorToProjectAction,
     inviteContactToProjectAction,
@@ -35,18 +35,21 @@ interface ProjectClient {
 interface CollaboratorFormProps {
     orgId: string;
     projectId: string;
+    /** Injected by PanelProvider — connects form to panel footer submit button */
+    formId?: string;
 }
 
 // ============================================================================
-// Component (Semi-Autonomous)
+// Component (Panel Self-Contained)
 // ============================================================================
 
 export function CollaboratorForm({
     orgId,
     projectId,
+    formId,
 }: CollaboratorFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
     const [isPending, startTransition] = useTransition();
 
     // ── Form State ──────────────────────────────────────────────────────
@@ -58,6 +61,19 @@ export function CollaboratorForm({
     const [contacts, setContacts] = useState<ContactOption[]>([]);
     const [projectClients, setProjectClients] = useState<ProjectClient[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    // 🚨 OBLIGATORIO: Self-describe via setPanelMeta
+    useEffect(() => {
+        setPanelMeta({
+            icon: UserCheck,
+            title: "Vincular Colaborador",
+            description: "Vinculá un colaborador externo de tu organización a este proyecto.",
+            size: "md",
+            footer: {
+                submitLabel: "Vincular Colaborador",
+            },
+        });
+    }, [setPanelMeta]);
 
     // Fetch available contacts and project clients on mount
     useEffect(() => {
@@ -116,10 +132,18 @@ export function CollaboratorForm({
     const hasLinkedUser = !!selectedContact?.linked_user_id;
     const willInvite = selectedContact && !hasLinkedUser;
 
-    // ── Callbacks ───────────────────────────────────────────────────────
-    const handleCancel = () => {
-        closeModal();
-    };
+    // Update submit label dynamically based on selection
+    useEffect(() => {
+        if (willInvite) {
+            setPanelMeta({
+                footer: { submitLabel: "Enviar Invitación" },
+            });
+        } else {
+            setPanelMeta({
+                footer: { submitLabel: "Vincular Colaborador" },
+            });
+        }
+    }, [willInvite, setPanelMeta]);
 
     const isValid = !!selectedContactId;
 
@@ -128,7 +152,7 @@ export function CollaboratorForm({
         e.preventDefault();
         if (!isValid || !selectedContact) return;
 
-        closeModal();
+        closePanel();
 
         startTransition(async () => {
             try {
@@ -193,8 +217,9 @@ export function CollaboratorForm({
 
     const noContactsAvailable = !isLoading && contacts.length === 0;
 
+    // 🚨 OBLIGATORIO: <form id={formId}> — conecta con el footer del container
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col flex-1">
             <div className="flex-1 overflow-y-auto space-y-4 p-1 px-2">
 
                 {/* Contact selector */}
@@ -255,13 +280,7 @@ export function CollaboratorForm({
                     />
                 )}
             </div>
-
-            <FormFooter
-                onCancel={handleCancel}
-                isLoading={isPending || noContactsAvailable}
-                submitLabel={willInvite ? "Enviar Invitación" : "Vincular Colaborador"}
-                className="-mx-4 -mb-4 mt-6"
-            />
         </form>
     );
 }
+

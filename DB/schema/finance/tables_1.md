@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-10T23:31:35.891Z
+> Generated: 2026-03-15T18:32:16.410Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -288,6 +288,7 @@
 | deleted_at | timestamptz | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
 | import_batch_id | uuid | ✓ |  |  |
+| covers_period | date | ✓ |  |  |
 
 ### `finance.indirect_costs`
 

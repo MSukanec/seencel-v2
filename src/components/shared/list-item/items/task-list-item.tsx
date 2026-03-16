@@ -1,22 +1,9 @@
 "use client";
 
-import { memo, useCallback } from "react";
-import { ListItem } from "../list-item-base";
+import { memo, useCallback, useMemo } from "react";
+import { ListItem, type ListItemContextMenuAction } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-    DropdownMenuSub,
-    DropdownMenuSubTrigger,
-    DropdownMenuSubContent,
-    DropdownMenuRadioGroup,
-    DropdownMenuRadioItem,
-    DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Link2, Circle } from "lucide-react";
+import { Pencil, Trash2, Link2, Circle } from "lucide-react";
 import { ResourcePriceDisplay } from "@/components/shared/price-pulse-popover";
 import {
     Tooltip,
@@ -134,11 +121,51 @@ export const TaskListItem = memo(function TaskListItem({
         onClick?.(task);
     }, [onClick, task]);
 
+    // Build context menu actions
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] | undefined => {
+        if (!isEditable || (!onEdit && !onDelete && !onStatusChange)) return undefined;
+        const actions: ListItemContextMenuAction[] = [];
+        if (onEdit) {
+            actions.push({
+                label: "Editar",
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                onClick: () => onEdit(task),
+            });
+        }
+        // Status change — flattened as direct actions
+        if (onStatusChange) {
+            const statuses: Array<{ key: "draft" | "active" | "archived"; label: string }> = [
+                { key: "draft", label: "Borrador" },
+                { key: "active", label: "Activa" },
+                { key: "archived", label: "Archivada" },
+            ];
+            statuses
+                .filter(s => s.key !== currentStatus)
+                .forEach(s => {
+                    actions.push({
+                        label: `Estado: ${s.label}`,
+                        icon: <Circle className={`h-3 w-3 ${STATUS_CONFIG[s.key].dotClass}`} />,
+                        onClick: () => onStatusChange(task, s.key),
+                    });
+                });
+        }
+        if (onDelete) {
+            actions.push({
+                label: "Eliminar",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: () => onDelete(task),
+                variant: "destructive",
+            });
+        }
+        return actions;
+    }, [isEditable, onEdit, onDelete, onStatusChange, task, currentStatus]);
+
     return (
         <ListItem
             variant="card"
             selected={selected}
             onClick={onClick ? handleClick : undefined}
+            contextMenuActions={contextMenuActions}
         >
             {/* Selection Checkbox */}
             {onToggleSelect && (
@@ -249,79 +276,6 @@ export const TaskListItem = memo(function TaskListItem({
                     )}
                 </div>
             </div>
-
-            {/* Actions dropdown */}
-            {isEditable && (onEdit || onDelete) && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {/* Editar */}
-                            {onEdit && (
-                                <DropdownMenuItem onClick={() => onEdit(task)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Editar
-                                </DropdownMenuItem>
-                            )}
-
-                            {/* Estado — submenú con radio al estilo GPT */}
-                            {onStatusChange && (
-                                <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger>
-                                            <Circle
-                                                className={`mr-2 h-3 w-3 ${STATUS_CONFIG[currentStatus].dotClass}`}
-                                            />
-                                            Estado
-                                        </DropdownMenuSubTrigger>
-                                        <DropdownMenuSubContent>
-                                            <DropdownMenuRadioGroup
-                                                value={currentStatus}
-                                                onValueChange={(val) =>
-                                                    onStatusChange(task, val as "draft" | "active" | "archived")
-                                                }
-                                            >
-                                                <DropdownMenuRadioItem value="draft">
-                                                    <Circle className="mr-2 h-3 w-3 fill-amber-500 text-amber-500" />
-                                                    Borrador
-                                                </DropdownMenuRadioItem>
-                                                <DropdownMenuRadioItem value="active">
-                                                    <Circle className="mr-2 h-3 w-3 fill-emerald-500 text-emerald-500" />
-                                                    Activa
-                                                </DropdownMenuRadioItem>
-                                                <DropdownMenuRadioItem value="archived">
-                                                    <Circle className="mr-2 h-3 w-3 fill-muted-foreground text-muted-foreground" />
-                                                    Archivada
-                                                </DropdownMenuRadioItem>
-                                            </DropdownMenuRadioGroup>
-                                        </DropdownMenuSubContent>
-                                    </DropdownMenuSub>
-                                </>
-                            )}
-
-                            {/* Eliminar */}
-                            {onDelete && (
-                                <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                        onClick={() => onDelete(task)}
-                                        className="text-destructive focus:text-destructive"
-                                    >
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Eliminar
-                                    </DropdownMenuItem>
-                                </>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
         </ListItem>
     );
 });

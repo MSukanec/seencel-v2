@@ -91,9 +91,9 @@ function EditableDateCell<TData>({
 }) {
     const [open, setOpen] = React.useState(false);
 
-    const handleSelect = async (date: Date) => {
-        await onUpdate(row, date);
+    const handleSelect = (date: Date) => {
         setOpen(false);
+        onUpdate(row, date);
     };
 
     return (
@@ -151,7 +151,7 @@ export function createDateColumn<TData>(
         title = "Fecha",
         showTime = false,
         relativeMode = "today-only",
-        showAvatar = true,
+        showAvatar = false,
         avatarUrlKey = "creator_avatar_url",
         avatarFallbackKey = "creator_full_name",
         enableSorting = true,

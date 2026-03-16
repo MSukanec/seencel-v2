@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import {
-    getDashboardLayout,
     getOverviewHeroData,
     getRecentProjects,
     getUpcomingEvents,
@@ -8,13 +7,9 @@ import {
     getActivityFeedItems,
 } from "@/actions/widget-actions";
 import { requireAuthContext } from "@/lib/auth";
-import { getOrganizationPlanFeatures } from "@/actions/plans";
-import { createClient } from "@/lib/supabase/server";
 import { OrganizationDashboardView } from "@/features/organization/views/organization-dashboard-view";
-import { TeamActivityView } from "@/features/team/views/team-activity-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTranslations } from "next-intl/server";
 import { Building2 } from "lucide-react";
 
@@ -42,74 +37,41 @@ export async function generateMetadata({
 // ============================================
 // PAGE COMPONENT
 // ============================================
-interface Props {
-    params: Promise<{ locale: string }>;
-    searchParams: Promise<{ view?: string }>;
-}
-
-export default async function OrganizationPage({ params, searchParams }: Props) {
+export default async function OrganizationPage() {
     const t = await getTranslations('OrganizationDashboard');
-    const { view } = await searchParams;
-    const defaultTab = view === 'activity' ? 'activity' : 'overview';
 
     try {
-        const { orgId } = await requireAuthContext();
+        await requireAuthContext();
 
-        const supabase = await createClient();
-
-        // Phase 1: Page-level queries (layout, org name, plan features)
-        // Phase 2: Widget data prefetch (parallel, fault-tolerant)
-        const [orgResult, planFeatures, savedLayout, ...widgetResults] = await Promise.all([
-            // Phase 1
-            orgId ? supabase.schema('iam').from("organizations").select("name").eq("id", orgId).single() : null,
-            orgId ? getOrganizationPlanFeatures(orgId) : null,
-            getDashboardLayout('org_dashboard'),
-            // Phase 2 — Widget prefetch (allSettled semantics via .catch)
-            getOverviewHeroData(null).catch(() => null),          // org_pulse
-            getRecentProjects(6).catch(() => null),               // org_recent_projects
-            getUpcomingEvents('all', 8).catch(() => null),        // upcoming_events
-            getRecentFiles('media', 'organization', 12).catch(() => null), // recent_files_gallery
-            getActivityFeedItems('all', 5).catch(() => null),     // activity_kpi
+        // Prefetch card data in parallel (fault-tolerant — each card auto-fetches as fallback)
+        const [heroData, projectsData, eventsData, galleryData, activityData] = await Promise.all([
+            getOverviewHeroData(null).catch(() => null),
+            getRecentProjects(6).catch(() => null),
+            getUpcomingEvents('all', 8).catch(() => null),
+            getRecentFiles('media', 'organization', 12).catch(() => null),
+            getActivityFeedItems('all', 5).catch(() => null),
         ]);
 
-        const orgName = orgResult?.data?.name || "Organización";
-
-        // Build prefetchedData map — keyed by widget ID
-        // Widgets that got null (failed) will fetch client-side as fallback
         const prefetchedData: Record<string, any> = {};
-        const widgetKeys = ['org_pulse', 'org_recent_projects', 'upcoming_events', 'recent_files_gallery', 'activity_kpi'];
-        widgetKeys.forEach((key, i) => {
-            if (widgetResults[i] != null) {
-                prefetchedData[key] = widgetResults[i];
-            }
-        });
+        const entries: [string, any][] = [
+            ['org_pulse', heroData],
+            ['org_recent_projects', projectsData],
+            ['upcoming_events', eventsData],
+            ['recent_files_gallery', galleryData],
+            ['activity_kpi', activityData],
+        ];
+        for (const [key, value] of entries) {
+            if (value != null) prefetchedData[key] = value;
+        }
 
         return (
-            <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
-                <PageWrapper
-                    type="page"
-                    title="Visión General"
-                    icon={<Building2 className="h-5 w-5" />}
-                    tabs={
-                        <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
-                            <TabsTrigger value="overview">Visión General</TabsTrigger>
-                            <TabsTrigger value="activity">Actividad</TabsTrigger>
-                        </TabsList>
-                    }
-                >
-                    <TabsContent value="overview" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <OrganizationDashboardView
-                            prefetchedData={prefetchedData}
-                            savedLayout={savedLayout}
-                            isCustomDashboardEnabled={planFeatures?.custom_dashboard ?? false}
-                        />
-                    </TabsContent>
-
-                    <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <TeamActivityView />
-                    </TabsContent>
-                </PageWrapper>
-            </Tabs>
+            <PageWrapper
+                type="page"
+                title="Visión General"
+                icon={<Building2 className="h-5 w-5" />}
+            >
+                <OrganizationDashboardView prefetchedData={prefetchedData} />
+            </PageWrapper>
         );
     } catch (error) {
         return (
@@ -123,3 +85,4 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
         );
     }
 }
+

@@ -23,9 +23,9 @@ export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
     '/organization/catalog': { slug: 'materiales/introduccion' },
     '/organizacion/catalogo': { slug: 'materiales/introduccion' },
 
-    // Finance
-    '/organization/finance': { slug: 'finanzas/introduccion' },
-    '/organizacion/finanzas': { slug: 'finanzas/introduccion' },
+    // General Costs (Gastos Generales)
+    '/organization/general-costs': { slug: 'gastos-generales/introduccion' },
+    '/organizacion/gastos-generales': { slug: 'gastos-generales/introduccion' },
 
     // Projects
     '/organization/projects': { slug: 'proyectos/introduccion' },
@@ -40,22 +40,25 @@ export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
     '/organization': { slug: 'organizacion/introduccion', exactOnly: true },
     '/organizacion': { slug: 'organizacion/introduccion', exactOnly: true },
 
-    // Planner (Planificador)
-    '/organization/planner': { slug: 'agenda/introduccion' },
-    '/organizacion/planificador': { slug: 'agenda/introduccion' },
+    // Planner (Planificador) — slug updated from agenda to planificador
+    '/organization/planner': { slug: 'planificador/introduccion' },
+    '/organizacion/planificador': { slug: 'planificador/introduccion' },
 
-    // Files (Archivos)
-    '/organization/files': { slug: 'archivos/introduccion' },
-    '/organizacion/archivos': { slug: 'archivos/introduccion' },
+    // Files (Documentación) — slug updated from archivos to documentacion
+    '/organization/files': { slug: 'documentacion/introduccion' },
+    '/organizacion/archivos': { slug: 'documentacion/introduccion' },
 
     // Contacts (Contactos)
     '/organization/contacts': { slug: 'contactos/introduccion' },
     '/organizacion/contactos': { slug: 'contactos/introduccion' },
 
-    // Settings (Configuración) — Índices Económicos tab
-    '/organization/settings': { slug: 'indices-economicos' },
-    '/organizacion/configuracion': { slug: 'indices-economicos' },
+    // Settings (Configuración) — Miembros
+    '/organization/settings/members': { slug: 'equipo/miembros' },
+    '/organizacion/configuracion/miembros': { slug: 'equipo/miembros' },
 
+    // Settings (Configuración) — Índices Económicos (exact match to avoid catching members)
+    '/organization/settings': { slug: 'organizacion/indices-economicos', exactOnly: true },
+    '/organizacion/configuracion': { slug: 'organizacion/indices-economicos', exactOnly: true },
 
     // Add more feature -> docs mappings here as documentation is created
 };
@@ -83,4 +86,26 @@ export function getDocsSlugForPath(pathname: string): string | null {
     }
 
     return null;
+}
+
+/**
+ * Check if documentation exists for a given docs path (e.g. "/docs/proyectos").
+ * Used by ViewEmptyState to conditionally show the "Documentación" button.
+ *
+ * This replaces the old docs-registry.ts — we derive the answer from
+ * the mapping itself, so there's a single source of truth.
+ */
+export function hasDocsForPath(docsPath: string): boolean {
+    // Normalize: "/docs/proyectos/introduccion" → "proyectos/introduccion"
+    const normalized = docsPath.replace(/^\/docs\//, '');
+
+    // Check if any mapping points to this slug or a sub-slug
+    for (const mapping of Object.values(FEATURE_DOCS_MAP)) {
+        if (mapping.slug === normalized) return true;
+        // e.g. docsPath="/docs/materiales" matches slug="materiales/introduccion"
+        if (mapping.slug.startsWith(normalized + '/')) return true;
+        if (normalized.startsWith(mapping.slug.split('/')[0])) return true;
+    }
+
+    return false;
 }

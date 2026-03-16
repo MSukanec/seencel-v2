@@ -3,6 +3,7 @@
 import { ImageUploader } from "@/components/shared/image-uploader";
 import { uploadContactAvatar } from "@/actions/contacts";
 import { getStorageUrl } from "@/lib/storage-utils";
+import { User } from "lucide-react";
 
 interface ContactAvatarManagerProps {
     currentPath?: string | null;
@@ -17,7 +18,10 @@ export function ContactAvatarManager({ currentPath, initials, onPathChange, read
     return (
         <ImageUploader
             currentImageUrl={avatarUrl}
-            fallback={initials}
+            fallback={initials !== "?" ? initials : undefined}
+            fallbackIcon={<User className="h-10 w-10 text-muted-foreground/40" />}
+            rounded="full"
+            fallbackClassName="bg-secondary"
             onUpload={async (file) => {
                 const formData = new FormData();
                 formData.append('file', file);
@@ -35,3 +39,4 @@ export function ContactAvatarManager({ currentPath, initials, onPathChange, read
         />
     );
 }
+

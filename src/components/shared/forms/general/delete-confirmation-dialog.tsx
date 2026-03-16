@@ -2,7 +2,6 @@
 
 import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -72,6 +71,12 @@ export function DeleteConfirmationDialog({
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
             <AlertDialogContent>
+                <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!isConfirmDisabled && !isDeleting) {
+                        onConfirm();
+                    }
+                }}>
                 <AlertDialogHeader>
                     <AlertDialogTitle>{title}</AlertDialogTitle>
                     <AlertDialogDescription asChild>
@@ -103,14 +108,15 @@ export function DeleteConfirmationDialog({
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel disabled={isDeleting}>{cancelLabel}</AlertDialogCancel>
-                    <AlertDialogAction
-                        onClick={handleConfirm}
+                    <button
+                        type="submit"
                         disabled={isConfirmDisabled || isDeleting}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 cursor-pointer"
                     >
                         {isDeleting ? (deletingLabel || "Deleting...") : confirmLabel}
-                    </AlertDialogAction>
+                    </button>
                 </AlertDialogFooter>
+                </form>
             </AlertDialogContent>
         </AlertDialog>
     );

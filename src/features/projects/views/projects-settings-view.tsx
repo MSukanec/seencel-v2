@@ -1,18 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Plus, Pencil, Trash2, MoreHorizontal, Monitor, Building2, Layers, FolderCog } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, Pencil, Trash2, Monitor, Building2, Layers, FolderCog } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
-import { ListItem } from "@/components/shared/list-item";
+import { ListItem, type ListItemContextMenuAction } from "@/components/shared/list-item";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { toast } from "sonner";
 import { usePanel } from "@/stores/panel-store";
@@ -76,10 +69,8 @@ function TypesSection({ organizationId, initialTypes }: { organizationId: string
             organization_id: organizationId,
         };
 
-        // 1. Update UI immediately
         setTypes(prev => [...prev, optimisticItem].sort((a, b) => a.name.localeCompare(b.name)));
 
-        // 2. Server call in background
         createProjectType(organizationId, data.name)
             .then(result => {
                 if (result.error) {
@@ -100,12 +91,10 @@ function TypesSection({ organizationId, initialTypes }: { organizationId: string
         const previousItem = type;
         const optimisticItem: SettingsItem = { ...type, name: data.name };
 
-        // 1. Update UI immediately
         setTypes(prev => prev.map(t =>
             t.id === type.id ? optimisticItem : t
         ).sort((a, b) => a.name.localeCompare(b.name)));
 
-        // 2. Server call in background
         updateProjectType(type.id, organizationId, data.name)
             .then(result => {
                 if (result.error) {
@@ -126,12 +115,10 @@ function TypesSection({ organizationId, initialTypes }: { organizationId: string
         if (!deletingItem) return;
         const deletedItem = deletingItem;
 
-        // 1. Update UI immediately
         setTypes(prev => prev.filter(t => t.id !== deletedItem.id));
         setIsDeleteDialogOpen(false);
         setDeletingItem(null);
 
-        // 2. Server call in background
         try {
             const result = await deleteProjectType(deletedItem.id, replacementId || undefined);
             if (!result.success) {
@@ -162,6 +149,7 @@ function TypesSection({ organizationId, initialTypes }: { organizationId: string
     return (
         <>
             <SettingsSection
+                contentVariant="inset"
                 icon={Layers}
                 title={t("title")}
                 description={t("description")}
@@ -172,7 +160,7 @@ function TypesSection({ organizationId, initialTypes }: { organizationId: string
                 {types.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-4">{t("empty")}</p>
                 ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                         {types.map((type) => (
                             <SettingsListItem
                                 key={type.id}
@@ -182,7 +170,6 @@ function TypesSection({ organizationId, initialTypes }: { organizationId: string
                                     organization: t("organization"),
                                     edit: t("edit"),
                                     delete: t("delete"),
-                                    actions: t("actions"),
                                 }}
                                 onEdit={handleOpenEdit}
                                 onDelete={(item) => { setDeletingItem(item); setIsDeleteDialogOpen(true); }}
@@ -225,10 +212,8 @@ function ModalitiesSection({ organizationId, initialModalities }: { organization
             organization_id: organizationId,
         };
 
-        // 1. Update UI immediately
         setModalities(prev => [...prev, optimisticItem].sort((a, b) => a.name.localeCompare(b.name)));
 
-        // 2. Server call in background
         createProjectModality(organizationId, data.name)
             .then(result => {
                 if (result.error) {
@@ -249,12 +234,10 @@ function ModalitiesSection({ organizationId, initialModalities }: { organization
         const previousItem = modality;
         const optimisticItem: SettingsItem = { ...modality, name: data.name };
 
-        // 1. Update UI immediately
         setModalities(prev => prev.map(m =>
             m.id === modality.id ? optimisticItem : m
         ).sort((a, b) => a.name.localeCompare(b.name)));
 
-        // 2. Server call in background
         updateProjectModality(modality.id, organizationId, data.name)
             .then(result => {
                 if (result.error) {
@@ -275,12 +258,10 @@ function ModalitiesSection({ organizationId, initialModalities }: { organization
         if (!deletingItem) return;
         const deletedItem = deletingItem;
 
-        // 1. Update UI immediately
         setModalities(prev => prev.filter(m => m.id !== deletedItem.id));
         setIsDeleteDialogOpen(false);
         setDeletingItem(null);
 
-        // 2. Server call in background
         try {
             const result = await deleteProjectModality(deletedItem.id, replacementId || undefined);
             if (!result.success) {
@@ -311,6 +292,7 @@ function ModalitiesSection({ organizationId, initialModalities }: { organization
     return (
         <>
             <SettingsSection
+                contentVariant="inset"
                 icon={FolderCog}
                 title={t("title")}
                 description={t("description")}
@@ -321,7 +303,7 @@ function ModalitiesSection({ organizationId, initialModalities }: { organization
                 {modalities.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-4">{t("empty")}</p>
                 ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                         {modalities.map((modality) => (
                             <SettingsListItem
                                 key={modality.id}
@@ -331,7 +313,6 @@ function ModalitiesSection({ organizationId, initialModalities }: { organization
                                     organization: t("organization"),
                                     edit: t("edit"),
                                     delete: t("delete"),
-                                    actions: t("actions"),
                                 }}
                                 onEdit={handleOpenEdit}
                                 onDelete={(item) => { setDeletingItem(item); setIsDeleteDialogOpen(true); }}
@@ -364,15 +345,32 @@ interface SettingsListItemProps {
         organization: string;
         edit: string;
         delete: string;
-        actions: string;
     };
     onEdit: (item: SettingsItem) => void;
     onDelete: (item: SettingsItem) => void;
 }
 
 function SettingsListItem({ item, labels, onEdit, onDelete }: SettingsListItemProps) {
+    // Build context menu actions (only for non-system items)
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] | undefined => {
+        if (item.is_system) return undefined;
+        return [
+            {
+                label: labels.edit,
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                onClick: () => onEdit(item),
+            },
+            {
+                label: labels.delete,
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: () => onDelete(item),
+                variant: "destructive" as const,
+            },
+        ];
+    }, [item, labels, onEdit, onDelete]);
+
     return (
-        <ListItem variant="card">
+        <ListItem variant="row" contextMenuActions={contextMenuActions}>
             <ListItem.Content>
                 <ListItem.Title>{item.name}</ListItem.Title>
             </ListItem.Content>
@@ -388,32 +386,6 @@ function SettingsListItem({ item, labels, onEdit, onDelete }: SettingsListItemPr
                     </Badge>
                 )}
             </ListItem.Trailing>
-
-            <ListItem.Actions>
-                {!item.is_system && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">{labels.actions}</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEdit(item)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                {labels.edit}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => onDelete(item)}
-                                className="text-destructive focus:text-destructive"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {labels.delete}
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
-            </ListItem.Actions>
         </ListItem>
     );
 }

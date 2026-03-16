@@ -4,8 +4,7 @@
 import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
-import { FormFooter } from "@/components/shared/forms/form-footer";
+import { usePanel } from "@/stores/panel-store";
 import { FormGroup } from "@/components/ui/form-group";
 import { ContactField, type Contact } from "@/components/shared/forms/fields/contact-field";
 import { SelectField } from "@/components/shared/forms/fields/select-field";
@@ -13,6 +12,7 @@ import { NotesField } from "@/components/shared/forms/fields/notes-field";
 import { ProjectField, type Project } from "@/components/shared/forms/fields/project-field";
 import { createClientAction, updateClientAction } from "@/features/clients/actions";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
+import { UserPlus } from "lucide-react";
 import type { ClientRole, ProjectClientView } from "../types";
 
 // ============================================================================
@@ -26,12 +26,12 @@ interface ClientFormProps {
     projectId?: string;
     /** If provided, form is in EDIT mode */
     initialData?: ProjectClientView;
-    /** Custom submit button label */
-    submitLabel?: string;
+    /** Injected by PanelProvider — connects form to panel footer submit button */
+    formId?: string;
 }
 
 // ============================================================================
-// Component
+// Component (Panel Self-Contained)
 // ============================================================================
 
 export function ClientForm({
@@ -39,12 +39,27 @@ export function ClientForm({
     roles,
     projectId,
     initialData,
-    submitLabel,
+    formId,
 }: ClientFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
     const [isPending, startTransition] = useTransition();
     const isEditing = !!initialData;
+
+    // 🚨 OBLIGATORIO: Self-describe via setPanelMeta
+    useEffect(() => {
+        setPanelMeta({
+            icon: UserPlus,
+            title: isEditing ? "Editar Vinculación" : "Agregar Cliente",
+            description: isEditing
+                ? "Modificá el rol u otros datos del cliente en este proyecto."
+                : "Vinculá un contacto existente al proyecto.",
+            size: "md",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Vincular Cliente",
+            },
+        });
+    }, [isEditing, setPanelMeta]);
 
     // ── Form State ──────────────────────────────────────────────────────
     const [selectedProjectId, setSelectedProjectId] = useState(initialData?.project_id || projectId || "");
@@ -112,7 +127,7 @@ export function ClientForm({
         };
 
         // Optimistic: close and show success immediately
-        closeModal();
+        closePanel();
         toast.success(isEditing ? "Cliente actualizado correctamente" : "Cliente vinculado al proyecto");
 
         startTransition(async () => {
@@ -135,10 +150,9 @@ export function ClientForm({
         label: r.name,
     }));
 
-    const defaultLabel = isEditing ? "Guardar Cambios" : "Vincular Cliente";
-
+    // 🚨 OBLIGATORIO: <form id={formId}> — conecta con el footer del container
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col flex-1">
             <div className="flex-1 overflow-y-auto space-y-4 p-1 px-2">
 
                 {/* Project — only shown when projectId is NOT provided */}
@@ -203,13 +217,6 @@ export function ClientForm({
                 />
 
             </div>
-
-            <FormFooter
-                onCancel={closeModal}
-                isLoading={isPending}
-                submitLabel={submitLabel || defaultLabel}
-                className="-mx-4 -mb-4 mt-6"
-            />
         </form>
     );
 }

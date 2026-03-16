@@ -32,8 +32,6 @@ export interface ContactListItemProps {
     onEdit?: (contact: ContactWithRelations) => void;
     /** Callback when delete is clicked */
     onDelete?: (contact: ContactWithRelations) => void;
-    /** Callback when attach files is clicked */
-    onAttachFiles?: (contact: ContactWithRelations) => void;
     /** Multi-select: whether this item is selected */
     selected?: boolean;
     /** Multi-select: toggle selection callback */
@@ -48,7 +46,6 @@ export const ContactListItem = memo(function ContactListItem({
     contact,
     onEdit,
     onDelete,
-    onAttachFiles,
     selected = false,
     onToggleSelect,
 }: ContactListItemProps) {
@@ -185,12 +182,6 @@ export const ContactListItem = memo(function ContactListItem({
                                 <DropdownMenuItem onClick={() => onEdit(contact)}>
                                     <Pencil className="w-4 h-4 mr-2" />
                                     Editar
-                                </DropdownMenuItem>
-                            )}
-                            {onAttachFiles && (
-                                <DropdownMenuItem onClick={() => onAttachFiles(contact)}>
-                                    <Paperclip className="w-4 h-4 mr-2" />
-                                    Adjuntar archivos
                                 </DropdownMenuItem>
                             )}
                             {onEdit && onDelete && <DropdownMenuSeparator />}

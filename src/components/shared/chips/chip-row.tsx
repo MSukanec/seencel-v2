@@ -16,7 +16,7 @@ export interface ChipRowProps {
 
 export function ChipRow({ children, className }: ChipRowProps) {
     return (
-        <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+        <div className={cn("flex flex-wrap items-center gap-1.5 pb-4 border-b border-border/30", className)}>
             {children}
         </div>
     );

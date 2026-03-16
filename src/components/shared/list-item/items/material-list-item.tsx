@@ -1,17 +1,10 @@
 "use client";
 
-import { memo, useCallback } from "react";
-import { ListItem } from "../list-item-base";
+import { memo, useCallback, useMemo } from "react";
+import { ListItem, type ListItemContextMenuAction } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Shield, Package } from "lucide-react";
+import { Pencil, Trash2, Shield, Package } from "lucide-react";
 import { ResourcePriceDisplay, type PricePulseData } from "@/components/shared/price-pulse-popover";
 
 // ============================================================================
@@ -108,8 +101,30 @@ export const MaterialListItem = memo(function MaterialListItem({
             }
             : null;
 
+    // Build context menu actions
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] | undefined => {
+        if (!canEdit || (!onEdit && !onDelete)) return undefined;
+        const actions: ListItemContextMenuAction[] = [];
+        if (onEdit) {
+            actions.push({
+                label: "Editar",
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                onClick: () => onEdit(material),
+            });
+        }
+        if (onDelete) {
+            actions.push({
+                label: "Eliminar",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: () => onDelete(material),
+                variant: "destructive",
+            });
+        }
+        return actions;
+    }, [canEdit, onEdit, onDelete, material]);
+
     return (
-        <ListItem variant="card" selected={selected}>
+        <ListItem variant="card" selected={selected} contextMenuActions={contextMenuActions}>
             {/* Selection Checkbox */}
             {onToggleSelect && (
                 <ListItem.Checkbox
@@ -178,36 +193,6 @@ export const MaterialListItem = memo(function MaterialListItem({
                     </span>
                 )}
             </div>
-
-            {canEdit && (onEdit || onDelete) && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {onEdit && (
-                                <DropdownMenuItem onClick={() => onEdit(material)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Editar
-                                </DropdownMenuItem>
-                            )}
-                            {onDelete && (
-                                <DropdownMenuItem
-                                    onClick={() => onDelete(material)}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
         </ListItem>
     );
 });

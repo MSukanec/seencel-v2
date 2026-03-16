@@ -93,6 +93,12 @@ interface PanelStore {
     toggleCreateAnother: () => void;
     /** Trigger a brief success animation on the modal */
     triggerSuccessFlash: () => void;
+    /**
+     * Global success handler — replaces closePanel() in forms after successful submit.
+     * If createAnother is ON: triggers flash + calls onReset (form stays open).
+     * If createAnother is OFF: closes the panel.
+     */
+    completePanel: (onReset?: () => void) => void;
 
     // Dirty form guard
     setBeforeClose: (handler: (() => Promise<boolean> | boolean) | undefined) => void;
@@ -211,5 +217,18 @@ export const usePanel = create<PanelStore>((set, get) => ({
     triggerSuccessFlash: () => {
         set({ successFlash: true });
         setTimeout(() => set({ successFlash: false }), 800);
+    },
+
+    completePanel: (onReset) => {
+        const { createAnother } = get();
+        if (createAnother) {
+            // Stay open: flash + reset
+            set({ successFlash: true });
+            setTimeout(() => set({ successFlash: false }), 800);
+            onReset?.();
+        } else {
+            // Normal close
+            get().closePanel();
+        }
     },
 }));

@@ -14,13 +14,24 @@ import {
 import { Switch } from "@/components/ui/switch"
 
 // ============================================================================
-// DISPLAY BUTTON — Linear-style column visibility toggle
+// DISPLAY BUTTON — Unified display popover (Linear-style)
 // ============================================================================
-// Shows/hides DataTable columns via a popover with switches.
-// Visually identical to FilterPopover and SearchButton.
+// Combines view mode switching + mode-specific options in a single popover.
+//
+// Features:
+//   1. View mode selector (Table, Cards, Board) — segmented control at top
+//   2. Mode-specific options below (e.g., column toggles for Table mode)
 //
 // Usage:
-//   <DisplayButton table={table} />
+//   <DisplayButton
+//     viewMode="table"
+//     onViewModeChange={setViewMode}
+//     viewModeOptions={[
+//       { value: "cards", icon: LayoutGrid, label: "Tarjetas" },
+//       { value: "table", icon: Table2, label: "Tabla" },
+//     ]}
+//     table={table}  // optional, for column toggles when in table mode
+//   />
 // ============================================================================
 
 // Map of column IDs to human-readable Spanish labels
@@ -41,27 +52,47 @@ const COLUMN_LABELS: Record<string, string> = {
     creator_name: "Creador",
 }
 
-export interface DisplayButtonProps<TData> {
-    /** TanStack Table instance */
-    table: Table<TData>
-    /** Custom label */
+export interface ViewModeOption {
+    value: string
+    icon: React.ComponentType<{ className?: string }>
+    label: string
+}
+
+export interface DisplayButtonProps<TData = unknown> {
+    /** Current view mode */
+    viewMode?: string
+    /** Callback when view mode changes */
+    onViewModeChange?: (mode: string) => void
+    /** Available view modes (segmented control) */
+    viewModeOptions?: ViewModeOption[]
+    /** TanStack Table instance — enables column visibility toggles in table mode */
+    table?: Table<TData>
+    /** Custom label for the button */
     label?: string
     /** Additional className */
     className?: string
 }
 
 export function DisplayButton<TData>({
+    viewMode,
+    onViewModeChange,
+    viewModeOptions = [],
     table,
     label = "Display",
     className,
 }: DisplayButtonProps<TData>) {
-    const columns = table.getAllColumns().filter(
+    // Column visibility (only in table mode or when table is provided)
+    const columns = table?.getAllColumns().filter(
         (column) => typeof column.accessorFn !== "undefined" && column.getCanHide()
-    )
+    ) ?? []
 
     const hiddenCount = columns.filter((column) => !column.getIsVisible()).length
+    const hasViewModes = viewModeOptions.length > 1
+    const isTableMode = viewMode === "table" || viewMode === "list"
+    const showColumnToggles = table && columns.length > 0 && isTableMode
 
-    if (columns.length === 0) return null
+    // Determine if button should show active indicator
+    const isActive = hiddenCount > 0
 
     return (
         <Popover>
@@ -71,58 +102,104 @@ export function DisplayButton<TData>({
                     size="sm"
                     className={cn(
                         "h-8 gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors",
-                        hiddenCount > 0 && "text-foreground",
+                        isActive && "text-foreground",
                         className
                     )}
                 >
                     <SlidersHorizontal className="h-4 w-4" />
                     <span>{label}</span>
-                    {hiddenCount > 0 && (
+                    {isActive && (
                         <span className="flex h-1.5 w-1.5 rounded-full bg-primary" />
                     )}
                 </Button>
             </PopoverTrigger>
             <PopoverContent
-                className="p-0 w-[220px] bg-popover/95 backdrop-blur-xl border-border/80 shadow-xl"
-                align="start"
+                className="p-0 w-[260px] bg-popover/95 backdrop-blur-xl border-border/80 shadow-xl"
+                align="end"
             >
-                {/* Header */}
-                <div className="px-3 py-2 border-b border-border/50">
-                    <p className="text-xs font-medium text-muted-foreground">Propiedades visibles</p>
-                </div>
-
-                {/* Column toggles */}
-                <div className="py-1 max-h-[300px] overflow-y-auto">
-                    {columns.map((column) => {
-                        const columnLabel = COLUMN_LABELS[column.id] || column.id.replace(/_/g, " ")
-                        return (
-                            <div
-                                key={column.id}
-                                className="flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/50 transition-colors"
-                                onClick={() => column.toggleVisibility()}
-                            >
-                                <span className="text-sm capitalize">{columnLabel}</span>
-                                <Switch
-                                    checked={column.getIsVisible()}
-                                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                                    className="scale-75"
-                                />
-                            </div>
-                        )
-                    })}
-                </div>
-
-                {/* Show all button when columns are hidden */}
-                {hiddenCount > 0 && (
-                    <div className="border-t border-border/50 py-1">
+                {/* View Mode Selector — segmented control */}
+                {hasViewModes && (
+                    <div className="p-3 border-b border-border/50">
                         <div
-                            className="flex items-center justify-center px-3 py-1.5 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => {
-                                columns.forEach(col => col.toggleVisibility(true))
-                            }}
+                            className={cn(
+                                "inline-flex items-center gap-1 p-1 rounded-lg w-full",
+                                "bg-black/15 border border-white/[0.04]",
+                                "shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.25),inset_0_0.5px_1px_rgba(0,0,0,0.15)]",
+                            )}
                         >
-                            Mostrar todas
+                            {viewModeOptions.map((option) => {
+                                const isSelected = viewMode === option.value
+                                const Icon = option.icon
+
+                                return (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() => onViewModeChange?.(option.value)}
+                                        className={cn(
+                                            "inline-flex items-center justify-center gap-1.5 px-2.5 h-7 text-xs rounded-md transition-all flex-1",
+                                            isSelected
+                                                ? "bg-[var(--background)] text-foreground font-medium shadow-[0_1px_3px_rgba(0,0,0,0.25),0_1px_1px_rgba(0,0,0,0.15)] border border-white/[0.06]"
+                                                : "text-muted-foreground hover:text-foreground cursor-pointer"
+                                        )}
+                                    >
+                                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                                        <span>{option.label}</span>
+                                    </button>
+                                )
+                            })}
                         </div>
+                    </div>
+                )}
+
+                {/* Column Toggles — shown when in table mode and table is provided */}
+                {showColumnToggles && (
+                    <>
+                        <div className="px-3 py-2 border-b border-border/50">
+                            <p className="text-xs font-medium text-muted-foreground">Columnas visibles</p>
+                        </div>
+                        <div className="py-1 max-h-[300px] overflow-y-auto">
+                            {columns.map((column) => {
+                                const columnLabel = COLUMN_LABELS[column.id] || column.id.replace(/_/g, " ")
+                                return (
+                                    <div
+                                        key={column.id}
+                                        className="flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                                        onClick={() => column.toggleVisibility()}
+                                    >
+                                        <span className="text-sm capitalize">{columnLabel}</span>
+                                        <Switch
+                                            checked={column.getIsVisible()}
+                                            onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                                            className="scale-75"
+                                        />
+                                    </div>
+                                )
+                            })}
+                        </div>
+
+                        {/* Show all button when columns are hidden */}
+                        {hiddenCount > 0 && (
+                            <div className="border-t border-border/50 py-1">
+                                <div
+                                    className="flex items-center justify-center px-3 py-1.5 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                    onClick={() => {
+                                        columns.forEach(col => col.toggleVisibility(true))
+                                    }}
+                                >
+                                    Mostrar todas
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Placeholder for future mode-specific options */}
+                {!showColumnToggles && (
+                    <div className="px-3 py-4 text-center">
+                        <p className="text-xs text-muted-foreground">
+                            Sin opciones adicionales
+                        </p>
                     </div>
                 )}
             </PopoverContent>

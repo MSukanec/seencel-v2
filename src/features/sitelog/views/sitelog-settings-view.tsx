@@ -90,7 +90,7 @@ export function SitelogSettingsView({ organizationId, initialTypes }: SitelogSet
                         },
                     ]}
                 >
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                         {types.length === 0 ? (
                             <ViewEmptyState
                                 mode="empty"

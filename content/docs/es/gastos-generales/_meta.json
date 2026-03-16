@@ -1,0 +1,18 @@
+{
+    "order": [
+        "introduccion",
+        "conceptos",
+        "pagos"
+    ],
+    "items": {
+        "introduccion": {
+            "title": "¿Qué son los Gastos Generales?"
+        },
+        "conceptos": {
+            "title": "Conceptos de Gasto"
+        },
+        "pagos": {
+            "title": "Pagos"
+        }
+    }
+}

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/routing";
 import { FileText, ChevronLeft, Layers } from "lucide-react";
+import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
 
 // Views
 import { QuoteBaseView } from "@/features/quotes/views/quote-base-view";
@@ -26,8 +27,6 @@ export async function generateMetadata(): Promise<Metadata> {
     };
 }
 
-const tabTriggerClass =
-    "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
 
 export default async function QuoteDetailAppPage({
     params,
@@ -136,22 +135,25 @@ export default async function QuoteDetailAppPage({
                             </Link>
                         </Button>
                     }
-                    tabs={
-                        <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
-                            <TabsTrigger value="overview" className={tabTriggerClass}>
+                    parentLabel={quote.quote_type === "change_order" ? quote.parent_contract_name || "Contrato" : "Cotizaciones"}
+                >
+                    {/* Content Tabs — inside content, not header */}
+                    <DetailContentTabs>
+                        <TabsList>
+                            <TabsTrigger value="overview">
                                 Resumen
                             </TabsTrigger>
-                            <TabsTrigger value="items" className={tabTriggerClass}>
+                            <TabsTrigger value="items">
                                 Ítems
                             </TabsTrigger>
-                            <TabsTrigger value="resources" className={tabTriggerClass}>
+                            <TabsTrigger value="resources">
                                 Recursos
                             </TabsTrigger>
-                            <TabsTrigger value="analytics" className={tabTriggerClass}>
+                            <TabsTrigger value="analytics">
                                 Analítica
                             </TabsTrigger>
                             {isContract && (
-                                <TabsTrigger value="change_orders" className={tabTriggerClass}>
+                                <TabsTrigger value="change_orders">
                                     Órdenes de Cambio
                                     {changeOrders.length > 0 && (
                                         <span className="ml-1 bg-muted-foreground/20 text-xs px-1.5 py-0.5 rounded-full">
@@ -161,8 +163,8 @@ export default async function QuoteDetailAppPage({
                                 </TabsTrigger>
                             )}
                         </TabsList>
-                    }
-                >
+                    </DetailContentTabs>
+
                     <TabsContent
                         value="overview"
                         className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden"

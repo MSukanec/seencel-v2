@@ -5,13 +5,7 @@ import { ListItem } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { EntityContextMenu, EntityCustomAction } from "@/components/shared/entity-context-menu";
 import { MoreVertical, Pencil, UserX, ShieldCheck, User, Crown, Eye, ToggleLeft, ToggleRight } from "lucide-react";
 
 // ============================================================================
@@ -96,8 +90,37 @@ export const MemberListItem = memo(function MemberListItem({
     const isExternalActor = !!actorTypeLabel;
     const hasActions = (canEditRole && onEditRole) || (canRemove && onRemove) || onToggleActive || onViewAs;
 
-    return (
-        <ListItem variant="card" className={isInactive ? 'opacity-50' : undefined}>
+    const customActions: EntityCustomAction<MemberListItemData>[] = [];
+
+    if (onViewAs) {
+        customActions.push({
+            label: "Ver como este usuario",
+            icon: <Eye className="w-4 h-4 mr-2" />,
+            onClick: () => onViewAs(),
+            visible: () => true,
+        });
+    }
+
+    if (canEditRole && onEditRole) {
+        customActions.push({
+            label: "Editar Rol",
+            icon: <Pencil className="w-4 h-4 mr-2" />,
+            onClick: () => onEditRole(member),
+            visible: () => true,
+        });
+    }
+
+    if (onToggleActive) {
+        customActions.push({
+            label: isInactive ? "Activar" : "Desactivar",
+            icon: isInactive ? <ToggleRight className="w-4 h-4 mr-2 text-green-500" /> : <ToggleLeft className="w-4 h-4 mr-2" />,
+            onClick: () => onToggleActive(),
+            visible: () => true,
+        });
+    }
+
+    const content = (
+        <ListItem variant="row" className={isInactive ? 'opacity-50' : undefined}>
             {/* Avatar */}
             <ListItem.Leading>
                 <Avatar className="h-10 w-10 border">
@@ -154,65 +177,20 @@ export const MemberListItem = memo(function MemberListItem({
                     Unido el {formatJoinDate(member.joined_at)}
                 </span>
             </ListItem.Trailing>
-
-            {/* Actions dropdown */}
-            {hasActions && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground group-hover:text-foreground"
-                            >
-                                <MoreVertical className="w-4 h-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {/* View As — external actors only */}
-                            {onViewAs && (
-                                <DropdownMenuItem onClick={onViewAs}>
-                                    <Eye className="w-4 h-4 mr-2" />
-                                    Ver como este usuario
-                                </DropdownMenuItem>
-                            )}
-                            {onViewAs && (canEditRole || canRemove || onToggleActive) && (
-                                <DropdownMenuSeparator />
-                            )}
-                            {/* Edit Role — members only */}
-                            {canEditRole && onEditRole && (
-                                <DropdownMenuItem onClick={() => onEditRole(member)}>
-                                    <Pencil className="w-4 h-4 mr-2" />
-                                    Editar Rol
-                                </DropdownMenuItem>
-                            )}
-                            {/* Toggle Active — external actors */}
-                            {onToggleActive && (
-                                <DropdownMenuItem onClick={onToggleActive}>
-                                    {isInactive
-                                        ? <><ToggleRight className="w-4 h-4 mr-2 text-green-500" />Activar</>
-                                        : <><ToggleLeft className="w-4 h-4 mr-2" />Desactivar</>
-                                    }
-                                </DropdownMenuItem>
-                            )}
-                            {/* Separator before destructive actions */}
-                            {(canEditRole || onToggleActive) && canRemove && (
-                                <DropdownMenuSeparator />
-                            )}
-                            {/* Remove — members only */}
-                            {canRemove && onRemove && (
-                                <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onClick={() => onRemove(member)}
-                                >
-                                    <UserX className="w-4 h-4 mr-2" />
-                                    Eliminar Miembro
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
         </ListItem>
     );
+
+    if (hasActions) {
+        return (
+            <EntityContextMenu
+                data={member}
+                customActions={customActions.length > 0 ? customActions : undefined}
+                onDelete={canRemove && onRemove ? () => onRemove(member) : undefined}
+            >
+                {content}
+            </EntityContextMenu>
+        );
+    }
+
+    return content;
 });

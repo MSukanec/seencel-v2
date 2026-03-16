@@ -1,18 +1,39 @@
 "use client";
 
-import { useState, useMemo, useEffect, useTransition } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
+/**
+ * Contact Form — Panel Self-Contained
+ * Hybrid Chip Form — Linear-inspired
+ *
+ * Layout:
+ * ┌─────────────────────────────────┐
+ * │ Header (icon + title + desc)    │  ← setPanelMeta
+ * ├─────────────────────────────────┤
+ * │ Avatar                          │
+ * │ Persona / Empresa toggle        │
+ * │ Hero: Nombre (big)              │
+ * │ Hero: Apellido (big)            │
+ * │ Email + Teléfono                │
+ * │ Empresa                         │
+ * │ ▸ Ver más campos                │
+ * ├─────────────────────────────────┤
+ * │ Footer: Cancelar + Submit       │  ← container-managed
+ * └─────────────────────────────────┘
+ */
+
+import { useState, useMemo, useEffect, useTransition, useRef } from "react";
 import { ContactWithRelations, ContactCategory, ContactType } from "@/types/contact";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { useRouter } from "@/i18n/routing";
-import { FormFooter } from "@/components/shared/forms/form-footer";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { TextField, NotesField, SegmentedField } from "@/components/shared/forms/fields";
-import { FormGroup } from "@/components/ui/form-group";
-import { FactoryLabel } from "@/components/shared/forms/fields/field-wrapper";
-import { Label } from "@/components/ui/label";
-import { User, Building2, ChevronDown, X, Loader2, ShieldCheck } from "lucide-react";
+import { FormHeroField } from "@/components/shared/forms/fields/form-hero-field";
+import { FormNotesField } from "@/components/shared/forms/fields/form-notes-field";
+import { FormReferenceField } from "@/components/shared/forms/fields/form-reference-field";
+import { ChipRow, CategoryChip, SelectChip } from "@/components/shared/chips";
+import { User, Building2, Loader2, ShieldCheck, Users, Mail, Phone, MapPin, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AttachmentChip } from "@/components/shared/chips";
+import type { UploadedFile } from "@/hooks/use-file-upload";
+import { getContactFiles } from "@/features/contact/actions/contact-files-actions";
 
 /** Traducción de actor_type a label legible */
 const ACTOR_TYPE_LABELS: Record<string, string> = {
@@ -22,18 +43,15 @@ const ACTOR_TYPE_LABELS: Record<string, string> = {
     external_site_manager: "Director de Obra Externo",
     subcontractor_portal_user: "Subcontratista",
 };
-import { cn } from "@/lib/utils";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Combobox } from "@/components/ui/combobox";
 import { toast } from "sonner";
 
 import { ContactAvatarManager } from "@/features/contact/components/contact-avatar-manager";
 import { createContact, updateContact, getContactCategories, checkSeencelUser } from "@/actions/contacts";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
-const CONTACT_TYPE_OPTIONS = [
-    { value: "person" as const, label: "Persona", icon: User },
-    { value: "company" as const, label: "Empresa", icon: Building2 },
+const CONTACT_TYPE_CHIP_OPTIONS = [
+    { value: "person", label: "Persona", icon: <User className="h-3.5 w-3.5 text-muted-foreground" /> },
+    { value: "company", label: "Empresa", icon: <Building2 className="h-3.5 w-3.5 text-muted-foreground" /> },
 ];
 
 /** Simplified company contact for the combobox */
@@ -43,45 +61,78 @@ export interface CompanyOption {
 }
 
 // ============================================================================
-// Props — Minimal: el form fetchea sus datos auxiliares internamente
+// Props — Panel-compatible: receives formId from PanelProvider
 // ============================================================================
 
 interface ContactFormProps {
     organizationId: string;
     /** If provided, form is in EDIT mode */
     initialData?: ContactWithRelations;
-    /** Simple callback after successful create/update — parent does refresh */
+    /** Simple callback after successful create/update */
     onSuccess?: () => void;
+    /** Injected by PanelProvider — connects form to panel footer submit button */
+    formId?: string;
 
-    // ── Legacy props (backward compat) ──────────────────────────────────
-    // Cuando se pasan, se usan directamente en vez de fetchear.
-    // Esto permite que las vistas existentes sigan funcionando sin cambios.
+    // ── Data props ──
     contactCategories?: ContactCategory[];
     companyContacts?: CompanyOption[];
-    /** @deprecated — Use onSuccess instead. Kept for backward compat with ContactsList. */
-    onOptimisticSubmit?: (data: any, categoryIds: string[]) => void;
 }
 
 // ============================================================================
-// Component (Semi-Autonomous)
+// Component (Panel Self-Contained)
 // ============================================================================
 
 export function ContactForm({
     organizationId,
     initialData,
     onSuccess,
-    // Legacy props
+    formId,
     contactCategories: externalCategories,
     companyContacts: externalCompanyContacts,
-    onOptimisticSubmit,
 }: ContactFormProps) {
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const isEditing = !!initialData;
 
     const [contactType, setContactType] = useState<ContactType>(initialData?.contact_type || "person");
     const [showMore, setShowMore] = useState(false);
+
+    // ── Files / Attachments State ───────────────────────────────────────
+    const [files, setFiles] = useState<UploadedFile[]>([]);
+    const [tempId] = useState(() => `temp_${Math.random().toString(36).substring(2, 9)}`);
+    const uploadCleanupRef = useRef<(() => void) | null>(null);
+
+    // Load existing files if editing
+    useEffect(() => {
+        if (!isEditing || !initialData) return;
+        getContactFiles(initialData.id, organizationId).then(serverFiles => {
+            setFiles(serverFiles.map(f => ({
+                id: f.id,
+                url: f.url,
+                name: f.name,
+                type: f.type,
+                size: f.size,
+                path: f.path,
+                bucket: f.bucket,
+            })));
+        }).catch(console.error);
+    }, [isEditing, initialData, organizationId]);
+
+    // 🚨 OBLIGATORIO: Self-describe via setPanelMeta
+    useEffect(() => {
+        setPanelMeta({
+            icon: Users,
+            title: isEditing ? "Editar Contacto" : "Nuevo Contacto",
+            description: isEditing
+                ? `Modificando a ${initialData?.full_name || 'contacto'}`
+                : "Agrega un nuevo contacto a tu organización.",
+            size: "lg",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Crear Contacto",
+            },
+        });
+    }, [isEditing, initialData?.full_name, setPanelMeta]);
 
     // ── Fetched Data (solo si NO se pasan como props) ───────────────────
     const [fetchedCategories, setFetchedCategories] = useState<ContactCategory[]>([]);
@@ -94,18 +145,16 @@ export function ContactForm({
 
     // Fetch categories + company contacts if not provided externally
     useEffect(() => {
-        if (externalCategories && externalCompanyContacts) return; // Already provided
+        if (externalCategories && externalCompanyContacts) return;
 
         const fetchAuxData = async () => {
             setIsLoadingData(true);
             try {
-                // Fetch categories if not provided
                 if (!externalCategories) {
                     const categories = await getContactCategories(organizationId);
                     setFetchedCategories(categories);
                 }
 
-                // Fetch company contacts if not provided
                 if (!externalCompanyContacts) {
                     const supabase = createSupabaseClient();
                     const { data: companiesData } = await supabase
@@ -167,7 +216,6 @@ export function ContactForm({
 
     const handleEmailBlur = async () => {
         const email = formData.email.trim();
-        // Skip if: no email, already linked, same email already checked, or editing a linked contact
         if (!email || !email.includes('@') || isLinkedToUser || email === lastCheckedEmail) return;
 
         setIsCheckingEmail(true);
@@ -175,7 +223,6 @@ export function ContactForm({
             const result = await checkSeencelUser(email);
             setSeencelUserMatch(result);
 
-            // Auto-fill name and avatar if we found a match and fields are empty
             if (result) {
                 const updates: Partial<typeof formData> = {};
                 if (!formData.first_name && result.firstName) {
@@ -232,7 +279,6 @@ export function ContactForm({
 
     const handleCompanySelect = (companyId: string) => {
         if (companyId === formData.company_id) {
-            // Deselect
             setFormData(prev => ({ ...prev, company_id: "", company_name: "" }));
         } else {
             const company = availableCompanies.find(c => c.id === companyId);
@@ -270,16 +316,10 @@ export function ContactForm({
             location: formData.location || null,
             notes: formData.notes || null,
             image_url: formData.image_url || null,
+            media_files: files.length > 0 ? files : undefined,
         };
 
-        // ── Legacy path: delegate to parent via onOptimisticSubmit ───────
-        if (onOptimisticSubmit) {
-            onOptimisticSubmit(dataToSave, formData.categoryIds);
-            return;
-        }
-
-        // ── Autonomous path: form handles server call + lifecycle ────────
-        closeModal();
+        closePanel();
         toast.success(isEditing ? "Contacto actualizado" : "Contacto creado");
 
         startTransition(async () => {
@@ -290,7 +330,6 @@ export function ContactForm({
                     await createContact(organizationId, dataToSave, formData.categoryIds);
                 }
                 onSuccess?.();
-                router.refresh();
             } catch (error: any) {
                 toast.error(error.message || "Error al guardar el contacto");
                 router.refresh();
@@ -298,12 +337,85 @@ export function ContactForm({
         });
     };
 
+    // 🚨 OBLIGATORIO: <form id={formId}> — conecta con el footer del container
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col max-h-full min-h-0">
-            <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col flex-1">
 
+            {/* ── Chips (SIEMPRE arriba de todo) ──────────── */}
+            <ChipRow>
+                <SelectChip
+                    value={contactType}
+                    onChange={(val) => handleContactTypeChange(val as ContactType)}
+                    options={CONTACT_TYPE_CHIP_OPTIONS}
+                    icon={<User className="h-3.5 w-3.5 text-muted-foreground" />}
+                    emptyLabel="Tipo"
+                    disabled={isLinkedToUser}
+                    popoverWidth={160}
+                />
+                {isPerson && (
+                    <SelectChip
+                        value={formData.company_id}
+                        onChange={(val) => {
+                            const company = availableCompanies.find(c => c.id === val);
+                            setFormData(prev => ({
+                                ...prev,
+                                company_id: val,
+                                company_name: company?.name || "",
+                            }));
+                        }}
+                        options={availableCompanies.map(c => ({
+                            value: c.id,
+                            label: c.name,
+                            icon: <Building2 className="h-3.5 w-3.5 text-muted-foreground" />,
+                        }))}
+                        icon={<Building2 className="h-3.5 w-3.5 text-muted-foreground" />}
+                        emptyLabel="Empresa"
+                        searchPlaceholder="Buscar empresa..."
+                        popoverWidth={220}
+                        onCreateNew={async (name) => {
+                            try {
+                                const newCompany = await createContact(organizationId, {
+                                    contact_type: "company",
+                                    first_name: name,
+                                    full_name: name,
+                                }, []);
+                                if (newCompany?.id) {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        company_id: newCompany.id,
+                                        company_name: name,
+                                    }));
+                                    toast.success(`Empresa "${name}" creada`);
+                                    return newCompany.id;
+                                }
+                            } catch {
+                                toast.error("Error al crear la empresa");
+                            }
+                        }}
+                        createLabel="Crear empresa"
+                    />
+                )}
+                <CategoryChip
+                    value={formData.categoryIds}
+                    onChange={toggleCategory}
+                    options={contactCategories.map(c => ({ value: c.id, label: c.name }))}
+                    manageRoute={{ pathname: "/organization/contacts/categories" as any }}
+                    manageLabel="Gestionar categorías"
+                />
+                <AttachmentChip
+                    value={files}
+                    onChange={setFiles}
+                    bucket="private-assets"
+                    folderPath={`organizations/${organizationId}/contacts/attachments/${isEditing ? initialData.id : tempId}`}
+                    maxSizeMB={10}
+                    cleanupRef={uploadCleanupRef}
+                />
+            </ChipRow>
+
+            {/* ── Avatar + Type Toggle ─────────────────── */}
+            <div className="space-y-4 mb-2">
                 {/* Avatar Section */}
-                <div className="flex justify-center pb-2">
+                <div className="flex justify-center pt-2">
                     <ContactAvatarManager
                         initials={formData.first_name?.[0] || formData.last_name?.[0] || "?"}
                         currentPath={formData.image_url}
@@ -332,216 +444,104 @@ export function ContactForm({
                     </div>
                 )}
 
-                {/* Contact Type Toggle - Below Avatar, Full Width */}
-                <SegmentedField
-                    value={contactType}
-                    onChange={handleContactTypeChange}
-                    options={CONTACT_TYPE_OPTIONS}
-                    disabled={isLinkedToUser}
-                />
+            </div>
 
-                {/* Name Fields */}
-                {isPerson ? (
-                    <div className="grid grid-cols-2 gap-4">
-                        <TextField
-                            label="Nombre"
-                            value={formData.first_name}
-                            onChange={(val) => setFormData({ ...formData, first_name: val })}
-                            placeholder="Ej. Juan"
-                            required={true}
-                            autoFocus={!isLinkedToUser}
+            {/* ── Hero: Name Fields (stacked) ────────────── */}
+            {isPerson ? (
+                <>
+                    <FormHeroField
+                        value={formData.first_name}
+                        onChange={(val) => setFormData(prev => ({ ...prev, first_name: val }))}
+                        placeholder="Nombre..."
+                        autoFocus={!isLinkedToUser}
+                    />
+                    <FormHeroField
+                        value={formData.last_name}
+                        onChange={(val) => setFormData(prev => ({ ...prev, last_name: val }))}
+                        placeholder="Apellido..."
+                        className="border-t-0"
+                    />
+                </>
+            ) : (
+                <FormHeroField
+                    value={formData.first_name}
+                    onChange={(val) => setFormData(prev => ({ ...prev, first_name: val }))}
+                    placeholder="Nombre de la Empresa..."
+                    autoFocus
+                />
+            )}
+
+            {/* ── Borderless fields below hero ──────────── */}
+            <div className="flex-1 mt-4 space-y-1">
+
+                {/* Email */}
+                <div className="border-t border-border/10 pt-2 mt-1">
+                    <div className="flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                        <input
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => {
+                                setFormData({ ...formData, email: e.target.value });
+                                if (seencelUserMatch) setSeencelUserMatch(null);
+                            }}
+                            onBlur={handleEmailBlur}
+                            placeholder={isPerson ? "juan@ejemplo.com" : "info@empresa.com"}
                             disabled={isLinkedToUser}
-                            helpText={isLinkedToUser ? "Sincronizado desde el perfil del usuario" : undefined}
-                        />
-                        <TextField
-                            label="Apellido"
-                            value={formData.last_name}
-                            onChange={(val) => setFormData({ ...formData, last_name: val })}
-                            placeholder="Ej. Pérez"
-                            required={false}
-                            disabled={isLinkedToUser}
+                            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 outline-none border-none disabled:opacity-50"
                         />
                     </div>
-                ) : (
-                    <TextField
-                        label="Nombre de la Empresa"
-                        value={formData.first_name}
-                        onChange={(val) => setFormData({ ...formData, first_name: val })}
-                        placeholder="Ej. Constructora ABC"
-                        required={true}
-                        autoFocus
-                    />
-                )}
-
-                {/* Contact Info */}
-                <div className="grid grid-cols-2 gap-4">
-                    <TextField
-                        label="Email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(val) => {
-                            setFormData({ ...formData, email: val });
-                            // Clear match if email changed
-                            if (seencelUserMatch) setSeencelUserMatch(null);
-                        }}
-                        onBlur={handleEmailBlur}
-                        placeholder={isPerson ? "juan@ejemplo.com" : "info@empresa.com"}
-                        required={false}
-                        disabled={isLinkedToUser}
-                        helpText={
-                            isLinkedToUser
+                    {(isLinkedToUser || seencelUserMatch || isCheckingEmail) && (
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5 ml-5.5">
+                            {isLinkedToUser
                                 ? "Sincronizado desde el perfil del usuario"
                                 : seencelUserMatch
                                     ? "✓ Usuario de Seencel detectado — se vinculará al guardar"
-                                    : isCheckingEmail
-                                        ? "Verificando..."
-                                        : undefined
-                        }
-                    />
-                    <FormGroup label={<FactoryLabel label="Teléfono" />} required={false}>
+                                    : "Verificando..."}
+                        </p>
+                    )}
+                </div>
+
+                {/* Phone */}
+                <div className="border-t border-border/10 pt-2 mt-1">
+                    <div className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
                         <PhoneInput
                             defaultCountry="AR"
                             value={formData.phone}
                             onChange={(value) => setFormData({ ...formData, phone: value || "" })}
                             placeholder="+54 9 11..."
+                            className="[&_button]:h-7 [&_button]:text-xs [&_button]:border-none [&_button]:bg-transparent [&_button]:shadow-none [&_button]:px-1 [&_input]:h-7 [&_input]:text-sm [&_input]:border-none [&_input]:bg-transparent [&_input]:shadow-none [&_input]:placeholder:text-muted-foreground/30"
                         />
-                    </FormGroup>
+                    </div>
                 </div>
 
-                {/* Company field (only for person) */}
-                {isPerson && (
-                    <FormGroup label={<FactoryLabel label="Empresa" />} required={false}>
-                        {companyContacts.length > 0 ? (
-                            <div className="space-y-2">
-                                {formData.company_id ? (
-                                    /* Linked company - show selected with clear button */
-                                    <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-muted/30">
-                                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                                        <span className="text-sm flex-1 truncate">
-                                            {availableCompanies.find(c => c.id === formData.company_id)?.name || formData.company_name}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={handleClearCompany}
-                                            className="text-muted-foreground hover:text-foreground transition-colors"
-                                        >
-                                            <X className="h-3.5 w-3.5" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    /* Combobox to select or type */
-                                    <Combobox
-                                        value={formData.company_id}
-                                        onValueChange={handleCompanySelect}
-                                        options={companyOptions}
-                                        placeholder="Seleccionar empresa..."
-                                        searchPlaceholder="Buscar empresa..."
-                                        emptyMessage="No hay empresas registradas"
-                                    />
-                                )}
-                                {!formData.company_id && (
-                                    <input
-                                        type="text"
-                                        value={formData.company_name}
-                                        onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                                        placeholder="O escribí el nombre manualmente"
-                                        className="border-input flex w-full rounded-md border bg-transparent px-3 py-2 text-sm transition-[color,box-shadow] outline-none h-9"
-                                    />
-                                )}
-                            </div>
-                        ) : isLoadingData ? (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span>Cargando empresas...</span>
-                            </div>
-                        ) : (
-                            /* No company contacts - simple text field */
-                            <input
-                                type="text"
-                                value={formData.company_name}
-                                onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                                placeholder="Nombre de la empresa"
-                                className="border-input flex w-full rounded-md border bg-transparent px-3 py-2 text-sm transition-[color,box-shadow] outline-none h-9"
-                            />
-                        )}
-                    </FormGroup>
-                )}
+                {/* Documento / ID */}
+                <FormReferenceField
+                    value={formData.national_id}
+                    onChange={(val) => setFormData({ ...formData, national_id: val })}
+                    placeholder={isPerson ? "DNI, CUIT, Pasaporte..." : "CUIT, RFC, NIT, EIN..."}
+                    prefix={<FileText className="h-3.5 w-3.5 text-muted-foreground/50" />}
+                />
 
-                {/* Collapsible: Additional Fields */}
-                <Collapsible open={showMore} onOpenChange={setShowMore}>
-                    <CollapsibleTrigger asChild>
-                        <button
-                            type="button"
-                            className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full py-2"
-                        >
-                            <ChevronDown className={cn(
-                                "h-4 w-4 transition-transform",
-                                showMore && "rotate-180"
-                            )} />
-                            {showMore ? "Ver menos" : "Ver más campos"}
-                        </button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-4 pt-1">
-                        {/* Categories */}
-                        <FormGroup label={<FactoryLabel label="Categorías" />} required={false}>
-                            {isLoadingData && !externalCategories ? (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span>Cargando categorías...</span>
-                                </div>
-                            ) : (
-                                <div className="flex flex-wrap gap-2 border rounded-md p-3 bg-muted/20">
-                                    {contactCategories.length === 0 ? (
-                                        <p className="text-xs text-muted-foreground">No hay categorías disponibles.</p>
-                                    ) : (
-                                        contactCategories.map(category => (
-                                            <div key={category.id} className="flex items-center space-x-2 bg-background border px-2 py-1 rounded-sm">
-                                                <Checkbox
-                                                    id={`category-${category.id}`}
-                                                    checked={formData.categoryIds.includes(category.id)}
-                                                    onCheckedChange={() => toggleCategory(category.id)}
-                                                />
-                                                <Label htmlFor={`category-${category.id}`} className="text-sm font-normal cursor-pointer">
-                                                    {category.name}
-                                                </Label>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </FormGroup>
+                {/* Ubicación */}
+                <FormReferenceField
+                    value={formData.location}
+                    onChange={(val) => setFormData({ ...formData, location: val })}
+                    placeholder="Ciudad, País"
+                    prefix={<MapPin className="h-3.5 w-3.5 text-muted-foreground/50" />}
+                />
 
-                        <TextField
-                            label={isPerson ? "Documento / ID" : "ID Fiscal"}
-                            value={formData.national_id}
-                            onChange={(val) => setFormData({ ...formData, national_id: val })}
-                            placeholder={isPerson ? "Ej. DNI, CUIT, Pasaporte..." : "Ej. CUIT, RFC, NIT, EIN..."}
-                            required={false}
-                        />
-                        <TextField
-                            label="Ubicación"
-                            value={formData.location}
-                            onChange={(val) => setFormData({ ...formData, location: val })}
-                            placeholder="Ciudad, País"
-                            required={false}
-                        />
-                        <NotesField
-                            value={formData.notes}
-                            onChange={(val) => setFormData({ ...formData, notes: val })}
-                            placeholder="Información adicional..."
-                            rows={4}
-                        />
-                    </CollapsibleContent>
-                </Collapsible>
-
+                {/* Notas */}
+                <div className="border-t border-border/10 pt-2 mt-1">
+                    <FormNotesField
+                        value={formData.notes}
+                        onChange={(val) => setFormData({ ...formData, notes: val })}
+                        placeholder="Información adicional..."
+                        rows={3}
+                    />
+                </div>
             </div>
-
-            <FormFooter
-                onCancel={closeModal}
-                submitLabel={initialData ? "Guardar Cambios" : "Crear Contacto"}
-                isLoading={isPending}
-                className="-mx-4 -mb-4 mt-6"
-            />
         </form>
     );
 }

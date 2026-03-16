@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 // ============================================================================
@@ -14,11 +15,17 @@ import { revalidatePath } from "next/cache";
  */
 export async function deleteFile(mediaLinkId: string) {
     try {
+        const user = await getAuthUser();
+        if (!user) return { success: false, error: "No autorizado" };
+
         const supabase = await createClient();
 
         const { error } = await supabase
             .from("media_links")
-            .delete()
+            .update({
+                is_deleted: true,
+                deleted_at: new Date().toISOString(),
+            })
             .eq("id", mediaLinkId);
 
         if (error) {
@@ -74,10 +81,12 @@ function mapMimeToFileType(mime: string): string {
 export async function uploadFiles(
     organizationId: string,
     files: UploadFileData[],
-    folderId?: string | null,
     projectId?: string | null
 ) {
     try {
+        const user = await getAuthUser();
+        if (!user) return { success: false, error: "No autorizado" };
+
         const supabase = await createClient();
 
         const results: { success: boolean; fileName: string; error?: string }[] = [];
@@ -113,7 +122,6 @@ export async function uploadFiles(
                     project_id: projectId || null,
                     category: "general",
                     visibility: "private",
-                    folder_id: folderId || null,
                 });
 
             if (linkError) {
@@ -142,149 +150,126 @@ export async function uploadFiles(
     }
 }
 
+
 // ============================================================================
-// FOLDER CRUD
+// SAVED VIEWS CRUD
 // ============================================================================
+
+interface CreateSavedViewInput {
+    organizationId: string;
+    name: string;
+    entityType: string;
+    viewMode?: string | null;
+    filters?: Record<string, unknown>;
+}
 
 /**
- * Create a new folder
+ * Create a new saved view
  */
-export async function createFolder(
-    organizationId: string,
-    name: string,
-    parentId?: string | null,
-    projectId?: string | null
-) {
+export async function createSavedView(input: CreateSavedViewInput) {
     try {
+        const user = await getAuthUser();
+        if (!user) return { success: false, error: "No autorizado" };
+
         const supabase = await createClient();
 
+        // Get next position
+        const { count } = await supabase
+            .from("saved_views")
+            .select("*", { count: "exact", head: true })
+            .eq("organization_id", input.organizationId)
+            .eq("entity_type", input.entityType)
+            .eq("is_deleted", false);
+
         const { data, error } = await supabase
-            .from("media_file_folders")
+            .from("saved_views")
             .insert({
-                organization_id: organizationId,
-                name: name.trim(),
-                parent_id: parentId || null,
-                project_id: projectId || null,
+                organization_id: input.organizationId,
+                name: input.name.trim(),
+                entity_type: input.entityType,
+                view_mode: input.viewMode || null,
+                filters: input.filters || {},
+                position: (count || 0),
             })
             .select()
             .single();
 
         if (error) {
-            console.error("Error creating folder:", error);
+            console.error("Error creating saved view:", error);
             return { success: false, error: error.message };
         }
 
         revalidatePath("/organization/files", "page");
         return { success: true, data };
     } catch (err) {
-        console.error("Unexpected error creating folder:", err);
+        console.error("Unexpected error creating saved view:", err);
         return { success: false, error: err instanceof Error ? err.message : "Error desconocido" };
     }
 }
 
 /**
- * Rename a folder
+ * Update a saved view (name, filters, view_mode)
  */
-export async function renameFolder(folderId: string, newName: string) {
+export async function updateSavedView(
+    viewId: string,
+    updates: { name?: string; filters?: Record<string, unknown>; viewMode?: string | null }
+) {
     try {
+        const user = await getAuthUser();
+        if (!user) return { success: false, error: "No autorizado" };
+
         const supabase = await createClient();
 
+        const updateData: Record<string, unknown> = {};
+        if (updates.name !== undefined) updateData.name = updates.name.trim();
+        if (updates.filters !== undefined) updateData.filters = updates.filters;
+        if (updates.viewMode !== undefined) updateData.view_mode = updates.viewMode;
+
         const { error } = await supabase
-            .from("media_file_folders")
-            .update({ name: newName.trim() })
-            .eq("id", folderId);
+            .from("saved_views")
+            .update(updateData)
+            .eq("id", viewId);
 
         if (error) {
-            console.error("Error renaming folder:", error);
+            console.error("Error updating saved view:", error);
             return { success: false, error: error.message };
         }
 
         revalidatePath("/organization/files", "page");
         return { success: true };
     } catch (err) {
-        console.error("Unexpected error renaming folder:", err);
+        console.error("Unexpected error updating saved view:", err);
         return { success: false, error: err instanceof Error ? err.message : "Error desconocido" };
     }
 }
 
 /**
- * Soft delete a folder. Files inside will have folder_id set to NULL via trigger.
+ * Soft delete a saved view
  */
-export async function deleteFolder(folderId: string) {
+export async function deleteSavedView(viewId: string) {
     try {
+        const user = await getAuthUser();
+        if (!user) return { success: false, error: "No autorizado" };
+
         const supabase = await createClient();
 
         const { error } = await supabase
-            .from("media_file_folders")
+            .from("saved_views")
             .update({
                 is_deleted: true,
                 deleted_at: new Date().toISOString(),
             })
-            .eq("id", folderId);
+            .eq("id", viewId);
 
         if (error) {
-            console.error("Error deleting folder:", error);
+            console.error("Error deleting saved view:", error);
             return { success: false, error: error.message };
         }
 
         revalidatePath("/organization/files", "page");
         return { success: true };
     } catch (err) {
-        console.error("Unexpected error deleting folder:", err);
-        return { success: false, error: err instanceof Error ? err.message : "Error desconocido" };
-    }
-}
-
-// ============================================================================
-// MOVE FILE TO FOLDER
-// ============================================================================
-
-/**
- * Move a file (media_link) to a folder, or remove from folder (folderId = null)
- */
-export async function moveFileToFolder(mediaLinkId: string, folderId: string | null) {
-    try {
-        const supabase = await createClient();
-
-        const { error } = await supabase
-            .from("media_links")
-            .update({ folder_id: folderId })
-            .eq("id", mediaLinkId);
-
-        if (error) {
-            console.error("Error moving file:", error);
-            return { success: false, error: error.message };
-        }
-
-        revalidatePath("/organization/files", "page");
-        return { success: true };
-    } catch (err) {
-        console.error("Unexpected error moving file:", err);
-        return { success: false, error: err instanceof Error ? err.message : "Error desconocido" };
-    }
-}
-
-/**
- * Move multiple files to a folder at once
- */
-export async function moveFilesToFolder(mediaLinkIds: string[], folderId: string | null) {
-    try {
-        const supabase = await createClient();
-
-        const { error } = await supabase
-            .from("media_links")
-            .update({ folder_id: folderId })
-            .in("id", mediaLinkIds);
-
-        if (error) {
-            console.error("Error moving files:", error);
-            return { success: false, error: error.message };
-        }
-
-        revalidatePath("/organization/files", "page");
-        return { success: true };
-    } catch (err) {
-        console.error("Unexpected error moving files:", err);
+        console.error("Unexpected error deleting saved view:", err);
         return { success: false, error: err instanceof Error ? err.message : "Error desconocido" };
     }
 }

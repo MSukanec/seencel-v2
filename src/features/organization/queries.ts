@@ -1,6 +1,30 @@
 import { createClient } from '@/lib/supabase/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, requireAuthContext } from '@/lib/auth';
 import { subDays } from 'date-fns';
+
+export async function getOrganizationSettingsData(orgId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .schema('iam').from('organizations')
+        .select(`
+            id, 
+            name, 
+            logo_url, 
+            settings,
+            organization_data(*)
+        `)
+        .eq('id', orgId)
+        .eq('is_deleted', false)
+        .single();
+
+    if (error || !data) {
+        console.error("Error fetching organization settings data:", error);
+        return { error: error?.message || "Organización no encontrada" };
+    }
+
+    return { organization: data };
+}
 
 export async function getDashboardData() {
     const authUser = await getAuthUser();

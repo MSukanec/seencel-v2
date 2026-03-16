@@ -3,6 +3,7 @@
 import { type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { FeatureGuard } from "@/components/ui/feature-guard";
 
 // ============================================================================
@@ -40,6 +41,8 @@ interface SettingsSectionProps {
     actions?: SettingsSectionAction[];
     /** Contenido de la sección (campos, tablas, etc.) - va en columna derecha */
     children: React.ReactNode;
+    /** Variante del contenedor interior. "default" (sin caja), "card" (rectángulo estándar) o "inset" (caja oscura con sombra interna) */
+    contentVariant?: "default" | "card" | "inset";
     /** Clases adicionales para el contenedor */
     className?: string;
 }
@@ -50,26 +53,6 @@ interface SettingsSectionProps {
 
 /**
  * SettingsSection - Layout de dos columnas para configuraciones.
- * 
- * Layout:
- * ┌──────────────────────┬─────────────────────────────────────┐
- * │ [Icon] Título        │                                     │
- * │ Descripción          │        Children (contenido)         │
- * │ [Btn1] [Btn2]        │                                     │
- * └──────────────────────┴─────────────────────────────────────┘
- * 
- * @example
- * <SettingsSection
- *     icon={Package}
- *     title="Materiales"
- *     description="Materiales necesarios por unidad"
- *     actions={[
- *         { label: "Agregar", icon: Plus, onClick: handleAdd },
- *         { label: "Importar", icon: Upload, onClick: handleImport, variant: "secondary" },
- *     ]}
- * >
- *     <Table ... />
- * </SettingsSection>
  */
 export function SettingsSection({
     icon: Icon,
@@ -77,6 +60,7 @@ export function SettingsSection({
     description,
     actions,
     children,
+    contentVariant = "default",
     className,
 }: SettingsSectionProps) {
     return (
@@ -143,7 +127,13 @@ export function SettingsSection({
 
             {/* Right Column - Content (2/3) */}
             <div className="md:col-span-2">
-                {children}
+                {contentVariant === "card" || contentVariant === "inset" ? (
+                    <Card variant={contentVariant === "inset" ? "inset" : "default"} className="overflow-hidden">
+                        {children}
+                    </Card>
+                ) : (
+                    children
+                )}
             </div>
         </div>
     );

@@ -4,11 +4,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 import { Card } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContactWithRelations } from "@/types/contact";
-import { Building2, Mail, MessageCircle, MoreHorizontal, Paperclip, Pencil, Phone, PhoneCall, ShieldCheck, Trash2 } from "lucide-react";
+import { Building2, Mail, MessageCircle, Phone, PhoneCall, ShieldCheck } from "lucide-react";
 
 /** Traducción de actor_type a label legible */
 const ACTOR_TYPE_LABELS: Record<string, string> = {
@@ -33,41 +32,12 @@ function formatPhoneForWhatsApp(phone: string): string {
     return phone.replace(/[\s\-\(\)]/g, '').replace(/^\+/, '');
 }
 
-export function ContactCard({ contact, organizationName, organizationLogoUrl, onEdit, onDelete, onAttachFiles }: ContactCardProps) {
+export function ContactCard({ contact, organizationName, organizationLogoUrl, onEdit }: ContactCardProps) {
     const avatarUrl = contact.resolved_avatar_url || contact.image_url;
 
     return (
-        <Card className="group relative flex flex-col items-center text-center p-6 h-[400px] bg-card hover:bg-accent/40 transition-colors border-border/50 shadow-sm cursor-pointer">
+        <Card className="group relative flex flex-col items-center text-center p-6 h-[400px] hover:bg-accent/30 transition-colors cursor-pointer">
 
-            {/* Top Actions - Always Visible */}
-            <div className="absolute top-4 right-4">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <button className="text-muted-foreground hover:text-foreground transition-colors outline-none">
-                            <MoreHorizontal className="h-5 w-5" />
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEdit(contact)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                        </DropdownMenuItem>
-                        {onAttachFiles && (
-                            <DropdownMenuItem onClick={() => onAttachFiles(contact)}>
-                                <Paperclip className="mr-2 h-4 w-4" />
-                                Adjuntar archivos
-                            </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                            onClick={() => onDelete(contact)}
-                            className="text-destructive focus:text-destructive"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
 
             {/* Mini Avatar Indicators (Top Left) */}
             {contact.linked_user_id && (
@@ -223,7 +193,7 @@ export function ContactCard({ contact, organizationName, organizationLogoUrl, on
                                         className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
                                     >
                                         <MessageCircle className="h-4 w-4 text-green-500" />
-                                        <span>WhatsApp</span>
+                                        <span>Enviar por WhatsApp</span>
                                     </a>
                                 </div>
                             </PopoverContent>

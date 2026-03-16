@@ -28,7 +28,7 @@
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: #739b4d;
+  --primary: rgb(105, 148, 25);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
@@ -36,8 +36,8 @@
   --muted-foreground: oklch(0.552 0.016 285.938);
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(54.392% 0.19137 24.073);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive: var(--semantic-negative);
+  --destructive-foreground: var(--semantic-negative-fg);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.50 0.02 270);
@@ -64,7 +64,7 @@
   --semantic-warning-fg: oklch(0.20 0.02 75);
   --semantic-info: oklch(0.60 0.15 250);
   --semantic-info-fg: oklch(0.985 0 0);
-  --semantic-neutral: oklch(0.60 0.12 235);
+  --semantic-neutral: oklch(49.97% 0.00006 271.152);
   --semantic-neutral-fg: oklch(0.985 0 0);
 
   /* ── System Indicator ── */
@@ -102,7 +102,7 @@
 
 .dark {
   /* ── Core UI Colors ── */
-  --background: #383838;
+  --background: hsl(0, 0%, 17%);
   --foreground: oklch(0.985 0 0);
   --card: #242424;
   --card-foreground: oklch(0.985 0 0);
@@ -114,13 +114,13 @@
   --muted-foreground: oklch(0.705 0.015 286.067);
   --accent: oklch(0.274 0.006 286.033);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: var(--semantic-negative);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.62 0.02 270);
 
   /* ── Sidebar ── */
-  --sidebar: #242424;
+  --sidebar: hsl(0, 0%, 13%);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -432,6 +432,186 @@
 
 
 
+/* ── CINCEL ISLAND — Shared raised element on inset surface ──────────────── */
+/* Reusable island effect: elements appear raised from a carved surface.
+   Used by: toolbar buttons (.toolbar-inset > button)
+            data table rows ([data-row-type="data"])
+   Single source of truth for the Seencel cincel (chisel) aesthetic.      */
+
+/* Base island — raised with shadow + subtle border + background */
+.cincel-island,
+.toolbar-inset>button,
+.toolbar-inset>div>button,
+.toolbar-inset>div>div>button {
+  background-color: var(--background) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.5rem;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.25),
+    0 1px 1px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+/* Island hover — slight sink */
+.cincel-island:hover,
+.toolbar-inset>button:hover,
+.toolbar-inset>div>button:hover,
+.toolbar-inset>div>div>button:hover {
+  box-shadow:
+    0 0.5px 1px rgba(0, 0, 0, 0.15),
+    0 0.5px 0.5px rgba(0, 0, 0, 0.1);
+}
+
+/* Island active/pressed — inset shadow */
+.cincel-island:active,
+.toolbar-inset>button:active,
+.toolbar-inset>div>button:active,
+.toolbar-inset>div>div>button:active {
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 0.5px 1px rgba(0, 0, 0, 0.12);
+  background-color: color-mix(in srgb, var(--background) 93%, black 7%) !important;
+}
+
+/* ── DetailContentTabs — Tab triggers as cincel islands ──────────────────── */
+/* Same cincel-island aesthetic as toolbar buttons.                           */
+
+/* Tab triggers — raised island */
+.detail-content-tabs [role="tab"] {
+  background-color: var(--background) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.5rem;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.25),
+    0 1px 1px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+/* Tab hover — slight sink */
+.detail-content-tabs [role="tab"]:hover {
+  box-shadow:
+    0 0.5px 1px rgba(0, 0, 0, 0.15),
+    0 0.5px 0.5px rgba(0, 0, 0, 0.1);
+}
+
+/* Tab active/pressed — inset shadow */
+.detail-content-tabs [role="tab"]:active {
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 0.5px 1px rgba(0, 0, 0, 0.12);
+  background-color: color-mix(in srgb, var(--background) 93%, black 7%) !important;
+}
+
+/* Active tab (selected) — brighter, emphasize elevation */
+.detail-content-tabs [role="tab"][data-state="active"] {
+  color: var(--foreground);
+  background-color: var(--background) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Inactive tab — more subtle */
+.detail-content-tabs [role="tab"][data-state="inactive"] {
+  background-color: transparent !important;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.detail-content-tabs [role="tab"][data-state="inactive"]:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.04);
+  box-shadow:
+    0 0.5px 1px rgba(0, 0, 0, 0.1);
+}
+
+/* ── DataTable Cincel — Table-specific rules ─────────────────────────────── */
+/* Container uses Card variant="inset". Island effect on data rows only.
+   Column headers + group headers stay flat on the carved surface.         */
+
+/* Table element — separate borders for row gaps */
+.seencel-table-inset [data-slot="table"] {
+  border-collapse: separate !important;
+  border-spacing: 0 4px !important;
+}
+
+/* ALL rows — remove default borders (gaps handle separation) */
+.seencel-table-inset [data-slot="table-row"] {
+  border-bottom: none !important;
+  background: transparent !important;
+}
+
+.seencel-table-inset [data-slot="table-head"] {
+  background: transparent !important;
+}
+
+/* Force thead transparent even when sticky */
+.seencel-table-inset [data-slot="table-header"] {
+  background: transparent !important;
+  backdrop-filter: none !important;
+}
+
+/* Data row cells — island effect (same as .cincel-island) */
+.seencel-table-inset [data-row-type="data"] [data-slot="table-cell"] {
+  background-color: var(--background) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: none;
+  border-right: none;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.25),
+    0 1px 1px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.seencel-table-inset [data-row-type="data"] [data-slot="table-cell"]:first-child {
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.5rem 0 0 0.5rem;
+}
+
+.seencel-table-inset [data-row-type="data"] [data-slot="table-cell"]:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.seencel-table-inset [data-row-type="data"]:hover [data-slot="table-cell"] {
+  box-shadow:
+    0 0.5px 1px rgba(0, 0, 0, 0.15),
+    0 0.5px 0.5px rgba(0, 0, 0, 0.1);
+}
+
+.seencel-table-inset [data-row-type="data"]:active [data-slot="table-cell"] {
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 0.5px 1px rgba(0, 0, 0, 0.12);
+  background-color: color-mix(in srgb, var(--background) 93%, black 7%) !important;
+}
+
+.seencel-table-inset [data-row-type="data"][data-state="selected"] [data-slot="table-cell"] {
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--background));
+}
+
+/* Light mode overrides for data rows */
+:root .seencel-table-inset [data-row-type="data"] [data-slot="table-cell"] {
+  background-color: var(--card);
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 0.5px 1px rgba(0, 0, 0, 0.04);
+}
+
+:root .seencel-table-inset [data-row-type="data"] [data-slot="table-cell"]:first-child {
+  border-left-color: rgba(0, 0, 0, 0.06);
+}
+
+:root .seencel-table-inset [data-row-type="data"] [data-slot="table-cell"]:last-child {
+  border-right-color: rgba(0, 0, 0, 0.06);
+}
+
+:root .seencel-table-inset [data-row-type="data"]:hover [data-slot="table-cell"] {
+  box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.04);
+}
+
 /* ============================================================================
    6. UTILITY CLASSES
    ============================================================================ */
@@ -665,4 +845,13 @@
 
 .seencel-map-light .gm-style>div:first-child>div:first-child {
   filter: saturate(0) brightness(0.9) contrast(1.05);
+}
+
+/* ── Google Maps — Clean mode (hide logo, legal, shortcuts in mini maps) ── */
+.seencel-map-clean .gm-style .gmnoprint,
+.seencel-map-clean .gm-style .gm-style-cc,
+.seencel-map-clean .gm-style a[href^="https://maps.google.com"],
+.seencel-map-clean .gm-style a[title="Open this area in Google Maps"],
+.seencel-map-clean .gm-style .gm-control-active {
+  display: none !important;
 }

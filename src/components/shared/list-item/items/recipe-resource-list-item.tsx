@@ -13,10 +13,9 @@
 // dashed-border aesthetic.
 // ============================================================================
 
-import { memo, useCallback } from "react";
-import { ListItem } from "../list-item-base";
+import { memo, useCallback, useMemo } from "react";
+import { ListItem, type ListItemContextMenuAction } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
     Package,
     HardHat,
@@ -24,16 +23,8 @@ import {
     FileText,
     Pencil,
     Trash2,
-    MoreHorizontal,
     ExternalLink,
 } from "lucide-react";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { type PricePulseData } from "@/components/shared/price-pulse-popover";
 import { CatalogPriceButton } from "@/components/shared/catalog/catalog-price-button";
 import { QuantityPopover, type QuantityPopoverData } from "@/components/shared/catalog/quantity-popover";
@@ -222,8 +213,39 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
         onRemove?.(id);
     }, [onRemove, id]);
 
+    // Build context menu actions
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] | undefined => {
+        if (!isOwn || (!onEdit && !onRemove && !resourceId)) return undefined;
+        const actions: ListItemContextMenuAction[] = [];
+        if (onEdit) {
+            actions.push({
+                label: "Editar",
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                onClick: handleEdit,
+            });
+        }
+        if ((variant === "material" || variant === "labor") && resourceId) {
+            actions.push({
+                label: "Ver detalle",
+                icon: <ExternalLink className="h-3.5 w-3.5" />,
+                onClick: () => {
+                    // TODO: Navigate to detail page when routes exist
+                },
+            });
+        }
+        if (onRemove) {
+            actions.push({
+                label: "Eliminar",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: handleRemove,
+                variant: "destructive",
+            });
+        }
+        return actions;
+    }, [isOwn, onEdit, onRemove, resourceId, variant, handleEdit, handleRemove]);
+
     return (
-        <ListItem variant="card">
+        <ListItem variant="card" contextMenuActions={contextMenuActions}>
             {/* Color strip — same pattern as MaterialListItem / LaborListItem */}
             <ListItem.ColorStrip color={config.stripColor} />
 
@@ -303,55 +325,6 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
                     </span>
                 </div>
             </div>
-
-            {/* Actions: "..." dropdown menu */}
-            {isOwn && (onEdit || onRemove || resourceId) && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {/* Edit — open form in edit mode */}
-                            {onEdit && (
-                                <DropdownMenuItem onClick={handleEdit}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Editar
-                                </DropdownMenuItem>
-                            )}
-                            {/* Detail link — only for materials and labor */}
-                            {(variant === "material" || variant === "labor") && resourceId && (
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        // TODO: Navigate to detail page when routes exist
-                                        // router.push(`/organization/catalog/${variant}/${resourceId}`)
-                                    }}
-                                >
-                                    <ExternalLink className="mr-2 h-4 w-4" />
-                                    Ver detalle
-                                </DropdownMenuItem>
-                            )}
-                            {/* Separator before destructive action */}
-                            {onRemove && (onEdit || resourceId) && (
-                                <DropdownMenuSeparator />
-                            )}
-                            {/* Delete */}
-                            {onRemove && (
-                                <DropdownMenuItem
-                                    onClick={handleRemove}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
         </ListItem>
     );
 });

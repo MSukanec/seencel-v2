@@ -65,17 +65,10 @@ function EditableCurrencyCell<TData>({
     const [loading, setLoading] = React.useState(false);
     const currentValue = (row as any)[accessorKey] as string;
 
-    const handleSelect = async (value: string) => {
-        if (value === currentValue) {
-            setOpen(false);
-            return;
-        }
-        setLoading(true);
-        try {
-            await onUpdate(row, value);
-        } finally {
-            setLoading(false);
-            setOpen(false);
+    const handleSelect = (value: string) => {
+        setOpen(false);
+        if (value !== currentValue) {
+            onUpdate(row, value);
         }
     };
 

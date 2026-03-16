@@ -11,10 +11,10 @@
  */
 
 import { useMemo, useCallback } from "react";
-import { Plus, FileText, FolderOpen, Layers, FolderPlus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { ViewEmptyState } from "@/components/shared/empty-state";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { SearchButton } from "@/components/shared/toolbar-controls";
+import { Plus, FileText, FolderOpen, Layers, FolderPlus, MoreHorizontal, Pencil, Trash2, Repeat, CircleDot, Zap, Building2, Briefcase, Tag } from "lucide-react";
+import { ViewEmptyState, type QuickStartPack } from "@/components/shared/empty-state";
+import { PageHeaderActionPortal } from "@/components/layout";
+import { FilterPopover, SearchButton, ToolbarCard } from "@/components/shared/toolbar-controls";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import {
     Accordion,
@@ -30,6 +30,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePanel } from "@/stores/panel-store";
+import {
+    createGeneralCostCategory,
+    createGeneralCost,
+} from "@/features/general-costs/actions";
 import { useTableActions } from "@/hooks/use-table-actions";
 import { deleteGeneralCost, deleteGeneralCostCategory } from "../actions";
 import { GeneralCost, GeneralCostCategory } from "../types";
@@ -121,8 +125,26 @@ function formatGroupTotal(amount: number): string {
 export function GeneralCostsConceptsView({ data, conceptStats, categories, organizationId }: GeneralCostsConceptsViewProps) {
     const { openPanel } = usePanel();
 
+    // ─── Filter options ──────────────────────────────────
+    const recurrenceOptions = useMemo(() => [
+        { label: "Recurrente", value: "true" },
+        { label: "No recurrente", value: "false" },
+    ], []);
+
+    const categoryOptions = useMemo(() =>
+        categories.map(c => ({ label: c.name, value: c.id })),
+        [categories]
+    );
+
     // ─── Filters ─────────────────────────────────────────
-    const filters = useTableFilters({});
+    const filters = useTableFilters({
+        facets: [
+            { key: "recurrence", title: "Recurrencia", icon: Repeat, options: recurrenceOptions },
+            ...(categories.length > 0 ? [
+                { key: "category", title: "Categoría", icon: FolderOpen, options: categoryOptions },
+            ] : []),
+        ],
+    });
 
     // ─── Delete actions (concepts) ──────────────────────
     const { handleDelete, DeleteConfirmDialog } = useTableActions<GeneralCost>({
@@ -208,10 +230,25 @@ export function GeneralCostsConceptsView({ data, conceptStats, categories, organ
 
     // ─── Filtered data ───────────────────────────────────
     const filteredData = useMemo(() => {
-        if (!filters.searchQuery) return data;
-        const q = filters.searchQuery.toLowerCase();
-        return data.filter(c => c.name.toLowerCase().includes(q));
-    }, [data, filters.searchQuery]);
+        return data.filter(c => {
+            // Search
+            if (filters.searchQuery) {
+                const q = filters.searchQuery.toLowerCase();
+                if (!c.name.toLowerCase().includes(q)) return false;
+            }
+            // Recurrence facet
+            const recurrenceFilter = filters.facetValues.recurrence;
+            if (recurrenceFilter?.size > 0) {
+                if (!recurrenceFilter.has(String(c.is_recurring))) return false;
+            }
+            // Category facet
+            const categoryFilter = filters.facetValues.category;
+            if (categoryFilter?.size > 0) {
+                if (!c.category_id || !categoryFilter.has(c.category_id)) return false;
+            }
+            return true;
+        });
+    }, [data, filters.searchQuery, filters.facetValues]);
 
     // ─── Groups ──────────────────────────────────────────
     const categoryGroups = useMemo(() => {
@@ -219,7 +256,7 @@ export function GeneralCostsConceptsView({ data, conceptStats, categories, organ
         // When searching, hide empty categories
         if (filters.searchQuery) return groups.filter(g => g.concepts.length > 0);
         return groups;
-    }, [filteredData, categories, conceptStats, filters.searchQuery]);
+    }, [filteredData, categories, conceptStats, filters.searchQuery, filters.facetValues]);
 
     // All accordion values (open by default)
     const allGroupIds = useMemo(
@@ -233,46 +270,131 @@ export function GeneralCostsConceptsView({ data, conceptStats, categories, organ
         [categoryGroups]
     );
 
-    // ─── Toolbar config ───────────────────────────────────
-    const toolbarActions = [
-        { label: "Nuevo Concepto", icon: Plus, onClick: () => handleCreate() },
-        { label: "Nueva Categoría", icon: FolderPlus, onClick: handleCreateCategory },
-    ];
+    // ─── Header actions (split button) ─────────────────────
+    const headerActions = (
+        <PageHeaderActionPortal>
+            <div className="flex items-center">
+                <button
+                    onClick={() => handleCreate()}
+                    className="flex items-center gap-1.5 h-8 px-3 rounded-l-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+                >
+                    <Plus className="h-4 w-4" />
+                    <span>Nuevo Concepto</span>
+                </button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            className="flex items-center justify-center h-8 w-8 rounded-r-lg border-l border-primary-foreground/20 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+                        >
+                            <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={handleCreateCategory}>
+                            <FolderPlus className="h-4 w-4 mr-2" />
+                            Nueva Categoría
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        </PageHeaderActionPortal>
+    );
 
     // ─── Empty state ─────────────────────────────────────
+    // ─── Quick Start Packs ───────────────────────────────
+    const quickStartPacks = useMemo<QuickStartPack[]>(() => [
+        {
+            id: "services",
+            icon: Zap,
+            label: "Pack Servicios",
+            description: "Luz, Gas, Internet, Agua, Teléfono",
+            onApply: async () => {
+                try {
+                    const cat = await createGeneralCostCategory({ organization_id: organizationId, name: "Servicios" });
+                    if (!cat?.id) throw new Error();
+                    const names = ["Luz", "Gas", "Internet", "Agua", "Teléfono"];
+                    await Promise.all(names.map(name =>
+                        createGeneralCost({ organization_id: organizationId, category_id: cat.id, name, is_recurring: true, recurrence_interval: "monthly" })
+                    ));
+                    toast.success(`Pack Servicios creado (${names.length} conceptos)`);
+                } catch { toast.error("Error al crear el pack"); }
+            },
+        },
+        {
+            id: "real-estate",
+            icon: Building2,
+            label: "Pack Inmobiliario",
+            description: "Alquiler, Expensas, Seguros, Impuestos",
+            onApply: async () => {
+                try {
+                    const cat = await createGeneralCostCategory({ organization_id: organizationId, name: "Inmueble" });
+                    if (!cat?.id) throw new Error();
+                    const names = ["Alquiler", "Expensas", "Seguros", "Impuestos Inmobiliarios"];
+                    await Promise.all(names.map(name =>
+                        createGeneralCost({ organization_id: organizationId, category_id: cat.id, name, is_recurring: true, recurrence_interval: "monthly" })
+                    ));
+                    toast.success(`Pack Inmobiliario creado (${names.length} conceptos)`);
+                } catch { toast.error("Error al crear el pack"); }
+            },
+        },
+        {
+            id: "admin",
+            icon: Briefcase,
+            label: "Pack Administrativo",
+            description: "Contabilidad, Legal, Software, Papelería",
+            onApply: async () => {
+                try {
+                    const cat = await createGeneralCostCategory({ organization_id: organizationId, name: "Administración" });
+                    if (!cat?.id) throw new Error();
+                    const names = ["Contabilidad", "Asesoría Legal", "Licencias de Software", "Papelería"];
+                    await Promise.all(names.map(name =>
+                        createGeneralCost({ organization_id: organizationId, category_id: cat.id, name, is_recurring: false })
+                    ));
+                    toast.success(`Pack Administrativo creado (${names.length} conceptos)`);
+                } catch { toast.error("Error al crear el pack"); }
+            },
+        },
+    ], [organizationId]);
+
     if (data.length === 0 && categories.length === 0) {
         return (
             <>
-                <Toolbar portalToHeader actions={toolbarActions} />
+                {headerActions}
                 <ViewEmptyState
                     mode="empty"
-                    icon={FileText}
+                    icon={Tag}
                     viewName="Conceptos de Gasto"
                     featureDescription="Definí los tipos de gastos recurrentes o eventuales de tu organización."
+                    quickStartPacks={quickStartPacks}
                     onAction={() => handleCreate()}
-                    actionLabel="Nuevo Concepto"
+                    actionLabel="Crear concepto manualmente"
+                    docsPath="/docs/gastos-generales"
                 />
             </>
         );
     }
 
-    // ─── No results ──────────────────────────────────────
-    if (filteredData.length === 0) {
+    // ─── No results (only when filters are active) ─────────
+    if (filteredData.length === 0 && filters.hasActiveFilters) {
         return (
             <>
-                <Toolbar
-                    portalToHeader
-                    leftActions={
-                        <SearchButton filters={filters} placeholder="Buscar conceptos..." />
-                    }
-                    actions={toolbarActions}
-                />
-                <ViewEmptyState
-                    mode="no-results"
-                    icon={FileText}
-                    viewName="Conceptos"
-                    onResetFilters={filters.clearAll}
-                />
+                {headerActions}
+                <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
+                    <ToolbarCard
+                        right={
+                            <>
+                                <SearchButton filters={filters} placeholder="Buscar conceptos..." />
+                                <FilterPopover filters={filters} />
+                            </>
+                        }
+                    />
+                    <ViewEmptyState
+                        mode="no-results"
+                        icon={Tag}
+                        viewName="Conceptos"
+                        onResetFilters={filters.clearAll}
+                    />
+                </div>
             </>
         );
     }
@@ -280,13 +402,18 @@ export function GeneralCostsConceptsView({ data, conceptStats, categories, organ
     // ─── Render ──────────────────────────────────────────
     return (
         <>
-            <Toolbar
-                portalToHeader
-                leftActions={
-                    <SearchButton filters={filters} placeholder="Buscar conceptos..." />
-                }
-                actions={toolbarActions}
-            />
+            {headerActions}
+
+            <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
+                {/* Toolbar card — inline */}
+                <ToolbarCard
+                    right={
+                        <>
+                            <SearchButton filters={filters} placeholder="Buscar conceptos..." />
+                            <FilterPopover filters={filters} />
+                        </>
+                    }
+                />
 
             <Accordion
                 type="multiple"
@@ -402,6 +529,7 @@ export function GeneralCostsConceptsView({ data, conceptStats, categories, organ
                     </AccordionItem>
                 ))}
             </Accordion>
+            </div>
 
             <DeleteConfirmDialog />
             <DeleteCategoryDialog />

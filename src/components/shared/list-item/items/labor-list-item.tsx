@@ -1,16 +1,9 @@
 "use client";
 
-import { memo, useCallback } from "react";
-import { ListItem } from "../list-item-base";
+import { memo, useCallback, useMemo } from "react";
+import { ListItem, type ListItemContextMenuAction } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, DollarSign, HardHat } from "lucide-react";
+import { Pencil, DollarSign, HardHat } from "lucide-react";
 import { ResourcePriceDisplay, type PricePulseData } from "@/components/shared/price-pulse-popover";
 
 // ============================================================================
@@ -71,7 +64,15 @@ export const LaborListItem = memo(function LaborListItem({
     // TODO: When labor has its own upsertLaborPrice action, wire pricePulseData here
 
     return (
-        <ListItem variant="card" selected={selected}>
+        <ListItem variant="card" selected={selected} contextMenuActions={
+            onEditPrice ? [{
+                label: laborType.current_price != null ? "Editar precio" : "Establecer precio",
+                icon: laborType.current_price != null
+                    ? <Pencil className="h-3.5 w-3.5" />
+                    : <DollarSign className="h-3.5 w-3.5" />,
+                onClick: () => onEditPrice(laborType),
+            }] : undefined
+        }>
             {/* Selection Checkbox */}
             {onToggleSelect && (
                 <ListItem.Checkbox
@@ -129,29 +130,6 @@ export const LaborListItem = memo(function LaborListItem({
                     </span>
                 )}
             </div>
-
-            {/* Actions dropdown */}
-            {onEditPrice && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEditPrice(laborType)}>
-                                {laborType.current_price != null ? (
-                                    <><Pencil className="mr-2 h-4 w-4" /> Editar precio</>
-                                ) : (
-                                    <><DollarSign className="mr-2 h-4 w-4" /> Establecer precio</>
-                                )}
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
         </ListItem>
     );
 });

@@ -1,32 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Info } from "lucide-react";
+import { Info, UserCheck } from "lucide-react";
 import { addExternalCollaboratorAction } from "@/features/team/actions";
 import { ADVISOR_ACTOR_TYPE_LABELS } from "@/features/team/types";
 
 interface AddExternalFormProps {
     organizationId: string;
+    formId?: string;
 }
 
-export function AddExternalCollaboratorForm({ organizationId }: AddExternalFormProps) {
+export function AddExternalCollaboratorForm({ organizationId, formId }: AddExternalFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta, setSubmitting } = usePanel();
 
     // Form state
     const [email, setEmail] = useState("");
     const [actorType, setActorType] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Setup Panel Meta
+    useEffect(() => {
+        setPanelMeta({
+            title: "Vincular Colaborador Externo",
+            description: "Envía una invitación formal para que un colaborador externo se una a tu organización.",
+            icon: UserCheck,
+            size: "md",
+            footer: {
+                submitLabel: "Agregar Colaborador",
+            }
+        });
+    }, [setPanelMeta]);
 
     const handleCancel = () => {
-        closeModal();
+        closePanel();
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -42,30 +55,30 @@ export function AddExternalCollaboratorForm({ organizationId }: AddExternalFormP
             return;
         }
 
-        setIsSubmitting(true);
+        setSubmitting(true);
 
         try {
             const result = await addExternalCollaboratorAction(organizationId, email.trim(), actorType);
 
             if (!result.success) {
                 toast.error(result.error || "Error al agregar colaborador");
-                setIsSubmitting(false);
+                setSubmitting(false);
                 return;
             }
 
-            closeModal();
+            closePanel();
             toast.success("Se envió una invitación al colaborador por email.");
             router.refresh();
         } catch (error) {
             toast.error("Error inesperado al agregar colaborador");
-            setIsSubmitting(false);
+            setSubmitting(false);
         }
     };
 
     const selectedTypeInfo = actorType ? ADVISOR_ACTOR_TYPE_LABELS[actorType] : null;
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto space-y-4">
                 <FormGroup label="Email" required>
                     <Input
@@ -120,13 +133,6 @@ export function AddExternalCollaboratorForm({ organizationId }: AddExternalFormP
                     </div>
                 </div>
             </div>
-
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                isLoading={isSubmitting}
-                submitLabel="Agregar Colaborador"
-                onCancel={handleCancel}
-            />
         </form>
     );
 }

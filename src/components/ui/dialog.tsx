@@ -38,7 +38,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 backdrop-blur-[3px]",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px]",
         className
       )}
       {...props}
@@ -62,8 +62,9 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          // Base styles
-          "bg-background fixed z-50 outline-none duration-200",
+          // Base styles — matches Panel modal aesthetic
+          "fixed z-50 outline-none duration-200",
+          "border border-border/50 shadow-2xl",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "flex flex-col",
           // Mobile fullscreen mode
@@ -73,17 +74,20 @@ function DialogContent({
             "data-[state=open]:slide-in-from-bottom-full data-[state=closed]:slide-out-to-bottom-full",
             // Desktop: centered modal
             "sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]",
-            "sm:w-full sm:h-auto sm:max-h-[85vh] sm:rounded-lg sm:border sm:shadow-lg",
+            "sm:w-full sm:h-auto sm:max-h-[85vh] sm:rounded-xl sm:border sm:border-border/50 sm:shadow-2xl",
             "sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-95",
             "sm:data-[state=closed]:zoom-out-95 sm:data-[state=closed]:slide-out-to-bottom-0",
           ] : [
             // Standard centered modal
             "top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]",
-            "w-full max-w-[calc(100%-2rem)] max-h-[85vh] rounded-lg border shadow-lg p-6",
+            "w-full max-w-[calc(100%-2rem)] max-h-[85vh] rounded-xl p-6",
             "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           ],
           className
         )}
+        style={{
+          background: "linear-gradient(135deg, color-mix(in oklch, var(--sidebar), black 6%) 0%, var(--sidebar) 50%, color-mix(in oklch, var(--sidebar), white 8%) 100%)",
+        }}
         {...props}
       >
         {children}

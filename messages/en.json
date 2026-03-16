@@ -8,7 +8,7 @@
     "Sidebar": {
         "tools": {
             "kanban": "Kanban",
-            "files": "Documentation"
+            "files": "Files"
         },
         "construction": "CONSTRUCTION",
         "items": {
@@ -172,7 +172,7 @@
             "items": {
                 "overview": "Overview",
                 "basicData": "Basic Data",
-                "filesMedia": "Documentation",
+                "filesMedia": "Files",
                 "finance": "Finance",
                 "moodboard": "Moodboard",
                 "computationBudget": "Compute & Budget",

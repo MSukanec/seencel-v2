@@ -9,7 +9,7 @@
  */
 
 import { useMemo, useRef, useEffect, useCallback } from "react";
-import { Plus, Receipt, CircleDot, Wallet, Coins, FileText, FolderOpen } from "lucide-react";
+import { Plus, Receipt, CircleDot, Wallet, Coins, FileText, FolderOpen, MoreHorizontal, Upload, Download } from "lucide-react";
 import { format, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";
@@ -18,9 +18,15 @@ import { useModal } from "@/stores/modal-store";
 import { useTableActions } from "@/hooks/use-table-actions";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { FilterPopover, SearchButton, DisplayButton } from "@/components/shared/toolbar-controls";
-import { getStandardToolbarActions } from "@/lib/toolbar-actions";
+import { PageHeaderActionPortal } from "@/components/layout";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { FilterPopover, SearchButton, ToolbarCard } from "@/components/shared/toolbar-controls";
 import { exportToCSV, exportToExcel } from "@/lib/export";
 import { createImportBatch, revertImportBatch, importGeneralCostPaymentsBatch, type ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
@@ -376,21 +382,54 @@ export function GeneralCostsPaymentsView({
         toast.success('Exportación Excel descargada');
     };
 
-    // ─── Toolbar actions ─────────────────────────────────
-    const toolbarActions = [
-        { label: "Nuevo Pago", icon: Plus, onClick: handleOpenForm },
-        ...getStandardToolbarActions({
-            onImport: handleOpenImport,
-            onExportCSV: handleExportCSV,
-            onExportExcel: handleExportExcel,
-        }),
-    ];
 
-    // ─── Empty state ─────────────────────────────────────
-    if (optimisticItems.length === 0) {
-        return (
-            <>
-                <Toolbar portalToHeader actions={toolbarActions} />
+    // ─── Determine content state ─────────────────────────
+    const isEmpty = optimisticItems.length === 0;
+    const hasData = optimisticItems.length > 0;
+    const noResults = hasData && filteredData.length === 0;
+
+    // ─── Render ──────────────────────────────────────────
+    return (
+        <>
+            {/* Primary Action + Secondary actions → Header */}
+            <PageHeaderActionPortal>
+                <div className="flex items-center">
+                    <button
+                        onClick={handleOpenForm}
+                        className="flex items-center gap-1.5 h-8 px-3 rounded-l-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+                    >
+                        <Plus className="h-4 w-4" />
+                        <span>Nuevo Pago</span>
+                    </button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                className="flex items-center justify-center h-8 w-8 rounded-r-lg border-l border-primary-foreground/20 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+                            >
+                                <MoreHorizontal className="h-4 w-4" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={handleOpenImport}>
+                                <Upload className="h-4 w-4 mr-2" />
+                                Importar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleExportCSV}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Exportar CSV
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportExcel}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Exportar Excel
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </PageHeaderActionPortal>
+
+            {/* Empty state — full height, outside toolbar wrapper */}
+            {isEmpty ? (
                 <ViewEmptyState
                     mode="empty"
                     icon={Receipt}
@@ -398,68 +437,49 @@ export function GeneralCostsPaymentsView({
                     featureDescription="Registrá pagos de gastos generales para llevar control de tus egresos operativos."
                     onAction={handleOpenForm}
                     actionLabel="Nuevo Pago"
+                    docsPath="/docs/gastos-generales"
                 />
-            </>
-        );
-    }
+            ) : (
+                /* Inline toolbar + content in a unified column */
+                <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
+                    {/* Toolbar card — inline, content-agnostic */}
+                    <ToolbarCard
+                        right={
+                            <>
+                                <SearchButton filters={filters} placeholder="Buscar pagos..." />
+                                <FilterPopover filters={filters} />
+                            </>
+                        }
+                    />
 
-    // ─── No results ──────────────────────────────────────
-    if (filteredData.length === 0) {
-        return (
-            <>
-                <Toolbar
-                    portalToHeader
-                    leftActions={
-                        <>
-                            <FilterPopover filters={filters} />
-                            <SearchButton filters={filters} placeholder="Buscar pagos..." />
-                        </>
-                    }
-                    actions={toolbarActions}
-                />
-                <ViewEmptyState
-                    mode="no-results"
-                    icon={Receipt}
-                    viewName="Pagos"
-                    onResetFilters={filters.clearAll}
-                />
-            </>
-        );
-    }
+                    {/* Content */}
+                    {noResults ? (
+                        <ViewEmptyState
+                            mode="no-results"
+                            icon={Receipt}
+                            viewName="Pagos"
+                            onResetFilters={filters.clearAll}
+                        />
+                    ) : (
+                        <DataTable
+                            columns={columns}
+                            data={filteredData}
+                            enableRowSelection
+                            enableContextMenu
+                            onRowClick={handleRowClick}
+                            onEdit={handleEdit}
+                            onDuplicate={handleDuplicate}
+                            onDelete={handleDelete}
+                            onBulkDelete={handleBulkDelete}
+                            initialSorting={[{ id: "payment_date", desc: true }]}
+                            globalFilter={filters.searchQuery}
+                            onGlobalFilterChange={filters.setSearchQuery}
+                            onClearFilters={filters.clearAll}
+                        />
+                    )}
+                </div>
+            )}
 
-    // ─── Embedded toolbar ────────────────────────────────
-    const embeddedToolbar = (table: any) => (
-        <Toolbar
-            leftActions={
-                <>
-                    <FilterPopover filters={filters} />
-                    <DisplayButton table={table} />
-                    <SearchButton filters={filters} placeholder="Buscar pagos..." />
-                </>
-            }
-            actions={toolbarActions}
-        />
-    );
-
-    // ─── Render ──────────────────────────────────────────
-    return (
-        <>
-            <DataTable
-                columns={columns}
-                data={filteredData}
-                enableRowSelection
-                enableContextMenu
-                onRowClick={handleRowClick}
-                onEdit={handleEdit}
-                onDuplicate={handleDuplicate}
-                onDelete={handleDelete}
-                onBulkDelete={handleBulkDelete}
-                initialSorting={[{ id: "payment_date", desc: true }]}
-                globalFilter={filters.searchQuery}
-                onGlobalFilterChange={filters.setSearchQuery}
-                onClearFilters={filters.clearAll}
-                embeddedToolbar={embeddedToolbar}
-            />
             <DeleteConfirmDialog />
         </>
     );

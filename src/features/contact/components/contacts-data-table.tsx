@@ -1,37 +1,41 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { ContactWithRelations, ContactCategory } from "@/types/contact";
-import { ContactForm, CompanyOption } from "@/features/contact/forms/contact-form";
+import { CompanyOption } from "@/features/contact/forms/contact-form";
+import { usePanel } from "@/stores/panel-store";
 import { useModal } from "@/stores/modal-store";
 import { useRouter } from "@/i18n/routing";
+import { useTableActions } from "@/hooks/use-table-actions";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { Card } from "@/components/ui/card";
+import { EntityContextMenu, type EntityCustomAction } from "@/components/shared/entity-context-menu";
 import { ContactCard } from "./contact-card";
-import { ContactFilesModal } from "./contact-files-modal";
-import { ContactListItem } from "@/components/shared/list-item/items/contact-list-item";
-import { deleteContact } from "@/actions/contacts";
-import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
-import { ViewEmptyState } from "@/components/shared/empty-state";
-import { Users } from "lucide-react";
+import { deleteContact, updateContact } from "@/actions/contacts";
+import { getContactColumns } from "@/features/contact/tables/contacts-columns";
+import {
+    Paperclip,
+    Phone,
+    Mail,
+    MessageCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 interface ContactsDataTableProps {
     organizationId: string;
-    /** Already optimistic items from parent */
     contacts: ContactWithRelations[];
     contactCategories: ContactCategory[];
     viewMode: "table" | "grid";
-    globalFilter?: string;
-    onGlobalFilterChange?: (value: string) => void;
-    selectedCategoryIds?: Set<string>;
-    filterSeencel?: Set<string>;
-    filterOrgMember?: Set<string>;
     organizationName: string;
     organizationLogoUrl: string | null;
-    /** Company contacts for the edit form combobox */
     companyContacts: CompanyOption[];
-    /** Callback: parent handles optimistic update for edit */
-    onEditSubmit: (contactId: string, data: any, categoryIds: string[]) => void;
-    /** Callback: parent handles optimistic remove */
     onDeleteContact: (id: string | number, serverAction?: () => Promise<void>) => void;
+    searchQuery?: string;
+    onClearFilters?: () => void;
 }
 
 export function ContactsDataTable({
@@ -39,174 +43,154 @@ export function ContactsDataTable({
     contacts,
     contactCategories,
     viewMode,
-    globalFilter,
-    onGlobalFilterChange,
-    selectedCategoryIds,
-    filterSeencel,
-    filterOrgMember,
     organizationName,
     organizationLogoUrl,
     companyContacts,
-    onEditSubmit,
     onDeleteContact,
+    searchQuery,
+    onClearFilters,
 }: ContactsDataTableProps) {
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
     const router = useRouter();
-    const [deletingContact, setDeletingContact] = useState<ContactWithRelations | null>(null);
 
-    // Filter by search query and selected categories
-    const filteredContacts = useMemo(() => {
-        let result = contacts;
+    // ─── Inline update handler ───────────────────────────
+    const handleInlineUpdate = useCallback(async (row: ContactWithRelations, fields: Record<string, any>) => {
+        try {
+            const categoryIds = fields._categoryIds;
+            const contactFields = { ...fields };
+            delete contactFields._categoryIds;
 
-        // Filter by categories
-        if (selectedCategoryIds && selectedCategoryIds.size > 0) {
-            result = result.filter(c =>
-                c.contact_categories?.some(cat => selectedCategoryIds.has(cat.id))
+            if (contactFields.first_name !== undefined || contactFields.last_name !== undefined) {
+                const firstName = contactFields.first_name ?? row.first_name;
+                const lastName = contactFields.last_name ?? row.last_name;
+                contactFields.full_name = [firstName, lastName].filter(Boolean).join(" ");
+            }
+
+            await updateContact(
+                row.id,
+                Object.keys(contactFields).length > 0 ? contactFields : {},
+                categoryIds
             );
+            router.refresh();
+        } catch {
+            toast.error("Error al actualizar el contacto");
         }
+    }, [router]);
 
-        // Filter by Seencel status
-        if (filterSeencel && filterSeencel.size > 0 && filterSeencel.size < 2) {
-            const wantSeencel = filterSeencel.has("yes");
-            result = result.filter(c => wantSeencel ? !!c.linked_user_id : !c.linked_user_id);
-        }
-
-        // Filter by Org member status
-        if (filterOrgMember && filterOrgMember.size > 0 && filterOrgMember.size < 2) {
-            const wantOrgMember = filterOrgMember.has("yes");
-            result = result.filter(c => wantOrgMember ? c.is_organization_member : !c.is_organization_member);
-        }
-
-        // Filter by search query
-        if (globalFilter?.trim()) {
-            const query = globalFilter.toLowerCase();
-            result = result.filter(c =>
-                (c.full_name?.toLowerCase().includes(query)) ||
-                (c.email?.toLowerCase().includes(query)) ||
-                (c.phone?.includes(query)) ||
-                (c.resolved_company_name?.toLowerCase().includes(query)) ||
-                (c.location?.toLowerCase().includes(query)) ||
-                (c.contact_categories?.some(cat => cat.name.toLowerCase().includes(query)))
-            );
-        }
-
-        return result;
-    }, [contacts, globalFilter, selectedCategoryIds, filterSeencel, filterOrgMember]);
-
-    // 🚀 OPTIMISTIC EDIT: parent handles the update
-    const handleOpenEdit = (contact: ContactWithRelations) => {
-        openModal(
-            <ContactForm
-                organizationId={organizationId}
-                contactCategories={contactCategories}
-                companyContacts={companyContacts}
-                initialData={contact}
-                onOptimisticSubmit={(data, categoryIds) => onEditSubmit(contact.id, data, categoryIds)}
-            />,
-            {
-                title: "Editar Contacto",
-                description: `Modificando a ${contact.full_name}`,
-                size: "lg"
-            }
-        );
-    };
-
-    // Opens the delete modal
-    const handleDelete = (contact: ContactWithRelations) => {
-        setDeletingContact(contact);
-    };
-
-    // Opens the attach files modal
-    const handleAttachFiles = (contact: ContactWithRelations) => {
-        openModal(
-            <ContactFilesModal
-                contactId={contact.id}
-                organizationId={organizationId}
-            />,
-            {
-                title: `Archivos de ${contact.full_name || "Contacto"}`,
-                description: "Adjuntá documentos, imágenes o PDFs a este contacto.",
-                size: "lg"
-            }
-        );
-    };
-
-    // 🚀 OPTIMISTIC DELETE: parent handles the remove
-    const handleConfirmDelete = async (replacementId: string | null) => {
-        if (!deletingContact) return;
-        const contactId = deletingContact.id;
-        setDeletingContact(null); // Close modal immediately
-
-        onDeleteContact(contactId, async () => {
-            try {
-                await deleteContact(contactId, replacementId || undefined);
-            } catch (error) {
-                router.refresh(); // Recover on error
-            }
+    // ─── Panel handlers ─────────────────────────────────
+    const handleEdit = useCallback((contact: ContactWithRelations) => {
+        openPanel('contact-form', {
+            organizationId,
+            contactCategories,
+            companyContacts,
+            initialData: contact,
+            onSuccess: () => {
+                router.refresh();
+            },
         });
-    };
+    }, [organizationId, contactCategories, companyContacts, openPanel, router]);
 
-    // Empty state when no results
-    if (filteredContacts.length === 0) {
-        return (
-            <>
-                <ViewEmptyState
-                    mode="no-results"
-                    icon={Users}
-                    viewName="contactos"
-                    filterContext="con esa búsqueda"
-                    onResetFilters={() => onGlobalFilterChange?.("")}
-                />
-            </>
-        );
-    }
+    // ─── Delete via useTableActions ──────────────────────
+    const { handleDelete, handleBulkDelete, DeleteConfirmDialog } = useTableActions<ContactWithRelations>({
+        onDelete: async (contact) => {
+            onDeleteContact(contact.id, async () => {
+                try {
+                    await deleteContact(contact.id);
+                } catch {
+                    toast.error("Error al eliminar el contacto");
+                    router.refresh();
+                }
+            });
+            return { success: true };
+        },
+        entityName: "contacto",
+        entityNamePlural: "contactos",
+    });
+
+    // ─── Custom actions (Zone 3 of EntityContextMenu) ────
+    const customActions: EntityCustomAction<ContactWithRelations>[] = useMemo(() => [
+        {
+            label: "Enviar por WhatsApp",
+            icon: <MessageCircle className="h-3.5 w-3.5" />,
+            visible: (contact) => !!contact.phone,
+            onClick: (contact) => {
+                const formattedPhone = contact.phone!.replace(/\D/g, "");
+                window.open(`https://wa.me/${formattedPhone}`, "_blank");
+            },
+        },
+        {
+            label: "Llamar",
+            icon: <Phone className="h-3.5 w-3.5" />,
+            visible: (contact) => !!contact.phone,
+            onClick: (contact) => window.open(`tel:${contact.phone}`, "_self"),
+        },
+        {
+            label: "Enviar por mail",
+            icon: <Mail className="h-3.5 w-3.5" />,
+            visible: (contact) => !!contact.email,
+            onClick: (contact) => window.open(`mailto:${contact.email}`, "_blank"),
+        },
+    ], []);
+
+    // ─── Columns (memoized) ──────────────────────────────
+    const columns = useMemo(
+        () => getContactColumns({
+            onInlineUpdate: handleInlineUpdate,
+            contactCategories,
+            companyContacts: companyContacts.map(c => ({ id: c.id, name: c.name })),
+        }),
+        [handleInlineUpdate, contactCategories, companyContacts]
+    );
+
+    // ─── Row click → open edit panel ────────────────────
+    const handleRowClick = useCallback((contact: ContactWithRelations) => {
+        handleEdit(contact);
+    }, [handleEdit]);
 
     return (
         <>
             {viewMode === "grid" ? (
-                /* Grid view: Cards */
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {filteredContacts.map((contact) => (
-                        <ContactCard
-                            key={contact.id}
-                            contact={contact}
-                            organizationName={organizationName}
-                            organizationLogoUrl={organizationLogoUrl}
-                            onEdit={handleOpenEdit}
-                            onDelete={handleDelete}
-                            onAttachFiles={handleAttachFiles}
-                        />
-                    ))}
-                </div>
+                <Card variant="inset">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {contacts.map((contact) => (
+                            <EntityContextMenu
+                                key={contact.id}
+                                data={contact}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                                customActions={customActions}
+                            >
+                                <div>
+                                    <ContactCard
+                                        contact={contact}
+                                        organizationName={organizationName}
+                                        organizationLogoUrl={organizationLogoUrl}
+                                        onEdit={handleEdit}
+                                        onDelete={handleDelete}
+                                    />
+                                </div>
+                            </EntityContextMenu>
+                        ))}
+                    </div>
+                </Card>
             ) : (
-                /* List view: ListItems */
-                <div className="flex flex-col gap-1">
-                    {filteredContacts.map((contact) => (
-                        <ContactListItem
-                            key={contact.id}
-                            contact={contact}
-                            onEdit={handleOpenEdit}
-                            onDelete={handleDelete}
-                            onAttachFiles={handleAttachFiles}
-                        />
-                    ))}
-                </div>
+                <DataTable
+                    columns={columns}
+                    data={contacts}
+                    enableRowSelection
+                    enableContextMenu
+                    onRowClick={handleRowClick}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onBulkDelete={handleBulkDelete}
+                    initialSorting={[{ id: "full_name", desc: false }]}
+                    globalFilter={searchQuery}
+                    onClearFilters={onClearFilters}
+                    customActions={customActions}
+                />
             )}
 
-            {/* Delete Contact Modal */}
-            <DeleteReplacementModal
-                isOpen={deletingContact !== null}
-                onClose={() => setDeletingContact(null)}
-                onConfirm={handleConfirmDelete}
-                itemToDelete={deletingContact ? { id: deletingContact.id, name: deletingContact.full_name || "Sin nombre" } : null}
-                entityLabel="contacto"
-                replacementOptions={contacts
-                    .filter(c => c.id !== deletingContact?.id)
-                    .map(c => ({ id: c.id, name: c.full_name || `${c.first_name} ${c.last_name}` || "Sin nombre" }))
-                }
-                title="Eliminar Contacto"
-                description={`¿Estás seguro de eliminar a "${deletingContact?.full_name || 'este contacto'}"?`}
-            />
+            <DeleteConfirmDialog />
         </>
     );
 }

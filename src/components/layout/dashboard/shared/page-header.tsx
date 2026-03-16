@@ -3,16 +3,15 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
-import { usePathname } from "next/navigation";
+import { usePathname, Link } from "@/i18n/routing";
 import { CurrencyModeSelector } from "@/components/shared/currency-mode-selector";
-import { HeaderOrgProjectSelector } from "@/components/layout/dashboard/shared/header-org-project-selector";
-import { HeaderAvatarButton } from "@/components/layout/dashboard/shared/header-avatar-button";
+// CommandBarTrigger moved to sidebar
 import { HeaderIconButton } from "@/components/layout/dashboard/shared/header-icon-button";
-import { SidebarNotificationsButton } from "@/components/layout/dashboard/sidebar/buttons/sidebar-notifications-button";
-import { CalendarDays, Users, BookOpen } from "lucide-react";
-import { Link } from "@/i18n/routing";
-import { useLocale } from "next-intl";
+import { BookOpen } from "lucide-react";
+
 import { getDocsSlugForPath } from "@/features/docs/lib/docs-mapping";
+import { useContextSidebarOverlay } from "@/stores/sidebar-store";
+import { DocsInlinePanel } from "@/features/docs/components/docs-inline-panel";
 
 export interface BreadcrumbItem {
     label: string | React.ReactNode
@@ -22,20 +21,27 @@ export interface BreadcrumbItem {
 // ─── Header Docs Button ─────────────────────────────────
 // Auto-detects the docs page for the current route.
 // Only renders when a matching docs slug exists.
+// Opens docs inline in the ContextSidebar overlay.
 
 function HeaderDocsButton() {
     const pathname = usePathname();
-    const locale = useLocale();
     const docsSlug = getDocsSlugForPath(pathname);
+    const { pushOverlay, hasOverlay } = useContextSidebarOverlay();
 
     if (!docsSlug) return null;
 
+    const handleClick = () => {
+        if (hasOverlay) return; // Already open
+        pushOverlay(
+            <DocsInlinePanel slug={docsSlug} />,
+            { title: "Documentación" }
+        );
+    };
+
     return (
-        <a href={`/${locale}/docs/${docsSlug}`} target="_blank" rel="noopener noreferrer">
-            <HeaderIconButton title="Documentación">
-                <BookOpen className="h-4 w-4" />
-            </HeaderIconButton>
-        </a>
+        <HeaderIconButton title="Documentación" onClick={handleClick}>
+            <BookOpen className="h-4 w-4" />
+        </HeaderIconButton>
     );
 }
 
@@ -51,6 +57,8 @@ interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
     icon?: React.ReactElement
     /** Optional back button (rendered before icon) */
     backButton?: React.ReactNode
+    /** Label for the parent page in detail mode (e.g. "Proyectos") */
+    parentLabel?: string
     /** Desktop toolbar - renders as second row in header */
     toolbar?: React.ReactNode
     /** Hide feedback button (default: false) */
@@ -65,12 +73,13 @@ export function PageHeader({
     children,
     icon,
     backButton,
+    parentLabel,
     toolbar,
     hideFeedback = false,
     ...props
 }: PageHeaderProps) {
     const pathname = usePathname();
-    const { contexts, getNavItems } = useSidebarNavigation();
+    const { contexts, getNavItems, getNavGroups } = useSidebarNavigation();
 
 
     // Helper to find the matching item in all contexts
@@ -83,82 +92,121 @@ export function PageHeader({
         return null;
     };
 
-    const activeItem = findActiveItem();
-    const ActiveIcon = activeItem?.icon;
+    // Detect if current page is a sub-page of a nav item with children
+    const findSubPageInfo = () => {
+        // Determine which contexts to search
+        const contextsToSearch: ('organization' | 'admin' | 'profile')[] = pathname.includes('/profile')
+            ? ['profile']
+            : ['organization'];
+
+        for (const ctx of contextsToSearch) {
+            const groups = getNavGroups(ctx);
+            for (const group of groups) {
+                for (const item of group.items) {
+                    if (item.children && item.children.length > 0) {
+                        const matchingChild = item.children.find((child: { href: string }) => pathname === child.href);
+                        if (matchingChild) {
+                            return { parentTitle: item.title, parentHref: item.href, childTitle: matchingChild.title, isParentPage: false };
+                        }
+                        // Check if we're on the parent page itself
+                        if (pathname === item.href) {
+                            return { parentTitle: item.title, parentHref: item.href, childTitle: item.children[0]?.title || '', isParentPage: true };
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    };
+
+    const subPageInfo = findSubPageInfo();
+
+    // Fallback: find active item for pages without sub-items
+    const activeItem = !subPageInfo ? findActiveItem() : null;
     const titleItem = breadcrumbs[breadcrumbs.length - 1];
 
     return (
         <div
             className={cn(
-                "sticky top-0 z-10 w-full bg-shell",
+                "sticky top-0 z-10 w-full",
                 className
             )}
             {...props}
         >
             {/* DESKTOP LAYOUT (Hidden on Mobile) */}
             <div className="hidden md:block">
-                {/* Row 1: Title + Tabs (centered) + Actions */}
-                <div className="px-8 h-[50px] flex items-center justify-between gap-4 relative">
-                    {/* Left: Breadcrumb + Title */}
-                    <div className="flex items-center gap-0 h-full">
-                        {/* Breadcrumb: Org / Project */}
-                        <HeaderOrgProjectSelector />
-
-                        {/* Breadcrumb separator */}
-                        <span className="text-sm text-muted-foreground mx-1.5">/</span>
-
-                        <div className="flex items-center gap-1.5">
-                            {backButton}
+                {/* Row 1: Breadcrumb (left) | Command Bar (center) | Actions (right) */}
+                <div className="px-8 h-[50px] grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                    {/* Left: Breadcrumb */}
+                    <div className="flex items-center gap-0 justify-self-start">
+                        {backButton && parentLabel ? (
+                            /* Detail page mode: ← Parent / Entity */
+                            <div className="flex items-center gap-0">
+                                {backButton}
+                                <span className="text-sm text-muted-foreground">
+                                    {parentLabel}
+                                </span>
+                                <span className="text-sm text-muted-foreground/50 mx-2">/</span>
+                                <span className="text-sm font-medium text-foreground truncate max-w-[300px]">
+                                    {titleItem?.label}
+                                </span>
+                            </div>
+                        ) : subPageInfo ? (
+                            <>
+                                {/* Parent page name — clickable link to Visión General */}
+                                <Link 
+                                    href={subPageInfo.parentHref as any} 
+                                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    {subPageInfo.parentTitle}
+                                </Link>
+                                {!subPageInfo.isParentPage && (
+                                    <>
+                                        <span className="text-sm text-muted-foreground/50 mx-2">/</span>
+                                        <span className="text-sm font-medium text-foreground">
+                                            {subPageInfo.childTitle}
+                                        </span>
+                                    </>
+                                )}
+                            </>
+                        ) : tabs ? (
+                            <div className={cn(
+                                "flex items-center",
+                                // Container pill background
+                                "[&_[role=tablist]]:!bg-muted/50 [&_[role=tablist]]:!backdrop-blur-sm",
+                                "[&_[role=tablist]]:!p-1 [&_[role=tablist]]:!gap-0.5",
+                                "[&_[role=tablist]]:!h-auto [&_[role=tablist]]:!items-center",
+                                "[&_[role=tablist]]:!rounded-full [&_[role=tablist]]:!border [&_[role=tablist]]:!border-border/30",
+                                // TabTrigger - Base: chip style
+                                "[&_[role=tab]]:!relative [&_[role=tab]]:!h-auto",
+                                "[&_[role=tab]]:!rounded-full",
+                                "[&_[role=tab]]:!bg-transparent [&_[role=tab]]:!border-none",
+                                "[&_[role=tab]]:!px-4 [&_[role=tab]]:!py-1.5 [&_[role=tab]]:!text-xs [&_[role=tab]]:!font-medium",
+                                "[&_[role=tab]]:!text-muted-foreground [&_[role=tab]]:!shadow-none",
+                                "[&_[role=tab]]:!cursor-pointer [&_[role=tab]]:!transition-all [&_[role=tab]]:!duration-200",
+                                "[&_[role=tab]:hover]:!text-foreground [&_[role=tab]:hover]:!bg-muted/80",
+                                // TabTrigger - Active: solid chip
+                                "[&_[role=tab][data-state=active]]:!text-foreground [&_[role=tab][data-state=active]]:!bg-background",
+                                "[&_[role=tab][data-state=active]]:!shadow-sm",
+                            )}>
+                                {tabs}
+                            </div>
+                        ) : (
+                            /* No sub-page, no tabs — show simple title */
                             <h1 className="text-sm font-medium text-foreground">
                                 {activeItem?.title || titleItem?.label}
                             </h1>
-                        </div>
+                        )}
                     </div>
 
-                    {/* Center: Tabs — chip style, absolutely centered */}
-                    {tabs && (
-                        <div className={cn(
-                            "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-                            "flex items-center",
-                            // Container pill background
-                            "[&_[role=tablist]]:!bg-muted/50 [&_[role=tablist]]:!backdrop-blur-sm",
-                            "[&_[role=tablist]]:!p-1 [&_[role=tablist]]:!gap-0.5",
-                            "[&_[role=tablist]]:!h-auto [&_[role=tablist]]:!items-center",
-                            "[&_[role=tablist]]:!rounded-full [&_[role=tablist]]:!border [&_[role=tablist]]:!border-border/30",
-                            // TabTrigger - Base: chip style
-                            "[&_[role=tab]]:!relative [&_[role=tab]]:!h-auto",
-                            "[&_[role=tab]]:!rounded-full",
-                            "[&_[role=tab]]:!bg-transparent [&_[role=tab]]:!border-none",
-                            "[&_[role=tab]]:!px-4 [&_[role=tab]]:!py-1.5 [&_[role=tab]]:!text-xs [&_[role=tab]]:!font-medium",
-                            "[&_[role=tab]]:!text-muted-foreground [&_[role=tab]]:!shadow-none",
-                            "[&_[role=tab]]:!cursor-pointer [&_[role=tab]]:!transition-all [&_[role=tab]]:!duration-200",
-                            "[&_[role=tab]:hover]:!text-foreground [&_[role=tab]:hover]:!bg-muted/80",
-                            // TabTrigger - Active: solid chip
-                            "[&_[role=tab][data-state=active]]:!text-foreground [&_[role=tab][data-state=active]]:!bg-background",
-                            "[&_[role=tab][data-state=active]]:!shadow-sm",
-                        )}>
-                            {tabs}
-                        </div>
-                    )}
+                    {/* Center: empty (Command Bar moved to sidebar) */}
+                    <div />
 
-                    {/* Right: Quick Access + Actions + Avatar */}
-                    <div id="page-header-actions" className="flex items-center gap-1.5">
+                    {/* Right: Actions */}
+                    <div id="page-header-actions" className="flex items-center gap-1.5 justify-self-end">
                         <CurrencyModeSelector />
                         {actions}
-
-                        {/* Quick Access — unified HeaderIconButton */}
-                        {/* BLOQUEADO TEMPORALMENTE - Planificador y Equipo */}
-                        <HeaderIconButton title="Planificador" className="opacity-40 pointer-events-none">
-                            <CalendarDays className="h-4 w-4" />
-                        </HeaderIconButton>
-                        <HeaderIconButton title="Equipo" className="opacity-40 pointer-events-none">
-                            <Users className="h-4 w-4" />
-                        </HeaderIconButton>
                         <HeaderDocsButton />
-                        <SidebarNotificationsButton variant="header" />
-
-                        {/* User Avatar — always last */}
-                        <HeaderAvatarButton />
                     </div>
                 </div>
 

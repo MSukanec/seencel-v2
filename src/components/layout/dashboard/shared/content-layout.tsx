@@ -34,7 +34,7 @@ export function ContentLayout({
     // Base classes que comparten todas las variantes
     // flex-1: funciona en contenedores flex (TabsContent con flex-1)
     // h-full: funciona en contenedores con altura explícita
-    const baseClasses = "h-full w-full flex-1 overflow-y-auto";
+    const baseClasses = "h-full w-full flex-1 flex flex-col overflow-y-auto";
 
     // Padding vertical igual para todas (excepto full)
     const paddingY = "py-6 pb-20";

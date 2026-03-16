@@ -24,6 +24,12 @@ export interface Project {
     // Joined fields from View
     city: string | null;
     country: string | null;
+    address: string | null;
+    state: string | null;
+    zip_code: string | null;
+    lat: number | null;
+    lng: number | null;
+    place_id: string | null;
     start_date: string | null;
     estimated_end: string | null;
     project_type_name: string | null;
@@ -35,12 +41,12 @@ export interface Project {
 export interface ProjectType {
     id: string;
     name: string;
-    is_default: boolean;
+    is_default?: boolean;
 }
 
 export interface ProjectModality {
     id: string;
     name: string;
-    is_default: boolean;
+    is_default?: boolean;
 }
 

@@ -1,15 +1,8 @@
 "use client";
 
-import { memo, useCallback } from "react";
-import { ListItem } from "../list-item-base";
-import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { memo, useMemo } from "react";
+import { ListItem, type ListItemContextMenuAction } from "../list-item-base";
+import { Pencil, Trash2 } from "lucide-react";
 import { GeneralCostCategory } from "@/features/general-costs/types";
 
 // ============================================================================
@@ -38,11 +31,30 @@ export const CategoryListItem = memo(function CategoryListItem({
     onDelete,
 }: CategoryListItemProps) {
 
-    const handleEdit = useCallback(() => onEdit?.(category), [onEdit, category]);
-    const handleDelete = useCallback(() => onDelete?.(category), [onDelete, category]);
+    // Build context menu actions (only for editable categories)
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] | undefined => {
+        if (!canEdit || (!onEdit && !onDelete)) return undefined;
+        const actions: ListItemContextMenuAction[] = [];
+        if (onEdit) {
+            actions.push({
+                label: "Editar",
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                onClick: () => onEdit(category),
+            });
+        }
+        if (onDelete) {
+            actions.push({
+                label: "Eliminar",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: () => onDelete(category),
+                variant: "destructive",
+            });
+        }
+        return actions;
+    }, [canEdit, onEdit, onDelete, category]);
 
     return (
-        <ListItem variant="card">
+        <ListItem variant="card" contextMenuActions={contextMenuActions}>
             {/* Color strip: system = gray, custom = indigo */}
             <ListItem.ColorStrip color={category.is_system ? "system" : "indigo"} />
 
@@ -61,37 +73,6 @@ export const CategoryListItem = memo(function CategoryListItem({
                     </ListItem.Badges>
                 )}
             </ListItem.Content>
-
-            {/* Actions: only for non-system categories */}
-            {canEdit && (onEdit || onDelete) && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                            {onEdit && (
-                                <DropdownMenuItem onClick={handleEdit} className="text-xs gap-2">
-                                    <Pencil className="h-3.5 w-3.5" />
-                                    Editar
-                                </DropdownMenuItem>
-                            )}
-                            {onDelete && (
-                                <DropdownMenuItem
-                                    onClick={handleDelete}
-                                    className="text-xs gap-2 text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                    Eliminar
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
         </ListItem>
     );
 });

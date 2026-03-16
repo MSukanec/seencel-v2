@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthUser } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import { completeOnboardingStep } from "@/features/onboarding/actions";
+import { getSidebarProjects } from "@/features/projects/queries";
 
 export async function saveLastActiveProject(projectId: string) {
     const supabase = await createClient();
@@ -151,10 +152,31 @@ export async function createProject(formData: FormData) {
     const projectName = formData.get("name")?.toString()?.trim();
     if (!projectName) return { error: "El nombre del proyecto es obligatorio." };
 
+    // Code (optional)
+    const code = formData.get("code")?.toString()?.trim() || null;
+
+    // Determine effective status
+    const effectiveStatus = formData.get("status")?.toString() || "active";
+
+    // 🚨 Validate active project limit for active/planning status
+    if (effectiveStatus === 'active' || effectiveStatus === 'planning') {
+        const limitCheck = await checkActiveProjectLimit(organizationId);
+        if (limitCheck && !limitCheck.allowed) {
+            return {
+                error: "ACTIVE_LIMIT_REACHED",
+                limitInfo: {
+                    currentCount: limitCheck.current_active_count,
+                    maxAllowed: limitCheck.max_allowed,
+                }
+            };
+        }
+    }
+
     // Prepare Insert Data (Projects Table — identity only)
     const projectData = {
         name: projectName,
-        status: formData.get("status")?.toString() || "active",
+        code: code,
+        status: effectiveStatus,
         organization_id: organizationId,
         project_type_id: typeId,
         project_modality_id: modalityId,
@@ -176,14 +198,34 @@ export async function createProject(formData: FormData) {
         return { error: sanitizeError(insertError) };
     }
 
-    // Insert project_data
+    // Insert project_data (includes location if provided)
+    const projectDataFields: Record<string, any> = {
+        project_id: newProject.id,
+        organization_id: organizationId,
+        updated_at: new Date().toISOString(),
+    };
+
+    // Location fields
+    const address = formData.get("address")?.toString();
+    if (address) projectDataFields.address = address;
+    const city = formData.get("city")?.toString();
+    if (city) projectDataFields.city = city;
+    const state = formData.get("state")?.toString();
+    if (state) projectDataFields.state = state;
+    const country = formData.get("country")?.toString();
+    if (country) projectDataFields.country = country;
+    const zipCode = formData.get("zip_code")?.toString();
+    if (zipCode) projectDataFields.zip_code = zipCode;
+    const lat = formData.get("lat")?.toString();
+    if (lat) projectDataFields.lat = parseFloat(lat);
+    const lng = formData.get("lng")?.toString();
+    if (lng) projectDataFields.lng = parseFloat(lng);
+    const placeId = formData.get("place_id")?.toString();
+    if (placeId) projectDataFields.place_id = placeId;
+
     const { error: dataError } = await supabase
         .schema('projects').from('project_data')
-        .insert({
-            project_id: newProject.id,
-            organization_id: organizationId,
-            updated_at: new Date().toISOString()
-        });
+        .insert(projectDataFields);
 
     if (dataError) {
         console.error("Create Project Data Error:", dataError);
@@ -218,6 +260,9 @@ export async function createProject(formData: FormData) {
 }
 
 export async function updateProject(formData: FormData) {
+    const user = await getAuthUser();
+    if (!user) return { error: "No autorizado" };
+
     const supabase = await createClient();
 
     const projectId = formData.get("id")?.toString();
@@ -230,11 +275,14 @@ export async function updateProject(formData: FormData) {
     const name = formData.get("name");
     if (name) projectFields.name = name;
 
+    const code = formData.get("code");
+    if (code !== null) projectFields.code = code.toString().trim() || null;
+
     const status = formData.get("status");
     if (status) projectFields.status = status;
 
-    // 🚨 Validate active project limit when changing status to 'active'
-    if (status === 'active' && organizationId) {
+    // 🚨 Validate active project limit when changing status to 'active' or 'planning'
+    if ((status === 'active' || status === 'planning') && organizationId) {
         const limitCheck = await checkActiveProjectLimit(organizationId, projectId);
         if (limitCheck && !limitCheck.allowed) {
             return {
@@ -370,7 +418,7 @@ export async function updateProject(formData: FormData) {
             if (!currentProject) throw new Error("Project not found");
 
             const { error: dataError } = await supabase
-                .from("project_data")
+                .schema('projects').from("project_data")
                 .upsert({
                     project_id: projectId,
                     organization_id: currentProject.organization_id,
@@ -387,7 +435,7 @@ export async function updateProject(formData: FormData) {
             if (!currentProject) throw new Error("Project not found");
 
             const { error: settingsError } = await supabase
-                .from("project_settings")
+                .schema('projects').from("project_settings")
                 .upsert({
                     project_id: projectId,
                     organization_id: currentProject.organization_id,
@@ -448,7 +496,7 @@ export async function checkActiveProjectLimit(
 export async function swapProjectStatus(
     projectToActivateId: string,
     projectToDeactivateId: string,
-    deactivateToStatus: string = 'completed'
+    deactivateToStatus: string = 'inactive'
 ) {
     const supabase = await createClient();
 
@@ -461,13 +509,15 @@ export async function swapProjectStatus(
 
         if (deactivateError) throw deactivateError;
 
-        // 2. Activate the desired project
-        const { error: activateError } = await supabase
-            .schema('projects').from('projects')
-            .update({ status: 'active' })
-            .eq('id', projectToActivateId);
+        // 2. Activate the desired project (skip in create mode — '__new__' is not a real UUID)
+        if (projectToActivateId && projectToActivateId !== '__new__') {
+            const { error: activateError } = await supabase
+                .schema('projects').from('projects')
+                .update({ status: 'active' })
+                .eq('id', projectToActivateId);
 
-        if (activateError) throw activateError;
+            if (activateError) throw activateError;
+        }
 
         revalidatePath('/organization/projects');
         return { success: true };
@@ -477,7 +527,47 @@ export async function swapProjectStatus(
     }
 }
 
+// ============================================================================
+// GET ACTIVE PROJECTS FOR SWAP (lightweight)
+// ============================================================================
+
+/**
+ * Fetches active/planning projects for the SwapModal.
+ * Returns only minimal fields needed for display.
+ * Used by the form when it self-resolves (not receiving activeProjects from the view).
+ */
+export async function getActiveProjectsForSwap(
+    organizationId: string,
+    excludeId?: string
+): Promise<{ id: string; name: string; color: string | null; image_url: string | null; status: string }[]> {
+    const supabase = await createClient();
+
+    let query = supabase
+        .schema('projects').from('projects')
+        .select('id, name, color, image_url, status')
+        .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
+        .in('status', ['active', 'planning'])
+        .order('name');
+
+    if (excludeId) {
+        query = query.neq('id', excludeId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error('Error fetching active projects for swap:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
 export async function deleteProject(projectId: string) {
+    const user = await getAuthUser();
+    if (!user) return { error: "No autorizado" };
+
     const supabase = await createClient();
 
     try {
@@ -500,10 +590,144 @@ export async function deleteProject(projectId: string) {
 }
 
 // ============================================================================
+// INLINE UPDATE (for DataTable inline editing)
+// ============================================================================
+
+/**
+ * Lightweight partial update for inline editing from DataTable.
+ * Accepts a flat Record of field updates and applies directly.
+ */
+export async function updateProjectInline(
+    projectId: string,
+    updates: Record<string, any>
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    const authUser = await getAuthUser();
+    if (!authUser) return { success: false, error: "Not authenticated" };
+
+    try {
+        // Separate project fields from project_data fields
+        const projectFields: Record<string, any> = {};
+        const dataFields: Record<string, any> = {};
+
+        for (const [key, value] of Object.entries(updates)) {
+            if (['status', 'name', 'code', 'color', 'project_type_id', 'project_modality_id'].includes(key)) {
+                projectFields[key] = value;
+            } else if (['start_date', 'estimated_end', 'address', 'city', 'state', 'country', 'zip_code', 'lat', 'lng', 'place_id'].includes(key)) {
+                dataFields[key] = value;
+            }
+        }
+
+        // 🚨 Validate active project limit for inline status changes
+        if (projectFields.status === 'active' || projectFields.status === 'planning') {
+            // Fetch org_id for the project
+            const { data: proj } = await supabase
+                .schema('projects').from('projects')
+                .select('organization_id')
+                .eq('id', projectId)
+                .single();
+
+            if (proj) {
+                const limitCheck = await checkActiveProjectLimit(proj.organization_id, projectId);
+                if (limitCheck && !limitCheck.allowed) {
+                    return {
+                        success: false,
+                        error: "Has alcanzado el límite de proyectos activos de tu plan.",
+                    };
+                }
+            }
+        }
+
+        // If type name was passed, resolve to ID
+        if (updates.project_type_name !== undefined) {
+            const { data: project } = await supabase
+                .schema('projects').from('projects')
+                .select('organization_id')
+                .eq('id', projectId)
+                .single();
+
+            if (project) {
+                const { data: typeData } = await supabase
+                    .schema('projects').from('project_types')
+                    .select('id')
+                    .eq('name', updates.project_type_name)
+                    .or(`organization_id.eq.${project.organization_id},organization_id.is.null`)
+                    .eq('is_deleted', false)
+                    .single();
+
+                if (typeData) {
+                    projectFields.project_type_id = typeData.id;
+                }
+            }
+        }
+
+        // If modality name was passed, resolve to ID
+        if (updates.project_modality_name !== undefined) {
+            const { data: project } = await supabase
+                .schema('projects').from('projects')
+                .select('organization_id')
+                .eq('id', projectId)
+                .single();
+
+            if (project) {
+                const { data: modalityData } = await supabase
+                    .schema('projects').from('project_modalities')
+                    .select('id')
+                    .eq('name', updates.project_modality_name)
+                    .or(`organization_id.eq.${project.organization_id},organization_id.is.null`)
+                    .eq('is_deleted', false)
+                    .single();
+
+                if (modalityData) {
+                    projectFields.project_modality_id = modalityData.id;
+                }
+            }
+        }
+
+        // Update projects table
+        if (Object.keys(projectFields).length > 0) {
+            const { error } = await supabase
+                .schema('projects').from('projects')
+                .update(projectFields)
+                .eq('id', projectId);
+            if (error) throw error;
+        }
+
+        // Update project_data table
+        if (Object.keys(dataFields).length > 0) {
+            const { data: project } = await supabase
+                .schema('projects').from('projects')
+                .select('organization_id')
+                .eq('id', projectId)
+                .single();
+
+            if (project) {
+                const { error } = await supabase
+                    .schema('projects').from('project_data')
+                    .upsert({
+                        project_id: projectId,
+                        organization_id: project.organization_id,
+                        ...dataFields,
+                        updated_at: new Date().toISOString(),
+                    }, { onConflict: 'project_id' });
+                if (error) throw error;
+            }
+        }
+
+        revalidatePath('/organization/projects');
+        return { success: true };
+    } catch (e: any) {
+        console.error("Inline Update Project Error:", e);
+        return { success: false, error: sanitizeError(e) };
+    }
+}
+
+// ============================================================================
 // SIDEBAR PROJECTS (previously fetch-projects.ts)
 // ============================================================================
 
-import { getSidebarProjects } from "@/features/projects/queries";
+
 
 export async function fetchProjectsAction(organizationId: string) {
     if (!organizationId) return [];
@@ -525,7 +749,7 @@ export async function getProjectTypes(organizationId: string) {
 
     const { data, error } = await supabase
         .schema('projects').from('project_types')
-        .select('*')
+        .select('id, name, is_system, organization_id, created_at')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
         .order('name');
@@ -596,6 +820,9 @@ export async function updateProjectType(
     organizationId: string,
     name: string
 ) {
+    const user = await getAuthUser();
+    if (!user) return { error: "No autorizado" };
+
     const supabase = await createClient();
 
     const { data, error } = await supabase
@@ -653,7 +880,7 @@ export async function getProjectModalities(organizationId: string) {
 
     const { data, error } = await supabase
         .schema('projects').from('project_modalities')
-        .select('*')
+        .select('id, name, is_system, organization_id, created_at')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
         .order('name');
@@ -724,6 +951,9 @@ export async function updateProjectModality(
     organizationId: string,
     name: string
 ) {
+    const user = await getAuthUser();
+    if (!user) return { error: "No autorizado" };
+
     const supabase = await createClient();
 
     const { data, error } = await supabase

@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-10T23:31:35.891Z
+> Generated: 2026-03-15T18:32:16.410Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -24,11 +24,12 @@ DECLARE
     v_max_allowed INT;
     v_plan_features JSONB;
 BEGIN
+    -- Count both active AND planning projects (both consume a "slot")
     SELECT COUNT(*)
     INTO v_current_count
     FROM projects.projects
     WHERE organization_id = p_organization_id
-      AND status = 'active'
+      AND status IN ('active', 'planning')
       AND is_deleted = false
       AND (p_excluded_project_id IS NULL OR id != p_excluded_project_id);
 

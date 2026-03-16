@@ -14,6 +14,9 @@ export { StatusChip, type StatusChipProps, type StatusOption, type StatusVariant
 export { SelectChip, type SelectChipProps, type SelectChipOption } from "./chips/select-chip";
 export { WalletChip, type WalletChipProps, type WalletChipOption } from "./chips/wallet-chip";
 export { CurrencyChip, type CurrencyChipProps, type CurrencyChipOption } from "./chips/currency-chip";
+export { CategoryChip, type CategoryChipProps } from "./chips/category-chip";
 export { DateChip, type DateChipProps } from "./chips/date-chip";
 export { PeriodChip, type PeriodChipProps, type PeriodGranularity } from "./chips/period-chip";
 export { AttachmentChip, type AttachmentChipProps } from "./chips/attachment-chip";
+export { ColorChip, type ColorChipProps } from "./chips/color-chip";
+export { AddressChip, type AddressChipProps, type AddressData } from "./chips/address-chip";

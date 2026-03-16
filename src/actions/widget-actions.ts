@@ -360,7 +360,6 @@ export async function getFinancialSummary(
 export interface StorageOverviewData {
     totalBytes: number;
     fileCount: number;
-    folderCount: number;
     maxStorageMb: number;
     byType: { type: string; count: number; bytes: number }[];
 }
@@ -372,7 +371,7 @@ export interface StorageOverviewData {
 export async function getStorageOverviewData(): Promise<StorageOverviewData> {
     try {
         const orgId = await getActiveOrganizationId();
-        if (!orgId) return { totalBytes: 0, fileCount: 0, folderCount: 0, maxStorageMb: 500, byType: [] };
+        if (!orgId) return { totalBytes: 0, fileCount: 0, maxStorageMb: 500, byType: [] };
 
         const supabase = await createClient();
 
@@ -383,7 +382,7 @@ export async function getStorageOverviewData(): Promise<StorageOverviewData> {
 
         if (error || !data || data.length === 0) {
             console.error('[getStorageOverviewData] RPC error:', error);
-            return { totalBytes: 0, fileCount: 0, folderCount: 0, maxStorageMb: 500, byType: [] };
+            return { totalBytes: 0, fileCount: 0, maxStorageMb: 500, byType: [] };
         }
 
         const row = data[0];
@@ -392,7 +391,6 @@ export async function getStorageOverviewData(): Promise<StorageOverviewData> {
         return {
             totalBytes: Number(row.total_bytes) || 0,
             fileCount: Number(row.file_count) || 0,
-            folderCount: Number(row.folder_count) || 0,
             maxStorageMb: Number(row.max_storage_mb) || 500,
             byType: byType.map((t: any) => ({
                 type: t.type || 'other',
@@ -402,7 +400,7 @@ export async function getStorageOverviewData(): Promise<StorageOverviewData> {
         };
     } catch (error) {
         console.error('[getStorageOverviewData] Error:', error);
-        return { totalBytes: 0, fileCount: 0, folderCount: 0, maxStorageMb: 500, byType: [] };
+        return { totalBytes: 0, fileCount: 0, maxStorageMb: 500, byType: [] };
     }
 }
 
@@ -582,7 +580,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
     const now = new Date().toISOString();
     const today = now.split('T')[0];
 
-    const [activityResult, projectsResult, orgResult, membersResult, projectCountResult, projectLocationsResult, membersAvatarResult, calendarResult, kanbanResult, financialResult, prefsResult, teamMembersResult, storageFilesResult, storageFoldersResult] = await Promise.all([
+    const [activityResult, projectsResult, orgResult, membersResult, projectCountResult, projectLocationsResult, membersAvatarResult, calendarResult, kanbanResult, financialResult, prefsResult, teamMembersResult, storageFilesResult] = await Promise.all([
         // Activity feed (scope: organization, no filter)
         supabase
             .schema('audit').from("organization_activity_logs_view")
@@ -690,12 +688,6 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
             .select('file_type, file_size')
             .eq('organization_id', orgId)
             .eq('is_deleted', false),
-
-        // Storage: folder count
-        supabase
-            .from('media_file_folders')
-            .select('id', { count: 'exact', head: true })
-            .eq('organization_id', orgId),
     ]);
 
     // Build project locations (filter out deleted projects)
@@ -850,7 +842,6 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
         org_storage_overview: {
             totalBytes: storageTotalBytes,
             fileCount: storageFiles.length,
-            folderCount: storageFoldersResult.count || 0,
             maxStorageMb,
             byType: Object.entries(storageTypeAgg)
                 .map(([type, agg]) => ({ type, ...agg }))

@@ -7,7 +7,7 @@ import { SidebarMode } from '@/types/preferences';
 export type FontSize = 'smaller' | 'small' | 'default' | 'large' | 'larger';
 
 export type LayoutMode = 'default' | 'sidebar';
-export type NavigationContext = 'organization' | 'project' | 'learnings' | 'community' | 'admin' | 'home';
+export type NavigationContext = 'organization' | 'project' | 'learnings' | 'community' | 'admin' | 'home' | 'profile';
 
 interface LayoutState {
     layoutMode: LayoutMode;
@@ -17,6 +17,7 @@ interface LayoutState {
     sidebarProjectAvatars: boolean;
     headerTitle: React.ReactNode | null;
     fontSize: FontSize;
+    previousPath: string | null;
 
     actions: {
         setLayoutMode: (mode: LayoutMode) => void;
@@ -26,6 +27,7 @@ interface LayoutState {
         setSidebarProjectAvatars: (enabled: boolean) => void;
         setHeaderTitle: (title: React.ReactNode | null) => void;
         setFontSize: (size: FontSize) => void;
+        setPreviousPath: (path: string | null) => void;
     };
 }
 
@@ -39,6 +41,7 @@ export const useLayoutStore = create<LayoutState>()(
             sidebarProjectAvatars: true,
             headerTitle: null,
             fontSize: 'default',
+            previousPath: null,
             actions: {
                 setLayoutMode: (mode) => set({ layoutMode: mode }),
                 setActiveContext: (context) => set({ activeContext: context }),
@@ -48,11 +51,11 @@ export const useLayoutStore = create<LayoutState>()(
                 setHeaderTitle: (title) => set({ headerTitle: title }),
                 setFontSize: (size) => {
                     set({ fontSize: size });
-                    // Apply immediately to DOM
                     if (typeof document !== 'undefined') {
                         document.documentElement.setAttribute('data-font-size', size);
                     }
                 },
+                setPreviousPath: (path) => set({ previousPath: path }),
             },
         }),
         {

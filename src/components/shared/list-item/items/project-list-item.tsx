@@ -1,15 +1,15 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Project } from "@/types/project";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuSeparator,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
     MapPin,
     Building2,
@@ -17,7 +17,6 @@ import {
     ImageOff,
     Pencil,
     Trash2,
-    MoreHorizontal,
     ExternalLink,
     Activity,
     CheckCircle,
@@ -119,179 +118,165 @@ export const ProjectListItem = memo(function ProjectListItem({
         : undefined;
 
     return (
-        <div
-            role="button"
-            tabIndex={0}
-            onClick={onClick}
-            onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onClick?.();
-                }
-            }}
-            className={cn(
-                "relative overflow-hidden rounded-xl cursor-pointer group",
-                "h-[100px] w-full",
-                "transition-all duration-200 ease-out",
-                "hover:brightness-110 hover:shadow-lg",
-                !hasPalette && "bg-card border border-border",
-                className
-            )}
-            style={{
-                border: cardBorder,
-            }}
-        >
-            {/* Background Image — fills entire item */}
-            {imageUrl ? (
-                <Image
-                    src={imageUrl}
-                    alt={project.name}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                />
-            ) : (
-                <div className="absolute inset-0 flex items-center justify-end pr-8 bg-muted/10">
-                    <ImageOff className="h-8 w-8 text-muted-foreground/15" />
-                </div>
-            )}
-
-            {/* Gradient overlay — left to right (content readable on left) */}
-            <div
-                className="absolute inset-0"
-                style={{ background: gradientOverlay }}
-            />
-
-            {/* Content Layer */}
-            <div className="relative z-10 h-full flex items-center px-5 gap-4">
-                {/* Left: Name + Location */}
-                <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
-                        {dotColor && (
-                            <span
-                                className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white/30 shadow"
-                                style={{ backgroundColor: dotColor }}
-                            />
-                        )}
-                        <h3 className="text-sm font-semibold text-white leading-tight truncate">
-                            {project.name}
-                        </h3>
-                    </div>
-                    {location && (
-                        <p className={cn(
-                            "text-xs text-white/60 flex items-center gap-1",
-                            dotColor && "ml-[18px]"
-                        )}>
-                            <MapPin className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{location}</span>
-                        </p>
+        <ContextMenu>
+            <ContextMenuTrigger asChild>
+                <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={onClick}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onClick?.();
+                        }
+                    }}
+                    className={cn(
+                        "relative overflow-hidden rounded-xl cursor-pointer group",
+                        "h-[100px] w-full",
+                        "transition-all duration-200 ease-out",
+                        "hover:brightness-110 hover:shadow-lg",
+                        !hasPalette && "bg-card border border-border",
+                        className
                     )}
-                    {createdDate && (
-                        <p className={cn(
-                            "text-xs text-white/40",
-                            dotColor && "ml-[18px]"
-                        )}>
-                            {format(createdDate, "dd MMM yyyy", { locale: es })}
-                        </p>
-                    )}
-                </div>
-
-                {/* Center: Badges */}
-                <div className="hidden md:flex items-center gap-2 shrink-0">
-                    {/* Status */}
-                    <div
-                        className="flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1"
-                        style={{ backgroundColor: badgeBg, color: badgeColor }}
-                    >
-                        <StatusIcon className="h-3 w-3" />
-                        <span>{statusLabel}</span>
-                    </div>
-
-                    {/* Type */}
-                    {project.project_type_name && (
-                        <div
-                            className="flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
-                            style={{ backgroundColor: badgeBg, color: badgeColor }}
-                        >
-                            <Building2 className="h-3 w-3" />
-                            <span>{project.project_type_name}</span>
-                        </div>
-                    )}
-
-                    {/* Modality */}
-                    {project.project_modality_name && (
-                        <div
-                            className="flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
-                            style={{ backgroundColor: badgeBg, color: badgeColor }}
-                        >
-                            <Hammer className="h-3 w-3" />
-                            <span>{project.project_modality_name}</span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Right: Date + Actions */}
-                <div className="flex items-center gap-3 shrink-0">
-                    {/* Action Menu */}
-                    {(onEdit || onDelete) && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
-                                >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem onClick={(e) => {
-                                    e.stopPropagation();
-                                }} asChild>
-                                    <Link href={detailHref}>
-                                        <ExternalLink className="h-4 w-4 mr-2" />
-                                        Editar
-                                    </Link>
-                                </DropdownMenuItem>
-                                {onEdit && (
-                                    <DropdownMenuItem onClick={(e) => {
-                                        e.stopPropagation();
-                                        onEdit(project);
-                                    }}>
-                                        <Pencil className="h-4 w-4 mr-2" />
-                                        Edición Rápida
-                                    </DropdownMenuItem>
-                                )}
-                                {onDelete && (
-                                    <DropdownMenuItem
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onDelete(project);
-                                        }}
-                                        className="text-destructive focus:text-destructive"
-                                    >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Eliminar
-                                    </DropdownMenuItem>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
-                </div>
-            </div>
-
-            {/* Swatch Bar — bottom edge */}
-            {swatchColors.length > 0 && (
-                <div className="absolute bottom-0 left-0 right-0 flex h-1 z-10">
-                    {swatchColors.map((color, i) => (
-                        <div
-                            key={i}
-                            className="flex-1"
-                            style={{ backgroundColor: color }}
+                    style={{
+                        border: cardBorder,
+                    }}
+                >
+                    {/* Background Image — fills entire item */}
+                    {imageUrl ? (
+                        <Image
+                            src={imageUrl}
+                            alt={project.name}
+                            fill
+                            unoptimized
+                            className="object-cover"
                         />
-                    ))}
+                    ) : (
+                        <div className="absolute inset-0 flex items-center justify-end pr-8 bg-muted/10">
+                            <ImageOff className="h-8 w-8 text-muted-foreground/15" />
+                        </div>
+                    )}
+
+                    {/* Gradient overlay — left to right (content readable on left) */}
+                    <div
+                        className="absolute inset-0"
+                        style={{ background: gradientOverlay }}
+                    />
+
+                    {/* Content Layer */}
+                    <div className="relative z-10 h-full flex items-center px-5 gap-4">
+                        {/* Left: Name + Location */}
+                        <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                                {dotColor && (
+                                    <span
+                                        className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white/30 shadow"
+                                        style={{ backgroundColor: dotColor }}
+                                    />
+                                )}
+                                <h3 className="text-sm font-semibold text-white leading-tight truncate">
+                                    {project.name}
+                                </h3>
+                            </div>
+                            {location && (
+                                <p className={cn(
+                                    "text-xs text-white/60 flex items-center gap-1",
+                                    dotColor && "ml-[18px]"
+                                )}>
+                                    <MapPin className="h-3 w-3 shrink-0" />
+                                    <span className="truncate">{location}</span>
+                                </p>
+                            )}
+                            {createdDate && (
+                                <p className={cn(
+                                    "text-xs text-white/40",
+                                    dotColor && "ml-[18px]"
+                                )}>
+                                    {format(createdDate, "dd MMM yyyy", { locale: es })}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Center: Badges */}
+                        <div className="hidden md:flex items-center gap-2 shrink-0">
+                            {/* Status */}
+                            <div
+                                className="flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1"
+                                style={{ backgroundColor: badgeBg, color: badgeColor }}
+                            >
+                                <StatusIcon className="h-3 w-3" />
+                                <span>{statusLabel}</span>
+                            </div>
+
+                            {/* Type */}
+                            {project.project_type_name && (
+                                <div
+                                    className="flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
+                                    style={{ backgroundColor: badgeBg, color: badgeColor }}
+                                >
+                                    <Building2 className="h-3 w-3" />
+                                    <span>{project.project_type_name}</span>
+                                </div>
+                            )}
+
+                            {/* Modality */}
+                            {project.project_modality_name && (
+                                <div
+                                    className="flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
+                                    style={{ backgroundColor: badgeBg, color: badgeColor }}
+                                >
+                                    <Hammer className="h-3 w-3" />
+                                    <span>{project.project_modality_name}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Swatch Bar — bottom edge */}
+                    {swatchColors.length > 0 && (
+                        <div className="absolute bottom-0 left-0 right-0 flex h-1 z-10">
+                            {swatchColors.map((color, i) => (
+                                <div
+                                    key={i}
+                                    className="flex-1"
+                                    style={{ backgroundColor: color }}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
+            </ContextMenuTrigger>
+            {(onEdit || onDelete) && (
+                <ContextMenuContent className="w-56">
+                    <ContextMenuItem asChild>
+                        <Link href={detailHref} className="gap-2 text-xs">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Editar
+                        </Link>
+                    </ContextMenuItem>
+                    {onEdit && (
+                        <ContextMenuItem
+                            onSelect={() => onEdit(project)}
+                            className="gap-2 text-xs"
+                        >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edición Rápida
+                        </ContextMenuItem>
+                    )}
+                    {onDelete && (
+                        <>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem
+                                onSelect={() => onDelete(project)}
+                                className="gap-2 text-xs"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Eliminar
+                            </ContextMenuItem>
+                        </>
+                    )}
+                </ContextMenuContent>
             )}
-        </div>
+        </ContextMenu>
     );
 });

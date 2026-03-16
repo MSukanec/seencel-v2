@@ -16,6 +16,8 @@ import { useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { LucideIcon } from "lucide-react";
+import { ViewEmptyState } from "@/components/shared/empty-state";
+import { ListItem } from "@/components/shared/list-item";
 
 interface TeamPermissionsViewProps {
     organizationId: string;
@@ -224,66 +226,36 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
     const hasPermissions = permissions.length > 0;
 
     return (
-        <ContentLayout variant="wide">
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex justify-between items-center px-1">
-                    <div>
-                        <h2 className="text-xl font-semibold tracking-tight text-foreground">Permisos por Rol</h2>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Configurá qué puede hacer cada rol en tu organización.
-                        </p>
-                    </div>
-                    {!hasPermissions && (
+        <ContentLayout variant="settings">
+            <div className="space-y-6 pb-12">
+                {!hasPermissions && (
+                    <div className="flex justify-end">
                         <Button onClick={handleSeed} disabled={isSeeding} variant="outline" size="sm">
                             <Database className="w-4 h-4 mr-2" />
                             {isSeeding ? "Generando..." : "Generar Permisos Base"}
                         </Button>
-                    )}
-                </div>
-
-                {/* Role badges header — sticky context */}
-                {hasPermissions && hasRoles && (
-                    <div className="flex items-center gap-3 px-1">
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Roles:</span>
-                        <div className="flex gap-2 flex-wrap">
-                            {filteredRoles.map(role => {
-                                const RoleIcon = getRoleIcon(role.name);
-                                return (
-                                    <Badge
-                                        key={role.id}
-                                        variant="secondary"
-                                        className="bg-background border text-foreground font-medium px-3 py-1.5 text-xs flex items-center gap-1.5 shadow-sm"
-                                    >
-                                        <RoleIcon className="w-3 h-3 text-primary/80" />
-                                        {role.name}
-                                    </Badge>
-                                );
-                            })}
-                        </div>
                     </div>
                 )}
 
-                {/* Empty states */}
+
+                <Card variant="inset" className="p-2 sm:p-4">
+                    {/* Empty states */}
                 {!hasPermissions ? (
-                    <div className="p-12 text-center border rounded-xl bg-muted/10 dashed border-2 border-dashed border-muted">
-                        <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-foreground">No hay permisos definidos</h3>
-                        <p className="text-muted-foreground mt-2 max-w-md mx-auto mb-6">
-                            La base de datos de permisos está vacía. Genera los permisos predeterminados para comenzar.
-                        </p>
-                        <Button onClick={handleSeed} disabled={isSeeding}>
-                            {isSeeding ? "Generando..." : "Generar Permisos del Sistema"}
-                        </Button>
-                    </div>
+                    <ViewEmptyState
+                        mode="empty"
+                        icon={ShieldCheck}
+                        viewName="Permisos"
+                        featureDescription="La base de datos de permisos está vacía. Genera los permisos predeterminados para comenzar."
+                        onAction={handleSeed}
+                        actionLabel={isSeeding ? "Generando..." : "Generar Permisos del Sistema"}
+                    />
                 ) : !hasRoles ? (
-                    <div className="p-8 text-center border rounded-xl bg-muted/20">
-                        <Info className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-foreground">No se encontraron roles personalizados</h3>
-                        <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-                            Crea un rol personalizado para ver la matriz de permisos.
-                        </p>
-                    </div>
+                    <ViewEmptyState
+                        mode="empty"
+                        icon={Info}
+                        viewName="Permisos"
+                        featureDescription="No se encontraron roles personalizados. Crea un rol personalizado para ver la matriz de permisos."
+                    />
                 ) : (
                     /* Permission categories */
                     <div className="space-y-6">
@@ -311,27 +283,25 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
                                     </div>
 
                                     {/* Permission items */}
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-2">
                                         {categoryPermissions.map(permission => {
                                             const display = PermissionTranslations[permission.key];
                                             const isManageType = permission.key.endsWith('.manage');
 
                                             return (
-                                                <Card
+                                                <ListItem
                                                     key={permission.id}
-                                                    className={cn(
-                                                        "border shadow-none transition-colors",
-                                                        "hover:bg-muted/30"
-                                                    )}
+                                                    variant="row"
+                                                    className="w-full px-4 py-3"
                                                 >
-                                                    <div className="flex items-center justify-between px-4 py-3">
+                                                    <div className="flex items-center justify-between w-full">
                                                         {/* Left: Permission info */}
                                                         <div className="flex items-start gap-3 flex-1 min-w-0">
                                                             <div className={cn(
                                                                 "mt-0.5 flex items-center justify-center w-6 h-6 rounded-md shrink-0",
                                                                 isManageType
-                                                                    ? "bg-amber-500/10 text-amber-500"
-                                                                    : "bg-blue-500/10 text-blue-500"
+                                                                    ? "bg-amber-500/10 text-white"
+                                                                    : "bg-blue-500/10 text-white"
                                                             )}>
                                                                 {isManageType
                                                                     ? <Edit className="w-3.5 h-3.5" />
@@ -346,10 +316,10 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
                                                                     <Badge
                                                                         variant="outline"
                                                                         className={cn(
-                                                                            "text-[10px] px-1.5 py-0 h-4 font-medium border",
+                                                                            "text-[10px] px-1.5 py-0 h-4 font-medium border text-white",
                                                                             isManageType
-                                                                                ? "text-amber-500 border-amber-500/30"
-                                                                                : "text-blue-500 border-blue-500/30"
+                                                                                ? "border-amber-500/30"
+                                                                                : "border-blue-500/30"
                                                                         )}
                                                                     >
                                                                         {isManageType ? 'Edición' : 'Lectura'}
@@ -373,7 +343,7 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
                                                                 return (
                                                                     <div
                                                                         key={`${role.id}-${permission.id}`}
-                                                                        className="flex flex-col items-center gap-0.5 w-16"
+                                                                        className="flex flex-col items-center gap-0.5 w-20"
                                                                     >
                                                                         {isLoading ? (
                                                                             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -400,7 +370,7 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
                                                             })}
                                                         </div>
                                                     </div>
-                                                </Card>
+                                                </ListItem>
                                             );
                                         })}
                                     </div>
@@ -409,6 +379,7 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
                         })}
                     </div>
                 )}
+                </Card>
             </div>
         </ContentLayout>
     );

@@ -11,24 +11,24 @@ Un **Proyecto** en SEENCEL representa una obra o emprendimiento de construcción
 
 ### Información Principal
 
-| Campo | Descripción | Obligatorio |
-|-------|-------------|:-----------:|
-| **Nombre** | Nombre del proyecto. Ej: "Torre Norte Edificio Central" | ✅ |
-| **Código** | Código interno para identificación rápida. Ej: "PRY-001" | No |
-| **Estado** | Estado actual del proyecto (ver detalle abajo) | ✅ |
-| **Tipo** | Clasificación del proyecto (configurables por organización) | No |
-| **Modalidad** | Tipo de contrato o modalidad de ejecución | No |
+| Campo | Descripción |
+|-------|-------------|
+| **Nombre** (obligatorio) | Nombre del proyecto. Ej: "Torre Norte Edificio Central" |
+| **Código** | Código interno para identificación rápida. Ej: "PRY-001" |
+| **Estado** (obligatorio) | Estado actual del proyecto (ver detalle abajo) |
+| **Tipo** | Clasificación del proyecto (configurables por organización) |
+| **Modalidad** | Tipo de contrato o modalidad de ejecución |
 
 ### Estado del Proyecto
 
 El estado define en qué etapa se encuentra tu proyecto. Es un campo clave porque **la cantidad de proyectos activos simultáneamente depende de tu plan contratado**.
 
-| Estado | Significado | ¿Cuenta para el límite? |
-|--------|-------------|:-----------------------:|
-| **Activo** | Proyecto en ejecución, se está trabajando activamente | ✅ Sí |
-| **Planificación** | Proyecto en etapa de diseño o pre-obra, aún no comenzó | ✅ Sí |
-| **Completado** | Proyecto finalizado, la obra se terminó | ❌ No |
-| **Inactivo** | Proyecto pausado o archivado temporalmente | ❌ No |
+| Estado | Descripción |
+|--------|-------------|
+| **Activo** (cuenta para el límite) | Proyecto en ejecución, se está trabajando activamente |
+| **Planificación** (cuenta para el límite) | En etapa de diseño o pre-obra, aún no comenzó |
+| **Completado** | Proyecto finalizado, no cuenta para el límite |
+| **Inactivo** | Pausado o archivado temporalmente, no cuenta para el límite |
 
 <Callout type="important" title="Límite de Proyectos Activos">
 Cada plan de SEENCEL tiene un límite de proyectos activos simultáneos. Los proyectos en estado **Completado** o **Inactivo** no cuentan para este límite. Si necesitás liberar espacio, marcá como Completado o Inactivo los proyectos que ya no estés trabajando.

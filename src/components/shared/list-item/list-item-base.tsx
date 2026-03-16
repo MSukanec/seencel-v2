@@ -2,12 +2,29 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Pencil, Trash2, Eye } from "lucide-react";
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuSeparator,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type ListItemVariant = "card" | "flat";
+type ListItemVariant = "card" | "flat" | "row";
+
+/** Context menu action for list items — same pattern as DataTable context menu */
+export interface ListItemContextMenuAction {
+    label: string;
+    icon?: React.ReactNode;
+    onClick: () => void;
+    /** "destructive" items are rendered last after a separator (gray, NOT red — matches DataTable) */
+    variant?: "default" | "destructive";
+}
 
 interface ListItemContextValue {
     variant: ListItemVariant;
@@ -30,47 +47,103 @@ interface ListItemProps extends React.HTMLAttributes<HTMLDivElement> {
     disabled?: boolean;
     /** Make the entire item clickable */
     onClick?: () => void;
+    /**
+     * Context menu actions shown on right-click.
+     * Replaces the old DropdownMenu + MoreHorizontal pattern.
+     * "destructive" items auto-separate and render last (DataTable convention).
+     */
+    contextMenuActions?: ListItemContextMenuAction[];
 }
 
 const ListItemRoot = React.forwardRef<HTMLDivElement, ListItemProps>(
-    ({ className, variant = "card", selected, disabled, onClick, children, ...props }, ref) => {
+    ({ className, variant = "card", selected, disabled, onClick, contextMenuActions, children, ...props }, ref) => {
         const isClickable = !!onClick && !disabled;
+
+        const innerDiv = (
+            <div
+                ref={ref}
+                role={isClickable ? "button" : undefined}
+                tabIndex={isClickable ? 0 : undefined}
+                onClick={disabled ? undefined : onClick}
+                onKeyDown={isClickable ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onClick?.();
+                    }
+                } : undefined}
+                className={cn(
+                    // Base styles
+                    "flex items-center gap-3 transition-colors group overflow-hidden",
+                    // Variant styles
+                    variant === "card" && [
+                        "p-3 rounded-lg border bg-card",
+                        !disabled && "hover:bg-accent",
+                    ],
+                    variant === "flat" && [
+                        "py-2 px-1",
+                        !disabled && "hover:bg-muted/30 rounded-md",
+                    ],
+                    variant === "row" && [
+                        "cincel-island px-4 py-3",
+                    ],
+                    // States - Selected uses primary border, remove default border
+                    selected && "border-primary border-2",
+                    disabled && "opacity-50 cursor-not-allowed",
+                    isClickable && "cursor-pointer",
+                    className
+                )}
+                {...props}
+            >
+                {children}
+            </div>
+        );
+
+        // Wrap with ContextMenu if actions are provided
+        if (contextMenuActions && contextMenuActions.length > 0) {
+            const standardActions = contextMenuActions.filter(a => a.variant !== "destructive");
+            const destructiveActions = contextMenuActions.filter(a => a.variant === "destructive");
+
+            return (
+                <ListItemContext.Provider value={{ variant }}>
+                    <ContextMenu>
+                        <ContextMenuTrigger asChild>
+                            {innerDiv}
+                        </ContextMenuTrigger>
+                        <ContextMenuContent className="w-56">
+                            {standardActions.map((action, i) => (
+                                <ContextMenuItem
+                                    key={i}
+                                    onSelect={action.onClick}
+                                    className="gap-2 text-xs"
+                                >
+                                    {action.icon}
+                                    {action.label}
+                                </ContextMenuItem>
+                            ))}
+                            {destructiveActions.length > 0 && (
+                                <>
+                                    <ContextMenuSeparator />
+                                    {destructiveActions.map((action, i) => (
+                                        <ContextMenuItem
+                                            key={`d-${i}`}
+                                            onSelect={action.onClick}
+                                            className="gap-2 text-xs"
+                                        >
+                                            {action.icon}
+                                            {action.label}
+                                        </ContextMenuItem>
+                                    ))}
+                                </>
+                            )}
+                        </ContextMenuContent>
+                    </ContextMenu>
+                </ListItemContext.Provider>
+            );
+        }
 
         return (
             <ListItemContext.Provider value={{ variant }}>
-                <div
-                    ref={ref}
-                    role={isClickable ? "button" : undefined}
-                    tabIndex={isClickable ? 0 : undefined}
-                    onClick={disabled ? undefined : onClick}
-                    onKeyDown={isClickable ? (e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            onClick?.();
-                        }
-                    } : undefined}
-                    className={cn(
-                        // Base styles
-                        "flex items-center gap-3 transition-colors group overflow-hidden",
-                        // Variant styles
-                        variant === "card" && [
-                            "p-3 rounded-lg border bg-card",
-                            !disabled && "hover:bg-accent",
-                        ],
-                        variant === "flat" && [
-                            "py-2 px-1",
-                            !disabled && "hover:bg-muted/30 rounded-md",
-                        ],
-                        // States - Selected uses primary border, remove default border
-                        selected && "border-primary border-2",
-                        disabled && "opacity-50 cursor-not-allowed",
-                        isClickable && "cursor-pointer",
-                        className
-                    )}
-                    {...props}
-                >
-                    {children}
-                </div>
+                {innerDiv}
             </ListItemContext.Provider>
         );
     }

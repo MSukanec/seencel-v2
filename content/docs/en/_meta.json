@@ -1,9 +1,8 @@
 {
     "order": [
         "getting-started",
-        "agenda",
+        "planificador",
         "materials",
-        "finance",
         "projects"
     ],
     "items": {
@@ -11,17 +10,13 @@
             "title": "Getting Started",
             "icon": "rocket"
         },
-        "agenda": {
+        "planificador": {
             "title": "Planner",
             "icon": "calendar"
         },
         "materials": {
             "title": "Materials",
             "icon": "package"
-        },
-        "finance": {
-            "title": "Finance",
-            "icon": "dollar-sign"
         },
         "projects": {
             "title": "Projects",

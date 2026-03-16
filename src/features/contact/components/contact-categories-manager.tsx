@@ -1,22 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Pencil, Trash2, MoreHorizontal, Monitor, Building2, Tags } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useMemo } from "react";
+import { Plus, Pencil, Trash2, Monitor, Building2, Tags } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
-import { ListItem } from "@/components/shared/list-item";
+import { ListItem, type ListItemContextMenuAction } from "@/components/shared/list-item";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { deleteContactCategory } from "@/actions/contacts";
 import { ContactCategory } from "@/types/contact";
-import { ContactCategoryForm } from "./contact-category-form";
 import { toast } from "sonner";
 
 interface ContactCategoriesManagerProps {
@@ -25,7 +17,7 @@ interface ContactCategoriesManagerProps {
 }
 
 export function ContactCategoriesManager({ organizationId, initialCategories }: ContactCategoriesManagerProps) {
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
     const [categories, setCategories] = useState<ContactCategory[]>(initialCategories);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [deletingCategory, setDeletingCategory] = useState<ContactCategory | null>(null);
@@ -62,38 +54,25 @@ export function ContactCategoriesManager({ organizationId, initialCategories }: 
     };
 
     const handleOpenCreate = () => {
-        openModal(
-            <ContactCategoryForm
-                organizationId={organizationId}
-                onSuccess={handleCreate}
-            />,
-            {
-                title: "Crear Categoría",
-                description: "Define una nueva categoría para clasificar tus contactos.",
-                size: 'md'
-            }
-        );
+        openPanel('contact-category-form', {
+            organizationId,
+            onSuccess: handleCreate,
+        });
     };
 
     const handleOpenEdit = (category: ContactCategory) => {
-        openModal(
-            <ContactCategoryForm
-                organizationId={organizationId}
-                initialData={category}
-                onSuccess={handleEdit}
-            />,
-            {
-                title: "Editar Categoría",
-                description: "Modifica el nombre de esta categoría de contacto.",
-                size: 'md'
-            }
-        );
+        openPanel('contact-category-form', {
+            organizationId,
+            initialData: category,
+            onSuccess: handleEdit,
+        });
     };
 
     return (
         <>
             <SettingsSectionContainer>
                 <SettingsSection
+                    contentVariant="card"
                     icon={Tags}
                     title="Categorías de Contacto"
                     description="Las categorías te permiten clasificar y organizar tus contactos según su relación con tu empresa: clientes, proveedores, subcontratistas, arquitectos, y más. Usá las categorías para filtrar contactos rápidamente y mantener tu directorio organizado."
@@ -104,7 +83,7 @@ export function ContactCategoriesManager({ organizationId, initialCategories }: 
                     {categories.length === 0 ? (
                         <p className="text-sm text-muted-foreground py-4">No hay categorías definidas. Creá una para empezar a organizar tus contactos.</p>
                     ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-2.5">
                             {categories.map((category) => (
                                 <CategoryListItem
                                     key={category.id}
@@ -146,8 +125,26 @@ interface CategoryListItemProps {
 function CategoryListItem({ category, onEdit, onDelete }: CategoryListItemProps) {
     const isSystem = !category.organization_id;
 
+    // Context menu actions (only for non-system items) — same pattern as Projects settings
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] | undefined => {
+        if (isSystem) return undefined;
+        return [
+            {
+                label: "Editar",
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                onClick: () => onEdit(category),
+            },
+            {
+                label: "Eliminar",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: () => onDelete(category),
+                variant: "destructive" as const,
+            },
+        ];
+    }, [category, isSystem, onEdit, onDelete]);
+
     return (
-        <ListItem variant="card">
+        <ListItem variant="row" contextMenuActions={contextMenuActions}>
             <ListItem.Content>
                 <ListItem.Title>{category.name}</ListItem.Title>
             </ListItem.Content>
@@ -163,32 +160,7 @@ function CategoryListItem({ category, onEdit, onDelete }: CategoryListItemProps)
                     </Badge>
                 )}
             </ListItem.Trailing>
-
-            <ListItem.Actions>
-                {!isSystem && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEdit(category)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => onDelete(category)}
-                                className="text-destructive focus:text-destructive"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
-            </ListItem.Actions>
         </ListItem>
     );
 }
+

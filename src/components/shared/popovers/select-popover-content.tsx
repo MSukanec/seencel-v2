@@ -4,12 +4,17 @@
  * Used by: select-chip (forms), entity-column (tables)
  * Single source of truth for searchable list selectors (concepts, categories, etc.)
  * Includes optional footer action to navigate to management page.
+ *
+ * Supports inline creation (Linear-style):
+ *   When `onCreateNew` is provided, typing a name that doesn't exist shows
+ *   "+ Crear: 'xyz'" at the bottom. Clicking it calls onCreateNew(name),
+ *   which should create the entity and return its new ID for auto-selection.
  */
 
 "use client";
 
 import * as React from "react";
-import { Check, Tag, Settings } from "lucide-react";
+import { Check, Tag, Settings, Plus, Loader2 } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
 import {
     Command,
@@ -47,6 +52,16 @@ export interface SelectPopoverContentProps {
     manageRoute?: { pathname: string; query?: Record<string, string> };
     /** Label for the manage action */
     manageLabel?: string;
+    /**
+     * Inline creation callback (Linear-style).
+     * When provided, shows "+ Crear: 'searchQuery'" when the query doesn't
+     * exactly match an existing option.
+     * Should create the entity and return the new ID for auto-selection.
+     * Return undefined/void if auto-selection is not needed.
+     */
+    onCreateNew?: (name: string) => Promise<string | undefined | void>;
+    /** Label prefix for the create action (default: "Crear") */
+    createLabel?: string;
 }
 
 // ─── Component ───────────────────────────────────────────
@@ -61,15 +76,48 @@ export function SelectPopoverContent({
     defaultIcon,
     manageRoute,
     manageLabel = "Gestionar...",
+    onCreateNew,
+    createLabel = "Crear",
 }: SelectPopoverContentProps) {
     const router = useRouter();
     const fallbackIcon = defaultIcon || <Tag className="h-3.5 w-3.5 text-muted-foreground" />;
+    const [searchQuery, setSearchQuery] = React.useState("");
+    const [isCreating, setIsCreating] = React.useState(false);
+
+    // Show "create new" when: onCreateNew exists, search has text, no exact label match
+    const showCreateNew = React.useMemo(() => {
+        if (!onCreateNew || !searchQuery.trim()) return false;
+        const q = searchQuery.trim().toLowerCase();
+        return !options.some(o => o.label.toLowerCase() === q);
+    }, [onCreateNew, searchQuery, options]);
+
+    const handleCreateNew = async () => {
+        if (!onCreateNew || !searchQuery.trim() || isCreating) return;
+        setIsCreating(true);
+        try {
+            const newId = await onCreateNew(searchQuery.trim());
+            if (newId) {
+                onSelect(newId);
+            }
+            onOpenChange?.(false);
+        } finally {
+            setIsCreating(false);
+            setSearchQuery("");
+        }
+    };
 
     return (
         <Command>
-            <CommandInput placeholder={searchPlaceholder} className="h-8 text-xs" />
+            <CommandInput
+                placeholder={searchPlaceholder}
+                className="h-8 text-xs"
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+            />
             <CommandList>
-                <CommandEmpty className="text-xs py-4 text-center">{emptyText}</CommandEmpty>
+                <CommandEmpty className="text-xs py-4 text-center">
+                    {showCreateNew ? null : emptyText}
+                </CommandEmpty>
                 <CommandGroup>
                     {options.map((option) => (
                         <CommandItem
@@ -93,6 +141,28 @@ export function SelectPopoverContent({
                         </CommandItem>
                     ))}
                 </CommandGroup>
+                {/* Inline creation — Linear-style */}
+                {showCreateNew && (
+                    <>
+                        <CommandSeparator />
+                        <CommandGroup>
+                            <CommandItem
+                                value={`__create_new_${searchQuery.trim()}__`}
+                                onSelect={handleCreateNew}
+                                disabled={isCreating}
+                                className="flex items-center gap-2 text-xs cursor-pointer"
+                            >
+                                {isCreating ? (
+                                    <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+                                ) : (
+                                    <Plus className="h-3.5 w-3.5 text-primary" />
+                                )}
+                                <span className="text-primary font-medium">{createLabel}:</span>
+                                <span className="text-foreground truncate">"{searchQuery.trim()}"</span>
+                            </CommandItem>
+                        </CommandGroup>
+                    </>
+                )}
                 {manageRoute && (
                     <>
                         <CommandSeparator />

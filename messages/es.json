@@ -9,7 +9,7 @@
     "Sidebar": {
         "tools": {
             "kanban": "Kanban",
-            "files": "Documentación"
+            "files": "Archivos"
         },
         "construction": "CONSTRUCCION",
         "items": {
@@ -279,7 +279,7 @@
             "items": {
                 "overview": "Visión General",
                 "basicData": "Datos Básicos",
-                "filesMedia": "Documentación",
+                "filesMedia": "Archivos",
                 "finance": "Finanzas",
                 "moodboard": "Moodboard",
                 "computationBudget": "Cómputo y Presupuesto",
@@ -1703,7 +1703,7 @@
         }
     },
     "Files": {
-        "title": "Documentación"
+        "title": "Archivos"
     },
     "Subcontracts": {
         "title": "Subcontratos",

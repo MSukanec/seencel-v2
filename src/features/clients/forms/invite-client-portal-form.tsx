@@ -1,11 +1,10 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
-import { FormFooter } from "@/components/shared/forms/form-footer";
+import { usePanel } from "@/stores/panel-store";
 import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";
 import { sendClientInvitationAction } from "@/features/clients/actions";
@@ -24,6 +23,8 @@ interface InviteClientPortalFormProps {
     contactAvatarUrl?: string | null;
     /** Whether the contact already has a Seencel account */
     isSeencelUser?: boolean;
+    /** Injected by PanelProvider — connects form to panel footer submit button */
+    formId?: string;
 }
 
 // ============================================================================
@@ -38,7 +39,7 @@ function getInitials(name: string | null): string {
 }
 
 // ============================================================================
-// Component
+// Component (Panel Self-Contained)
 // ============================================================================
 
 export function InviteClientPortalForm({
@@ -47,9 +48,10 @@ export function InviteClientPortalForm({
     contactEmail,
     contactAvatarUrl,
     isSeencelUser = false,
+    formId,
 }: InviteClientPortalFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
     const [isPending, startTransition] = useTransition();
 
     // If the contact has no email, allow entering one inline
@@ -57,6 +59,19 @@ export function InviteClientPortalForm({
     const needsEmail = !contactEmail;
 
     const displayName = contactName || contactEmail || "el cliente";
+
+    // 🚨 OBLIGATORIO: Self-describe via setPanelMeta
+    useEffect(() => {
+        setPanelMeta({
+            icon: Mail,
+            title: "Invitar al Portal",
+            description: `Enviá una invitación a ${displayName} para acceder al portal del proyecto.`,
+            size: "lg",
+            footer: {
+                submitLabel: "Enviar Invitación",
+            },
+        });
+    }, [displayName, setPanelMeta]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,7 +85,7 @@ export function InviteClientPortalForm({
                     return;
                 }
 
-                closeModal();
+                closePanel();
                 toast.success(`Invitación enviada a ${displayName}`);
                 router.refresh();
             } catch (error: any) {
@@ -79,8 +94,9 @@ export function InviteClientPortalForm({
         });
     };
 
+    // 🚨 OBLIGATORIO: <form id={formId}> — conecta con el footer del container
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col flex-1">
             <div className="flex-1 overflow-y-auto space-y-5 p-1 px-2">
 
                 {/* Client identity card */}
@@ -154,14 +170,6 @@ export function InviteClientPortalForm({
                 )}
 
             </div>
-
-            <FormFooter
-                onCancel={closeModal}
-                isLoading={isPending}
-                submitLabel="Enviar Invitación"
-                submitDisabled={needsEmail && !overrideEmail.trim()}
-                className="-mx-4 -mb-4 mt-6"
-            />
         </form>
     );
 }

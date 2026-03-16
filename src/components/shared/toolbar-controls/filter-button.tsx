@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ListFilter, CalendarDays, X, ChevronRight, Search } from "lucide-react"
+import { Check, ListFilter, CalendarDays, X, ChevronLeft, Search, Plus } from "lucide-react"
 import { DateRange } from "react-day-picker"
 import { es } from "date-fns/locale"
 import {
@@ -49,6 +49,8 @@ export interface FilterPopoverProps {
     searchPlaceholder?: string
     /** Custom trigger label */
     label?: string
+    /** Variant: 'default' = full button, 'plus' = minimal + icon for active filters bar */
+    variant?: "default" | "plus"
     /** Additional className */
     className?: string
 }
@@ -278,6 +280,7 @@ export function FilterPopover({
     filters,
     searchPlaceholder = "Buscar...",
     label = "Filtrar",
+    variant = "default",
     className,
 }: FilterPopoverProps) {
     const [open, setOpen] = React.useState(false)
@@ -369,30 +372,44 @@ export function FilterPopover({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                        "h-8 gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors",
-                        filters.hasActiveFilters && "text-foreground",
-                        className
-                    )}
-                >
-                    <ListFilter className="h-4 w-4" />
-                    <span>{label}</span>
-                    {activeCount > 0 && (
-                        <Badge
-                            variant="secondary"
-                            className="rounded-full px-1.5 py-0 text-[10px] font-medium bg-primary/15 text-primary min-w-[18px] flex items-center justify-center"
-                        >
-                            {activeCount}
-                        </Badge>
-                    )}
-                </Button>
+                {variant === "plus" ? (
+                    <button
+                        type="button"
+                        className={cn(
+                            "inline-flex items-center justify-center h-5 w-5 rounded-md",
+                            "text-muted-foreground hover:text-foreground hover:bg-muted",
+                            "transition-colors",
+                            className
+                        )}
+                    >
+                        <Plus className="h-3.5 w-3.5" />
+                    </button>
+                ) : (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                            "h-8 gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors",
+                            filters.hasActiveFilters && "text-foreground",
+                            className
+                        )}
+                    >
+                        <ListFilter className="h-4 w-4" />
+                        <span>{label}</span>
+                        {activeCount > 0 && (
+                            <Badge
+                                variant="secondary"
+                                className="rounded-full px-1.5 py-0 text-[10px] font-medium bg-primary/15 text-primary min-w-[18px] flex items-center justify-center"
+                            >
+                                {activeCount}
+                            </Badge>
+                        )}
+                    </Button>
+                )}
             </PopoverTrigger>
             <PopoverContent
                 className="p-0 w-[240px] bg-popover/95 backdrop-blur-xl border-border/80 shadow-xl overflow-visible"
-                align="start"
+                align="end"
             >
                 <div className="relative" onMouseLeave={handleMouseLeave}>
                     {/* ── Filter categories ───────────────────────── */}
@@ -425,7 +442,7 @@ export function FilterPopover({
                                                 {count}
                                             </Badge>
                                         )}
-                                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                                        <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground/60" />
                                     </div>
                                 </div>
                             )
@@ -455,7 +472,7 @@ export function FilterPopover({
                     {hoveredCategory && (
                         <div
                             className={cn(
-                                "absolute left-full top-0 ml-1 bg-popover/95 backdrop-blur-xl border border-border/80 rounded-md shadow-xl z-50",
+                                "absolute right-full top-0 mr-1 bg-popover/95 backdrop-blur-xl border border-border/80 rounded-md shadow-xl z-50",
                                 hoveredCategory.type === "facet" ? "w-[260px]" : "w-auto"
                             )}
                             onMouseEnter={handleSubPanelEnter}

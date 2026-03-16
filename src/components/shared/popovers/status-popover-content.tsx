@@ -8,7 +8,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, CheckCircle2, Clock, XCircle, Circle } from "lucide-react";
+import { Check, CheckCircle2, Clock, XCircle, Circle, CircleDot } from "lucide-react";
 import {
     Command,
     CommandInput,
@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────
 
-export type StatusVariant = "positive" | "negative" | "warning" | "neutral";
+export type StatusVariant = "positive" | "negative" | "warning" | "neutral" | "info";
 
 export interface StatusPopoverOption {
     value: string;
@@ -42,6 +42,7 @@ const VARIANT_CONFIG: Record<StatusVariant, { icon: React.ElementType; className
     negative: { icon: XCircle, className: "text-amount-negative" },
     warning: { icon: Clock, className: "text-semantic-warning" },
     neutral: { icon: Circle, className: "text-muted-foreground" },
+    info: { icon: CircleDot, className: "text-blue-400" },
 };
 
 export function StatusDot({ variant }: { variant: StatusVariant }) {

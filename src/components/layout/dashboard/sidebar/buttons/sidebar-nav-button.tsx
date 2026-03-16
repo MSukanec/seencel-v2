@@ -50,38 +50,19 @@ export function SidebarNavButton({
     const content = (
         <div
             className={cn(
-                "group relative flex items-center w-full rounded-lg transition-colors duration-0",
-                "hover:bg-muted text-muted-foreground hover:text-foreground",
+                "group relative flex items-center w-full rounded-lg transition-all duration-150",
+                isActive
+                    ? "bg-white/[0.04] text-foreground border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_3px_rgba(0,0,0,0.25),0_1px_1px_rgba(0,0,0,0.15)]"
+                    : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.03] border border-transparent",
                 "p-0 min-h-[32px]",
-                isActive && "text-foreground",
-                disabled && "cursor-not-allowed hover:bg-transparent hover:text-muted-foreground",
+                disabled && "cursor-not-allowed hover:bg-transparent hover:text-muted-foreground/60",
                 className
             )}
-            style={isActive ? {
-                borderLeft: "2px solid var(--plan-border, rgba(255,255,255,0.1))",
-                boxShadow: "var(--plan-glow, none)",
-                background: `linear-gradient(90deg, var(--plan-accent, rgba(255,255,255,0.06)), transparent 70%), hsl(var(--secondary))`,
-            } : undefined}
         >
-            {/* Border reflection — vertical sheen on left border (active only) */}
-            {isActive && (
-                <div
-                    className="absolute left-0 top-0 w-[2px] h-full overflow-hidden pointer-events-none rounded-l-lg"
-                >
-                    <div
-                        className="absolute left-0 top-0 w-full h-[6px]"
-                        style={{
-                            background: "linear-gradient(180deg, transparent, var(--plan-border, rgba(255,255,255,0.2)), transparent)",
-                            animation: "plan-border-reflection 15s linear infinite",
-                            filter: "blur(0.5px)",
-                        }}
-                    />
-                </div>
-            )}
             {/* Icon - 16x16 */}
             <div className={cn(
                 "w-8 h-8 flex items-center justify-center shrink-0",
-                isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+                isActive ? "text-foreground" : "text-muted-foreground/50 group-hover:text-muted-foreground",
                 lockedClass
             )}>
                 <Icon className="h-4 w-4" />

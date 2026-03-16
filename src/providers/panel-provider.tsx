@@ -42,16 +42,16 @@ const modalVariants = {
 
 const panelTransition = {
     type: "spring" as const,
-    damping: 30,
-    stiffness: 300,
-    mass: 0.8,
+    damping: 40,
+    stiffness: 900,
+    mass: 0.15,
 };
 
 const modalTransition = {
     type: "spring" as const,
-    damping: 25,
-    stiffness: 350,
-    mass: 0.6,
+    damping: 35,
+    stiffness: 1000,
+    mass: 0.15,
 };
 
 // ─── Success sound (Web Audio) ──────────────────────────
@@ -133,7 +133,7 @@ function SuccessAnimatedModal({
             className={cn(
                 "pointer-events-auto w-full flex flex-col overflow-hidden",
                 "rounded-xl shadow-2xl border border-border/50",
-                "min-h-[50vh] max-h-[92vh] mx-4",
+                "max-h-[92vh] mx-4",
                 modalSizeClasses[topPanel.size || "md"],
             )}
             style={{

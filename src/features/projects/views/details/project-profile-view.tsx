@@ -11,12 +11,14 @@
 //   4. Color Identificativo (swatches predefinidos)
 // ============================================================================
 
-import { useRef, useCallback, useState } from "react";
+import React, { useRef, useCallback, useState } from "react";
 import { useLayoutData } from "@/hooks/use-layout-data";
 import { ContentLayout } from "@/components/layout";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { TextField, NotesField } from "@/components/shared/forms/fields";
 import { updateProject } from "@/features/projects/actions";
+import { PROJECT_STATUS_CONFIG } from "@/features/projects/tables/projects-columns";
+import type { StatusVariant } from "@/components/shared/data-table/columns/status-column";
 import { SingleImageDropzone } from "@/components/ui/single-image-dropzone";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/client-image-compression";
@@ -35,7 +37,16 @@ import {
     Check,
     Activity,
     Palette,
+    MapPin,
+    CheckCircle2,
+    Clock,
+    XCircle,
+    Circle,
+    CircleDot,
 } from "lucide-react";
+import { ProjectLocationSection } from "./project-location-section";
+import { ColorPopoverContent, STANDARD_COLORS } from "@/components/shared/popovers";
+import { cn } from "@/lib/utils";
 
 
 // ── Color palette ──
@@ -54,27 +65,22 @@ const PROJECT_COLORS = [
     { value: "#8D6E63", label: "Marrón" },
 ];
 
-// ── Status definitions ──
-const PROJECT_STATUSES = [
-    {
-        value: "active",
-        label: "Activo",
-        color: "bg-emerald-500",
-        description: "El proyecto está en ejecución. Aparece en el dashboard, reportes, métricas financieras y operativas. Cuenta como proyecto activo en tu plan.",
-    },
-    {
-        value: "paused",
-        label: "Pausado",
-        color: "bg-amber-500",
-        description: "Temporalmente detenido. Se conservan todos los datos pero no aparece en métricas activas ni cuenta como proyecto activo en tu plan.",
-    },
-    {
-        value: "completed",
-        label: "Completado",
-        color: "bg-violet-500",
-        description: "El proyecto finalizó. Toda la información queda disponible como registro histórico pero no cuenta como proyecto activo en tu plan ni aparece en métricas operativas.",
-    },
-] as const;
+// ── Status variant → visual config (matches status-column.tsx VARIANT_CONFIG) ──
+const VARIANT_STYLES: Record<StatusVariant, { icon: React.ElementType; colorClass: string }> = {
+    info:     { icon: CircleDot,    colorClass: "text-blue-400" },
+    warning:  { icon: Clock,        colorClass: "text-semantic-warning" },
+    neutral:  { icon: Circle,       colorClass: "text-muted-foreground/50" },
+    positive: { icon: CheckCircle2,  colorClass: "text-amount-positive" },
+    negative: { icon: XCircle,       colorClass: "text-amount-negative" },
+};
+
+// ── Status descriptions for the info panel ──
+const STATUS_DESCRIPTIONS: Record<string, string> = {
+    planning:  "El proyecto está en fase de planificación. No aparece en métricas operativas pero permite configurar toda la información antes de iniciarlo.",
+    active:    "El proyecto está en ejecución. Aparece en el dashboard, reportes, métricas financieras y operativas. Cuenta como proyecto activo en tu plan.",
+    inactive:  "Temporalmente detenido. Se conservan todos los datos pero no aparece en métricas activas ni cuenta como proyecto activo en tu plan.",
+    completed: "El proyecto finalizó. Toda la información queda disponible como registro histórico pero no cuenta como proyecto activo en tu plan ni aparece en métricas operativas.",
+};
 
 // ── Props ──
 interface ProjectProfileViewProps {
@@ -213,7 +219,8 @@ export function ProjectProfileView({ project, projectTypes, projectModalities }:
     };
 
     // Current status info
-    const currentStatus = PROJECT_STATUSES.find(s => s.value === status) || PROJECT_STATUSES[0];
+    const currentStatusConfig = PROJECT_STATUS_CONFIG.find(s => s.value === status) || PROJECT_STATUS_CONFIG[0];
+    const currentVariantStyle = VARIANT_STYLES[currentStatusConfig.variant];
 
     return (
         <ContentLayout variant="settings">
@@ -231,39 +238,47 @@ export function ProjectProfileView({ project, projectTypes, projectModalities }:
                             <SelectTrigger className="w-full">
                                 <SelectValue>
                                     <span className="flex items-center gap-2">
-                                        <span className={`h-2 w-2 rounded-full ${currentStatus.color}`} />
-                                        {currentStatus.label}
+                                        <currentVariantStyle.icon className={cn("h-4 w-4", currentVariantStyle.colorClass)} />
+                                        {currentStatusConfig.label}
                                     </span>
                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                                {PROJECT_STATUSES.map(s => (
-                                    <SelectItem key={s.value} value={s.value}>
-                                        <span className="flex items-center gap-2">
-                                            <span className={`h-2 w-2 rounded-full ${s.color}`} />
-                                            {s.label}
-                                        </span>
-                                    </SelectItem>
-                                ))}
+                                {PROJECT_STATUS_CONFIG.map(s => {
+                                    const vs = VARIANT_STYLES[s.variant];
+                                    return (
+                                        <SelectItem key={s.value} value={s.value}>
+                                            <span className="flex items-center gap-2">
+                                                <vs.icon className={cn("h-4 w-4", vs.colorClass)} />
+                                                {s.label}
+                                            </span>
+                                        </SelectItem>
+                                    );
+                                })}
                             </SelectContent>
                         </Select>
 
                         {/* Status description */}
                         <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
                             <div className="space-y-2.5">
-                                {PROJECT_STATUSES.map(s => (
-                                    <div
-                                        key={s.value}
-                                        className={`flex items-start gap-2.5 text-sm transition-opacity ${s.value === status ? "opacity-100" : "opacity-40"
-                                            }`}
-                                    >
-                                        <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${s.color}`} />
-                                        <div>
-                                            <span className="font-medium">{s.label}:</span>{" "}
-                                            <span className="text-muted-foreground">{s.description}</span>
+                                {PROJECT_STATUS_CONFIG.map(s => {
+                                    const vs = VARIANT_STYLES[s.variant];
+                                    return (
+                                        <div
+                                            key={s.value}
+                                            className={cn(
+                                                "flex items-start gap-2.5 text-sm transition-opacity",
+                                                s.value === status ? "opacity-100" : "opacity-40"
+                                            )}
+                                        >
+                                            <vs.icon className={cn("h-4 w-4 mt-0.5 shrink-0", vs.colorClass)} />
+                                            <div>
+                                                <span className="font-medium">{s.label}:</span>{" "}
+                                                <span className="text-muted-foreground">{STATUS_DESCRIPTIONS[s.value] || ""}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -365,50 +380,23 @@ export function ProjectProfileView({ project, projectTypes, projectModalities }:
                     title="Color Identificativo"
                     description="Asigna un color único a este proyecto para diferenciarlo visualmente en toda la plataforma."
                 >
-                    <div className="space-y-4">
-                        {/* Note */}
-                        <p className="text-sm text-muted-foreground">
-                            El color aparece en badges de estado, columnas del planificador, gráficos financieros
-                            y cualquier vista donde se muestren múltiples proyectos. Elegí un color que te permita
-                            identificar este proyecto de un vistazo.
-                        </p>
-
-                        {/* Color swatches grid */}
-                        <div className="flex flex-wrap gap-2">
-                            {PROJECT_COLORS.map(c => (
-                                <button
-                                    key={c.value}
-                                    type="button"
-                                    title={c.label}
-                                    className={`group relative h-9 w-9 rounded-lg transition-all duration-150 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${color === c.value
-                                        ? "ring-2 ring-white/80 ring-offset-2 ring-offset-background scale-110 shadow-lg"
-                                        : "ring-1 ring-white/10 hover:ring-white/30"
-                                        }`}
-                                    style={{ backgroundColor: c.value }}
-                                    onClick={() => handleColorChange(c.value)}
-                                >
-                                    {color === c.value && (
-                                        <Check className="h-4 w-4 text-white drop-shadow-md absolute inset-0 m-auto" />
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Preview bar */}
-                        <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-3">
-                            <div
-                                className="h-5 w-5 rounded-full shrink-0 ring-1 ring-white/10"
-                                style={{ backgroundColor: color }}
-                            />
-                            <div className="text-sm">
-                                <span className="text-foreground font-medium">{project.name || "Proyecto"}</span>
-                                <span className="text-muted-foreground ml-1.5">·</span>
-                                <span className="text-muted-foreground ml-1.5">
-                                    {PROJECT_COLORS.find(c => c.value === color)?.label || "Personalizado"}
-                                </span>
-                            </div>
-                        </div>
+                    <div className="rounded-lg border border-border/50 bg-muted/30 p-2">
+                        <ColorPopoverContent
+                            colors={STANDARD_COLORS}
+                            currentValue={color}
+                            onSelect={handleColorChange}
+                            showPicker
+                        />
                     </div>
+                </SettingsSection>
+
+                {/* ── Ubicación ── */}
+                <SettingsSection
+                    icon={MapPin}
+                    title="Ubicación"
+                    description="Define la ubicación geográfica de la obra para visualizarla en el mapa de proyectos."
+                >
+                    <ProjectLocationSection project={project} />
                 </SettingsSection>
 
             </SettingsSectionContainer>

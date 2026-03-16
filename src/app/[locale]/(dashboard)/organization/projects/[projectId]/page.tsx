@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Settings, MapPin, Palette, Users } from "lucide-react";
+import { Settings, Palette, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageWrapper, ContentLayout } from "@/components/layout";
+import { PageWrapper } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { BackButton } from "@/components/shared/back-button";
+import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
 import { LockedBadge } from "@/components/shared/locked-badge";
 import { getProjectById } from "@/features/projects/queries";
 import { getProjectTypes, getProjectModalities } from "@/features/projects/actions";
 import { getClientRoles, getClients } from "@/features/clients/queries";
 import { getProjectCollaborators } from "@/features/external-actors/project-access-queries";
 import { ProjectProfileView } from "@/features/projects/views/details/project-profile-view";
-import { ProjectLocationView } from "@/features/projects/views/details/project-location-view";
 import { ProjectParticipantsView } from "@/features/projects/views/details/project-participants-view";
 
 // ============================================================================
@@ -77,32 +77,31 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                 <PageWrapper
                     type="page"
                     title={truncatedName}
+                    parentLabel="Proyectos"
                     backButton={
                         <BackButton fallbackHref="/organization/projects" />
                     }
-                    tabs={
-                        <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
+                >
+                    {/* Content Tabs — inside content, not header */}
+                    <DetailContentTabs>
+                        <TabsList>
                             <TabsTrigger value="general" className="gap-2">
-                                <Settings className="h-4 w-4" />
+                                <Settings className="h-3.5 w-3.5" />
                                 Perfil
                             </TabsTrigger>
                             <TabsTrigger value="participants" className="gap-2">
-                                <Users className="h-4 w-4" />
+                                <Users className="h-3.5 w-3.5" />
                                 Participantes
-                            </TabsTrigger>
-                            <TabsTrigger value="location" className="gap-2">
-                                <MapPin className="h-4 w-4" />
-                                Ubicación
                             </TabsTrigger>
                             <LockedBadge>
                                 <TabsTrigger value="appearance" className="gap-2">
-                                    <Palette className="h-4 w-4" />
+                                    <Palette className="h-3.5 w-3.5" />
                                     Apariencia
                                 </TabsTrigger>
                             </LockedBadge>
                         </TabsList>
-                    }
-                >
+                    </DetailContentTabs>
+
                     {/* Perfil Tab */}
                     <TabsContent value="general" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ProjectProfileView
@@ -123,13 +122,6 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                         />
                     </TabsContent>
 
-                    {/* Ubicación Tab */}
-                    <TabsContent value="location" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ContentLayout variant="full">
-                            <ProjectLocationView project={project} />
-                        </ContentLayout>
-                    </TabsContent>
-
                 </PageWrapper>
             </Tabs>
 
@@ -146,3 +138,4 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
         );
     }
 }
+

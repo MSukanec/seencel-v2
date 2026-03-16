@@ -1,20 +1,37 @@
 "use client";
 
-import { useEffect, useTransition, useState } from "react";
+/**
+ * General Costs — Concept Form (Panel)
+ * Hybrid Chip Form — Linear-inspired
+ *
+ * Layout:
+ * ┌─────────────────────────────────┐
+ * │ Header (icon + title)           │
+ * ├─────────────────────────────────┤
+ * │ Chips (category, recurrence)    │
+ * │─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │
+ * │ Hero: Name (big, bg accent)     │
+ * │                                 │
+ * │ Description (borderless)        │
+ * │ Expected amount (if recurring)  │
+ * ├─────────────────────────────────┤
+ * │ Footer (cancel + submit)        │
+ * └─────────────────────────────────┘
+ */
+
+import { useState, useEffect, useMemo } from "react";
 import { usePanel } from "@/stores/panel-store";
-import { FileText } from "lucide-react";
+import { FileText, FolderOpen, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import {
-    TextField,
-    NotesField,
-    SelectField,
-    SwitchField,
-    AmountField,
-    CurrencyField,
-} from "@/components/shared/forms/fields";
+    ChipRow,
+    SelectChip,
+} from "@/components/shared/chips";
 import { useFormData } from "@/stores/organization-store";
+import { FormHeroField } from "@/components/shared/forms/fields/form-hero-field";
+import { FormNotesField } from "@/components/shared/forms/fields/form-notes-field";
 import { GeneralCost, GeneralCostCategory } from "@/features/general-costs/types";
-import { createGeneralCost, updateGeneralCost } from "@/features/general-costs/actions";
+import { createGeneralCost, updateGeneralCost, createGeneralCostCategory } from "@/features/general-costs/actions";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -29,11 +46,19 @@ interface ConceptFormProps {
 // ─── Constants ───────────────────────────────────────────
 
 const RECURRENCE_OPTIONS = [
-    { value: "monthly", label: "Mensual" },
-    { value: "weekly", label: "Semanal" },
-    { value: "quarterly", label: "Trimestral" },
-    { value: "yearly", label: "Anual" },
+    { value: "none", label: "Sin recurrencia", icon: <Repeat className="h-3.5 w-3.5 text-muted-foreground/50" /> },
+    { value: "monthly", label: "Mensual", icon: <Repeat className="h-3.5 w-3.5 text-muted-foreground" /> },
+    { value: "weekly", label: "Semanal", icon: <Repeat className="h-3.5 w-3.5 text-muted-foreground" /> },
+    { value: "quarterly", label: "Trimestral", icon: <Repeat className="h-3.5 w-3.5 text-muted-foreground" /> },
+    { value: "yearly", label: "Anual", icon: <Repeat className="h-3.5 w-3.5 text-muted-foreground" /> },
 ];
+
+/** Format amount with thousand separators for display (AR format: 150.000,50) */
+function formatAmountDisplay(raw: string): string {
+    const [integer, decimal] = raw.split(".");
+    const formatted = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return decimal !== undefined ? `${formatted},${decimal}` : formatted;
+}
 
 // ─── Component ───────────────────────────────────────────
 
@@ -44,19 +69,25 @@ export function GeneralCostsConceptForm({
     onSuccess,
     formId,
 }: ConceptFormProps) {
-    const { closePanel, setPanelMeta } = usePanel();
-    const [isPending, startTransition] = useTransition();
+    const { closePanel, setPanelMeta, completePanel } = usePanel();
     const isEditing = !!initialData;
+
+    // Local copy of categories (for optimistic inline creation)
+    const [localCategories, setLocalCategories] = useState(categories);
 
     // Form state
     const [name, setName] = useState(initialData?.name || "");
     const [description, setDescription] = useState(initialData?.description || "");
     const [categoryId, setCategoryId] = useState(initialData?.category_id || "");
-    const [isRecurring, setIsRecurring] = useState(initialData?.is_recurring ?? false);
-    const [recurrenceInterval, setRecurrenceInterval] = useState(initialData?.recurrence_interval || "monthly");
+    const [recurrenceInterval, setRecurrenceInterval] = useState(
+        initialData?.is_recurring ? (initialData.recurrence_interval || "monthly") : "none"
+    );
     const [expectedDay, setExpectedDay] = useState(String(initialData?.expected_day || "1"));
     const [expectedAmount, setExpectedAmount] = useState(initialData?.expected_amount?.toString() || "");
     const [expectedCurrencyId, setExpectedCurrencyId] = useState(initialData?.expected_currency_id || "");
+
+    // Derived
+    const isRecurring = recurrenceInterval !== "none";
 
     // Currencies from org store
     const { currencies } = useFormData();
@@ -84,11 +115,45 @@ export function GeneralCostsConceptForm({
         });
     }, [isEditing, setPanelMeta]);
 
-    // ─── Category options ────────────────────────────────
-    const categoryOptions = (categories ?? []).map((cat) => ({
-        value: cat.id,
-        label: cat.name,
-    }));
+    // ─── Chip options ────────────────────────────────────
+    const categoryChipOptions = useMemo(() =>
+        (localCategories ?? []).map((cat) => ({
+            value: cat.id,
+            label: cat.name,
+            icon: <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />,
+        })),
+        [localCategories]
+    );
+
+    // Inline category creation
+    const handleCreateCategory = async (name: string): Promise<string | undefined> => {
+        try {
+            const newCat = await createGeneralCostCategory({
+                organization_id: organizationId,
+                name,
+            });
+            if (newCat?.id) {
+                // Add to local categories optimistically
+                setLocalCategories(prev => [...prev, newCat as GeneralCostCategory]);
+                toast.success(`Categoría "${name}" creada`);
+                return newCat.id;
+            }
+        } catch {
+            toast.error("Error al crear la categoría");
+        }
+        return undefined;
+    };
+
+    const selectedCurrency = currencies?.find(c => c.id === expectedCurrencyId);
+    const currencySymbol = selectedCurrency?.symbol || "$";
+
+    // Reset form for "create another"
+    const resetForm = () => {
+        setName("");
+        setDescription("");
+        setExpectedAmount("");
+        setExpectedDay("1");
+    };
 
     // ─── Submit ──────────────────────────────────────────
     const handleSubmit = (e: React.FormEvent) => {
@@ -103,106 +168,122 @@ export function GeneralCostsConceptForm({
             return;
         }
 
-        startTransition(async () => {
-            try {
-                const payload = {
-                    name,
-                    description: description || undefined,
-                    category_id: categoryId,
-                    is_recurring: isRecurring,
-                    recurrence_interval: isRecurring ? recurrenceInterval : undefined,
-                    expected_day: isRecurring ? Number(expectedDay) || undefined : undefined,
-                    expected_amount: isRecurring && expectedAmount ? parseFloat(expectedAmount) : null,
-                    expected_currency_id: isRecurring && expectedCurrencyId ? expectedCurrencyId : null,
-                };
+        try {
+            const payload = {
+                name,
+                description: description || undefined,
+                category_id: categoryId,
+                is_recurring: isRecurring,
+                recurrence_interval: isRecurring ? recurrenceInterval : undefined,
+                expected_day: isRecurring ? Number(expectedDay) || undefined : undefined,
+                expected_amount: isRecurring && expectedAmount ? parseFloat(expectedAmount) : null,
+                expected_currency_id: isRecurring && expectedCurrencyId ? expectedCurrencyId : null,
+            };
 
-                if (isEditing && initialData) {
-                    await updateGeneralCost(initialData.id, payload);
-                    toast.success("Concepto actualizado");
-                } else {
-                    await createGeneralCost({
-                        ...payload,
-                        organization_id: organizationId,
-                    });
-                    toast.success("Concepto creado");
-                }
-                onSuccess?.();
-                closePanel();
-            } catch {
-                toast.error("Error al guardar el concepto");
+            if (isEditing && initialData) {
+                updateGeneralCost(initialData.id, payload);
+                toast.success("Concepto actualizado");
+            } else {
+                createGeneralCost({
+                    ...payload,
+                    organization_id: organizationId,
+                });
+                toast.success("Concepto creado");
             }
-        });
+            onSuccess?.();
+
+            if (isEditing) {
+                closePanel();
+            } else {
+                completePanel(resetForm);
+            }
+        } catch {
+            toast.error("Error al guardar el concepto");
+        }
     };
 
     // ─── Render ──────────────────────────────────────────
     return (
-        <form id={formId} onSubmit={handleSubmit}>
-            <div className="space-y-4">
-                <TextField
-                    label="Nombre"
-                    value={name}
-                    onChange={setName}
-                    placeholder="Ej. Alquiler Local"
-                    required
-                />
-
-                <SelectField
-                    label="Categoría"
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col flex-1">
+            {/* ── Chips: Metadata ───────────────────────── */}
+            <ChipRow>
+                <SelectChip
                     value={categoryId}
                     onChange={setCategoryId}
-                    options={categoryOptions}
-                    placeholder="Seleccionar categoría"
-                    required
+                    options={categoryChipOptions}
+                    icon={<FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />}
+                    emptyLabel="Categoría"
+                    searchPlaceholder="Buscar categoría..."
+                    popoverWidth={220}
+                    onCreateNew={handleCreateCategory}
+                    createLabel="Crear categoría"
+                />
+                <SelectChip
+                    value={recurrenceInterval}
+                    onChange={setRecurrenceInterval}
+                    options={RECURRENCE_OPTIONS}
+                    icon={<Repeat className="h-3.5 w-3.5 text-muted-foreground" />}
+                    emptyLabel="Recurrencia"
+                    searchPlaceholder="Buscar..."
+                    popoverWidth={200}
+                />
+            </ChipRow>
+
+            {/* ── Hero: Name ────────────────────────────── */}
+            <FormHeroField
+                value={name}
+                onChange={setName}
+                placeholder="Nombre del concepto..."
+                autoFocus
+            />
+
+            {/* ── Borderless fields ─────────────────────── */}
+            <div className="flex-1 mt-4 space-y-1">
+                {/* Description */}
+                <FormNotesField
+                    value={description}
+                    onChange={setDescription}
+                    placeholder="Agregar descripción o notas..."
                 />
 
-                <SwitchField
-                    label="Recurrencia"
-                    value={isRecurring}
-                    onChange={setIsRecurring}
-                    description="Activar si este gasto se repite periódicamente"
-                />
-
+                {/* Recurring details — only when recurring is active */}
                 {isRecurring && (
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <SelectField
-                                label="Frecuencia"
-                                value={recurrenceInterval}
-                                onChange={setRecurrenceInterval}
-                                options={RECURRENCE_OPTIONS}
-                                placeholder="Seleccionar frecuencia"
-                            />
-                            <TextField
-                                label="Día esperado"
+                    <div className="border-t border-border/10 pt-3 mt-2 space-y-3">
+                        {/* Expected day */}
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground select-none w-28 shrink-0">Día esperado</span>
+                            <input
+                                type="text"
+                                inputMode="numeric"
                                 value={expectedDay}
-                                onChange={setExpectedDay}
+                                onChange={(e) => {
+                                    const v = e.target.value.replace(/\D/g, "");
+                                    if (v === "" || (Number(v) >= 1 && Number(v) <= 31)) setExpectedDay(v);
+                                }}
                                 placeholder="1-31"
-                                helpText="Día del mes aproximado"
+                                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 outline-none border-none font-mono"
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <AmountField
-                                label="Monto Esperado"
-                                value={expectedAmount}
-                                onChange={setExpectedAmount}
-                                helpText="Cuánto esperás pagar cada período"
-                            />
-                            <CurrencyField
-                                value={expectedCurrencyId}
-                                onChange={setExpectedCurrencyId}
-                                currencies={currencies.map(c => ({ id: c.id, name: c.name, code: c.code, symbol: c.symbol }))}
-                            />
+                        {/* Expected amount */}
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground select-none w-28 shrink-0">Monto esperado</span>
+                            <div className="flex items-center gap-1.5 flex-1">
+                                <span className="text-sm text-muted-foreground select-none">{currencySymbol}</span>
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={expectedAmount ? formatAmountDisplay(expectedAmount) : ""}
+                                    onChange={(e) => {
+                                        const raw = e.target.value.replace(/\./g, "").replace(",", ".");
+                                        if (raw === "" || /^\d*\.?\d*$/.test(raw)) setExpectedAmount(raw);
+                                    }}
+                                    placeholder="0"
+                                    className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 outline-none border-none font-mono"
+                                />
+                            </div>
                         </div>
                     </div>
                 )}
-
-                <NotesField
-                    label="Descripción"
-                    value={description}
-                    onChange={setDescription}
-                    placeholder="Detalles adicionales..."
-                    rows={3}
-                />
             </div>
         </form>
     );

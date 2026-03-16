@@ -365,7 +365,7 @@ export function HeaderOrgProjectSelector() {
     const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/)/, '');
     const isOrgRoute = pathWithoutLocale.startsWith('/organization') || pathWithoutLocale.startsWith('/organizacion');
 
-    const isProjectDetailPage = /\/(?:organization|organizacion)\/(?:projects|proyectos)\/[^/]+/.test(pathWithoutLocale);
+    const isProjectDetailPage = /\/(?:organization|organizacion)\/(?:projects|proyectos)\/[0-9a-f]{8}-/.test(pathWithoutLocale);
     const isQuoteDetailPage = /\/(?:organization|organizacion)\/(?:quotes|cotizaciones)\/[^/]+/.test(pathWithoutLocale);
 
     const isOrgOnly = !isProjectDetailPage && ORG_ONLY_PREFIXES.some(prefix =>

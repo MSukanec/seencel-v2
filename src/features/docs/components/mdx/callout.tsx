@@ -2,27 +2,29 @@ import { cn } from "@/lib/utils";
 import { AlertCircle, Info, Lightbulb, AlertTriangle } from "lucide-react";
 
 interface CalloutProps {
-    type?: "info" | "warning" | "tip" | "danger";
+    type?: "info" | "warning" | "tip" | "danger" | "important";
     title?: string;
     children: React.ReactNode;
 }
 
-const iconMap = {
+const iconMap: Record<string, typeof Info> = {
     info: Info,
     warning: AlertTriangle,
     tip: Lightbulb,
     danger: AlertCircle,
+    important: Info,
 };
 
-const styleMap = {
+const styleMap: Record<string, string> = {
     info: "bg-primary/10 border-primary/50 text-primary",
     warning: "bg-yellow-500/10 border-yellow-500/50 text-yellow-700 dark:text-yellow-300",
     tip: "bg-primary/10 border-primary/50 text-primary",
     danger: "bg-red-500/10 border-red-500/50 text-red-700 dark:text-red-300",
+    important: "bg-primary/10 border-primary/50 text-primary",
 };
 
 export function Callout({ type = "info", title, children }: CalloutProps) {
-    const Icon = iconMap[type];
+    const Icon = iconMap[type] || Info;
 
     return (
         <div className={cn(

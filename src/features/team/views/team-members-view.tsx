@@ -7,17 +7,19 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Users, UserPlus, Wrench, BookOpen, UserCheck, Lock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { InviteMemberForm } from "@/features/team/forms/team-invite-member-form";
 import { removeMemberAction, updateMemberRoleAction, revokeInvitationAction, resendInvitationAction, removeExternalActorAction, reactivateExternalActorAction } from "@/features/team/actions";
 import { SeatStatus, ExternalActorDetail, EXTERNAL_ACTOR_TYPE_LABELS, ADVISOR_ACTOR_TYPES } from "@/features/team/types";
 import { useAccessContextStore } from "@/stores/access-context-store";
 import type { ExternalActorType } from "@/features/external-actors/types";
 
-import { MemberListItem } from "@/components/shared/list-item";
+import { MemberListItem, ListItem } from "@/components/shared/list-item";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { SettingsSection } from "@/components/shared/settings-section";
 import { ContentLayout } from "@/components/layout";
+import { useContextSidebarOverlay } from "@/stores/sidebar-store";
+import { DocsInlinePanel } from "@/features/docs/components/docs-inline-panel";
 import { toast } from "sonner";
 import { AddExternalCollaboratorForm } from "@/features/team/forms/team-add-external-form";
 import {
@@ -47,7 +49,7 @@ interface MembersSettingsViewProps {
 }
 
 export function TeamMembersView({ organizationId, planId, members, invitations, roles, currentUserId, ownerId, canInviteMembers, initialSeatStatus, externalActors, maxExternalAdvisors }: MembersSettingsViewProps) {
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
     const [removedMemberIds, setRemovedMemberIds] = useState<string[]>([]);
     const [removedInvitationIds, setRemovedInvitationIds] = useState<string[]>([]);
     const [roleOverrides, setRoleOverrides] = useState<Record<string, { roleId: string; roleName: string }>>();
@@ -56,6 +58,18 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
     const [selectedRoleId, setSelectedRoleId] = useState<string>("");
     const [isPending, startTransition] = useTransition();
     const [seatStatus, setSeatStatus] = useState<SeatStatus | null>(initialSeatStatus);
+    const { pushOverlay, hasOverlay } = useContextSidebarOverlay();
+
+    // ── Docs Overlay ─────────────────────────────────────────────────────
+    const openDocsOverlay = (docsPath: string) => {
+        if (hasOverlay) return;
+        const slug = docsPath.replace(/^\/(es\/|en\/)?docs\//, '');
+        if (!slug) return;
+        pushOverlay(
+            <DocsInlinePanel slug={slug} />,
+            { title: "Documentación" }
+        );
+    };
 
     // Roles that can be assigned (exclude admin/system roles that shouldn't be manually assigned)
     // Only show roles that belong to THIS organization (not system-level roles)
@@ -115,18 +129,11 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
     };
 
     const handleInvite = () => {
-        openModal(
-            <InviteMemberForm
-                organizationId={organizationId}
-                planId={planId}
-                roles={roles}
-            />,
-            {
-                title: "Invitar Miembro",
-                description: "Invita a nuevos miembros a tu organización para colaborar en proyectos.",
-                size: "md"
-            }
-        );
+        openPanel('team-invite-member-form', {
+            organizationId,
+            planId,
+            roles
+        });
     };
 
     const handleEditRole = (member: OrganizationMemberDetail) => {
@@ -232,10 +239,11 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
     const isCurrentUser = (member: OrganizationMemberDetail) => member.user_id === currentUserId;
 
     return (
-        <ContentLayout variant="wide">
+        <ContentLayout variant="settings">
             <div className="space-y-12 pb-12">
                 {/* Members Section */}
                 <SettingsSection
+                    contentVariant="inset"
                     icon={Users}
                     title="Miembros de la Organización"
                     description={
@@ -264,7 +272,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                             label: "Documentación",
                             icon: BookOpen,
                             variant: "secondary",
-                            href: "/docs/equipo/miembros",
+                            onClick: () => openDocsOverlay("/docs/equipo/miembros"),
                         },
                     ]}
                 >
@@ -305,79 +313,75 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                 {/* Pending Member Invitations Section */}
                 {memberInvitations.length > 0 && (
                     <SettingsSection
+                        contentVariant="inset"
                         icon={Mail}
                         title="Invitaciones Pendientes"
                         description="Usuarios que han sido invitados a unirse a la organización pero aún no han aceptado. Cada invitación ocupa un asiento temporalmente."
                     >
-                        <Card className="border shadow-sm overflow-hidden bg-muted/20">
-                            <div className="divide-y">
-                                {memberInvitations.map((invite) => (
-                                    <div key={invite.id} className="flex items-center justify-between p-4 px-5">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-full bg-background border flex items-center justify-center text-muted-foreground">
-                                                <Mail className="w-5 h-5" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-sm font-medium leading-none">{invite.email}</p>
-                                                <div className="flex items-center gap-2">
-                                                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
-                                                        {roles.find(r => r.id === invite.role_id)?.name || "Rol"}
-                                                    </Badge>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        Enviado el {new Date(invite.created_at).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                            </div>
+                        <div className="space-y-2">
+                            {memberInvitations.map((invite) => (
+                                <ListItem key={invite.id} variant="row">
+                                    <ListItem.Leading>
+                                        <div className="h-10 w-10 rounded-full bg-background border flex items-center justify-center text-muted-foreground">
+                                            <Mail className="w-5 h-5" />
                                         </div>
+                                    </ListItem.Leading>
+                                    <ListItem.Content>
+                                        <ListItem.Title>{invite.email}</ListItem.Title>
+                                        <ListItem.Badges>
+                                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                                                {roles.find(r => r.id === invite.role_id)?.name || "Rol"}
+                                            </Badge>
+                                            <span className="text-xs text-muted-foreground self-center">
+                                                Enviado el {new Date(invite.created_at).toLocaleDateString()}
+                                            </span>
+                                        </ListItem.Badges>
+                                    </ListItem.Content>
+                                    <ListItem.Trailing className="flex flex-row items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 text-xs"
+                                            disabled={isPending}
+                                            onClick={() => {
+                                                startTransition(async () => {
+                                                    const result = await resendInvitationAction(organizationId, invite.id);
+                                                    if (result.success) {
+                                                        toast.success("Invitación reenviada correctamente");
+                                                    } else {
+                                                        toast.error(result.error || "Error al reenviar");
+                                                    }
+                                                });
+                                            }}
+                                        >
+                                            Reenviar
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            disabled={isPending}
+                                            onClick={() => {
+                                                const inviteId = invite.id;
+                                                setRemovedInvitationIds(prev => [...prev, inviteId]);
 
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="h-8 text-xs"
-                                                disabled={isPending}
-                                                onClick={() => {
-                                                    startTransition(async () => {
-                                                        const result = await resendInvitationAction(organizationId, invite.id);
-                                                        if (result.success) {
-                                                            toast.success("Invitación reenviada correctamente");
-                                                        } else {
-                                                            toast.error(result.error || "Error al reenviar");
-                                                        }
-                                                    });
-                                                }}
-                                            >
-                                                Reenviar
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                disabled={isPending}
-                                                onClick={() => {
-                                                    // Optimistic: remove invitation immediately
-                                                    const inviteId = invite.id;
-                                                    setRemovedInvitationIds(prev => [...prev, inviteId]);
-
-                                                    startTransition(async () => {
-                                                        const result = await revokeInvitationAction(organizationId, inviteId);
-                                                        if (result.success) {
-                                                            toast.success("Invitación revocada");
-                                                        } else {
-                                                            // Rollback
-                                                            setRemovedInvitationIds(prev => prev.filter(id => id !== inviteId));
-                                                            toast.error(result.error || "Error al revocar");
-                                                        }
-                                                    });
-                                                }}
-                                            >
-                                                Revocar
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
+                                                startTransition(async () => {
+                                                    const result = await revokeInvitationAction(organizationId, inviteId);
+                                                    if (result.success) {
+                                                        toast.success("Invitación revocada");
+                                                    } else {
+                                                        setRemovedInvitationIds(prev => prev.filter(id => id !== inviteId));
+                                                        toast.error(result.error || "Error al revocar");
+                                                    }
+                                                });
+                                            }}
+                                        >
+                                            Revocar
+                                        </Button>
+                                    </ListItem.Trailing>
+                                </ListItem>
+                            ))}
+                        </div>
                     </SettingsSection>
                 )}
 
@@ -390,6 +394,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                     </div>
                     <div className={!isCurrentUserOwner ? 'pointer-events-none opacity-50' : 'opacity-75'}>
                         <SettingsSection
+                            contentVariant="inset"
                             icon={Wrench}
                             title="Colaboradores"
                             description={
@@ -406,14 +411,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                     label: "Agregar Colaborador",
                                     icon: UserCheck,
                                     onClick: () => {
-                                        openModal(
-                                            <AddExternalCollaboratorForm organizationId={organizationId} />,
-                                            {
-                                                title: "Agregar Colaborador",
-                                                description: "Agregá asesores y colaboradores profesionales a tu organización.",
-                                                size: "md"
-                                            }
-                                        );
+                                        openPanel('team-add-external-form', { organizationId });
                                     },
                                     featureGuard: {
                                         isEnabled: canAddAdvisor,
@@ -428,7 +426,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                     label: "Documentación",
                                     icon: BookOpen,
                                     variant: "secondary",
-                                    href: "/docs/equipo/colaboradores",
+                                    onClick: () => openDocsOverlay("/docs/equipo/colaboradores"),
                                 },
                             ]}
                         >
@@ -442,14 +440,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                                 viewName="Colaboradores"
                                                 featureDescription="Los colaboradores son profesionales que participan en tus proyectos: contadores, directores de obra, subcontratistas, etc. No ocupan asientos del plan."
                                                 onAction={() => {
-                                                    openModal(
-                                                        <AddExternalCollaboratorForm organizationId={organizationId} />,
-                                                        {
-                                                            title: "Agregar Colaborador",
-                                                            description: "Agregá asesores y colaboradores profesionales a tu organización.",
-                                                            size: "md"
-                                                        }
-                                                    );
+                                                    openPanel('team-add-external-form', { organizationId });
                                                 }}
                                                 actionLabel="Agregar Colaborador"
                                                 docsPath="/docs/equipo/colaboradores"
@@ -505,26 +496,26 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                                 {advisorInvitations.length > 0 && (
                                                     <div className={advisorActors.length > 0 ? "mt-4" : ""}>
                                                         <p className="text-xs font-medium text-muted-foreground mb-2">Invitaciones pendientes</p>
-                                                        <Card className="border shadow-sm overflow-hidden bg-muted/10">
-                                                            <div className="divide-y">
-                                                                {advisorInvitations.map((invite) => (
-                                                                    <div key={invite.id} className="flex items-center justify-between p-4 px-5">
-                                                                        <div className="flex items-center gap-4">
-                                                                            <div className="h-10 w-10 rounded-full bg-background border flex items-center justify-center text-muted-foreground">
-                                                                                <Mail className="w-5 h-5" />
-                                                                            </div>
-                                                                            <div className="space-y-1">
-                                                                                <p className="text-sm font-medium leading-none">{invite.email}</p>
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
-                                                                                        {EXTERNAL_ACTOR_TYPE_LABELS[(invite as any).actor_type]?.label || 'Colaborador'}
-                                                                                    </Badge>
-                                                                                    <span className="text-xs text-muted-foreground">
-                                                                                        Enviado el {new Date(invite.created_at).toLocaleDateString()}
-                                                                                    </span>
-                                                                                </div>
-                                                                            </div>
+                                                        <div className="space-y-2">
+                                                            {advisorInvitations.map((invite) => (
+                                                                <ListItem key={invite.id} variant="row">
+                                                                    <ListItem.Leading>
+                                                                        <div className="h-10 w-10 rounded-full bg-background border flex items-center justify-center text-muted-foreground">
+                                                                            <Mail className="w-5 h-5" />
                                                                         </div>
+                                                                    </ListItem.Leading>
+                                                                    <ListItem.Content>
+                                                                        <ListItem.Title>{invite.email}</ListItem.Title>
+                                                                        <ListItem.Badges>
+                                                                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                                                                                {EXTERNAL_ACTOR_TYPE_LABELS[(invite as any).actor_type]?.label || 'Colaborador'}
+                                                                            </Badge>
+                                                                            <span className="text-xs text-muted-foreground self-center">
+                                                                                Enviado el {new Date(invite.created_at).toLocaleDateString()}
+                                                                            </span>
+                                                                        </ListItem.Badges>
+                                                                    </ListItem.Content>
+                                                                    <ListItem.Trailing className="flex flex-row items-center justify-end">
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="sm"
@@ -546,10 +537,10 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                                                         >
                                                                             Revocar
                                                                         </Button>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </Card>
+                                                                    </ListItem.Trailing>
+                                                                </ListItem>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </>

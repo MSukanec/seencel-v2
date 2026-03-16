@@ -49,7 +49,7 @@ function ActivityItemRow({
     const moduleCfg = moduleConfigs[item.target_table];
 
     const actionLabel = actionCfg?.label || verb;
-    const moduleLabel = moduleCfg?.label || item.target_table;
+    const moduleLabel = moduleCfg?.displayLabel || item.target_table;
     const detail = getDetailText(item);
     const initials = (item.full_name || "?")
         .split(" ")

@@ -25,6 +25,7 @@ import {
     CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { CELL_VALUE_CLASS, CELL_EMPTY_CLASS, EDITABLE_CELL_CLASS } from "./column-styles";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -89,40 +90,40 @@ function EditableProjectCell<TData>({
     const currentId = getProjectId(row);
     const initials = name ? name.substring(0, 2).toUpperCase() : "?";
 
-    const handleSelect = async (projectId: string) => {
+    const handleSelect = (projectId: string) => {
+        setOpen(false);
         const newId = projectId === "__none__" ? null : projectId;
         if (newId !== currentId) {
-            await onUpdate(row, newId);
+            onUpdate(row, newId);
         }
-        setOpen(false);
     };
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <button
-                    className="flex items-center gap-2 cursor-pointer rounded-md px-1.5 py-1 -mx-1.5 transition-all border border-transparent hover:border-dashed hover:border-border hover:bg-[#2a2b2d]"
+                    className={cn("flex items-center gap-2", EDITABLE_CELL_CLASS)}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {name ? (
                         <>
-                            <Avatar className="h-5 w-5 rounded-full border border-border/50">
+                            <Avatar className="h-6 w-6 rounded-md border border-border/50">
                                 {imageUrl ? (
                                     <AvatarImage src={imageUrl} alt={name} className="object-cover" />
                                 ) : null}
                                 <AvatarFallback
-                                    className="rounded-full text-[6px] font-bold text-white"
+                                    className="rounded-md text-[7px] font-bold text-white"
                                     style={{ backgroundColor: color || "hsl(var(--primary))" }}
                                 >
                                     {initials}
                                 </AvatarFallback>
                             </Avatar>
-                            <span className="text-xs font-[450] truncate max-w-[120px]" title={name}>
+                            <span className={cn(CELL_VALUE_CLASS, "truncate max-w-[120px]")} title={name}>
                                 {name}
                             </span>
                         </>
                     ) : (
-                        <span className="text-muted-foreground italic text-xs">{emptyValue}</span>
+                        <span className={cn(CELL_EMPTY_CLASS, "italic")}>{emptyValue}</span>
                     )}
                 </button>
             </PopoverTrigger>
@@ -210,7 +211,7 @@ export function createProjectColumn<TData>(
 
             if (!name) {
                 return (
-                    <span className="text-muted-foreground italic text-xs">
+                    <span className={cn(CELL_EMPTY_CLASS, "italic")}>
                         {emptyValue}
                     </span>
                 );
@@ -220,18 +221,18 @@ export function createProjectColumn<TData>(
 
             return (
                 <div className="flex items-center gap-2">
-                    <Avatar className="h-5 w-5 rounded-full border border-border/50">
+                    <Avatar className="h-6 w-6 rounded-md border border-border/50">
                         {imageUrl ? (
                             <AvatarImage src={imageUrl} alt={name} className="object-cover" />
                         ) : null}
                         <AvatarFallback
-                            className="rounded-full text-[6px] font-bold text-white"
+                            className="rounded-md text-[7px] font-bold text-white"
                             style={{ backgroundColor: color || "hsl(var(--primary))" }}
                         >
                             {initials}
                         </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs font-[450] truncate max-w-[160px]" title={name}>
+                    <span className={cn(CELL_VALUE_CLASS, "truncate max-w-[160px]")} title={name}>
                         {name}
                     </span>
                 </div>

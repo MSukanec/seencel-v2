@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-10T23:31:35.891Z
+> Generated: 2026-03-15T18:32:16.410Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -96,6 +96,8 @@
 | accessibility_notes | text | ✓ |  |  |
 | updated_by | uuid | ✓ |  | FK → organization_members.id |
 | created_by | uuid | ✓ |  | FK → organization_members.id |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
 
 ### `iam.organization_external_actors`
 

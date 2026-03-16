@@ -16,6 +16,7 @@ export async function getOrganizationContacts(organizationId: string): Promise<C
         .schema('contacts').from('contacts_view')
         .select('*')
         .eq('organization_id', organizationId)
+        .limit(2000)
         .eq('is_deleted', false) // Filter out deleted contacts
         .order('full_name', { ascending: true });
 
@@ -36,12 +37,19 @@ function getStorageUrl(path: string | null, bucket: string = 'avatars') {
     return `${baseUrl}/storage/v1/object/public/${bucket}/${path}`;
 }
 
-export async function createContact(organizationId: string, contact: Partial<Contact>, categoryIds: string[] = []) {
+export async function createContact(organizationId: string, contact: Partial<Contact>, categoryIds: string[] = [], media_files?: any[]) {
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
+
     const supabase = await createClient();
 
     // Prepare payload
+    // Extract media_files if passed via contact object, we use it later
+    let extractedMediaFiles = media_files || (contact as any).media_files;
+    const { media_files: _ignore, ...contactFields } = contact as any;
+
     const payload: Record<string, any> = {
-        ...contact,
+        ...contactFields,
         organization_id: organizationId,
     };
 
@@ -110,6 +118,55 @@ export async function createContact(organizationId: string, contact: Partial<Con
         }
     }
 
+    // 3. Link media files if provided
+    if (extractedMediaFiles && extractedMediaFiles.length > 0) {
+        for (const mediaData of extractedMediaFiles) {
+            if (mediaData.id === 'existing') continue;
+            if (!mediaData.path || !mediaData.bucket) continue;
+
+            const dbType = mediaData.type?.startsWith('image/')
+                ? 'image'
+                : mediaData.type === 'application/pdf'
+                    ? 'pdf'
+                    : 'other';
+
+            const { data: fileData, error: fileError } = await supabase
+                .from('media_files')
+                .insert({
+                    organization_id: organizationId,
+                    bucket: mediaData.bucket,
+                    file_path: mediaData.path,
+                    file_name: mediaData.name,
+                    file_type: dbType,
+                    file_size: mediaData.size,
+                    is_public: false
+                })
+                .select()
+                .single();
+
+            if (fileError) {
+                console.error('Error creating media_file for contact:', fileError);
+                continue;
+            }
+
+            if (fileData) {
+                const { error: linkError } = await supabase
+                    .from('media_links')
+                    .insert({
+                        media_file_id: fileData.id,
+                        organization_id: organizationId,
+                        contact_id: newContact.id,
+                        category: 'document',
+                        visibility: 'private'
+                    });
+
+                if (linkError) {
+                    console.error('Error creating media_link for contact:', linkError);
+                }
+            }
+        }
+    }
+
     revalidatePath(`/organization/contacts`);
 
     // Mark onboarding step as completed (fire and forget)
@@ -118,11 +175,18 @@ export async function createContact(organizationId: string, contact: Partial<Con
     return newContact;
 }
 
-export async function updateContact(contactId: string, updates: Partial<Contact>, categoryIds?: string[]) {
+export async function updateContact(contactId: string, updates: Partial<Contact>, categoryIds?: string[], media_files?: any[]) {
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
+
     const supabase = await createClient();
 
+    // Extract media_files if passed via updates
+    let extractedMediaFiles = media_files || (updates as any).media_files;
+    const { media_files: _ignore, ...updateFields } = updates as any;
+
     const payload: Record<string, any> = {
-        ...updates,
+        ...updateFields,
     };
 
     // Convert relative path to full URL if needed
@@ -137,7 +201,7 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
             .schema('contacts').from('contacts')
             .select('linked_user_id, organization_id')
             .eq('id', contactId)
-            .single();
+            .maybeSingle();
 
         if (currentContact && !currentContact.linked_user_id) {
             const seencelUser = await checkSeencelUser(payload.email);
@@ -214,6 +278,58 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
         }
     }
 
+    // 3. Update media files if provided
+    if (extractedMediaFiles && extractedMediaFiles.length > 0) {
+        const { data: contact } = await supabase.schema('contacts').from('contacts').select('organization_id').eq('id', contactId).single();
+        if (contact) {
+            for (const mediaData of extractedMediaFiles) {
+                if (mediaData.id === 'existing') continue;
+                if (!mediaData.path || !mediaData.bucket) continue;
+
+                const dbType = mediaData.type?.startsWith('image/')
+                    ? 'image'
+                    : mediaData.type === 'application/pdf'
+                        ? 'pdf'
+                        : 'other';
+
+                const { data: fileData, error: fileError } = await supabase
+                    .from('media_files')
+                    .insert({
+                        organization_id: contact.organization_id,
+                        bucket: mediaData.bucket,
+                        file_path: mediaData.path,
+                        file_name: mediaData.name,
+                        file_type: dbType,
+                        file_size: mediaData.size,
+                        is_public: false
+                    })
+                    .select()
+                    .single();
+
+                if (fileError) {
+                    console.error('Error creating media_file for contact:', fileError);
+                    continue;
+                }
+
+                if (fileData) {
+                    const { error: linkError } = await supabase
+                        .from('media_links')
+                        .insert({
+                            media_file_id: fileData.id,
+                            organization_id: contact.organization_id,
+                            contact_id: contactId,
+                            category: 'document',
+                            visibility: 'private'
+                        });
+
+                    if (linkError) {
+                        console.error('Error creating media_link for contact:', linkError);
+                    }
+                }
+            }
+        }
+    }
+
     revalidatePath('/', 'layout'); // Aggressive refresh to ensure next-intl routes update
     revalidatePath(`/organization/contacts`);
 }
@@ -226,7 +342,7 @@ export async function deleteContact(contactId: string, replacementId?: string) {
         .schema('contacts').from('contacts')
         .select('organization_id')
         .eq('id', contactId)
-        .single();
+        .maybeSingle();
 
     if (!contact) {
         throw new Error('Contacto no encontrado');
@@ -279,7 +395,7 @@ export async function getContactCategories(organizationId: string): Promise<Cont
 
     const { data, error } = await supabase
         .schema('contacts').from('contact_categories')
-        .select('*')
+        .select('id, name, organization_id')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
         .order('name');

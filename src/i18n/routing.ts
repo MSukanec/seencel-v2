@@ -22,6 +22,26 @@ export const routing = defineRouting({
             en: '/profile',
             es: '/perfil'
         },
+        '/profile/organizations': {
+            en: '/profile/organizations',
+            es: '/perfil/organizaciones'
+        },
+        '/profile/security': {
+            en: '/profile/security',
+            es: '/perfil/seguridad'
+        },
+        '/profile/billing': {
+            en: '/profile/billing',
+            es: '/perfil/facturacion'
+        },
+        '/profile/notifications': {
+            en: '/profile/notifications',
+            es: '/perfil/notificaciones'
+        },
+        '/profile/preferences': {
+            en: '/profile/preferences',
+            es: '/perfil/preferencias'
+        },
         '/notifications': {
             en: '/notifications',
             es: '/notificaciones'
@@ -34,14 +54,58 @@ export const routing = defineRouting({
             en: '/organization/projects/[projectId]',
             es: '/organizacion/proyectos/[projectId]'
         },
+        '/organization/projects/settings': {
+            en: '/organization/projects/settings',
+            es: '/organizacion/proyectos/ajustes'
+        },
+        '/organization/projects/location': {
+            en: '/organization/projects/location',
+            es: '/organizacion/proyectos/ubicacion'
+        },
 
         '/organization/settings': {
             en: '/organization/settings',
             es: '/organizacion/configuracion'
         },
+        '/organization/settings/members': {
+            en: '/organization/settings/members',
+            es: '/organizacion/configuracion/miembros'
+        },
+        '/organization/settings/permissions': {
+            en: '/organization/settings/permissions',
+            es: '/organizacion/configuracion/permisos'
+        },
+        '/organization/settings/location': {
+            en: '/organization/settings/location',
+            es: '/organizacion/configuracion/ubicacion'
+        },
+        '/organization/settings/billing': {
+            en: '/organization/settings/billing',
+            es: '/organizacion/configuracion/facturacion'
+        },
+        '/organization/settings/finance': {
+            en: '/organization/settings/finance',
+            es: '/organizacion/configuracion/finanzas'
+        },
+        '/organization/settings/activity': {
+            en: '/organization/settings/activity',
+            es: '/organizacion/configuracion/actividad'
+        },
+        '/organization/advanced': {
+            en: '/organization/advanced',
+            es: '/organizacion/avanzado'
+        },
+        '/organization/advanced/indices': {
+            en: '/organization/advanced/indices',
+            es: '/organizacion/avanzado/indices'
+        },
         '/organization/contacts': {
             en: '/organization/contacts',
             es: '/organizacion/contactos'
+        },
+        '/organization/contacts/categories': {
+            en: '/organization/contacts/categories',
+            es: '/organizacion/contactos/categorias'
         },
         '/organization/team': {
             en: '/organization/team',
@@ -115,7 +179,11 @@ export const routing = defineRouting({
         // ===== Organization Files =====
         '/organization/files': {
             en: '/organization/files',
-            es: '/organizacion/documentacion'
+            es: '/organizacion/archivos'
+        },
+        '/organization/files/settings': {
+            en: '/organization/files/settings',
+            es: '/organizacion/archivos/ajustes'
         },
 
         // ===== Organization Quotes =====
@@ -132,6 +200,18 @@ export const routing = defineRouting({
         '/organization/general-costs': {
             en: '/organization/general-costs',
             es: '/organizacion/gastos-generales'
+        },
+        '/organization/general-costs/payments': {
+            en: '/organization/general-costs/payments',
+            es: '/organizacion/gastos-generales/pagos'
+        },
+        '/organization/general-costs/concepts': {
+            en: '/organization/general-costs/concepts',
+            es: '/organizacion/gastos-generales/conceptos'
+        },
+        '/organization/general-costs/settings': {
+            en: '/organization/general-costs/settings',
+            es: '/organizacion/gastos-generales/ajustes'
         },
 
         // ===== Organization Pages (migrated from /project/) =====

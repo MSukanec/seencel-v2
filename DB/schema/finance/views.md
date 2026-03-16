@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-10T23:31:35.891Z
+> Generated: 2026-03-15T18:32:16.410Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -380,6 +380,7 @@ SELECT gcp.id,
     gcp.organization_id,
     gcp.payment_date,
     date_trunc('month'::text, (gcp.payment_date)::timestamp with time zone) AS payment_month,
+    gcp.covers_period,
     gcp.amount,
     gcp.currency_id,
     cur.code AS currency_code,

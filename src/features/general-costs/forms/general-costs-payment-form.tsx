@@ -41,6 +41,9 @@ import type { UploadedFile } from "@/hooks/use-file-upload";
 import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import { GeneralCost, GeneralCostPaymentView } from "@/features/general-costs/types";
 import { createGeneralCostPayment, updateGeneralCostPayment } from "@/features/general-costs/actions";
+import { FormHeroField } from "@/components/shared/forms/fields/form-hero-field";
+import { FormNotesField } from "@/components/shared/forms/fields/form-notes-field";
+import { FormReferenceField } from "@/components/shared/forms/fields/form-reference-field";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -81,7 +84,7 @@ export function GeneralCostsPaymentForm({
     onSuccess,
     formId,
 }: PaymentFormProps) {
-    const { closePanel, setPanelMeta, createAnother, triggerSuccessFlash } = usePanel();
+    const { closePanel, setPanelMeta, completePanel } = usePanel();
     const isEditing = !!initialData;
     const [isLoading, setIsLoading] = useState(false);
     const uploadCleanupRef = useRef<(() => void) | null>(null);
@@ -232,11 +235,10 @@ export function GeneralCostsPaymentForm({
             onSuccess?.();
 
             // If "create another" is active and we're creating (not editing), reset form
-            if (createAnother && !isEditing) {
-                triggerSuccessFlash();
-                resetForm();
-            } else {
+            if (isEditing) {
                 closePanel();
+            } else {
+                completePanel(resetForm);
             }
         } catch {
             toast.error("Error al guardar el pago");
@@ -294,67 +296,49 @@ export function GeneralCostsPaymentForm({
                 />
             </ChipRow>
 
-            {/* ── Separator ─────────────────────────────── */}
-            <div className="border-t border-border/30 my-4" />
-
             {/* ── Hero: Amount ──────────────────────────── */}
-            <div className="-mx-5 px-5 py-4 border-y border-border/20" style={{ background: "color-mix(in oklch, var(--sidebar), black 15%)" }}>
-                <div className="flex items-center gap-3">
-                    <span className="text-2xl font-light text-muted-foreground select-none">
-                        {currencySymbol}
-                    </span>
+            <FormHeroField
+                value={amount ? formatAmountDisplay(amount) : ""}
+                onChange={(v) => {
+                    const raw = v.replace(/\./g, "").replace(",", ".");
+                    if (raw === "" || /^\d*\.?\d*$/.test(raw)) setAmount(raw);
+                }}
+                placeholder="0.00"
+                prefix={currencySymbol}
+                inputMode="decimal"
+                size="lg"
+                autoFocus
+            >
+                {/* Exchange rate inline */}
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="select-none">Tasa de Cambio</span>
                     <input
                         type="text"
                         inputMode="decimal"
-                        value={amount ? formatAmountDisplay(amount) : ""}
+                        value={exchangeRate ? formatAmountDisplay(exchangeRate) : ""}
                         onChange={(e) => {
-                            // Strip thousand separators (dots), convert decimal comma to dot
                             const raw = e.target.value.replace(/\./g, "").replace(",", ".");
-                            if (raw === "" || /^\d*\.?\d*$/.test(raw)) setAmount(raw);
+                            if (raw === "" || /^\d*\.?\d*$/.test(raw)) setExchangeRate(raw);
                         }}
-                        placeholder="0.00"
-                        className="flex-1 bg-transparent text-4xl font-semibold text-foreground placeholder:text-muted-foreground/40 outline-none border-none"
-                        autoFocus
+                        placeholder="1,0000"
+                        className="w-20 bg-transparent text-xs text-muted-foreground placeholder:text-muted-foreground/30 outline-none border-none text-right font-mono"
                     />
-                    {/* Exchange rate inline */}
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span className="select-none">Tasa de Cambio</span>
-                        <input
-                            type="text"
-                            inputMode="decimal"
-                            value={exchangeRate ? formatAmountDisplay(exchangeRate) : ""}
-                            onChange={(e) => {
-                                const raw = e.target.value.replace(/\./g, "").replace(",", ".");
-                                if (raw === "" || /^\d*\.?\d*$/.test(raw)) setExchangeRate(raw);
-                            }}
-                            placeholder="1,0000"
-                            className="w-20 bg-transparent text-xs text-muted-foreground placeholder:text-muted-foreground/30 outline-none border-none text-right font-mono"
-                        />
-                    </div>
                 </div>
-            </div>
+            </FormHeroField>
 
             {/* ── Borderless fields ─────────────────────── */}
             <div className="flex-1 mt-4 space-y-1">
                 {/* Notes */}
-                <textarea
+                <FormNotesField
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Agregar notas o descripción..."
-                    rows={3}
-                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 outline-none border-none resize-none leading-relaxed"
+                    onChange={setNotes}
                 />
 
-                {/* Reference — subtle, secondary */}
-                <div className="border-t border-border/10 pt-2 mt-1">
-                    <input
-                        type="text"
-                        value={reference}
-                        onChange={(e) => setReference(e.target.value)}
-                        placeholder="# Nro. de recibo o referencia"
-                        className="w-full bg-transparent text-xs text-muted-foreground placeholder:text-muted-foreground/30 outline-none border-none"
-                    />
-                </div>
+                {/* Reference */}
+                <FormReferenceField
+                    value={reference}
+                    onChange={setReference}
+                />
             </div>
         </form>
     );

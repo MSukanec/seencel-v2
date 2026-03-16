@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Minus, Users, ShoppingCart, AlertTriangle, CheckCircle } from "lucide-react";
+import { Plus, Minus, Users, ShoppingCart, AlertTriangle, CheckCircle, UserPlus } from "lucide-react";
 import { Role, SeatStatus } from "@/features/team/types";
 import { getOrganizationSeatStatus, sendInvitationAction } from "@/features/team/actions";
 import { Link } from "@/i18n/routing";
@@ -22,11 +22,12 @@ interface InviteMemberFormProps {
     organizationId: string;
     planId: string;
     roles: Role[];
+    formId?: string;
 }
 
-export function InviteMemberForm({ organizationId, planId, roles }: InviteMemberFormProps) {
+export function InviteMemberForm({ organizationId, planId, roles, formId }: InviteMemberFormProps) {
     const router = useRouter();
-    const { closeModal, openModal } = useModal();
+    const { closePanel, setPanelMeta, setBeforeClose } = usePanel();
     const [seatStatus, setSeatStatus] = useState<SeatStatus | null>(null);
     const [loadingSeats, setLoadingSeats] = useState(true);
 
@@ -55,12 +56,55 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
         loadSeatStatus();
     }, [organizationId]);
 
+    // Panel Meta Sync
+    useEffect(() => {
+        if (showPurchaseFlow && seatStatus) {
+            setPanelMeta({
+                icon: ShoppingCart,
+                title: "Comprar Asientos",
+                description: "Agregá más capacidad a tu plan.",
+                size: "md",
+                footer: {
+                    submitLabel: "Ir a Checkout",
+                    cancelLabel: seatStatus.can_invite ? "Volver" : "Cancelar",
+                }
+            });
+        } else {
+            setPanelMeta({
+                icon: UserPlus,
+                title: "Invitar Miembro",
+                description: "Invitá a nuevos miembros a tu organización para colaborar en proyectos.",
+                size: "md",
+                footer: {
+                    submitLabel: "Enviar Invitación",
+                }
+            });
+        }
+    }, [showPurchaseFlow, seatStatus?.can_invite, setPanelMeta]);
+
+    // Manejar intercepciones de cerrado (ej. Volver dentro de panel en lugar de cerrar)
+    useEffect(() => {
+        if (showPurchaseFlow && seatStatus?.can_invite) {
+            setBeforeClose(() => {
+                setShowPurchaseFlow(false);
+                return false; // Evitar cierre del panel
+            });
+        } else {
+            setBeforeClose(undefined);
+        }
+    }, [showPurchaseFlow, seatStatus?.can_invite, setBeforeClose]);
+
     const handleCancel = () => {
-        closeModal();
+        closePanel();
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (showPurchaseFlow) {
+            handleGoToCheckout();
+            return;
+        }
 
         if (!email.trim()) {
             toast.error("El email es obligatorio");
@@ -72,10 +116,10 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
             return;
         }
 
-        // Optimistic: close modal immediately and show toast
+        // Optimistic: close panel immediately and show toast
         const inviteEmail = email.trim();
         const inviteRoleId = roleId;
-        closeModal();
+        closePanel();
         toast.success("Invitación enviada correctamente");
 
         // Server call in background
@@ -92,7 +136,7 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
 
     const handleGoToCheckout = () => {
         // Navigate to checkout with seat purchase params (client-side, instant)
-        closeModal();
+        closePanel();
         router.push(`/checkout?type=seats&org=${organizationId}&quantity=${seatsToBuy}` as any);
     };
 
@@ -120,7 +164,7 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
     // Show purchase flow (triggered by no seats OR user clicks "buy more")
     if (showPurchaseFlow && seatStatus) {
         return (
-            <div className="flex flex-col h-full min-h-0">
+            <form id={formId} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
                 <div className="flex-1 overflow-y-auto space-y-4">
                     {/* Seat Balance */}
                     <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1.5">
@@ -266,23 +310,13 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
                         </div>
                     </div>
                 </div>
-
-                <FormFooter
-                    className="-mx-4 -mb-4 mt-4"
-                    isLoading={false}
-                    isForm={false}
-                    submitLabel="Ir a Checkout"
-                    cancelLabel={seatStatus.can_invite ? "Volver" : "Cancelar"}
-                    onCancel={seatStatus.can_invite ? () => setShowPurchaseFlow(false) : handleCancel}
-                    onSubmit={handleGoToCheckout}
-                />
-            </div>
+            </form>
         );
     }
 
     // Normal invitation form (seats available)
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto space-y-4">
                 {/* Seat Counter Badge */}
                 {seatStatus && (
@@ -341,13 +375,6 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
                     </p>
                 )}
             </div>
-
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                isLoading={false}
-                submitLabel="Enviar Invitación"
-                onCancel={handleCancel}
-            />
         </form>
     );
 }

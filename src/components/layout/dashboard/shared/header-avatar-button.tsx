@@ -9,12 +9,13 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { Link, useRouter } from "@/i18n/routing";
+import { Link, useRouter, usePathname } from "@/i18n/routing";
 import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { useUser } from "@/stores/user-store";
 import { useModal } from "@/stores/modal-store";
+import { useLayoutStore } from "@/stores/layout-store";
 import { FeedbackForm } from "@/components/shared/forms/feedback-form";
 import { HeaderIconButton } from "@/components/layout/dashboard/shared/header-icon-button";
 import {
@@ -27,6 +28,7 @@ import {
     Sun,
     Moon,
     Sparkles,
+    ChevronsUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +40,7 @@ import { cn } from "@/lib/utils";
 // Styles unified with SidebarNotificationsButton popover.
 // ============================================================================
 
-export function HeaderAvatarButton() {
+export function HeaderAvatarButton({ variant = 'header' }: { variant?: 'header' | 'sidebar' | 'sidebar-collapsed' }) {
     const [open, setOpen] = React.useState(false);
     const router = useRouter();
     const supabase = createClient();
@@ -48,6 +50,7 @@ export function HeaderAvatarButton() {
 
     const { openModal, closeModal } = useModal();
     const tFeedback = useTranslations('Feedback');
+    const pathname = usePathname();
 
     const name = user?.full_name || "Usuario";
     const email = user?.email || "";
@@ -83,22 +86,87 @@ export function HeaderAvatarButton() {
     // Shared item classes — matches notifications popover density
     const itemClass = "flex items-center gap-3 px-3 py-2 text-sm transition-colors hover:bg-muted/50 cursor-pointer";
 
+    const isSidebar = variant === 'sidebar' || variant === 'sidebar-collapsed';
+
+    const triggerContent = variant === 'sidebar' ? (
+        // Sidebar expanded: Avatar + Name + Email + Chevrons
+        <button
+            className={cn(
+                "flex items-center cursor-pointer transition-all w-full px-2 py-1.5 gap-2.5 rounded-xl text-left",
+                "bg-white/[0.03] border border-white/[0.08]",
+                "shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3),0_1px_2px_rgba(0,0,0,0.2)]",
+                "hover:bg-white/[0.05] hover:border-white/[0.11]",
+                "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_3px_8px_rgba(0,0,0,0.35),0_1px_3px_rgba(0,0,0,0.25)]",
+                "text-sidebar-foreground",
+                open && "bg-white/[0.05] border-white/[0.11]"
+            )}
+        >
+            <div className={cn(
+                "shrink-0 rounded-full flex items-center justify-center",
+                "h-8 w-8 bg-black/20 shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.35),inset_0_0.5px_1px_rgba(0,0,0,0.25)] border border-white/[0.04]"
+            )}>
+                <Avatar className="h-6 w-6 rounded-full shrink-0">
+                    <AvatarImage src={avatarUrl} alt={name} />
+                    <AvatarFallback className="text-[10px] rounded-full bg-primary/10 text-primary font-medium">
+                        {initials}
+                    </AvatarFallback>
+                </Avatar>
+            </div>
+            <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-sm font-semibold truncate w-full leading-tight">
+                    {name.split(' ')[0]}
+                </span>
+                <span className="text-[11px] text-muted-foreground leading-tight truncate w-full">
+                    {email}
+                </span>
+            </div>
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+        </button>
+    ) : variant === 'sidebar-collapsed' ? (
+        // Sidebar collapsed: Avatar only, matching OrgSelector square sizing
+        <button
+            className={cn(
+                "flex items-center justify-center w-11 h-[44px] rounded-xl transition-all cursor-pointer",
+                "bg-white/[0.03] border border-white/[0.08]",
+                "shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3),0_1px_2px_rgba(0,0,0,0.2)]",
+                "hover:bg-white/[0.05] hover:border-white/[0.11]",
+                "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_3px_8px_rgba(0,0,0,0.35),0_1px_3px_rgba(0,0,0,0.25)]",
+                open && "bg-white/[0.05] border-white/[0.11]"
+            )}
+        >
+            <div className={cn(
+                "shrink-0 rounded-full flex items-center justify-center",
+                "h-8 w-8 bg-black/20 shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.35),inset_0_0.5px_1px_rgba(0,0,0,0.25)] border border-white/[0.04]"
+            )}>
+                <Avatar className="h-6 w-6 rounded-full shrink-0">
+                    <AvatarImage src={avatarUrl} alt={name} />
+                    <AvatarFallback className="text-[10px] rounded-full bg-primary/10 text-primary font-medium">
+                        {initials}
+                    </AvatarFallback>
+                </Avatar>
+            </div>
+        </button>
+    ) : (
+        // Header: Original icon button trigger
+        <HeaderIconButton active={open} className="p-0">
+            <Avatar className="h-8 w-8 rounded-full">
+                <AvatarImage src={avatarUrl} alt={name} />
+                <AvatarFallback className="text-xs rounded-full bg-primary/10 text-primary font-medium">
+                    {initials}
+                </AvatarFallback>
+            </Avatar>
+        </HeaderIconButton>
+    );
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <HeaderIconButton active={open} className="p-0">
-                    <Avatar className="h-8 w-8 rounded-full">
-                        <AvatarImage src={avatarUrl} alt={name} />
-                        <AvatarFallback className="text-xs rounded-full bg-primary/10 text-primary font-medium">
-                            {initials}
-                        </AvatarFallback>
-                    </Avatar>
-                </HeaderIconButton>
+                {triggerContent}
             </PopoverTrigger>
 
             <PopoverContent
-                side="bottom"
-                align="end"
+                side={isSidebar ? "right" : "bottom"}
+                align={isSidebar ? "end" : "end"}
                 sideOffset={8}
                 className="w-[240px] p-0"
             >
@@ -120,7 +188,17 @@ export function HeaderAvatarButton() {
 
                 {/* Menu Items — dense, border-separated like notification items */}
                 <div className="flex flex-col">
-                    <Link href="/profile" onClick={handleClose} className={itemClass}>
+                    <Link
+                        href="/profile"
+                        onClick={() => {
+                            // Save current path so "Volver a la app" works
+                            if (!pathname.includes('/profile')) {
+                                useLayoutStore.getState().actions.setPreviousPath(pathname);
+                            }
+                            handleClose();
+                        }}
+                        className={itemClass}
+                    >
                         <Settings className="h-4 w-4 text-muted-foreground shrink-0" />
                         {tUser('settings')}
                     </Link>

@@ -1,25 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
-import { FormFooter } from "@/components/shared/forms/form-footer";
+import { usePanel } from "@/stores/panel-store";
 import { UploadField } from "@/components/shared/forms/fields/upload-field";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { FolderOpen, FolderPlus, Loader2 } from "lucide-react";
+import { Upload } from "lucide-react";
 import { type UploadedFile } from "@/hooks/use-file-upload";
-import { uploadFiles, createFolder } from "@/features/files/actions";
-import type { Folder } from "@/features/files/types";
+import { uploadFiles } from "@/features/files/actions";
 import { ProjectField } from "@/components/shared/forms/fields/project-field";
 
 // ============================================================================
@@ -29,43 +17,38 @@ import { ProjectField } from "@/components/shared/forms/fields/project-field";
 interface FilesUploadFormProps {
     organizationId: string;
     maxFileSizeMb: number;
-    folders?: Folder[];
     /** Projects available for selection (org-level context) */
     projects?: { id: string; name: string }[];
     /** Pre-selected project (project-level context) */
     activeProjectId?: string | null;
+    /** Injected by PanelProvider — connects form to footer submit */
+    formId?: string;
 }
 
-export function FilesUploadForm({ organizationId, maxFileSizeMb, folders = [], projects = [], activeProjectId }: FilesUploadFormProps) {
+export function FilesUploadForm({ organizationId, maxFileSizeMb, projects = [], activeProjectId, formId }: FilesUploadFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
     const uploadedFilesRef = useRef<UploadedFile[]>([]);
     const cleanupRef = useRef<(() => void) | null>(null);
 
-    // Root-level folders for the selector, sorted alphabetically
-    const rootFolders = useMemo(() =>
-        folders.filter(f => !f.parent_id).sort((a, b) => a.name.localeCompare(b.name)),
-        [folders]
-    );
+    // -1 = unlimited (plan features convention). Resolve to practical cap.
+    const effectiveMaxSize = maxFileSizeMb < 0 ? 1024 : maxFileSizeMb;
 
-    // Pre-select first folder alphabetically, or __none__ if no folders exist
-    const [selectedFolderId, setSelectedFolderId] = useState<string>(
-        rootFolders.length > 0 ? rootFolders[0].id : "__none__"
-    );
+    // 🚨 OBLIGATORIO: Self-describe panel header + footer
+    useEffect(() => {
+        setPanelMeta({
+            icon: Upload,
+            title: "Subir Archivos",
+            description: "Seleccioná los archivos que querés subir a tu organización",
+            size: "md",
+            footer: {
+                submitLabel: "Subir",
+            },
+        });
+    }, [setPanelMeta]);
 
-    // Inline folder creation
-    const [showNewFolder, setShowNewFolder] = useState(false);
-    const [newFolderName, setNewFolderName] = useState("");
-    const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-    const [localFolders, setLocalFolders] = useState<Folder[]>([]);
     const [selectedProjectId, setSelectedProjectId] = useState<string>(activeProjectId || "none");
     const showProjectSelector = !activeProjectId && projects.length > 0;
-
-    // Combine server folders + locally created folders
-    const allRootFolders = useMemo(() => {
-        const combined = [...rootFolders, ...localFolders];
-        return combined.sort((a, b) => a.name.localeCompare(b.name));
-    }, [rootFolders, localFolders]);
 
     // Track files by ref to avoid stale closures in optimistic handler
     const handleFilesChange = useCallback((files: UploadedFile | UploadedFile[] | null) => {
@@ -77,43 +60,6 @@ export function FilesUploadForm({ organizationId, maxFileSizeMb, folders = [], p
             uploadedFilesRef.current = [];
         }
     }, []);
-
-    // Cancel: close modal + cleanup orphaned files from storage
-    const handleCancel = useCallback(() => {
-        cleanupRef.current?.();
-        closeModal();
-    }, [closeModal]);
-
-    // Inline create folder
-    const handleCreateFolder = async () => {
-        const trimmed = newFolderName.trim();
-        if (!trimmed) return;
-
-        // Check for duplicates
-        if (allRootFolders.some(f => f.name.toLowerCase() === trimmed.toLowerCase())) {
-            toast.error("Ya existe una carpeta con ese nombre");
-            return;
-        }
-
-        setIsCreatingFolder(true);
-        try {
-            const result = await createFolder(organizationId, trimmed);
-            if (result.success && result.data) {
-                const newFolder = result.data as Folder;
-                setLocalFolders(prev => [...prev, newFolder]);
-                setSelectedFolderId(newFolder.id);
-                setNewFolderName("");
-                setShowNewFolder(false);
-                toast.success(`Carpeta "${trimmed}" creada`);
-            } else {
-                toast.error(result.error || "Error al crear carpeta");
-            }
-        } catch {
-            toast.error("Error inesperado al crear carpeta");
-        } finally {
-            setIsCreatingFolder(false);
-        }
-    };
 
     // Submit: optimistic close, server action in background
     const handleSubmit = async (e: React.FormEvent) => {
@@ -134,154 +80,78 @@ export function FilesUploadForm({ organizationId, maxFileSizeMb, folders = [], p
             size: f.size,
         }));
         const count = files.length;
-        const folderId = selectedFolderId === "__none__" ? undefined : selectedFolderId;
         const projectId = selectedProjectId === "none" ? undefined : selectedProjectId;
 
-        // Optimistic: close modal + toast immediately
-        closeModal();
+        // Optimistic: close panel + toast immediately
+        closePanel();
         toast.success(
             count === 1
                 ? "Archivo subido correctamente"
-                : `${count} documentos subidos correctamente`
+                : `${count} archivos subidos correctamente`
         );
 
         // Server action in background
         try {
-            const result = await uploadFiles(organizationId, filesToUpload, folderId, projectId);
+            const result = await uploadFiles(organizationId, filesToUpload, projectId);
             if (!result.success) {
-                toast.error(result.error || "Error al registrar documentos en el sistema");
+                toast.error(result.error || "Error al registrar archivos en el sistema");
             }
             router.refresh();
         } catch {
-            toast.error("Error inesperado al registrar documentos");
+            toast.error("Error inesperado al registrar archivos");
         }
     };
 
     // Show upgrade hint if plan allows less than max tier (TEAMS = 1024MB)
     const upgradeHint = useMemo(() => {
-        if (maxFileSizeMb >= 1024) return undefined;
+        if (effectiveMaxSize >= 1024) return undefined;
         return {
-            message: "¿Necesitás subir documentos más grandes? Mejorá tu plan →",
+            message: "¿Necesitás subir archivos más grandes? Mejorá tu plan →",
             onClick: () => {
-                closeModal();
+                closePanel();
                 router.push("/pricing" as any);
             },
         };
-    }, [maxFileSizeMb, closeModal, router]);
+    }, [effectiveMaxSize, closePanel, router]);
 
     // Contextual rejection message when file exceeds plan limit
     const handleFileTooLarge = useCallback((fileName: string, fileSizeMB: number, maxSizeMB: number) => {
         const nextPlan = maxSizeMB <= 50 ? "Pro" : maxSizeMB <= 500 ? "Teams" : null;
         const upgradeText = nextPlan
-            ? `Actualizá a ${nextPlan} para subir documentos más grandes.`
+            ? `Actualizá a ${nextPlan} para subir archivos más grandes.`
             : "";
 
         toast.error(
-            `Tu plan permite documentos de hasta ${maxSizeMB} MB.\n"${fileName}" pesa ${fileSizeMB} MB.${upgradeText ? `\n${upgradeText}` : ""}`,
+            `Tu plan permite archivos de hasta ${maxSizeMB} MB.\n"${fileName}" pesa ${fileSizeMB} MB.${upgradeText ? `\n${upgradeText}` : ""}`,
             { duration: 6000 }
         );
     }, []);
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            <div className="flex-1 overflow-y-auto space-y-4">
-                {/* Project selector — only in org-level context */}
-                {showProjectSelector && (
-                    <ProjectField
-                        value={selectedProjectId}
-                        onChange={setSelectedProjectId}
-                        projects={projects}
-                        allowNone
-                        noneLabel="Sin proyecto"
-                        tooltip="Seleccioná el proyecto al que pertenecen estos documentos. Si no seleccionás ninguno, se subirán a nivel de organización."
-                    />
-                )}
-
-                {/* Folder selector — always visible */}
-                <div className="space-y-2">
-                    <Label htmlFor="folder-select" className="flex items-center gap-1.5">
-                        <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                        Carpeta
-                    </Label>
-                    <div className="flex items-center gap-2">
-                        <Select
-                            value={selectedFolderId}
-                            onValueChange={setSelectedFolderId}
-                        >
-                            <SelectTrigger id="folder-select" className="flex-1">
-                                <SelectValue placeholder="Sin carpeta" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="__none__">Sin carpeta</SelectItem>
-                                {allRootFolders.map((folder) => (
-                                    <SelectItem key={folder.id} value={folder.id}>
-                                        {folder.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="shrink-0"
-                            onClick={() => setShowNewFolder(!showNewFolder)}
-                            title="Crear carpeta"
-                        >
-                            <FolderPlus className="h-4 w-4" />
-                        </Button>
-                    </div>
-
-                    {/* Inline new folder creation */}
-                    {showNewFolder && (
-                        <div className="flex items-center gap-2 mt-2">
-                            <Input
-                                placeholder="Nombre de carpeta..."
-                                value={newFolderName}
-                                onChange={(e) => setNewFolderName(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        handleCreateFolder();
-                                    }
-                                }}
-                                disabled={isCreatingFolder}
-                                autoFocus
-                            />
-                            <Button
-                                type="button"
-                                size="sm"
-                                onClick={handleCreateFolder}
-                                disabled={isCreatingFolder || !newFolderName.trim()}
-                            >
-                                {isCreatingFolder ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    "Crear"
-                                )}
-                            </Button>
-                        </div>
-                    )}
-                </div>
-
-                <UploadField
-                    label="Documentos"
-                    mode="multi-file"
-                    value={uploadedFilesRef.current}
-                    onChange={handleFilesChange}
-                    folderPath={`organizations/${organizationId}/files`}
-                    maxSizeMB={maxFileSizeMb}
-                    dropzoneLabel="Subir archivos"
-                    upgradeHint={upgradeHint}
-                    onFileTooLarge={handleFileTooLarge}
-                    cleanupRef={cleanupRef}
+        <form id={formId} onSubmit={handleSubmit} className="space-y-4">
+            {/* Project selector — only in org-level context */}
+            {showProjectSelector && (
+                <ProjectField
+                    value={selectedProjectId}
+                    onChange={setSelectedProjectId}
+                    projects={projects}
+                    allowNone
+                    noneLabel="Sin proyecto"
+                    tooltip="Seleccioná el proyecto al que pertenecen estos archivos. Si no seleccionás ninguno, se subirán a nivel de organización."
                 />
-            </div>
+            )}
 
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                submitLabel="Subir"
-                onCancel={handleCancel}
+            <UploadField
+                label="Archivos"
+                mode="multi-file"
+                value={uploadedFilesRef.current}
+                onChange={handleFilesChange}
+                folderPath={`organizations/${organizationId}/files`}
+                maxSizeMB={effectiveMaxSize}
+                dropzoneLabel="Subir archivos"
+                upgradeHint={upgradeHint}
+                onFileTooLarge={handleFileTooLarge}
+                cleanupRef={cleanupRef}
             />
         </form>
     );

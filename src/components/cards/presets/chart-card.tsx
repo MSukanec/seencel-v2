@@ -100,7 +100,7 @@ export function ContentCard({
                         <div className="min-h-[24px] mt-0.5">{badge}</div>
                     </div>
                 )}
-                <div className={cn(value && "flex-1 min-h-0 flex flex-col justify-end")}>
+                <div className={cn(value && "flex-1 min-h-0 mt-3 flex flex-col justify-end")}>
                     {children}
                 </div>
             </CardBase.Body>

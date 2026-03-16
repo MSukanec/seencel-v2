@@ -16,13 +16,14 @@
 
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Tag } from "lucide-react";
+import { Tag, type LucideIcon } from "lucide-react";
 import { DataTableColumnHeader } from "../data-table-column-header";
 import { DataTableAvatarCell } from "../data-table-avatar-cell";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SelectPopoverContent } from "@/components/shared/popovers";
 import { useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
+import { CELL_VALUE_CLASS, CELL_EMPTY_CLASS, EDITABLE_CELL_CLASS, EDITABLE_CELL_LOADING_CLASS } from "./column-styles";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -70,6 +71,10 @@ export interface EntityColumnOptions<TData> {
     manageLabel?: string;
     /** Message when no results found (default: "No hay opciones disponibles.") */
     emptySearchMessage?: string;
+    /** Custom icon for the popover and context menu (default: Tag) */
+    icon?: LucideIcon;
+    /** Map of option value → icon to show in cell (e.g. person/company icons) */
+    optionIcons?: Record<string, React.ReactNode>;
 }
 
 // ─── Editable Entity Cell ────────────────────────────────
@@ -86,6 +91,8 @@ function EditableEntityCell<TData>({
     manageRoute,
     manageLabel,
     emptySearchMessage,
+    icon,
+    optionIcons,
 }: {
     row: TData;
     displayTitle: string | null;
@@ -98,23 +105,19 @@ function EditableEntityCell<TData>({
     manageRoute?: any;
     manageLabel?: string;
     emptySearchMessage?: string;
+    icon?: LucideIcon;
+    optionIcons?: Record<string, React.ReactNode>;
 }) {
     const router = useRouter();
     const [open, setOpen] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
     const currentValue = (row as any)[accessorKey] as string;
+    const IconComp = icon || Tag;
 
-    const handleSelect = async (value: string) => {
-        if (value === currentValue) {
-            setOpen(false);
-            return;
-        }
-        setLoading(true);
-        try {
-            await onUpdate(row, value);
-        } finally {
-            setLoading(false);
-            setOpen(false);
+    const handleSelect = (value: string) => {
+        setOpen(false);
+        if (value !== currentValue) {
+            onUpdate(row, value);
         }
     };
 
@@ -123,13 +126,19 @@ function EditableEntityCell<TData>({
             <PopoverTrigger asChild>
                 <button
                     className={cn(
-                        "flex flex-col text-left cursor-pointer rounded-md px-1.5 py-1 -mx-1.5 transition-all",
-                        "border border-transparent hover:border-dashed hover:border-border hover:bg-[#2a2b2d]",
-                        loading && "opacity-50 pointer-events-none"
+                        "flex flex-col text-left",
+                        EDITABLE_CELL_CLASS,
+                        loading && EDITABLE_CELL_LOADING_CLASS
                     )}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <span className="text-sm font-medium">{displayTitle || emptyValue}</span>
+                    <span className={cn(
+                        "flex items-center gap-1.5",
+                        displayTitle ? CELL_VALUE_CLASS : CELL_EMPTY_CLASS
+                    )}>
+                        {optionIcons?.[currentValue] || <IconComp className="h-3.5 w-3.5 text-muted-foreground" />}
+                        {displayTitle || emptyValue}
+                    </span>
                     {subtitle && (
                         <span className="text-xs text-muted-foreground font-[450]">{subtitle}</span>
                     )}
@@ -143,7 +152,7 @@ function EditableEntityCell<TData>({
                     onOpenChange={setOpen}
                     searchPlaceholder={searchPlaceholder}
                     emptyText={emptySearchMessage || "No hay opciones disponibles."}
-                    defaultIcon={<Tag className="h-3.5 w-3.5 text-muted-foreground" />}
+                    defaultIcon={<IconComp className="h-3.5 w-3.5 text-muted-foreground" />}
                     manageRoute={manageRoute}
                     manageLabel={manageLabel}
                 />
@@ -175,7 +184,11 @@ export function createEntityColumn<TData>(
         manageRoute,
         manageLabel,
         emptySearchMessage,
+        icon,
+        optionIcons,
     } = options;
+
+    const IconComponent = icon || Tag;
 
     return {
         accessorKey,
@@ -200,6 +213,8 @@ export function createEntityColumn<TData>(
                         manageRoute={manageRoute}
                         manageLabel={manageLabel}
                         emptySearchMessage={emptySearchMessage}
+                        icon={icon}
+                        optionIcons={optionIcons}
                     />
                 );
             }
@@ -225,13 +240,21 @@ export function createEntityColumn<TData>(
             if (subtitle) {
                 return (
                     <div className="flex flex-col">
-                        <span className="text-sm font-medium">{displayTitle || emptyValue}</span>
+                        <span className={cn(displayTitle ? CELL_VALUE_CLASS : CELL_EMPTY_CLASS)}>{displayTitle || emptyValue}</span>
                         <span className="text-xs text-muted-foreground font-[450]">{subtitle}</span>
                     </div>
                 );
             }
 
-            return <span className="text-sm font-medium">{displayTitle || emptyValue}</span>;
+            return (
+                <span className={cn(
+                    "flex items-center gap-1.5",
+                    displayTitle ? CELL_VALUE_CLASS : CELL_EMPTY_CLASS
+                )}>
+                    {optionIcons?.[rawValue] || <IconComponent className="h-3.5 w-3.5 text-muted-foreground" />}
+                    {displayTitle || emptyValue}
+                </span>
+            );
         },
         enableSorting,
         ...(size && { size }),
@@ -240,7 +263,7 @@ export function createEntityColumn<TData>(
             meta: {
                 contextMenu: {
                     label: title,
-                    icon: Tag,
+                    icon: IconComponent,
                     options: entityOptions.map(o => ({
                         value: o.value,
                         label: o.label,

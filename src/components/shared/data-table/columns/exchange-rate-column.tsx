@@ -68,12 +68,12 @@ function EditableExchangeRateCell<TData>({
         setTimeout(() => inputRef.current?.select(), 10);
     };
 
-    const handleSave = async () => {
+    const handleSave = () => {
+        setIsEditing(false);
         const parsed = parseFloat(editValue.replace(/\./g, '').replace(',', '.'));
         if (!isNaN(parsed) && parsed > 0 && parsed !== rate) {
-            await onUpdate(row, parsed);
+            onUpdate(row, parsed);
         }
-        setIsEditing(false);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {

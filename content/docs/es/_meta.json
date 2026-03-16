@@ -1,16 +1,15 @@
 {
     "order": [
         "organizacion",
-        "primeros-pasos",
-        "agenda",
-        "archivos",
+        "planificador",
+        "documentacion",
         "contactos",
         "materiales",
         "tareas",
         "rubros",
         "ejecucion-de-obra",
         "equipo",
-        "finanzas",
+        "gastos-generales",
         "presupuestos",
         "proyectos"
     ],
@@ -19,16 +18,12 @@
             "title": "Organización",
             "icon": "building-2"
         },
-        "primeros-pasos": {
-            "title": "Primeros Pasos",
-            "icon": "rocket"
-        },
-        "agenda": {
-            "title": "Agenda",
+        "planificador": {
+            "title": "Planificador",
             "icon": "calendar"
         },
-        "archivos": {
-            "title": "Archivos",
+        "documentacion": {
+            "title": "Documentación",
             "icon": "folder-open"
         },
         "materiales": {
@@ -51,9 +46,9 @@
             "title": "Equipo",
             "icon": "users"
         },
-        "finanzas": {
-            "title": "Finanzas",
-            "icon": "dollar-sign"
+        "gastos-generales": {
+            "title": "Gastos Generales",
+            "icon": "receipt"
         },
         "contactos": {
             "title": "Contactos",

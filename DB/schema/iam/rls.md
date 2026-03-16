@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-10T23:31:35.891Z
+> Generated: 2026-03-15T18:32:16.410Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [IAM] RLS Policies (52)
+## [IAM] RLS Policies (55)
 
 ### `debug_signup_log` (1 policies)
 
@@ -68,6 +68,35 @@ is_self(user_id)
 - **USING**:
 ```sql
 (is_self(user_id) OR is_admin())
+```
+
+### `organization_data` (3 policies)
+
+#### MIEMBROS EDITAN ORGANIZATION_DATA
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+(can_mutate_org(organization_id, 'organization.manage'::text) OR is_admin())
+```
+
+#### MIEMBROS VEN ORGANIZATION_DATA
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+(is_org_member(organization_id) OR is_admin())
+```
+
+#### ORGANIZATION CREATES ORGANIZATION_DATA
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+(is_org_member(organization_id) OR is_admin())
 ```
 
 ### `organization_external_actors` (3 policies)
@@ -168,21 +197,15 @@ can_mutate_org(organization_id, 'organization.manage'::text)
 
 ### `organizations` (2 policies)
 
-#### DUEÑOS EDITAN SU ORGANIZACION
+#### MIEMBROS EDITAN SU ORGANIZACION
 
 - **Command**: UPDATE | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_deleted = false) AND ((owner_id = ( SELECT users.id
+((is_deleted = false) AND (is_admin() OR (owner_id = ( SELECT users.id
    FROM iam.users
-  WHERE (users.auth_id = auth.uid()))) OR is_admin()))
-```
-- **WITH CHECK**:
-```sql
-((owner_id = ( SELECT users.id
-   FROM iam.users
-  WHERE (users.auth_id = auth.uid()))) OR is_admin())
+  WHERE (users.auth_id = auth.uid()))) OR can_mutate_org(id, 'organization.manage'::text)))
 ```
 
 #### USUARIOS VEN ORGANIZACIONES
@@ -191,9 +214,9 @@ can_mutate_org(organization_id, 'organization.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_deleted = false) OR (owner_id = ( SELECT users.id
+(is_admin() OR ((is_deleted = false) AND ((owner_id = ( SELECT users.id
    FROM iam.users
-  WHERE (users.auth_id = auth.uid()))) OR is_admin())
+  WHERE (users.auth_id = auth.uid()))) OR is_org_member(id))))
 ```
 
 ### `permissions` (1 policies)

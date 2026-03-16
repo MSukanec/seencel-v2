@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-10T23:31:35.891Z
+> Generated: 2026-03-15T18:32:16.410Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Tables (chunk 1: app_settings — media_links)
+## [PUBLIC] Tables (chunk 1: app_settings — saved_views)
 
 ### `app_settings`
 
@@ -108,22 +108,6 @@
 | created_at | timestamptz | ✗ | timezone('utc'::text, now()) |  |
 | member_id | uuid | ✓ |  |  |
 
-### `media_file_folders`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  |  |
-| project_id | uuid | ✓ |  |  |
-| name | text | ✗ |  |  |
-| parent_id | uuid | ✓ |  | FK → media_file_folders.id |
-| created_by | uuid | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| updated_by | uuid | ✓ |  |  |
-
 ### `media_files`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -140,7 +124,7 @@
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
 | created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✓ |  |  |
+| updated_at | timestamptz | ✗ | now() |  |
 | updated_by | uuid | ✓ |  |  |
 
 ### `media_links`
@@ -175,4 +159,26 @@
 | pin_id | uuid | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
 | subcontract_payment_id | uuid | ✓ |  |  |
-| folder_id | uuid | ✓ |  | FK → media_file_folders.id |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+
+### `saved_views`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  |  |
+| created_by | uuid | ✓ |  |  |
+| updated_by | uuid | ✓ |  |  |
+| name | text | ✗ |  |  |
+| entity_type | text | ✗ |  |  |
+| view_mode | text | ✓ |  |  |
+| filters | jsonb | ✗ | '{}'::jsonb |  |
+| sort_config | jsonb | ✓ |  |  |
+| is_default | bool | ✗ | false |  |
+| position | int4 | ✗ | 0 |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| import_batch_id | uuid | ✓ |  | FK → import_batches.id |

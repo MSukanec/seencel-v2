@@ -7,12 +7,15 @@ import { usePathname, useRouter } from "@/i18n/routing";
 import { useRouter as useNextRouter } from "next/navigation";
 import { SidebarContextButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarAdminButton } from "./buttons";
 import { HeaderOrgSelector } from "@/components/layout/dashboard/shared/header-org-selector";
+import { SidebarProjectSelector } from "./sidebar-project-selector";
 import { SidebarAccordionGroups } from "./sidebar-accordion";
 import { SidebarPlanButton } from "./plan-button";
 import { getPlanAccentVars } from "@/components/shared/plan-badge";
 import { useOrganization } from "@/stores/organization-store";
 import { SidebarInstallButton } from "./install-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SidebarCommandBarTrigger } from "@/components/layout/dashboard/shared/command-bar";
+import { HeaderAvatarButton } from "@/components/layout/dashboard/shared/header-avatar-button";
 import {
     ArrowLeft,
     Building,
@@ -23,8 +26,13 @@ import {
     ClipboardList,
     LayoutDashboard,
     UserCircle,
+    Shield,
+    CreditCard,
+    Settings as SettingsIcon,
+    Sliders,
 } from "lucide-react";
-import { useSidebarNavigation, contextRoutes } from "@/hooks/use-sidebar-navigation";
+import { useSidebarNavigation, contextRoutes, type NavItem, type NavSubItem } from "@/hooks/use-sidebar-navigation";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Lock, Medal } from "lucide-react";
 import { useAccessContextStore, useIsDualAccess, useAccessMode } from "@/stores/access-context-store";
@@ -85,12 +93,52 @@ export function SidebarContent({
         return "home";
     });
 
+    // Page-level drill-down: when a NavItem has children, we track it here
+    const [pageSubItems, setPageSubItems] = React.useState<{
+        parentTitle: string;
+        parentHref: string;
+        parentIcon: React.ElementType;
+        children: NavSubItem[];
+    } | null>(null);
+
     // EFFECT: Sync drillState with activeContext
     React.useEffect(() => {
         if (activeContext && activeContext !== drillState) {
             setDrillState(activeContext);
         }
     }, [activeContext]);
+
+    // EFFECT: Auto-detect page sub-items from URL
+    React.useEffect(() => {
+        if (drillState !== 'organization') return;
+        const groups = getNavGroups('organization');
+        for (const group of groups) {
+            for (const item of group.items) {
+                if (item.children && item.children.length > 0) {
+                    // Check if current pathname matches any child href OR is a sub-route of the parent
+                    const isOnParent = pathname === item.href;
+                    const isOnChild = item.children.some(child => pathname === child.href);
+                    const isOnDynamicChild = pathname.startsWith(item.href + '/');
+                    if (isOnParent || isOnChild || isOnDynamicChild) {
+                        // Only set if not already showing these sub-items
+                        if (!pageSubItems || pageSubItems.parentHref !== item.href) {
+                            setPageSubItems({
+                                parentTitle: item.title,
+                                parentHref: item.href,
+                                parentIcon: item.icon,
+                                children: item.children,
+                            });
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+        // If URL doesn't match any page with children, clear sub-items
+        if (pageSubItems) {
+            setPageSubItems(null);
+        }
+    }, [pathname, drillState]);
 
 
     // Animation direction
@@ -140,7 +188,13 @@ export function SidebarContent({
             return;
         }
 
-        // Organization Context (must be after project check to avoid overlaps if URL schema is weird, but usually distinct)
+        // Profile Context — MUST be before organization to avoid /profile/organizations matching /organization
+        if (pathname.includes('/profile')) {
+            if (activeContext !== 'profile') actions.setActiveContext('profile');
+            return;
+        }
+
+        // Organization Context (must be after project and profile checks)
         if (pathname.includes('/organization')) {
             if (activeContext !== 'organization') actions.setActiveContext('organization');
             return;
@@ -171,15 +225,43 @@ export function SidebarContent({
     // Width class
     const widthClass = isExpanded ? "w-[240px]" : "w-[50px]";
 
+    // Handle drill into page sub-items
+    const handlePageDrillIn = (item: NavItem) => {
+        if (item.children && item.children.length > 0) {
+            setSlideDirection("right");
+            setPageSubItems({
+                parentTitle: item.title,
+                parentHref: item.href,
+                parentIcon: item.icon,
+                children: item.children,
+            });
+            // Navigate to the parent page
+            router.push(item.href as any);
+        }
+    };
+
+    // Handle back from page sub-items
+    const handlePageDrillBack = () => {
+        setSlideDirection("left");
+        setPageSubItems(null);
+    };
+
     // Unified Render Helper for Nav Items (Sub-items)
     const renderNavItem = (item: any, idx: number) => {
         const status = item.status;
         const isDisabled = item.disabled;
         const isHidden = item.hidden;
+        const hasChildren = item.children && item.children.length > 0;
 
-        // Badge
+        // Badge — chevron for items with children, or status badge
         let badge = null;
-        if (isHidden) {
+        if (hasChildren && isExpanded) {
+            badge = (
+                <div className="h-5 w-5 flex items-center justify-center">
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+            );
+        } else if (isHidden) {
             badge = (
                 <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-gray-500/10 hover:bg-gray-500/20 shadow-none">
                     <EyeOff className="h-3 w-3 text-gray-500" />
@@ -204,15 +286,20 @@ export function SidebarContent({
             ? "hidden"
             : (status as SidebarRestriction) || null;
 
+        // Check if this item or any of its children is active
+        const isItemActive = hasChildren
+            ? (pathname === item.href || item.children.some((c: NavSubItem) => pathname === c.href) || pathname.startsWith(item.href + '/'))
+            : pathname === item.href;
+
         const button = (
             <React.Fragment key={idx}>
                 <SidebarNavButton
                     icon={item.icon}
                     label={item.title}
-                    href={item.href}
-                    isActive={pathname === item.href}
+                    href={hasChildren ? undefined : item.href}
+                    isActive={isItemActive}
                     isExpanded={isExpanded}
-                    onClick={onLinkClick}
+                    onClick={hasChildren ? () => handlePageDrillIn(item) : onLinkClick}
                     badge={badge}
                     disabled={isDisabled}
                     isLocked={!!status || isHidden}
@@ -238,7 +325,7 @@ export function SidebarContent({
         <SidebarTooltipProvider>
             <div
                 className={cn(
-                    "flex flex-col h-full py-2 bg-sidebar border-r border-sidebar-border transition-all duration-150 ease-in-out relative",
+                    "flex flex-col h-full py-2 bg-sidebar transition-all duration-150 ease-in-out relative",
                     widthClass
                 )}
                 style={planAccentVars as React.CSSProperties}
@@ -246,23 +333,22 @@ export function SidebarContent({
 
 
                 <div className="flex flex-col w-full h-full overflow-hidden">
-                    <div className="w-full flex items-center gap-1.5 mb-2 px-2">
-                        <div className="flex-1 min-w-0">
-                            {drillState === "home" ? (
-                                <SidebarBrandButton
-                                    isExpanded={isExpanded}
-                                />
-                            ) : (
-                                <HeaderOrgSelector
-                                    variant="sidebar"
-                                    isExpanded={isExpanded}
-                                />
-                            )}
+                    {drillState === "home" || drillState === "profile" ? (
+                        <div className="w-full flex items-center gap-1.5 mb-2 px-2">
+                            <div className="flex-1 min-w-0">
+                                <SidebarBrandButton isExpanded={isExpanded} />
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="w-full px-2 mb-1 mt-1">
+                            <SidebarProjectSelector isExpanded={isExpanded} />
+                        </div>
+                    )}
 
-                    {/* Separator */}
-                    <div className="w-8 h-px bg-border/50 mb-2 mx-auto" />
+                    {/* Separator — hidden in profile mode (has its own after "Volver a la app") */}
+                    {drillState !== "profile" && (
+                        <div className="w-8 h-px bg-border/50 mb-2 mx-auto" />
+                    )}
 
                     <ScrollArea className="flex-1" type="scroll">
                         {/* ... (Previous Content Kept Same via Context, but I need to re-render it because replace_file requires context) 
@@ -346,34 +432,33 @@ export function SidebarContent({
                         {/* ============================================================ */}
                         {/* ORGANIZATION STATE: Direct navigation buttons */}
                         {/* ============================================================ */}
-                        {drillState === "organization" && (
+                        {drillState === "organization" && !pageSubItems && (
                             <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="organization">
 
-                                {/* Quick Access moved to header */}
+                                {/* Command Bar */}
+                                <SidebarCommandBarTrigger isExpanded={isExpanded} />
 
-                                {/* Visión General — styled as card matching accordion items */}
-                                <div
-                                    className={cn(
-                                        "rounded-lg",
-                                        "bg-sidebar-accent/50",
-                                        "border border-sidebar-border/40",
-                                        "px-0.5 py-0.5",
-                                    )}
-                                    style={{
-                                        boxShadow: "0 1px 3px 0 rgba(0,0,0,0.12), inset 0 1px 0 0 rgba(255,255,255,0.06)",
-                                        borderLeftColor: "var(--plan-border, rgba(255,255,255,0.06))",
-                                        borderLeftWidth: "2px",
-                                    }}
-                                >
-                                    <SidebarNavButton
-                                        icon={LayoutDashboard}
-                                        label="Visión General"
-                                        href="/organization"
-                                        isActive={pathname === '/organization'}
-                                        isExpanded={isExpanded}
-                                        onClick={onLinkClick}
-                                    />
-                                </div>
+                                {/* Spacer */}
+                                <div className="h-1" />
+
+                                {/* Visión General */}
+                                <SidebarNavButton
+                                    icon={LayoutDashboard}
+                                    label="Visión General"
+                                    href="/organization"
+                                    isActive={pathname === '/organization'}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+
+                                <SidebarNavButton
+                                    icon={CalendarDays}
+                                    label="Planificador"
+                                    href="/organization/planner"
+                                    isActive={pathname === '/organization/planner'}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
 
                                 {/* Unified Nav Items with Accordion (exclude standalone 'principal' group) */}
                                 <SidebarAccordionGroups
@@ -382,6 +467,38 @@ export function SidebarContent({
                                     isExpanded={isExpanded}
                                     activePath={pathname}
                                 />
+                            </nav>
+                        )}
+
+                        {/* ============================================================ */}
+                        {/* PAGE SUB-ITEMS STATE: Drill-down into a page's children */}
+                        {/* ============================================================ */}
+                        {drillState === "organization" && pageSubItems && (
+                            <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key={`page-${pageSubItems.parentHref}`}>
+                                {/* Back button */}
+                                <SidebarNavButton
+                                    icon={ArrowLeft}
+                                    label={pageSubItems.parentTitle}
+                                    isActive={false}
+                                    isExpanded={isExpanded}
+                                    onClick={handlePageDrillBack}
+                                />
+
+                                {/* Separator */}
+                                <div className="w-8 h-px bg-border/50 my-1 mx-auto" />
+
+                                {/* Sub-items */}
+                                {pageSubItems.children.map((child, idx) => (
+                                    <SidebarNavButton
+                                        key={idx}
+                                        icon={child.icon || pageSubItems.parentIcon}
+                                        label={child.title}
+                                        href={child.href as any}
+                                        isActive={pathname === child.href}
+                                        isExpanded={isExpanded}
+                                        onClick={onLinkClick}
+                                    />
+                                ))}
                             </nav>
                         )}
 
@@ -420,29 +537,15 @@ export function SidebarContent({
                         {drillState === "admin" && (
                             <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="admin">
 
-                                {/* Visión General — styled as card matching accordion items */}
-                                <div
-                                    className={cn(
-                                        "rounded-lg",
-                                        "bg-sidebar-accent/50",
-                                        "border border-sidebar-border/40",
-                                        "px-0.5 py-0.5",
-                                    )}
-                                    style={{
-                                        boxShadow: "0 1px 3px 0 rgba(0,0,0,0.12), inset 0 1px 0 0 rgba(255,255,255,0.06)",
-                                        borderLeftColor: "var(--plan-border, rgba(255,255,255,0.06))",
-                                        borderLeftWidth: "2px",
-                                    }}
-                                >
-                                    <SidebarNavButton
-                                        icon={LayoutDashboard}
-                                        label="Visión General"
-                                        href="/admin"
-                                        isActive={pathname === '/admin'}
-                                        isExpanded={isExpanded}
-                                        onClick={onLinkClick}
-                                    />
-                                </div>
+                                {/* Visión General */}
+                                <SidebarNavButton
+                                    icon={LayoutDashboard}
+                                    label="Visión General"
+                                    href="/admin"
+                                    isActive={pathname === '/admin'}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
 
                                 {/* Admin Nav Groups with Accordion (exclude standalone 'principal' group) */}
                                 <SidebarAccordionGroups
@@ -453,45 +556,141 @@ export function SidebarContent({
                                 />
                             </nav>
                         )}
+
+                        {/* ============================================================ */}
+                        {/* PROFILE STATE: Independent sidebar (Linear-style) */}
+                        {/* ============================================================ */}
+                        {drillState === "profile" && (
+                            <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="profile">
+                                {/* Back to app */}
+                                <SidebarNavButton
+                                    icon={ArrowLeft}
+                                    label="Volver a la app"
+                                    isActive={false}
+                                    isExpanded={isExpanded}
+                                    onClick={() => {
+                                        const prevPath = useLayoutStore.getState().previousPath;
+                                        setSlideDirection("left");
+                                        setDrillState("organization");
+                                        actions.setActiveContext("organization");
+                                        router.push((prevPath || '/organization') as any);
+                                    }}
+                                />
+
+                                {/* Separator */}
+                                <div className="w-8 h-px bg-border/50 my-1 mx-auto" />
+
+                                {/* CUENTA group label */}
+                                {isExpanded && (
+                                    <div className="px-3 py-1.5">
+                                        <span className="text-[11px] font-semibold uppercase text-muted-foreground/60">Cuenta</span>
+                                    </div>
+                                )}
+                                <SidebarNavButton
+                                    icon={UserCircle}
+                                    label="Perfil"
+                                    href="/profile"
+                                    isActive={pathname === '/profile'}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+                                <SidebarNavButton
+                                    icon={Building}
+                                    label="Organizaciones"
+                                    href="/profile/organizations"
+                                    isActive={pathname === '/profile/organizations'}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+                                <SidebarNavButton
+                                    icon={Shield}
+                                    label="Seguridad"
+                                    href="/profile/security"
+                                    isActive={pathname === '/profile/security'}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+
+                                {/* FACTURACIÓN group label */}
+                                {isExpanded && (
+                                    <div className="px-3 py-1.5 mt-2">
+                                        <span className="text-[11px] font-semibold uppercase text-muted-foreground/60">Facturación</span>
+                                    </div>
+                                )}
+                                <SidebarNavButton
+                                    icon={CreditCard}
+                                    label="Facturación"
+                                    href="/profile/billing"
+                                    isActive={pathname === '/profile/billing'}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+
+                                {/* PREFERENCIAS group label */}
+                                {isExpanded && (
+                                    <div className="px-3 py-1.5 mt-2">
+                                        <span className="text-[11px] font-semibold uppercase text-muted-foreground/60">Preferencias</span>
+                                    </div>
+                                )}
+                                <SidebarNavButton
+                                    icon={Bell}
+                                    label="Notificaciones"
+                                    href="/profile/notifications"
+                                    isActive={pathname === '/profile/notifications'}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+                                <SidebarNavButton
+                                    icon={Sliders}
+                                    label="Preferencias"
+                                    href="/profile/preferences"
+                                    isActive={pathname === '/profile/preferences'}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+                            </nav>
+                        )}
                     </ScrollArea>
 
-
-                    {/* PWA Install prompt (above plan section) */}
+                    {/* PWA Install prompt */}
                     {!isMobile && (
-                        <div className="px-2 pb-1">
+                        <div className="mt-auto px-2 pb-2">
                             <SidebarInstallButton isExpanded={isExpanded} />
                         </div>
                     )}
 
-                    {/* Mode Toggle (bottom, desktop only) */}
-                    {!isMobile && (
-                        <div className="mt-auto pt-3 border-t border-sidebar-border/50 px-2 space-y-2">
+                    {/* Admin, Hub & System Toggle (bottom, desktop only) */}
+                    {!isMobile && drillState !== 'profile' && (
+                        <div className="px-2 pb-3 space-y-2 mt-2">
                             {/* Admin Button (only visible to admins) */}
                             <SidebarAdminButton isExpanded={isExpanded} />
 
-                            {/* Back to Workspace — only in admin context */}
-                            {drillState === "admin" && (
-                                <SidebarNavButton
-                                    icon={ArrowLeft}
-                                    label="Espacio de Trabajo"
-                                    href={"/organization" as any}
-                                    isActive={false}
-                                    isExpanded={isExpanded}
-                                    onClick={onLinkClick}
-                                />
-                            )}
+                            {/* Navigation Out/Back — Below Admin */}
+                            <div className={cn("space-y-1", slideClass)}>
+                                {/* Back to Workspace — only in admin context */}
+                                {drillState === "admin" && (
+                                    <SidebarNavButton
+                                        icon={ArrowLeft}
+                                        label="Espacio de Trabajo"
+                                        href={"/organization" as any}
+                                        isActive={false}
+                                        isExpanded={isExpanded}
+                                        onClick={onLinkClick}
+                                    />
+                                )}
 
-                            {/* Hub Button — visible when NOT already in hub */}
-                            {drillState !== "home" && (
-                                <SidebarNavButton
-                                    icon={ArrowLeft}
-                                    label="Volver al Hub"
-                                    href={"/hub" as any}
-                                    isActive={false}
-                                    isExpanded={isExpanded}
-                                    onClick={onLinkClick}
-                                />
-                            )}
+                                {/* Hub Button — visible when NOT already in hub */}
+                                {drillState !== "home" && (
+                                    <SidebarNavButton
+                                        icon={ArrowLeft}
+                                        label="Volver al Hub"
+                                        href={"/hub" as any}
+                                        isActive={false}
+                                        isExpanded={isExpanded}
+                                        onClick={onLinkClick}
+                                    />
+                                )}
+                            </div>
 
                             {/* Access Mode Selector — only when user has dual access */}
                             {isDualAccess && isExpanded && (
@@ -567,8 +766,34 @@ export function SidebarContent({
                                 </SidebarTooltip>
                             )}
 
-                            {/* Plan Badge — full width */}
-                            <SidebarPlanButton isExpanded={isExpanded} />
+                            {/* Plan Badge — deshabilitado temporalmente */}
+                            {/* <SidebarPlanButton isExpanded={isExpanded} /> */}
+
+                            {/* Organization Selector + User + Notifications */}
+                            <div className="flex flex-col gap-1.5 pt-3 mt-1 border-t border-sidebar-border/50">
+                                {drillState !== "home" && (
+                                    <div className="w-full">
+                                        <HeaderOrgSelector
+                                            variant="sidebar"
+                                            isExpanded={isExpanded}
+                                        />
+                                    </div>
+                                )}
+                                
+                                <div className={cn(
+                                    "flex items-stretch gap-1.5",
+                                    isExpanded ? "justify-between" : "justify-center flex-col"
+                                )}>
+                                    <div className="flex-1 min-w-0">
+                                        <HeaderAvatarButton variant={isExpanded ? "sidebar" : "sidebar-collapsed"} />
+                                    </div>
+                                    <SidebarNotificationsButton
+                                        isExpanded={false}
+                                        variant="quick-access"
+                                        className={isExpanded ? "w-11 h-auto rounded-xl" : ""}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>

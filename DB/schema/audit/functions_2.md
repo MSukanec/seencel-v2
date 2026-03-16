@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-10T23:31:35.891Z
+> Generated: 2026-03-15T18:32:16.410Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [AUDIT] Functions (chunk 2: log_material_activity — log_site_logs_activity)
+## [AUDIT] Functions (chunk 2: log_material_activity — log_saved_view_activity)
 
 ### `audit.log_material_activity()` 🔐
 
@@ -148,7 +148,7 @@ $function$
 ```
 </details>
 
-### `audit.log_media_file_folder_activity()` 🔐
+### `audit.log_media_file_activity()` 🔐
 
 - **Returns**: trigger
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -156,7 +156,7 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION audit.log_media_file_folder_activity()
+CREATE OR REPLACE FUNCTION audit.log_media_file_activity()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -168,32 +168,109 @@ DECLARE
     audit_metadata jsonb;
     target_record RECORD;
 BEGIN
+    -- Skip si no tiene organization_id (archivos públicos del sistema)
+    IF (TG_OP = 'DELETE' AND OLD.organization_id IS NULL) OR
+       (TG_OP IN ('INSERT', 'UPDATE') AND NEW.organization_id IS NULL) THEN
+        RETURN NULL;
+    END IF;
+
     IF (TG_OP = 'DELETE') THEN
         target_record := OLD;
-        audit_action := 'delete_media_file_folder';
+        audit_action := 'delete_media_file';
         resolved_member_id := OLD.updated_by;
     ELSIF (TG_OP = 'UPDATE') THEN
         target_record := NEW;
         IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
-            audit_action := 'delete_media_file_folder';
+            audit_action := 'delete_media_file';
         ELSE
-            audit_action := 'update_media_file_folder';
+            audit_action := 'update_media_file';
         END IF;
         resolved_member_id := NEW.updated_by;
     ELSIF (TG_OP = 'INSERT') THEN
         target_record := NEW;
-        audit_action := 'create_media_file_folder';
+        audit_action := 'create_media_file';
         resolved_member_id := NEW.created_by;
     END IF;
 
-    audit_metadata := jsonb_build_object('name', target_record.name);
+    audit_metadata := jsonb_build_object(
+        'file_name', target_record.file_name,
+        'file_type', target_record.file_type,
+        'bucket', target_record.bucket
+    );
 
     BEGIN
         INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
-            audit_action, target_record.id, 'media_file_folders', audit_metadata
+            audit_action, target_record.id, 'media_files', audit_metadata
+        );
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+
+    RETURN NULL;
+END;
+$function$
+```
+</details>
+
+### `audit.log_media_link_activity()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION audit.log_media_link_activity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'audit', 'public'
+AS $function$
+DECLARE
+    resolved_member_id uuid;
+    audit_action text;
+    audit_metadata jsonb;
+    target_record RECORD;
+BEGIN
+    -- Skip si no tiene organization_id
+    IF (TG_OP = 'DELETE' AND OLD.organization_id IS NULL) OR
+       (TG_OP IN ('INSERT', 'UPDATE') AND NEW.organization_id IS NULL) THEN
+        RETURN NULL;
+    END IF;
+
+    IF (TG_OP = 'DELETE') THEN
+        target_record := OLD;
+        audit_action := 'delete_media_link';
+        resolved_member_id := OLD.updated_by;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        target_record := NEW;
+        -- Detectar soft delete (solo si la columna is_deleted existe)
+        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
+            audit_action := 'delete_media_link';
+        ELSE
+            audit_action := 'update_media_link';
+        END IF;
+        resolved_member_id := NEW.updated_by;
+    ELSIF (TG_OP = 'INSERT') THEN
+        target_record := NEW;
+        audit_action := 'create_media_link';
+        resolved_member_id := NEW.created_by;
+    END IF;
+
+    audit_metadata := jsonb_build_object(
+        'media_file_id', target_record.media_file_id,
+        'category', target_record.category,
+        'visibility', target_record.visibility
+    );
+
+    BEGIN
+        INSERT INTO audit.organization_activity_logs (
+            organization_id, member_id, action, target_id, target_table, metadata
+        ) VALUES (
+            target_record.organization_id, resolved_member_id,
+            audit_action, target_record.id, 'media_links', audit_metadata
         );
     EXCEPTION WHEN OTHERS THEN NULL;
     END;
@@ -1100,7 +1177,7 @@ $function$
 ```
 </details>
 
-### `audit.log_site_log_types_activity()` 🔐
+### `audit.log_saved_view_activity()` 🔐
 
 - **Returns**: trigger
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -1108,11 +1185,10 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION audit.log_site_log_types_activity()
+CREATE OR REPLACE FUNCTION audit.log_saved_view_activity()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'audit', 'public'
 AS $function$
 DECLARE
     resolved_member_id uuid;
@@ -1121,85 +1197,24 @@ DECLARE
     target_record RECORD;
 BEGIN
     IF (TG_OP = 'DELETE') THEN
-        target_record := OLD;
-        audit_action := 'delete_site_log_type';
+        target_record := OLD; audit_action := 'delete_saved_view';
         resolved_member_id := OLD.updated_by;
     ELSIF (TG_OP = 'UPDATE') THEN
         target_record := NEW;
         IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
-            audit_action := 'delete_site_log_type';
+            audit_action := 'delete_saved_view';
         ELSE
-            audit_action := 'update_site_log_type';
+            audit_action := 'update_saved_view';
         END IF;
         resolved_member_id := NEW.updated_by;
     ELSIF (TG_OP = 'INSERT') THEN
-        target_record := NEW;
-        audit_action := 'create_site_log_type';
+        target_record := NEW; audit_action := 'create_saved_view';
         resolved_member_id := NEW.created_by;
     END IF;
 
-    audit_metadata := jsonb_build_object('name', target_record.name);
-
-    -- SAFE INSERT CATCHING ERRORS
-    BEGIN
-        INSERT INTO audit.organization_activity_logs (
-            organization_id, member_id, action, target_id, target_table, metadata
-        ) VALUES (
-            target_record.organization_id, resolved_member_id,
-            audit_action, target_record.id, 'site_log_types', audit_metadata
-        );
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-
-    RETURN NULL;
-END;
-$function$
-```
-</details>
-
-### `audit.log_site_logs_activity()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION audit.log_site_logs_activity()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'audit', 'public'
-AS $function$
-DECLARE
-    resolved_member_id uuid;
-    audit_action text;
-    audit_metadata jsonb;
-    target_record RECORD;
-BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        target_record := OLD;
-        audit_action := 'delete_site_log';
-        resolved_member_id := OLD.updated_by;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        target_record := NEW;
-        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
-            audit_action := 'delete_site_log';
-        ELSE
-            audit_action := 'update_site_log';
-        END IF;
-        resolved_member_id := NEW.updated_by;
-    ELSIF (TG_OP = 'INSERT') THEN
-        target_record := NEW;
-        audit_action := 'create_site_log';
-        resolved_member_id := NEW.created_by;
-    END IF;
-
-    -- Generic metadata, maybe add date or weather?
     audit_metadata := jsonb_build_object(
-        'date', target_record.log_date,
-        'summary', left(target_record.ai_summary, 50)
+        'name', target_record.name,
+        'entity_type', target_record.entity_type
     );
 
     BEGIN
@@ -1207,10 +1222,9 @@ BEGIN
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
-            audit_action, target_record.id, 'site_logs', audit_metadata
+            audit_action, target_record.id, 'saved_views', audit_metadata
         );
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
+    EXCEPTION WHEN OTHERS THEN NULL;
     END;
 
     RETURN NULL;

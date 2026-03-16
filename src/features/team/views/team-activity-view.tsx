@@ -1,16 +1,23 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+/**
+ * Team Activity View — Linear-style feed
+ * 
+ * Muestra la actividad de la organización como un feed de frases naturales
+ * en vez de una tabla tradicional. Usa ActivityFeedList centralizado.
+ */
+
+import { useState, useMemo, useEffect } from "react";
 import { OrganizationActivityLog } from "@/features/team/types";
-import { TeamActivityLogsTable } from "@/features/team/components/team-activity-logs-table";
-import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
-import { DateRangeFilter, DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
-import { moduleConfigs, actionConfigs, getActionVerb } from "@/config/audit-logs";
-import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { getActivityFeedItems } from "@/actions/widget-actions";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useTableFilters } from "@/hooks/use-table-filters";
+import { ToolbarCard, FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
+import { ActivityFeedList } from "@/components/shared/activity-feed";
+import { User, Activity, ListOrdered, ActivitySquare } from "lucide-react";
+import { ViewEmptyState } from "@/components/shared/empty-state";
+import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { moduleConfigs, getActionVerb } from "@/config/audit-logs";
+import { Card } from "@/components/ui/card";
 
 interface TeamActivityViewProps {
     logs?: OrganizationActivityLog[];
@@ -30,167 +37,128 @@ export function TeamActivityView({ logs: initialLogs }: TeamActivityViewProps) {
             })
             .catch(() => setIsLoading(false));
     }, [initialLogs]);
-    // Search state with debounce
-    const [searchQuery, setSearchQuery] = useState("");
-    const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-    const debouncedSetSearch = useCallback((value: string) => {
-        clearTimeout(searchTimerRef.current);
-        searchTimerRef.current = setTimeout(() => setSearchQuery(value), 300);
-    }, []);
 
-    // Filter states
-    const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
-    const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
-    const [selectedActions, setSelectedActions] = useState<Set<string>>(new Set());
-    const [dateRange, setDateRange] = useState<DateRangeFilterValue | undefined>(undefined);
+    // ─── Filter config ───────────────────────────────────
 
-    // Compute unique users for filter
     const userOptions = useMemo(() => {
         const users = new Set(logs.map(log => log.full_name || log.email || "Sistema"));
         return Array.from(users).map(user => ({ label: user, value: user }));
     }, [logs]);
 
-    // Module options from config
-    const moduleOptions = useMemo(() => {
-        return Object.entries(moduleConfigs).map(([key, config]) => ({
-            label: config.label,
-            value: key
+    const ACTION_OPTIONS = useMemo(() => [
+        { label: "Creó", value: "Creó" },
+        { label: "Actualizó", value: "Actualizó" },
+        { label: "Eliminó", value: "Eliminó" },
+        { label: "Importó", value: "Importó" },
+        { label: "Archivó", value: "Archivó" },
+    ], []);
+
+    const MODULE_OPTIONS = useMemo(() => {
+        const modules = new Set(logs.map(log => {
+            const config = moduleConfigs[log.target_table];
+            return config?.displayLabel || log.target_table;
         }));
-    }, []);
+        return Array.from(modules).map(m => ({ label: m, value: m }));
+    }, [logs]);
 
-    // Action options from config
-    const actionOptions = useMemo(() => {
-        return Object.entries(actionConfigs).map(([key, config]) => ({
-            label: config.label,
-            value: key
-        }));
-    }, []);
+    const filters = useTableFilters({
+        facets: [
+            { key: "member", title: "Usuario", icon: User, options: userOptions },
+            { key: "action", title: "Acción", icon: Activity, options: ACTION_OPTIONS },
+            { key: "target_table", title: "Herramienta", icon: ListOrdered, options: MODULE_OPTIONS },
+        ],
+        enableDateRange: true,
+    });
 
-    // Toggle handlers for FacetedFilter
-    const handleUserSelect = (value: string) => {
-        setSelectedUsers(prev => {
-            const next = new Set(prev);
-            if (next.has(value)) next.delete(value);
-            else next.add(value);
-            return next;
-        });
-    };
+    // ─── Filtered data ───────────────────────────────────
 
-    const handleModuleSelect = (value: string) => {
-        setSelectedModules(prev => {
-            const next = new Set(prev);
-            if (next.has(value)) next.delete(value);
-            else next.add(value);
-            return next;
-        });
-    };
-
-    const handleActionSelect = (value: string) => {
-        setSelectedActions(prev => {
-            const next = new Set(prev);
-            if (next.has(value)) next.delete(value);
-            else next.add(value);
-            return next;
-        });
-    };
-
-    // Filter logs
     const filteredLogs = useMemo(() => {
         return logs.filter(log => {
-            // Search filter
-            if (searchQuery) {
-                const searchLower = searchQuery.toLowerCase();
+            // Search
+            if (filters.searchQuery) {
+                const q = filters.searchQuery.toLowerCase();
                 const userName = (log.full_name || log.email || "").toLowerCase();
                 const module = (log.target_table || "").toLowerCase();
                 const action = (log.action || "").toLowerCase();
                 const metadata = JSON.stringify(log.metadata || {}).toLowerCase();
-
-                if (!userName.includes(searchLower) &&
-                    !module.includes(searchLower) &&
-                    !action.includes(searchLower) &&
-                    !metadata.includes(searchLower)) {
+                if (!userName.includes(q) && !module.includes(q) && !action.includes(q) && !metadata.includes(q)) {
                     return false;
                 }
             }
 
-            // User filter
-            if (selectedUsers.size > 0) {
+            // User Facet
+            if (filters.facetValues.member && filters.facetValues.member.size > 0) {
                 const userName = log.full_name || log.email || "Sistema";
-                if (!selectedUsers.has(userName)) return false;
+                if (!filters.facetValues.member.has(userName)) return false;
             }
 
-            // Module filter
-            if (selectedModules.size > 0) {
-                if (!selectedModules.has(log.target_table)) return false;
+            // Module Facet
+            if (filters.facetValues.target_table && filters.facetValues.target_table.size > 0) {
+                const config = moduleConfigs[log.target_table];
+                const entityLabel = config?.displayLabel || log.target_table;
+                if (!filters.facetValues.target_table.has(entityLabel)) return false;
             }
 
-            // Action filter
-            if (selectedActions.size > 0) {
+            // Action Facet
+            if (filters.facetValues.action && filters.facetValues.action.size > 0) {
                 const actionVerb = getActionVerb(log.action);
-                if (!selectedActions.has(actionVerb)) return false;
+                const actionLabel = { create: "Creó", update: "Actualizó", delete: "Eliminó", import: "Importó", archive: "Archivó" }[actionVerb] || actionVerb;
+                if (!filters.facetValues.action.has(actionLabel)) return false;
             }
 
-            // Date range filter
-            if (dateRange?.from) {
+            // Date range
+            if (filters.dateRange?.from) {
                 const logDate = new Date(log.created_at);
-                const from = startOfDay(dateRange.from);
-                const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-
-                if (!isWithinInterval(logDate, { start: from, end: to })) {
-                    return false;
-                }
+                const from = startOfDay(filters.dateRange.from);
+                const to = filters.dateRange.to ? endOfDay(filters.dateRange.to) : endOfDay(filters.dateRange.from);
+                if (!isWithinInterval(logDate, { start: from, end: to })) return false;
             }
 
             return true;
-        });
-    }, [logs, searchQuery, selectedUsers, selectedModules, selectedActions, dateRange]);
+        }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }, [logs, filters]);
 
-    // Filter content for Toolbar
-    const filterContent = (
-        <>
-            <DateRangeFilter
-                title="Fechas"
-                value={dateRange}
-                onChange={setDateRange}
-            />
-            <FacetedFilter
-                title="Usuario"
-                options={userOptions}
-                selectedValues={selectedUsers}
-                onSelect={handleUserSelect}
-                onClear={() => setSelectedUsers(new Set())}
-            />
-            <FacetedFilter
-                title="Acción"
-                options={actionOptions}
-                selectedValues={selectedActions}
-                onSelect={handleActionSelect}
-                onClear={() => setSelectedActions(new Set())}
-            />
-            <FacetedFilter
-                title="Herramienta"
-                options={moduleOptions}
-                selectedValues={selectedModules}
-                onSelect={handleModuleSelect}
-                onClear={() => setSelectedModules(new Set())}
-            />
-        </>
-    );
+    // ─── Empty State ─────────────────────────────────────
+
+    if (!isLoading && logs.length === 0) {
+        return (
+            <ViewEmptyState mode="empty" viewName="Actividad" icon={ActivitySquare} />
+        );
+    }
+
+    // ─── No-results ──────────────────────────────────────
+
+    if (!isLoading && filteredLogs.length === 0) {
+        return (
+            <div className="flex flex-col gap-0.5">
+                <ToolbarCard
+                    right={
+                        <>
+                            <SearchButton filters={filters} placeholder="Buscar en actividad..." />
+                            <FilterPopover filters={filters} />
+                        </>
+                    }
+                />
+                <ViewEmptyState mode="no-results" viewName="Actividad" icon={ActivitySquare} onAction={filters.clearAll} />
+            </div>
+        );
+    }
+
+    // ─── Render ──────────────────────────────────────────
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
-            <Toolbar
-                portalToHeader
-                searchQuery={searchQuery}
-                onSearchChange={debouncedSetSearch}
-                searchPlaceholder="Buscar en actividad..."
-                filterContent={filterContent}
+        <div className="flex flex-col gap-4">
+            <ToolbarCard
+                right={
+                    <>
+                        <SearchButton filters={filters} placeholder="Buscar en actividad..." />
+                        <FilterPopover filters={filters} />
+                    </>
+                }
             />
-            <div className="flex-1 overflow-y-auto">
-                <ContentLayout variant="wide">
-                    <TeamActivityLogsTable data={filteredLogs} />
-                </ContentLayout>
-            </div>
+            <Card variant="inset">
+                <ActivityFeedList logs={filteredLogs} />
+            </Card>
         </div>
     );
 }

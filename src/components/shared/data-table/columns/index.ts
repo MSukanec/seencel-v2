@@ -20,4 +20,7 @@ export { createCurrencyColumn, type CurrencyColumnOptions, type CurrencyOption }
 export { createExchangeRateColumn, type ExchangeRateColumnOptions } from "./exchange-rate-column";
 export { createPeriodColumn, type PeriodColumnOptions } from "./period-column";
 export { createAttachmentColumn, type AttachmentColumnOptions } from "./attachment-column";
+export { createCreatorColumn, type CreatorColumnOptions } from "./creator-column";
+export { createAddressColumn, type AddressColumnOptions } from "./address-column";
 export { createColumns } from "./column-builder";
+export { CELL_VALUE_CLASS, CELL_EMPTY_CLASS, EDITABLE_CELL_CLASS, EDITABLE_CELL_LOADING_CLASS } from "./column-styles";

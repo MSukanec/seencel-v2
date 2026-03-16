@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { Folder } from "./types";
+import type { SavedView } from "./types";
 
 // ============================================================================
 // FILES QUERIES
@@ -18,13 +18,20 @@ export async function getFiles(organizationId: string, projectId?: string | null
     let query = supabase
         .from('media_links')
         .select(`
-            *,
-            media_files!inner (*)
+            id, category, project_id, organization_id,
+            site_log_id, client_payment_id, material_payment_id, material_purchase_id,
+            subcontract_payment_id, general_cost_payment_id, labor_payment_id,
+            partner_contribution_id, partner_withdrawal_id, pin_id, forum_thread_id,
+            course_id, testimonial_id,
+            media_files!inner (
+                id, file_name, file_type, file_size, bucket, file_path, created_at
+            )
         `)
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
         .eq('media_files.is_deleted', false)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500);
 
     // Filter by project if provided
     if (projectId) {
@@ -38,81 +45,41 @@ export async function getFiles(organizationId: string, projectId?: string | null
         return [];
     }
 
-    // Generate signed URLs for private files
-    const filesWithUrls = await Promise.all(data!.map(async (item: any) => {
-        if (!item.media_files) return item;
+    if (!data || data.length === 0) return [];
 
-        try {
-            const { data: signedData } = await supabase
-                .storage
-                .from(item.media_files.bucket)
-                .createSignedUrl(item.media_files.file_path, 3600); // 1 hour expiry
-
-            if (signedData) {
-                item.media_files.signed_url = signedData.signedUrl;
-            }
-        } catch (e) {
-            console.error("Error signing url for", item.media_files.file_name, e);
-        }
-        return item;
-    }));
-
-    return filesWithUrls;
-}
-
-// ============================================================================
-// FOLDER QUERIES
-// ============================================================================
-
-/**
- * Get all folders for an organization, optionally filtered by project.
- * Includes file count per folder.
- */
-export async function getFolders(organizationId: string, projectId?: string | null): Promise<Folder[]> {
-    const supabase = await createClient();
-
-    let query = supabase
-        .from('media_file_folders')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('is_deleted', false)
-        .order('name', { ascending: true });
-
-    if (projectId) {
-        query = query.eq('project_id', projectId);
-    } else {
-        query = query.is('project_id', null);
-    }
-
-    const { data: folders, error } = await query;
-
-    if (error) {
-        console.error('Error fetching folders:', error);
-        return [];
-    }
-
-    if (!folders || folders.length === 0) return [];
-
-    // Get file counts per folder in a single query
-    const folderIds = folders.map(f => f.id);
-    const { data: counts } = await supabase
-        .from('media_links')
-        .select('folder_id')
-        .eq('organization_id', organizationId)
-        .eq('is_deleted', false)
-        .in('folder_id', folderIds);
-
-    const countMap: Record<string, number> = {};
-    (counts || []).forEach((item: any) => {
-        if (item.folder_id) {
-            countMap[item.folder_id] = (countMap[item.folder_id] || 0) + 1;
-        }
+    // Batch signed URLs — group files by bucket, then one call per bucket
+    const bucketGroups: Record<string, { index: number; path: string }[]> = {};
+    data.forEach((item: any, index: number) => {
+        if (!item.media_files?.bucket || !item.media_files?.file_path) return;
+        const bucket = item.media_files.bucket;
+        if (!bucketGroups[bucket]) bucketGroups[bucket] = [];
+        bucketGroups[bucket].push({ index, path: item.media_files.file_path });
     });
 
-    return folders.map(folder => ({
-        ...folder,
-        file_count: countMap[folder.id] || 0,
-    }));
+    // One createSignedUrls call per bucket (instead of N individual calls)
+    await Promise.all(
+        Object.entries(bucketGroups).map(async ([bucket, files]) => {
+            try {
+                const paths = files.map(f => f.path);
+                const { data: signedData } = await supabase
+                    .storage
+                    .from(bucket)
+                    .createSignedUrls(paths, 3600); // 1 hour expiry
+
+                if (signedData) {
+                    signedData.forEach((signed, i) => {
+                        if (signed.signedUrl) {
+                            (data[files[i].index] as any).media_files.signed_url = signed.signedUrl;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error(`Error batch signing URLs for bucket ${bucket}:`, e);
+            }
+        })
+    );
+
+    return data as any;
 }
 
 // ============================================================================
@@ -168,4 +135,33 @@ export async function getStorageStats(organizationId: string): Promise<StorageSt
         .sort((a, b) => b.bytes - a.bytes);
 
     return { totalBytes, fileCount: data.length, byType };
+}
+
+// ============================================================================
+// SAVED VIEWS
+// ============================================================================
+
+/**
+ * Get saved views for an organization filtered by entity type.
+ */
+export async function getSavedViews(
+    organizationId: string,
+    entityType: string
+): Promise<SavedView[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('saved_views')
+        .select('id, organization_id, name, entity_type, view_mode, filters, is_default, position, created_at, updated_at')
+        .eq('organization_id', organizationId)
+        .eq('entity_type', entityType)
+        .eq('is_deleted', false)
+        .order('position', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching saved views:', error);
+        return [];
+    }
+
+    return (data || []) as SavedView[];
 }

@@ -31,7 +31,6 @@ export interface FileItem {
     category: string;
     project_id?: string | null;
     organization_id: string;
-    folder_id?: string | null;
     media_files: MediaFile;
     // FK fields that determine source module
     site_log_id?: string | null;
@@ -48,3 +47,27 @@ export interface FileItem {
     course_id?: string | null;
     testimonial_id?: string | null;
 }
+
+// ============================================================================
+// SAVED VIEWS
+// ============================================================================
+
+export interface SavedViewFilters {
+    search?: string;
+    facets?: Record<string, string[]>;
+    dateRange?: { from?: string; to?: string };
+}
+
+export interface SavedView {
+    id: string;
+    organization_id: string;
+    name: string;
+    entity_type: string;
+    view_mode: string | null;
+    filters: SavedViewFilters;
+    is_default: boolean;
+    position: number;
+    created_at: string;
+    updated_at: string;
+}
+

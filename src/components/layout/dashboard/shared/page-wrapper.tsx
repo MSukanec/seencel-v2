@@ -22,6 +22,8 @@ interface PageWrapperProps {
     icon?: React.ReactElement
     /** Optional back button for navigation */
     backButton?: React.ReactNode
+    /** Parent page label for detail mode breadcrumb (e.g. "Proyectos") */
+    parentLabel?: string
     /** Desktop toolbar - renders as second row in header */
     toolbar?: React.ReactNode
     /** @deprecated Use without type — kept temporarily for compatibility */
@@ -38,8 +40,12 @@ export function PageWrapper({
     user,
     icon,
     backButton,
+    parentLabel,
     toolbar
 }: PageWrapperProps) {
+    // In detail mode (parentLabel present), tabs go in content, not header
+    const headerTabs = parentLabel ? undefined : tabs;
+
     return (
         <div className={cn("flex flex-col h-full overflow-hidden", className)}>
             {/* Mobile Header: ALWAYS visible */}
@@ -55,10 +61,11 @@ export function PageWrapper({
             {title && (
                 <PageHeader
                     breadcrumbs={[{ label: title }]}
-                    tabs={tabs}
+                    tabs={headerTabs}
                     actions={actions}
                     icon={icon}
                     backButton={backButton}
+                    parentLabel={parentLabel}
                     toolbar={toolbar}
                 />
             )}
@@ -70,3 +77,4 @@ export function PageWrapper({
         </div>
     )
 }
+

@@ -10,4 +10,7 @@ export { WalletPopoverContent, type WalletPopoverOption, type WalletPopoverConte
 export { CurrencyPopoverContent, type CurrencyPopoverOption, type CurrencyPopoverContentProps } from "./currency-popover-content";
 export { StatusPopoverContent, StatusDot, type StatusPopoverOption, type StatusPopoverContentProps, type StatusVariant } from "./status-popover-content";
 export { SelectPopoverContent, type SelectPopoverOption, type SelectPopoverContentProps } from "./select-popover-content";
+export { CategoryPopoverContent, type CategoryPopoverOption, type CategoryPopoverContentProps } from "./category-popover-content";
 export { AttachmentPopoverContent, AttachmentLabel, type AttachmentPopoverContentProps } from "./attachment-popover-content";
+export { ColorPopoverContent, STANDARD_COLORS, type ColorPopoverContentProps } from "./color-popover-content";
+export { AddressPopoverContent, type AddressData, type AddressPopoverContentProps } from "./address-popover-content";

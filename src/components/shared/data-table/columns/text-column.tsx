@@ -45,6 +45,8 @@ export interface TextColumnOptions<TData> {
     editPlaceholder?: string;
     /** Secondary style: 12px font-[450] (Linear-style for plain text columns like Description) */
     secondary?: boolean;
+    /** Whether this column should fill remaining space (default: true) */
+    fillWidth?: boolean;
 }
 
 // ─── Editable Text Cell ──────────────────────────────────
@@ -79,11 +81,11 @@ function EditableTextCell<TData>({
         setTimeout(() => inputRef.current?.select(), 10);
     };
 
-    const handleSave = async () => {
-        if (editValue !== (value || "")) {
-            await onUpdate(row, editValue);
-        }
+    const handleSave = () => {
         setIsEditing(false);
+        if (editValue !== (value || "")) {
+            onUpdate(row, editValue);
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -153,6 +155,7 @@ export function createTextColumn<TData>(
         onUpdate,
         editPlaceholder,
         secondary = false,
+        fillWidth: shouldFill = true,
     } = options;
 
     // Resolved text classes
@@ -247,7 +250,7 @@ export function createTextColumn<TData>(
             );
         },
         enableSorting,
-        meta: { fillWidth: true },
+        meta: { fillWidth: shouldFill },
         ...(size ? { size } : {}),
     };
 }

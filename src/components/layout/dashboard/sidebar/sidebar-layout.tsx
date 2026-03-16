@@ -3,8 +3,9 @@
 import * as React from "react"
 import { Sidebar } from "./sidebar";
 import { UserProfile } from "@/types/user";
-import { useContextSidebar } from "@/stores/sidebar-store";
+import { useContextSidebarContent, useContextSidebarOverlay } from "@/stores/sidebar-store";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
 interface SidebarLayoutProps {
     children: React.ReactNode;
@@ -17,8 +18,9 @@ const MAX_WIDTH = 400; // Maximum sidebar width in pixels
 const DEFAULT_WIDTH = 224; // w-56 equivalent
 
 export function SidebarLayout({ children, user }: SidebarLayoutProps) {
-    const { state } = useContextSidebar();
-    const hasContextSidebar = !!state.content;
+    const { content: contextContent, title: contextTitle, hasOverlay } = useContextSidebarContent();
+    const { popOverlay } = useContextSidebarOverlay();
+    const hasContextSidebar = !!contextContent;
 
     // Mounted state to avoid hydration mismatch
     const [mounted, setMounted] = React.useState(false);
@@ -83,8 +85,8 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
                     <Sidebar user={user} />
                 </div>
 
-                {/* Main Content — Canvas */}
-                <main className="flex-1 overflow-hidden flex flex-col min-w-0 bg-background rounded-tl-2xl">
+                {/* Main Content — Canvas (encapsulated inset effect) */}
+                <main className="flex-1 overflow-hidden flex flex-col min-w-0 bg-background rounded-2xl my-2 mr-2 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(0,0,0,0.2)]">
                     {children}
                 </main>
 
@@ -112,21 +114,30 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
                         </div>
 
                         {/* Sidebar Content */}
-                        <aside className="flex flex-col h-full border-l bg-sidebar overflow-hidden ml-2">
-                            {state.title && (
-                                <div className="p-3 border-b shrink-0">
+                        <aside className="flex flex-col h-full bg-sidebar overflow-hidden ml-2">
+                            {contextTitle && (
+                                <div className="p-3 shrink-0 flex items-center justify-between">
                                     <h3 className={cn(
                                         "text-sm font-medium text-muted-foreground",
                                         isCompact && "text-center"
                                     )}>
-                                        {isCompact ? state.title.slice(0, 2).toUpperCase() : state.title}
+                                        {isCompact ? contextTitle.slice(0, 2).toUpperCase() : contextTitle}
                                     </h3>
+                                    {hasOverlay && !isCompact && (
+                                        <button
+                                            onClick={popOverlay}
+                                            className="flex items-center justify-center h-5 w-5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                            title="Cerrar"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
                                 </div>
                             )}
                             <div className="flex-1 overflow-y-auto">
                                 {/* Pass isCompact to children via context or data attribute */}
                                 <div data-compact={isCompact ? "true" : "false"}>
-                                    {state.content}
+                                    {contextContent}
                                 </div>
                             </div>
                         </aside>

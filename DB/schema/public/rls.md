@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-10T23:31:35.891Z
+> Generated: 2026-03-15T18:32:16.410Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] RLS Policies (30)
+## [PUBLIC] RLS Policies (29)
 
 ### `app_settings` (2 policies)
 
@@ -210,44 +210,6 @@ iam.is_org_member(organization_id)
 iam.is_org_member(organization_id)
 ```
 
-### `media_file_folders` (4 policies)
-
-#### MEMBERS DELETE MEDIA_FILE_FOLDERS
-
-- **Command**: DELETE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-iam.is_org_member(organization_id)
-```
-
-#### MEMBERS INSERT MEDIA_FILE_FOLDERS
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-iam.is_org_member(organization_id)
-```
-
-#### MEMBERS SELECT MEDIA_FILE_FOLDERS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-iam.is_org_member(organization_id)
-```
-
-#### MEMBERS UPDATE MEDIA_FILE_FOLDERS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-iam.is_org_member(organization_id)
-```
-
 ### `media_files` (3 policies)
 
 #### MEMBERS INSERT MEDIA_FILES
@@ -313,4 +275,33 @@ iam.is_org_member(organization_id)
 - **USING**:
 ```sql
 ((is_public = true) OR ((organization_id IS NOT NULL) AND iam.is_org_member(organization_id)) OR iam.is_admin())
+```
+
+### `saved_views` (3 policies)
+
+#### MEMBERS INSERT SAVED_VIEWS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+iam.can_mutate_org(organization_id, 'media.manage'::text)
+```
+
+#### MEMBERS SELECT SAVED_VIEWS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_view_org(organization_id, 'media.view'::text)
+```
+
+#### MEMBERS UPDATE SAVED_VIEWS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_mutate_org(organization_id, 'media.manage'::text)
 ```

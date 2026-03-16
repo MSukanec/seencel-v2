@@ -1,16 +1,9 @@
 "use client";
 
-import { memo, useCallback } from "react";
-import { ListItem } from "../list-item-base";
+import { memo, useCallback, useMemo } from "react";
+import { ListItem, type ListItemContextMenuAction } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, RefreshCw, CircleCheck, Clock, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, RefreshCw, CircleCheck, Clock, AlertTriangle, CircleDot } from "lucide-react";
 import type { GeneralCost } from "@/features/general-costs/types";
 import {
     Tooltip,
@@ -176,6 +169,28 @@ export const GeneralCostListItem = memo(function GeneralCostListItem({
     const handleDelete = useCallback(() => onDelete?.(concept), [onDelete, concept]);
     const handleClick = useCallback(() => onClick?.(concept), [onClick, concept]);
 
+    // Build context menu actions
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] | undefined => {
+        if (!onEdit && !onDelete) return undefined;
+        const actions: ListItemContextMenuAction[] = [];
+        if (onEdit) {
+            actions.push({
+                label: "Editar",
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                onClick: () => onEdit(concept),
+            });
+        }
+        if (onDelete) {
+            actions.push({
+                label: "Eliminar",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: () => onDelete(concept),
+                variant: "destructive",
+            });
+        }
+        return actions;
+    }, [onEdit, onDelete, concept]);
+
     const hasStats = stats && stats.total_payments > 0;
 
     // Recurrence status
@@ -197,9 +212,16 @@ export const GeneralCostListItem = memo(function GeneralCostListItem({
         <ListItem
             variant="card"
             onClick={onClick ? handleClick : undefined}
+            contextMenuActions={contextMenuActions}
         >
-            {/* Color strip: recurring = indigo, one-time = olive */}
-            <ListItem.ColorStrip color={concept.is_recurring ? "chart-7" : "chart-1"} />
+            {/* Leading icon: recurring vs one-time */}
+            <div className="flex items-center justify-center w-8 h-8 shrink-0 rounded-md bg-muted/50 ml-3">
+                {concept.is_recurring ? (
+                    <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                    <CircleDot className="h-4 w-4 text-muted-foreground/60" />
+                )}
+            </div>
 
             <ListItem.Content>
                 {/* Line 1: Name */}
@@ -209,7 +231,6 @@ export const GeneralCostListItem = memo(function GeneralCostListItem({
                 <div className="flex items-center gap-2 flex-wrap">
                     {concept.is_recurring && (
                         <Badge variant="outline" className="text-[10px] h-5 gap-1 font-normal text-muted-foreground border-muted-foreground/20">
-                            <RefreshCw className="h-2.5 w-2.5" />
                             {getRecurrenceLabel(concept.recurrence_interval, concept.expected_day, concept.expected_amount)}
                         </Badge>
                     )}
@@ -247,37 +268,6 @@ export const GeneralCostListItem = memo(function GeneralCostListItem({
                     <span className="text-xs text-muted-foreground/50 italic">Sin pagos</span>
                 )}
             </ListItem.Trailing>
-
-            {/* Actions */}
-            {(onEdit || onDelete) && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                            {onEdit && (
-                                <DropdownMenuItem onClick={handleEdit} className="text-xs gap-2">
-                                    <Pencil className="h-3.5 w-3.5" />
-                                    Editar
-                                </DropdownMenuItem>
-                            )}
-                            {onDelete && (
-                                <DropdownMenuItem
-                                    onClick={handleDelete}
-                                    className="text-xs gap-2 text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                    Eliminar
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
         </ListItem>
     );
 });

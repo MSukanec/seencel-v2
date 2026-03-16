@@ -69,7 +69,7 @@ export function OrganizationsList({
 
     return (
         <>
-            <div className="grid gap-4">
+            <div className="space-y-2.5">
                 {organizations.map((org) => (
                     <OrganizationListItem
                         key={org.id}

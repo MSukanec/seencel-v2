@@ -127,7 +127,7 @@ export function AdminActivityLogsDataTable({ data }: AdminActivityLogsDataTableP
                             className={`${config.color} font-medium text-xs gap-1`}
                         >
                             <Icon className="h-3 w-3" />
-                            {config.label}
+                            {config.displayLabel}
                         </Badge>
                     );
                 }
@@ -167,7 +167,7 @@ export function AdminActivityLogsDataTable({ data }: AdminActivityLogsDataTableP
                     columnId: "target_table",
                     title: "Módulo",
                     options: Object.entries(moduleConfigs).map(([key, config]) => ({
-                        label: config.label,
+                        label: config.displayLabel,
                         value: key,
                     })),
                 },

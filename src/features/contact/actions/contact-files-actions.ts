@@ -57,6 +57,7 @@ export async function getContactFiles(
         `)
         .eq("contact_id", contactId)
         .eq("organization_id", organizationId)
+        .eq("media_files.is_deleted", false)
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -154,13 +155,17 @@ export async function linkContactFile(
 /**
  * Unlink a file from a contact (removes media_link, keeps the file in storage).
  */
-export async function unlinkContactFile(mediaLinkId: string) {
+export async function unlinkContactFile(mediaLinkId: string, organizationId: string) {
     const supabase = await createClient();
+    
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
 
     const { error } = await supabase
         .from("media_links")
         .delete()
-        .eq("id", mediaLinkId);
+        .eq("id", mediaLinkId)
+        .eq("organization_id", organizationId);
 
     if (error) {
         console.error("Error unlinking file:", error);

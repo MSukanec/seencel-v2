@@ -28,12 +28,16 @@ interface ImageUploaderProps {
     compressionPreset?: ImagePreset;
     /** Size of the avatar (default: 'lg') */
     size?: "sm" | "md" | "lg" | "xl";
+    /** Border radius variant (default: 'lg') */
+    rounded?: "full" | "lg";
     /** Accepted file types (default: image/png, image/jpeg, image/webp) */
     accept?: string;
     /** Whether the component is disabled */
     disabled?: boolean;
     /** Additional className for the container */
     className?: string;
+    /** Additional className for the fallback area */
+    fallbackClassName?: string;
     /** Label for the upload button (if shown) */
     buttonLabel?: string;
     /** Hint text below the button */
@@ -68,9 +72,11 @@ export function ImageUploader({
     onRemove,
     compressionPreset = "avatar",
     size = "lg",
+    rounded = "lg",
     accept = "image/png, image/jpeg, image/webp",
     disabled = false,
     className,
+    fallbackClassName,
     buttonLabel,
     hint,
     showButton = false,
@@ -82,6 +88,7 @@ export function ImageUploader({
 
     const sizeConfig = SIZE_CONFIG[size];
     const displayUrl = previewUrl || currentImageUrl;
+    const roundedClass = rounded === "full" ? "rounded-full" : "rounded-lg";
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -138,23 +145,23 @@ export function ImageUploader({
                     onClick={handleClick}
                     className={`relative ${!disabled ? "cursor-pointer" : "cursor-default"}`}
                 >
-                    <Avatar className={`${sizeConfig.avatar} border-2 border-border shadow-sm bg-muted transition-opacity group-hover:opacity-80 rounded-lg`}>
+                    <Avatar className={`${sizeConfig.avatar} border-2 border-border shadow-sm bg-muted transition-opacity group-hover:opacity-80 ${roundedClass}`}>
                         <AvatarImage src={displayUrl || ""} className="object-cover" />
-                        <AvatarFallback className={`${sizeConfig.text} font-semibold text-muted-foreground w-full h-full flex items-center justify-center bg-muted/50 rounded-lg`}>
+                        <AvatarFallback className={`${sizeConfig.text} font-semibold text-muted-foreground w-full h-full flex items-center justify-center ${roundedClass} ${fallbackClassName || 'bg-muted/50'}`}>
                             {fallbackIcon || fallback || "?"}
                         </AvatarFallback>
                     </Avatar>
 
                     {/* Hover Overlay with Camera Icon */}
                     {!isUploading && !disabled && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className={`absolute inset-0 flex items-center justify-center bg-black/50 ${roundedClass} opacity-0 group-hover:opacity-100 transition-opacity`}>
                             <Camera className={`${sizeConfig.icon} text-white`} />
                         </div>
                     )}
 
                     {/* Loading Spinner */}
                     {isUploading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg">
+                        <div className={`absolute inset-0 flex items-center justify-center bg-black/40 ${roundedClass}`}>
                             <Loader2 className={`${sizeConfig.icon} text-white animate-spin`} />
                         </div>
                     )}

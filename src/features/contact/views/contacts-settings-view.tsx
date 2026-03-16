@@ -1,18 +1,21 @@
-import { ContactCategoriesManager } from "@/features/contact/components/contact-categories-manager";
+"use client";
+
 import { ContactCategory } from "@/types/contact";
+import { ContactCategoriesManager } from "@/features/contact/components/contact-categories-manager";
 
 interface ContactsSettingsViewProps {
     organizationId: string;
     initialCategories: ContactCategory[];
 }
 
-export function ContactsSettingsView({ organizationId, initialCategories }: ContactsSettingsViewProps) {
+export function ContactsSettingsView({
+    organizationId,
+    initialCategories,
+}: ContactsSettingsViewProps) {
     return (
-        <div className="space-y-6">
-            <ContactCategoriesManager
-                organizationId={organizationId}
-                initialCategories={initialCategories}
-            />
-        </div>
+        <ContactCategoriesManager
+            organizationId={organizationId}
+            initialCategories={initialCategories}
+        />
     );
 }

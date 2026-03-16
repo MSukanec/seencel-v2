@@ -1,6 +1,6 @@
 ---
 name: Seencel Page Layout Standard
-description: Estándar OBLIGATORIO para crear nuevas páginas (Page + Views) en Seencel V2. Define arquitectura Server/Client, Tabs en Header, Metadata, Error Handling y Toolbars.
+description: Estándar OBLIGATORIO para crear nuevas páginas (Page + Views) en Seencel V2. Define arquitectura Server/Client, Sidebar-First Navigation (sin Tabs en Header), Metadata, Error Handling y Toolbars.
 ---
 
 # Seencel Page Layout Standard
@@ -74,13 +74,13 @@ app/[locale]/.../page.tsx
 
 ## 🚨 Reglas de Oro (Resumen Ejecutivo)
 
-1.  **Architecture**: `page.tsx` en `app/` (Server) hace fetch y renderiza Tabs → importa `[feature]-*-view.tsx` directamente (sin intermediario client).
-2.  **Tabs**: Siempre van en el **Header** (prop `tabs` de `PageWrapper`), nunca en el body.
-3.  **Metadata**: TODA página debe exportar `generateMetadata` (con título y robots).
+1.  **Architecture**: Páginas con múltiples secciones usan `layout.tsx` + sub-rutas reales (sidebar-first, sin Tabs en Header).
+2.  **Sidebar-First**: Toda navegación de secciones usa **rutas reales** + **sidebar drill-down** (estilo Vercel). ⛔ PROHIBIDO usar `<Tabs>` para secciones de página.
+3.  **Metadata**: TODA página/sub-página debe exportar `generateMetadata` (con título y robots).
 4.  **Error Handling**: Usar `try/catch` y `<ErrorDisplay>` en el servidor para evitar pantallas blancas.
 5.  **Toolbar**: Usar `<Toolbar portalToHeader />` dentro de las Views de Listado/Gestión. **NO usar en Dashboards/Overview**.
 6.  **EmptyState**: Usar `ViewEmptyState` de `@/components/shared/empty-state`. Responsabilidad de la **View**, prohibido en DataTables.
-7.  **Translations**: **NUNCA** dejar claves de traducción faltantes. Asegurar que `es.json` incluya `title`, `detailTitle` (si aplica), `subtitle` y `back`.
+7.  **Header**: Solo breadcrumb centrado + CurrencyModeSelector (si aplica) + DocsButton. SIN tabs, SIN avatar, SIN notificaciones.
 
 ---
 
@@ -177,73 +177,105 @@ graph TD
 
 ---
 
-## 🧱 2. Implementación de `page.tsx` (Gold Standard)
+## 🧱 2. Implementación de Páginas con Sub-secciones (Sidebar-First)
+
+> **Decisión de Marzo 2026:** Las tabs en header se eliminan. Toda navegación de secciones se resuelve con **rutas reales** + **sidebar drill-down**.
+
+### Patrón obligatorio:
+
+```
+app/[locale]/(dashboard)/organization/[feature]/
+├── layout.tsx      ← Auth + PageWrapper + ContentLayout (COMPARTIDO)
+├── page.tsx        ← Sub-página raíz
+├── [section1]/
+│   └── page.tsx    ← Sub-página 1
+└── [section2]/
+    └── page.tsx    ← Sub-página 2
+```
+
+### layout.tsx (Gold Standard):
 
 ```tsx
-// src/app/[locale]/(dashboard)/.../page.tsx
-import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { ErrorDisplay } from "@/components/ui/error-display";
-import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// Imports de Views...
+// app/[locale]/(dashboard)/organization/[feature]/layout.tsx
+import { requireAuthContext } from "@/lib/auth";
+import { PageWrapper, ContentLayout } from "@/components/layout";
+import { FeatureIcon } from "lucide-react";
 
-// ✅ 1. METADATA OBLIGATORIA
-export async function generateMetadata({
-    params
-}: {
-    params: Promise<{ locale: string }>
-}): Promise<Metadata> {
-    const t = await getTranslations({ locale: (await params).locale, namespace: 'Feature' });
+export default async function FeatureLayout({ children }: { children: React.ReactNode }) {
+    await requireAuthContext();
+    return (
+        <PageWrapper title="NombreFeature" icon={<FeatureIcon />}>
+            <ContentLayout variant="wide">
+                {children}
+            </ContentLayout>
+        </PageWrapper>
+    );
+}
+```
+
+### Sub-página (Gold Standard):
+
+```tsx
+// app/[locale]/(dashboard)/organization/[feature]/[section]/page.tsx
+import type { Metadata } from "next";
+import { ErrorDisplay } from "@/components/ui/error-display";
+import { SectionView } from "@/features/feature/views/section-view";
+import { requireAuthContext } from "@/lib/auth";
+
+export async function generateMetadata(): Promise<Metadata> {
     return {
-        title: `${t('title')} | SEENCEL`,
-        description: t('subtitle'),
-        robots: "noindex, nofollow", // 🔒 Dashboard siempre privado
+        title: "Sección | Seencel",
+        description: "Descripción de la sección",
+        robots: "noindex, nofollow",
     };
 }
 
-export default async function FeaturePage({ params }: Props) {
-    const { projectId } = await params;
-
-    // ✅ 2. ERROR BOUNDARY MANUAL (Server Side)
+export default async function SectionPage() {
     try {
-        // Data Fetching
-        const project = await getProject(projectId);
-        
-        if (!project) return notFound();
-
-        return (
-            <Tabs defaultValue="overview" className="h-full flex flex-col">
-                <PageWrapper
-                    type="page"
-                    title="Título Página"
-                    icon={<IconoDelSidebar />} 
-                    tabs={
-                        <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
-                            <TabsTrigger value="overview">Visión General</TabsTrigger>
-                            <TabsTrigger value="list">Listado</TabsTrigger>
-                        </TabsList>
-                    }
-                >
-                    {/* ... TabsContent igual que antes ... */}
-                </PageWrapper>
-            </Tabs>
-        );
+        const { orgId } = await requireAuthContext();
+        // Fetch data específica de esta sección
+        return <SectionView ... />;
     } catch (error) {
-        // ✅ 3. MANEJO DE ERRORES AMIGABLE
         return (
             <div className="h-full w-full flex items-center justify-center">
                 <ErrorDisplay
                     title="Error al cargar"
                     message={error instanceof Error ? error.message : "Error desconocido"}
-                    retryLabel="Recargar"
+                    retryLabel="Reintentar"
                 />
             </div>
         );
     }
 }
 ```
+
+### Sidebar Navigation:
+
+En `use-sidebar-navigation.ts`, definir `children` para el item:
+
+```typescript
+getItemStatus('sidebar_feature', {
+    title: 'NombreFeature',
+    href: '/organization/feature',
+    icon: FeatureIcon,
+    children: [
+        { title: 'Visión General', href: '/organization/feature' },
+        { title: 'Sección 1', href: '/organization/feature/section1' },
+        { title: 'Sección 2', href: '/organization/feature/section2' },
+    ],
+}),
+```
+
+### Header:
+- Solo breadcrumb centrado (`Feature / Sección`)
+- CurrencyModeSelector si aplica
+- DocsButton
+- ⛔ **SIN tabs, SIN avatar, SIN notificaciones**
+
+### Referencia implementada:
+- **Gastos Generales**: `general-costs/layout.tsx` + `page.tsx`, `payments/page.tsx`, `concepts/page.tsx`
+- **Configuración**: `settings/layout.tsx` + 6 sub-páginas
+- **Avanzado**: `advanced/layout.tsx` + 2 sub-páginas
 
 ---
 
@@ -516,7 +548,7 @@ pathnames: {
 
 ## ❌ Anti-Patrones (Lo que NO debes hacer)
 
-1.  **Tabs en Body**: Poner `<TabsList>` dentro de `ContentLayout` o debajo del header manualmente.
+1.  **Tabs para Secciones**: Usar `<Tabs>` / `<TabsContent>` para secciones de página. Usar rutas reales + sidebar drill-down.
 2.  **Toolbars Manuales**: Crear un `div className="flex justify-between..."` con botones.
 3.  **Botones como Children**: `<Toolbar><Button>...</Button></Toolbar>`. Rompe el diseño mobile.
 4.  **Toolbar en Overview Vacío**: Poner una `<Toolbar actions={[]} />` vacía en un Dashboard. Simplemente no la pongas.
@@ -524,6 +556,7 @@ pathnames: {
 6.  **Hardcoded Strings**: No usar textos quemados en el código. Usar `useTranslations` o `getTranslations`.
 7.  **Link de next/link**: Usar `import Link from "next/link"` en lugar de `import { Link } from "@/i18n/routing"`. 🚨
 8.  **hrefs con locale**: Escribir hrefs como `/${locale}/ruta` en lugar de solo `/ruta`.
+9.  **Avatar/Notificaciones en Header**: El avatar y notificaciones viven en el bottom del sidebar, NO en el header.
 
 ---
 
@@ -568,26 +601,27 @@ import { LazyAreaChart as BaseAreaChart } from "@/components/charts/lazy-charts"
 
 > **REGLA**: SIEMPRE usar versiones lazy para charts en dashboards.
 
-### 10.3 Navegación de Tabs (Cambio Instantáneo)
+### 10.3 Navegación de Secciones (Sidebar-First)
 
-**Problema:** `router.replace()` causa re-fetch completo = LENTO.
+**Patrón antiguo (DEPRECADO):** `<Tabs>` en header con `router.replace()` o estado local.
+
+**Patrón nuevo (OBLIGATORIO):** Rutas reales + sidebar drill-down.
 
 ```tsx
-// ❌ INCORRECTO - Causa re-fetch completo
-const handleTabChange = (value: string) => {
-    router.replace(`${pathname}?view=${value}`);
-};
+// ❌ DEPRECADO - Tabs en header
+<Tabs defaultValue="overview">
+    <TabsList>...</TabsList>
+    <TabsContent value="overview">...</TabsContent>
+</Tabs>
 
-// ✅ CORRECTO - Cambio de tab instantáneo
-const [activeTab, setActiveTab] = useState(defaultTab);
-
-const handleTabChange = (value: string) => {
-    setActiveTab(value); // Update UI instantáneo
-    window.history.replaceState(null, '', `${pathname}?view=${value}`); // Shallow URL
-};
-
-<Tabs value={activeTab} onValueChange={handleTabChange}>
+// ✅ CORRECTO - Rutas reales con layout compartido
+// layout.tsx → PageWrapper + ContentLayout (compartido)
+// page.tsx → Sección raíz
+// payments/page.tsx → Sub-sección
+// concepts/page.tsx → Sub-sección
 ```
+
+> Las tabs de `<Tabs>` solo son válidas para controles DENTRO de una vista (ej: currency selector, toggle de modo), NO para secciones de página.
 
 ### 10.4 Data Refresh
 
@@ -681,11 +715,14 @@ import { MetricCard, ChartCard } from "@/components/cards";
 ## ✅ Checklist Final
 
 ### Estructura
-- [ ] `page.tsx` exporta `generateMetadata`
-- [ ] Tabs en prop `tabs` de PageWrapper
+- [ ] Páginas con secciones usan `layout.tsx` + sub-rutas (sidebar-first)
+- [ ] `layout.tsx` contiene Auth + PageWrapper + ContentLayout
+- [ ] Sub-páginas exportan `generateMetadata`
 - [ ] Views en archivos `*-view.tsx` (~150-200 líneas máx)
 - [ ] Columnas extraídas en `tables/*-columns.tsx`
 - [ ] Toolbar con `portalToHeader` en vistas de listado
+- [ ] Children definidos en `use-sidebar-navigation.ts`
+- [ ] Rutas registradas en `routing.ts` con ES/EN
 
 ### Hooks Globales
 - [ ] Delete usa `useTableActions` (NO reimplementar AlertDialog)
@@ -704,5 +741,10 @@ import { MetricCard, ChartCard } from "@/components/cards";
 - [ ] Rutas registradas en `routing.ts`
 
 ### Performance
-- [ ] Tab switching usa estado local
+- [ ] Secciones de página usan rutas reales (NO tabs con estado local)
 - [ ] Animaciones `duration-150` o más rápidas
+
+### Sidebar-First
+- [ ] Header solo tiene breadcrumb centrado + acciones contextuales
+- [ ] Avatar y notificaciones en el bottom del sidebar
+- [ ] Sidebar drill-down funciona correctamente

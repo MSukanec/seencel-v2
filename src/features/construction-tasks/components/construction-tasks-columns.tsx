@@ -5,7 +5,6 @@ import { ConstructionTaskView, ConstructionTaskStatus, STATUS_CONFIG } from "../
 import { createTextColumn } from "@/components/shared/data-table/columns/text-column";
 import { createDateColumn } from "@/components/shared/data-table/columns/date-column";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
-import { DataTableRowActions } from "@/components/shared/data-table/data-table-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -148,18 +147,7 @@ export function getConstructionTaskColumns(
             enableSorting: true,
         },
 
-        // --- Acciones ---
-        {
-            id: "actions",
-            cell: ({ row }) => (
-                <DataTableRowActions
-                    row={row}
-                    onEdit={callbacks.onEdit}
-                    onDelete={callbacks.onDelete}
-                />
-            ),
-            enableSorting: false,
-            enableHiding: false,
-        },
+        // Actions are handled by DataTable's context menu (enableRowActions/enableContextMenu)
     ];
 }
+

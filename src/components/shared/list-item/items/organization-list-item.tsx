@@ -6,12 +6,7 @@ import { PlanBadge } from "@/components/shared/plan-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AvatarStack } from "@/components/ui/avatar-stack";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { EntityContextMenu } from "@/components/shared/entity-context-menu";
 import { MoreVertical, Building, Trash2, Check } from "lucide-react";
 import { getStorageUrl } from "@/lib/storage-utils";
 
@@ -72,8 +67,8 @@ export const OrganizationListItem = memo(function OrganizationListItem({
     // Solo el dueño puede eliminar, y nunca la org activa
     const canDelete = isOwner && !isActive && !!onDelete;
 
-    return (
-        <ListItem variant="card">
+    const content = (
+        <ListItem variant="row">
             {/* Logo */}
             <ListItem.Leading>
                 <div className={`h-10 w-10 rounded-lg flex items-center justify-center overflow-hidden ${logoUrl ? '' : 'bg-primary/10'}`}>
@@ -117,32 +112,19 @@ export const OrganizationListItem = memo(function OrganizationListItem({
                     </Button>
                 ) : null}
             </ListItem.Trailing>
-
-            {/* Actions: Delete only */}
-            {canDelete && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground group-hover:text-foreground"
-                            >
-                                <MoreVertical className="w-4 h-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => onDelete!(organization)}
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Eliminar Organización
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
         </ListItem>
     );
+
+    if (canDelete) {
+        return (
+            <EntityContextMenu
+                data={organization}
+                onDelete={() => onDelete!(organization)}
+            >
+                {content}
+            </EntityContextMenu>
+        );
+    }
+
+    return content;
 });

@@ -51,6 +51,7 @@ export function ProfileOrganizationsView({ organizations, activeOrgId, currentUs
         <ContentLayout variant="settings">
             <SettingsSectionContainer>
                 <SettingsSection
+                    contentVariant="inset"
                     icon={Building}
                     title={t('title')}
                     description={t('description')}

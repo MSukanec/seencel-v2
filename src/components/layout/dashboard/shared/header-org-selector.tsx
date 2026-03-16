@@ -8,10 +8,11 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { useRouter } from "@/i18n/routing";
-import { ChevronDown, Check, Plus } from "lucide-react";
+import { ChevronsUpDown, Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { switchOrganization, fetchUserOrganizationsLight } from "@/features/organization/actions";
 import { useLayoutData } from "@/hooks/use-layout-data";
+import { useOrganization } from "@/stores/organization-store";
 
 // ============================================================================
 // ORG SELECTOR — Standalone component for selecting organizations
@@ -26,6 +27,19 @@ interface LightOrg {
     id: string;
     name: string;
     logo_url: string | null;
+}
+
+// ── Plan subtitle component ──
+function PlanSubtitle() {
+    const { planSlug } = useOrganization();
+    const label = planSlug
+        ? planSlug.charAt(0).toUpperCase() + planSlug.slice(1)
+        : 'Free';
+    return (
+        <span className="text-[11px] text-muted-foreground leading-tight truncate w-full text-left">
+            Plan {label}
+        </span>
+    );
 }
 
 // ── Module-level cache: survives component mount/unmount cycles ──
@@ -121,30 +135,61 @@ export function HeaderOrgSelector({ variant = "header", isExpanded = true }: Hea
             <PopoverTrigger asChild>
                 <button
                     className={cn(
-                        "flex items-center gap-2 rounded-lg transition-colors cursor-pointer",
+                        "flex items-center cursor-pointer transition-all",
                         isSidebar
-                            ? "w-full h-9 px-1.5 hover:bg-sidebar-accent/60 text-sidebar-foreground"
-                            : "h-7 px-2 hover:bg-secondary/80 text-foreground gap-1.5",
-                        open && (isSidebar ? "bg-sidebar-accent/60" : "bg-secondary/80")
+                            ? cn(
+                                "w-full px-2 py-1.5 gap-2.5 rounded-xl",
+                                "bg-white/[0.03] border border-white/[0.08]",
+                                "shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_4px_rgba(0,0,0,0.3),0_1px_2px_rgba(0,0,0,0.2)]",
+                                "hover:bg-white/[0.05] hover:border-white/[0.11]",
+                                "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_3px_8px_rgba(0,0,0,0.35),0_1px_3px_rgba(0,0,0,0.25)]",
+                                "text-sidebar-foreground"
+                              )
+                            : "h-7 px-2 gap-1.5 rounded-lg hover:bg-secondary/80 text-foreground",
+                        open && isSidebar && "bg-white/[0.05] border-white/[0.11]"
                     )}
                 >
-                    <Avatar className={cn(isSidebar ? "h-6 w-6" : "h-4 w-4", "rounded-md shrink-0")}>
-                        {currentOrg.logo_url && <AvatarImage src={currentOrg.logo_url} alt={currentOrg.name} />}
-                        <AvatarFallback className={cn(
-                            "rounded-md bg-primary/10 text-primary font-bold",
-                            isSidebar ? "text-[9px]" : "text-[7px]"
-                        )}>
-                            {getInitials(currentOrg.name)}
-                        </AvatarFallback>
-                    </Avatar>
-                    <span className={cn(
-                        "font-medium whitespace-nowrap truncate flex-1 text-left",
-                        isSidebar ? "text-sm" : "text-sm"
+                    {/* Circular avatar — inset/recessed effect */}
+                    <div className={cn(
+                        "shrink-0 rounded-full flex items-center justify-center",
+                        isSidebar
+                            ? "h-8 w-8 bg-black/20 shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.35),inset_0_0.5px_1px_rgba(0,0,0,0.25)] border border-white/[0.04]"
+                            : "h-4 w-4"
                     )}>
-                        {currentOrg.name}
-                    </span>
-                    <ChevronDown className={cn(
-                        "text-muted-foreground shrink-0",
+                        {currentOrg.logo_url ? (
+                            <Avatar className={cn(isSidebar ? "h-6 w-6" : "h-4 w-4", "rounded-full")}>
+                                <AvatarImage src={currentOrg.logo_url} alt={currentOrg.name} className="rounded-full" />
+                                <AvatarFallback className={cn(
+                                    "rounded-full bg-transparent text-muted-foreground font-bold",
+                                    isSidebar ? "text-[10px]" : "text-[7px]"
+                                )}>
+                                    {getInitials(currentOrg.name)}
+                                </AvatarFallback>
+                            </Avatar>
+                        ) : (
+                            <span className={cn(
+                                "font-bold text-muted-foreground",
+                                isSidebar ? "text-[11px]" : "text-[7px]"
+                            )}>
+                                {getInitials(currentOrg.name)}
+                            </span>
+                        )}
+                    </div>
+                    {/* Dual-row text */}
+                    {isSidebar ? (
+                        <div className="flex flex-col items-start flex-1 min-w-0">
+                            <span className="text-sm font-semibold truncate w-full text-left leading-tight">
+                                {currentOrg.name}
+                            </span>
+                            <PlanSubtitle />
+                        </div>
+                    ) : (
+                        <span className="text-sm font-medium whitespace-nowrap truncate flex-1 text-left">
+                            {currentOrg.name}
+                        </span>
+                    )}
+                    <ChevronsUpDown className={cn(
+                        "text-muted-foreground/50 shrink-0",
                         isSidebar ? "h-3.5 w-3.5" : "h-3 w-3"
                     )} />
                 </button>

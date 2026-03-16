@@ -1,6 +1,14 @@
 import { getDocsTree } from "@/features/docs/lib/get-docs-content";
 import { DocsSidebar } from "@/features/docs/components/docs-sidebar";
 import { getLocale } from "next-intl/server";
+import { BookOpen } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Documentación | SEENCEL",
+    description: "Guías y tutoriales de la plataforma Seencel",
+    robots: "noindex, nofollow",
+};
 
 interface DocsLayoutProps {
     children: React.ReactNode;
@@ -11,14 +19,22 @@ export default async function DocsLayout({ children }: DocsLayoutProps) {
     const tree = await getDocsTree(locale);
 
     return (
-        <div className="flex h-full">
-            {/* Left sidebar - Feature navigation */}
-            <aside className="w-64 border-r border-border bg-background p-4 overflow-y-auto hidden md:block">
-                <div className="mb-4">
-                    <h2 className="text-lg font-semibold">Documentación</h2>
-                    <p className="text-sm text-muted-foreground">Guías y tutoriales</p>
+        <div className="flex h-full overflow-hidden">
+            {/* Left sidebar — Docs navigation */}
+            <aside className="w-60 shrink-0 border-r border-border/50 bg-background overflow-y-auto hidden md:flex md:flex-col">
+                {/* Header */}
+                <div className="px-4 pt-5 pb-3">
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <BookOpen className="h-4 w-4 text-primary" />
+                        <h2 className="text-sm font-semibold text-foreground">Documentación</h2>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Guías y tutoriales</p>
                 </div>
-                <DocsSidebar tree={tree} />
+
+                {/* Navigation */}
+                <div className="flex-1 px-2 pb-4 overflow-y-auto">
+                    <DocsSidebar tree={tree} />
+                </div>
             </aside>
 
             {/* Main content area */}

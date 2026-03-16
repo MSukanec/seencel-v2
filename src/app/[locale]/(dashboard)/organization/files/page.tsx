@@ -1,15 +1,13 @@
 import { redirect } from "next/navigation";
 import { getDashboardData } from "@/features/organization/queries";
-import { getFiles, getFolders, getStorageStats } from "@/features/files/queries";
+import { getFiles, getSavedViews } from "@/features/files/queries";
 import { getSidebarProjects } from "@/features/projects/queries";
 import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { getTranslations } from "next-intl/server";
 import { Metadata } from "next";
-import { FolderOpen } from "lucide-react";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { FileGallery } from "@/features/files/views/files-gallery-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { StorageOverviewWidget } from "@/components/widgets/files/storage-overview-widget";
 
 export async function generateMetadata({
     params
@@ -36,59 +34,40 @@ export default async function OrganizationFilesPage() {
     const organizationId = organization.id;
 
     try {
-        const [files, folders, planFeatures, projects, storageStats] = await Promise.all([
+        const [files, planFeatures, projects, savedViews] = await Promise.all([
             getFiles(organizationId, null),
-            getFolders(organizationId, null),
             getOrganizationPlanFeatures(organizationId),
             getSidebarProjects(organizationId),
-            getStorageStats(organizationId),
+            getSavedViews(organizationId, 'files'),
         ]);
 
         const maxFileSizeMb = planFeatures?.max_file_size_mb ?? 50;
-        const maxStorageMb = planFeatures?.max_storage_mb ?? 500;
-
-
 
         return (
-            <PageWrapper
-                type="page"
-                title="Documentación"
-                icon={<FolderOpen />}
-            >
+            <PageWrapper title="Archivos">
                 <ContentLayout variant="wide">
-                    {files.length > 0 && (
-                        <StorageOverviewWidget
-                            stats={storageStats}
-                            maxStorageMb={maxStorageMb}
-                            folderCount={folders.length}
-                        />
-                    )}
-                    <div className={`flex-1 flex flex-col min-h-0${files.length > 0 ? " mt-4" : ""}`}>
-                        <FileGallery
-                            files={files}
-                            folders={folders}
-                            organizationId={organizationId}
-                            maxFileSizeMb={maxFileSizeMb}
-                            projects={projects}
-                        />
-                    </div>
+                    <FileGallery
+                        files={files}
+                        organizationId={organizationId}
+                        maxFileSizeMb={maxFileSizeMb}
+                        projects={projects}
+                        savedViews={savedViews}
+                    />
                 </ContentLayout>
             </PageWrapper>
         );
     } catch (error) {
         return (
-            <PageWrapper
-                type="page"
-                title="Documentación"
-                icon={<FolderOpen />}
-            >
-                <div className="h-full w-full flex items-center justify-center">
-                    <ErrorDisplay
-                        title="Error al cargar documentación"
-                        message={error instanceof Error ? error.message : "Error desconocido"}
-                        retryLabel="Reintentar"
-                    />
-                </div>
+            <PageWrapper title="Archivos">
+                <ContentLayout variant="wide">
+                    <div className="h-full w-full flex items-center justify-center">
+                        <ErrorDisplay
+                            title="Error al cargar archivos"
+                            message={error instanceof Error ? error.message : "Error desconocido"}
+                            retryLabel="Reintentar"
+                        />
+                    </div>
+                </ContentLayout>
             </PageWrapper>
         );
     }
