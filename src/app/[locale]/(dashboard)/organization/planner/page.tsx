@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { PlannerView } from "@/features/planner/views/planner-view";
 import { getTranslations } from "next-intl/server";
 import { Metadata } from "next";
+import { ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
 
 export async function generateMetadata({
@@ -51,23 +52,27 @@ export default async function PlannerPage() {
         }
 
         return (
-            <PlannerView
-                activeBoardData={activeBoardData}
-                organizationId={organizationId}
-                calendarEvents={calendarEvents}
-                projects={projects}
-                isTeamsEnabled={isTeamsEnabled}
-            />
+            <ContentLayout variant="wide">
+                <PlannerView
+                    activeBoardData={activeBoardData}
+                    organizationId={organizationId}
+                    calendarEvents={calendarEvents}
+                    projects={projects}
+                    isTeamsEnabled={isTeamsEnabled}
+                />
+            </ContentLayout>
         );
     } catch (error) {
         return (
-            <div className="h-full w-full flex items-center justify-center">
-                <ErrorDisplay
-                    title="Error al cargar el planificador"
-                    message={error instanceof Error ? error.message : "Error desconocido"}
-                    retryLabel="Reintentar"
-                />
-            </div>
+            <ContentLayout variant="wide">
+                <div className="h-full w-full flex items-center justify-center">
+                    <ErrorDisplay
+                        title="Error al cargar el planificador"
+                        message={error instanceof Error ? error.message : "Error desconocido"}
+                        retryLabel="Reintentar"
+                    />
+                </div>
+            </ContentLayout>
         );
     }
 }

@@ -8,7 +8,6 @@
 
 import { Building, Plus } from "lucide-react";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { OrganizationsList } from "@/features/organization/components/organizations-list";
 import { useRouter } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
@@ -48,8 +47,7 @@ export function ProfileOrganizationsView({ organizations, activeOrgId, currentUs
     };
 
     return (
-        <ContentLayout variant="settings">
-            <SettingsSectionContainer>
+        <SettingsSectionContainer>
                 <SettingsSection
                     contentVariant="inset"
                     icon={Building}
@@ -76,7 +74,6 @@ export function ProfileOrganizationsView({ organizations, activeOrgId, currentUs
                         />
                     )}
                 </SettingsSection>
-            </SettingsSectionContainer>
-        </ContentLayout>
+        </SettingsSectionContainer>
     );
 }

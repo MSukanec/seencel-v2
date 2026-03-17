@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────
 
-export type DatePickerMode = "day" | "month" | "quarter" | "half-year" | "year";
+export type DatePickerMode = "day" | "day-range" | "month" | "quarter" | "half-year" | "year";
 
 export interface UnifiedDatePickerProps {
     /** Active mode */
@@ -60,6 +60,12 @@ export interface UnifiedDatePickerProps {
     /** Callback when a period is selected */
     onSelectPeriod?: (iso: string) => void;
 
+    // ─── Day Range mode ──────────────────────────────────
+    /** Selected date range (day-range mode) */
+    rangeValue?: { from?: Date; to?: Date };
+    /** Callback when a range changes */
+    onSelectRange?: (range: { from?: Date; to?: Date }) => void;
+
     /** Show search input */
     showSearch?: boolean;
     /** Placeholder for search */
@@ -72,6 +78,7 @@ const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "S
 const WEEKDAY_LABELS = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
 const MODE_LABELS: Record<DatePickerMode, string> = {
     "day": "Día",
+    "day-range": "Fechas",
     "month": "Mes",
     "quarter": "Trimestre",
     "half-year": "Semestre",
@@ -88,6 +95,8 @@ export function UnifiedDatePicker({
     onSelectDay,
     periodValue,
     onSelectPeriod,
+    rangeValue,
+    onSelectRange,
     showSearch = true,
     searchPlaceholder = "Ej: May 2027, Q4, 20/05/2027",
 }: UnifiedDatePickerProps) {
@@ -110,7 +119,7 @@ export function UnifiedDatePicker({
 
     // View month for day calendar
     const [viewMonth, setViewMonth] = React.useState(() =>
-        value || new Date()
+        value || rangeValue?.from || new Date()
     );
     // View year for period grids
     const [viewYear, setViewYear] = React.useState(() =>
@@ -232,6 +241,15 @@ export function UnifiedDatePicker({
                         onSelect={(d) => onSelectDay?.(d)}
                     />
                 )}
+                {mode === "day-range" && (
+                    <DayGrid
+                        viewMonth={viewMonth}
+                        onViewMonthChange={setViewMonth}
+                        rangeValue={rangeValue}
+                        onSelectRange={(range) => onSelectRange?.(range)}
+                        isRangeMode
+                    />
+                )}
                 {mode === "month" && (
                     <PeriodGrid
                         type="month"
@@ -280,11 +298,17 @@ function DayGrid({
     onViewMonthChange,
     selected,
     onSelect,
+    rangeValue,
+    onSelectRange,
+    isRangeMode,
 }: {
     viewMonth: Date;
     onViewMonthChange: (d: Date) => void;
     selected?: Date;
-    onSelect: (d: Date) => void;
+    onSelect?: (d: Date) => void;
+    rangeValue?: { from?: Date; to?: Date };
+    onSelectRange?: (range: { from?: Date; to?: Date }) => void;
+    isRangeMode?: boolean;
 }) {
     const year = viewMonth.getFullYear();
     const month = viewMonth.getMonth();
@@ -317,8 +341,29 @@ function DayGrid({
 
     const monthLabel = `${MONTH_LABELS[month]} ${year}`;
 
-    const isSameDay = (a: { day: number; month: number; year: number }, b: Date) =>
-        a.day === b.getDate() && a.month === b.getMonth() && a.year === b.getFullYear();
+    const isSameDay = (a: { day: number; month: number; year: number }, b: Date | undefined) =>
+        b ? (a.day === b.getDate() && a.month === b.getMonth() && a.year === b.getFullYear()) : false;
+
+    // Range helpers
+    const currentHoverDate = React.useRef<Date | null>(null);
+    const [hoverDate, setHoverDate] = React.useState<Date | null>(null);
+
+    const isDayBefore = (d1: Date, d2: Date) => {
+        const reset1 = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate());
+        const reset2 = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate());
+        return reset1.getTime() < reset2.getTime();
+    };
+
+    const isDayAfter = (d1: Date, d2: Date) => {
+        const reset1 = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate());
+        const reset2 = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate());
+        return reset1.getTime() > reset2.getTime();
+    };
+
+    const isDayBetween = (a: { day: number; month: number; year: number }, start: Date, end: Date) => {
+        const target = new Date(a.year, a.month, a.day);
+        return isDayAfter(target, start) && isDayBefore(target, end);
+    };
 
     return (
         <div className="space-y-2">
@@ -346,27 +391,78 @@ function DayGrid({
             <div className="grid grid-cols-7 gap-0">
                 {cells.map((cell, i) => {
                     const isToday = !cell.outside && isSameDay(cell, today);
-                    const isSelected = selected && !cell.outside && isSameDay(cell, selected);
+                    
+                    let isSelected = false;
+                    let isSelectedStart = false;
+                    let isSelectedEnd = false;
+                    let isInRange = false;
+
+                    if (isRangeMode && rangeValue) {
+                        isSelectedStart = isSameDay(cell, rangeValue.from);
+                        isSelectedEnd = isSameDay(cell, rangeValue.to);
+                        isSelected = isSelectedStart || isSelectedEnd;
+                        
+                        if (rangeValue.from && rangeValue.to) {
+                            isInRange = isDayBetween(cell, rangeValue.from, rangeValue.to);
+                        } else if (rangeValue.from && hoverDate) {
+                            if (isDayBefore(hoverDate, rangeValue.from)) {
+                                isInRange = isDayBetween(cell, hoverDate, rangeValue.from);
+                            } else {
+                                isInRange = isDayBetween(cell, rangeValue.from, hoverDate);
+                            }
+                        }
+                    } else if (selected) {
+                        isSelected = !cell.outside && isSameDay(cell, selected);
+                    }
 
                     return (
-                        <button
-                            key={i}
-                            type="button"
-                            onClick={() => {
-                                const d = new Date(cell.year, cell.month, cell.day);
-                                onSelect(d);
-                                if (cell.outside) onViewMonthChange(d);
-                            }}
+                        <div 
+                            key={i} 
                             className={cn(
-                                "h-8 flex items-center justify-center text-xs rounded-md transition-colors",
-                                cell.outside && "text-muted-foreground/30",
-                                !cell.outside && !isSelected && !isToday && "text-foreground hover:bg-muted",
-                                isToday && !isSelected && "border border-border text-foreground hover:bg-muted",
-                                isSelected && "border border-primary bg-primary/10 text-foreground",
+                                "flex items-center justify-center p-0.5 relative",
+                                isInRange && !cell.outside && "bg-primary/10 rounded-none",
+                                // Highlight logic to merge corners
+                                isInRange && !cell.outside && i % 7 === 0 && "rounded-l-md",
+                                isInRange && !cell.outside && i % 7 === 6 && "rounded-r-md"
                             )}
+                            onMouseEnter={() => {
+                                if (isRangeMode && rangeValue?.from && !rangeValue.to && !cell.outside) {
+                                    setHoverDate(new Date(cell.year, cell.month, cell.day));
+                                }
+                            }}
                         >
-                            {cell.day}
-                        </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const d = new Date(cell.year, cell.month, cell.day);
+                                    if (isRangeMode) {
+                                        if (!rangeValue?.from || (rangeValue.from && rangeValue.to)) {
+                                            onSelectRange?.({ from: d, to: undefined });
+                                        } else {
+                                            if (isDayBefore(d, rangeValue.from)) {
+                                                onSelectRange?.({ from: d, to: rangeValue.from });
+                                            } else {
+                                                onSelectRange?.({ from: rangeValue.from, to: d });
+                                            }
+                                        }
+                                    } else {
+                                        onSelect?.(d);
+                                    }
+                                    if (cell.outside) onViewMonthChange(d);
+                                }}
+                                className={cn(
+                                    "h-8 w-8 flex items-center justify-center text-xs rounded-md transition-colors relative z-10",
+                                    cell.outside && "text-muted-foreground/30",
+                                    !cell.outside && !isSelected && !isToday && "text-foreground hover:bg-muted font-medium",
+                                    isToday && !isSelected && "border border-border text-foreground hover:bg-muted font-bold",
+                                    isSelected && "border border-transparent bg-primary text-primary-foreground font-semibold shadow-sm hover:bg-primary/90",
+                                    // if it's the start/end of a range, color it
+                                    (isSelectedStart || isSelectedEnd) && "bg-primary text-primary-foreground font-semibold hover:bg-primary/90 rounded-md"
+                                )}
+                            >
+                                {cell.day}
+                            </button>
+                        </div>
                     );
                 })}
             </div>

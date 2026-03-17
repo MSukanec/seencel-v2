@@ -1689,6 +1689,9 @@
     "Planner": {
         "title": "Planificador",
         "subtitle": "Organizá eventos, reuniones y tareas de tu equipo.",
+        "emptyState": {
+            "description": "Organiza reuniones, tareas y deadlines en un solo lugar. Usa la lista, el calendario o el panel para gestionar tu planificación."
+        },
         "tabs": {
             "calendar": "Calendario",
             "kanban": "Panel de Tareas"
@@ -1699,7 +1702,7 @@
             "calendar": "Calendario"
         },
         "actions": {
-            "new": "Nuevo Evento"
+            "new": "Nueva Actividad"
         }
     },
     "Files": {

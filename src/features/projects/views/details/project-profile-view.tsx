@@ -223,7 +223,7 @@ export function ProjectProfileView({ project, projectTypes, projectModalities }:
     const currentVariantStyle = VARIANT_STYLES[currentStatusConfig.variant];
 
     return (
-        <ContentLayout variant="settings">
+        <ContentLayout variant="narrow">
             <SettingsSectionContainer>
 
                 {/* ── Estado del Proyecto ── */}

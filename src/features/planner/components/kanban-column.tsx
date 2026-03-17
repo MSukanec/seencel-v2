@@ -4,6 +4,7 @@ import { KanbanCard, KanbanList, KanbanMember } from "@/features/planner/types";
 import { cn } from "@/lib/utils";
 import { KanbanCardItem } from "./kanban-card";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
     MoreHorizontal,
     Plus,
@@ -15,12 +16,12 @@ import {
     Move,
 } from "lucide-react";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuSeparator,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -67,16 +68,18 @@ export function KanbanColumn({
     const isAtLimit = list.limit_wip && activeCards.length >= list.limit_wip;
 
     return (
-        <div
-            ref={innerRef}
-            {...draggableProps}
-            className={cn(
-                "flex flex-col bg-card rounded-xl w-full max-h-full",
-                "border shadow-sm",
-                isDragOver && "border-primary/50 ring-2 ring-primary/20",
-            )}
-        >
-            {/* Column Header */}
+        <ContextMenu>
+            <ContextMenuTrigger asChild>
+                <Card
+                    variant="island"
+                    ref={innerRef}
+                    {...draggableProps}
+                    className={cn(
+                        "flex flex-col w-full h-fit max-h-full overflow-hidden",
+                        isDragOver && "border-primary/50 ring-2 ring-primary/20",
+                    )}
+                >
+                    {/* Column Header */}
             <div
                 {...dragHandleProps}
                 className="flex items-center justify-between p-3 gap-2 cursor-grab active:cursor-grabbing"
@@ -140,31 +143,6 @@ export function KanbanColumn({
                         <Plus className="h-4 w-4" />
                     </Button>
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={onEditList}>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Editar columna
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={onMoveList}>
-                                <Move className="h-4 w-4 mr-2" />
-                                Mover a otro tablero
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={onDeleteList}
-                                className="text-destructive focus:text-destructive"
-                            >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Eliminar columna
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
                 </div>
             </div>
 
@@ -208,7 +186,7 @@ export function KanbanColumn({
                                     className="w-full h-12 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors cursor-pointer"
                                 >
                                     <Plus className="h-4 w-4" />
-                                    Agregar tarjeta
+                                    Agregar actividad
                                 </button>
                             )}
                         </div>
@@ -260,11 +238,27 @@ export function KanbanColumn({
                         onClick={onAddCard}
                     >
                         <Plus className="h-4 w-4 mr-2" />
-                        Agregar tarjeta
+                        Agregar actividad
                     </Button>
                 </div>
             )}
-        </div>
+            </Card>
+            </ContextMenuTrigger>
+            
+            {/* Opciones del menú contextual para la columna */}
+            <ContextMenuContent className="w-56">
+                <ContextMenuItem onClick={onEditList} className="gap-2 text-xs">
+                    <Pencil className="h-4 w-4" />
+                    Editar columna
+                </ContextMenuItem>
+
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={onDeleteList} className="gap-2 text-xs">
+                    <Trash2 className="h-4 w-4" />
+                    Eliminar columna
+                </ContextMenuItem>
+            </ContextMenuContent>
+        </ContextMenu>
     );
 }
 

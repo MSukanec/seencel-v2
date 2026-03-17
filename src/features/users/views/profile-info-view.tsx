@@ -4,18 +4,20 @@
 // PROFILE INFO VIEW
 // ============================================================================
 // Vista de perfil personal usando SettingsSection layout.
-// Secciones: Foto de Perfil + Datos Personales (auto-save con debounce).
+// Secciones: Foto de Perfil + Datos Personales + Datos de Facturación.
+// Auto-save con debounce en todas las secciones.
 // Usa Field Factories (Standard 19.10) para todos los campos.
 // ============================================================================
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Camera, UserRound } from "lucide-react";
+import { Camera, UserRound, Receipt } from "lucide-react";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { FormGroup } from "@/components/ui/form-group";
 import { AvatarManager } from "@/features/users/components/avatar-manager";
 import { updateUserProfile } from "@/features/users/actions";
+import { updateBillingProfile } from "@/features/billing/actions";
+import { BillingProfile } from "@/features/billing/queries";
 import { UserProfile } from "@/types/user";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { CountrySelector } from "@/components/ui/country-selector";
@@ -27,6 +29,7 @@ import {
     TextField,
     PhoneField,
     DateField,
+    SwitchField,
 } from "@/components/shared/forms/fields";
 
 interface Country {
@@ -38,6 +41,7 @@ interface Country {
 interface ProfileInfoViewProps {
     profile: UserProfile | null;
     countries: Country[];
+    billingProfile?: BillingProfile | null;
 }
 
 interface ProfileFields {
@@ -48,10 +52,22 @@ interface ProfileFields {
     country: string;
 }
 
-export function ProfileInfoView({ profile, countries }: ProfileInfoViewProps) {
-    const t = useTranslations('Settings.Profile');
+interface BillingFields {
+    is_company: boolean;
+    full_name: string;
+    company_name: string;
+    tax_id: string;
+    country_id: string;
+    address_line1: string;
+    city: string;
+    postcode: string;
+}
 
-    // ── Form state ──
+export function ProfileInfoView({ profile, countries, billingProfile }: ProfileInfoViewProps) {
+    const t = useTranslations('Settings.Profile');
+    const tBilling = useTranslations('Settings.Billing');
+
+    // ── Profile form state ──
     const [firstName, setFirstName] = useState(profile?.first_name || "");
     const [lastName, setLastName] = useState(profile?.last_name || "");
     const [phoneValue, setPhoneValue] = useState(profile?.phone_e164 || "");
@@ -60,12 +76,22 @@ export function ProfileInfoView({ profile, countries }: ProfileInfoViewProps) {
         parseDateFromDB(profile?.birthdate) ?? undefined
     );
 
+    // ── Billing form state ──
+    const [isCompany, setIsCompany] = useState(billingProfile?.is_company ?? false);
+    const [billingFullName, setBillingFullName] = useState(billingProfile?.full_name ?? "");
+    const [companyName, setCompanyName] = useState(billingProfile?.company_name ?? "");
+    const [taxId, setTaxId] = useState(billingProfile?.tax_id ?? "");
+    const [billingCountryId, setBillingCountryId] = useState(billingProfile?.country_id ?? "");
+    const [addressLine1, setAddressLine1] = useState(billingProfile?.address_line1 ?? "");
+    const [city, setCity] = useState(billingProfile?.city ?? "");
+    const [postcode, setPostcode] = useState(billingProfile?.postcode ?? "");
+
     const initials = profile?.full_name
         ? profile.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
         : "US";
 
-    // ── Helper: build current fields snapshot ──
-    const buildFields = (overrides: Partial<ProfileFields> = {}): ProfileFields => ({
+    // ── Profile: build fields ──
+    const buildProfileFields = (overrides: Partial<ProfileFields> = {}): ProfileFields => ({
         first_name: firstName,
         last_name: lastName,
         phone: phoneValue,
@@ -74,8 +100,8 @@ export function ProfileInfoView({ profile, countries }: ProfileInfoViewProps) {
         ...overrides,
     });
 
-    // ── Auto-save (según autosave-pattern.md) ──
-    const { triggerAutoSave } = useAutoSave<ProfileFields>({
+    // ── Profile: auto-save ──
+    const { triggerAutoSave: triggerProfileSave } = useAutoSave<ProfileFields>({
         saveFn: async (fields) => {
             const formData = new FormData();
             formData.set("first_name", fields.first_name);
@@ -89,30 +115,93 @@ export function ProfileInfoView({ profile, countries }: ProfileInfoViewProps) {
         errorMessage: t('error'),
     });
 
-    // ── Field change handlers ──
+    // ── Billing: build fields ──
+    const buildBillingFields = (overrides: Partial<BillingFields> = {}): BillingFields => ({
+        is_company: isCompany,
+        full_name: billingFullName,
+        company_name: companyName,
+        tax_id: taxId,
+        country_id: billingCountryId,
+        address_line1: addressLine1,
+        city: city,
+        postcode: postcode,
+        ...overrides,
+    });
+
+    // ── Billing: auto-save ──
+    const { triggerAutoSave: triggerBillingSave } = useAutoSave<BillingFields>({
+        saveFn: async (fields) => {
+            const formData = new FormData();
+            formData.set("is_company", fields.is_company.toString());
+            formData.set("full_name", fields.full_name);
+            formData.set("company_name", fields.company_name);
+            formData.set("tax_id", fields.tax_id);
+            formData.set("country_id", fields.country_id);
+            formData.set("address_line1", fields.address_line1);
+            formData.set("city", fields.city);
+            formData.set("postcode", fields.postcode);
+
+            const result = await updateBillingProfile(formData);
+            if (!result.success) throw new Error(tBilling('error'));
+        },
+        successMessage: tBilling('success'),
+        errorMessage: tBilling('error'),
+    });
+
+    // ── Profile change handlers ──
     const handleFirstNameChange = (value: string) => {
         setFirstName(value);
-        triggerAutoSave(buildFields({ first_name: value }));
+        triggerProfileSave(buildProfileFields({ first_name: value }));
     };
-
     const handleLastNameChange = (value: string) => {
         setLastName(value);
-        triggerAutoSave(buildFields({ last_name: value }));
+        triggerProfileSave(buildProfileFields({ last_name: value }));
     };
-
     const handlePhoneChange = (value: string) => {
         setPhoneValue(value);
-        triggerAutoSave(buildFields({ phone: value }));
+        triggerProfileSave(buildProfileFields({ phone: value }));
     };
-
     const handleBirthdateChange = (value: Date | undefined) => {
         setBirthdateValue(value);
-        triggerAutoSave(buildFields({ birthdate: value ? (formatDateForDB(value) ?? "") : "" }));
+        triggerProfileSave(buildProfileFields({ birthdate: value ? (formatDateForDB(value) ?? "") : "" }));
     };
-
     const handleCountryChange = (value: string) => {
         setCountryValue(value);
-        triggerAutoSave(buildFields({ country: value }));
+        triggerProfileSave(buildProfileFields({ country: value }));
+    };
+
+    // ── Billing change handlers ──
+    const handleIsCompanyChange = (value: boolean) => {
+        setIsCompany(value);
+        triggerBillingSave(buildBillingFields({ is_company: value }));
+    };
+    const handleBillingFullNameChange = (value: string) => {
+        setBillingFullName(value);
+        triggerBillingSave(buildBillingFields({ full_name: value }));
+    };
+    const handleCompanyNameChange = (value: string) => {
+        setCompanyName(value);
+        triggerBillingSave(buildBillingFields({ company_name: value }));
+    };
+    const handleTaxIdChange = (value: string) => {
+        setTaxId(value);
+        triggerBillingSave(buildBillingFields({ tax_id: value }));
+    };
+    const handleBillingCountryChange = (value: string) => {
+        setBillingCountryId(value);
+        triggerBillingSave(buildBillingFields({ country_id: value }));
+    };
+    const handleAddressChange = (value: string) => {
+        setAddressLine1(value);
+        triggerBillingSave(buildBillingFields({ address_line1: value }));
+    };
+    const handleCityChange = (value: string) => {
+        setCity(value);
+        triggerBillingSave(buildBillingFields({ city: value }));
+    };
+    const handlePostcodeChange = (value: string) => {
+        setPostcode(value);
+        triggerBillingSave(buildBillingFields({ postcode: value }));
     };
 
     if (!profile) {
@@ -120,8 +209,7 @@ export function ProfileInfoView({ profile, countries }: ProfileInfoViewProps) {
     }
 
     return (
-        <ContentLayout variant="settings">
-            <SettingsSectionContainer>
+        <SettingsSectionContainer>
                 {/* ── Foto de Perfil ── */}
                 <SettingsSection
                     icon={Camera}
@@ -207,7 +295,89 @@ export function ProfileInfoView({ profile, countries }: ProfileInfoViewProps) {
                         </div>
                     </div>
                 </SettingsSection>
-            </SettingsSectionContainer>
-        </ContentLayout>
+
+                {/* ── Datos de Facturación ── */}
+                <SettingsSection
+                    icon={Receipt}
+                    title={tBilling('title')}
+                    description={tBilling('description')}
+                >
+                    <div className="space-y-4">
+                        {/* Tipo: Empresa / Persona */}
+                        <SwitchField
+                            label={tBilling('isCompany')}
+                            description={tBilling('isCompanyDescription')}
+                            value={isCompany}
+                            onChange={handleIsCompanyChange}
+                        />
+
+                        {/* Campos visibles solo si factura como empresa */}
+                        {isCompany && (
+                            <>
+                                {/* Nombre/Empresa + CUIT */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <TextField
+                                        label={tBilling('companyName')}
+                                        value={companyName}
+                                        onChange={handleCompanyNameChange}
+                                        placeholder={tBilling('companyNamePlaceholder')}
+                                        required={false}
+                                    />
+                                    <TextField
+                                        label={tBilling('taxId')}
+                                        value={taxId}
+                                        onChange={handleTaxIdChange}
+                                        placeholder={tBilling('taxIdPlaceholder')}
+                                        required={false}
+                                    />
+                                </div>
+
+                                {/* Dirección + País */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <TextField
+                                        label={tBilling('address')}
+                                        value={addressLine1}
+                                        onChange={handleAddressChange}
+                                        placeholder={tBilling('addressPlaceholder')}
+                                        required={false}
+                                    />
+                                    <FormGroup
+                                        label={<FactoryLabel label={tBilling('country')} />}
+                                        required={false}
+                                    >
+                                        <CountrySelector
+                                            value={billingCountryId}
+                                            onChange={handleBillingCountryChange}
+                                            countries={countries}
+                                            placeholder={tBilling('countryPlaceholder')}
+                                        />
+                                    </FormGroup>
+                                </div>
+
+                                {/* Ciudad + Código Postal */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <TextField
+                                        label={tBilling('city')}
+                                        value={city}
+                                        onChange={handleCityChange}
+                                        placeholder={tBilling('cityPlaceholder')}
+                                        required={false}
+                                    />
+                                    <TextField
+                                        label={tBilling('postcode')}
+                                        value={postcode}
+                                        onChange={handlePostcodeChange}
+                                        placeholder={tBilling('postcodePlaceholder')}
+                                        required={false}
+                                    />
+                                </div>
+
+                                {/* Footer info */}
+                                <p className="text-xs text-muted-foreground pt-2">{tBilling('footer')}</p>
+                            </>
+                        )}
+                    </div>
+                </SettingsSection>
+        </SettingsSectionContainer>
     );
 }

@@ -13,7 +13,6 @@ import { BellRing, Mail, Smartphone, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { toast } from "sonner";
 
 /**
@@ -148,8 +147,7 @@ export function ProfileNotificationsView() {
     };
 
     return (
-        <ContentLayout variant="settings">
-            <SettingsSectionContainer>
+        <SettingsSectionContainer>
                 {/* ── Notificaciones Push ── */}
                 <SettingsSection
                     icon={BellRing}
@@ -235,7 +233,6 @@ export function ProfileNotificationsView() {
                         </p>
                     </div>
                 </SettingsSection>
-            </SettingsSectionContainer>
-        </ContentLayout>
+        </SettingsSectionContainer>
     );
 }

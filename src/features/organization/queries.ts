@@ -26,6 +26,18 @@ export async function getOrganizationSettingsData(orgId: string) {
     return { organization: data };
 }
 
+export async function getOrganizationOwnerId(orgId: string): Promise<string | null> {
+    const supabase = await createClient();
+
+    const { data } = await supabase
+        .schema('iam').from('organizations')
+        .select('owner_id')
+        .eq('id', orgId)
+        .single();
+
+    return data?.owner_id || null;
+}
+
 export async function getDashboardData() {
     const authUser = await getAuthUser();
     if (!authUser) return { error: "User not authenticated." };

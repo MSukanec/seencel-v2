@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-15T18:32:16.410Z
+> Generated: 2026-03-16T12:23:01.346Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PLANNER] RLS Policies (38)
+## [PLANNER] RLS Policies (39)
 
 ### `attachments` (3 policies)
 
@@ -63,13 +63,22 @@ is_org_member(organization_id)
 (is_org_member(organization_id) AND (is_deleted = false))
 ```
 
-### `board_permissions` (2 policies)
+### `board_permissions` (3 policies)
 
 #### MIEMBROS CREAN BOARD_PERMISSIONS
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MIEMBROS EDITAN BOARD_PERMISSIONS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
 ```sql
 is_org_member(organization_id)
 ```
@@ -85,7 +94,7 @@ is_org_member(organization_id)
 
 ### `boards` (3 policies)
 
-#### MEMBERS INSERT BOARDS
+#### MIEMBROS CREAN BOARDS
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {authenticated}
@@ -94,22 +103,22 @@ is_org_member(organization_id)
 is_org_member(organization_id)
 ```
 
-#### MEMBERS SELECT BOARDS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {authenticated}
-- **USING**:
-```sql
-((is_deleted = false) AND is_org_member(organization_id))
-```
-
-#### MEMBERS UPDATE BOARDS
+#### MIEMBROS EDITAN BOARDS
 
 - **Command**: UPDATE | **Permissive**: PERMISSIVE
 - **Roles**: {authenticated}
 - **USING**:
 ```sql
 is_org_member(organization_id)
+```
+
+#### MIEMBROS VEN BOARDS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+((is_deleted = false) AND is_org_member(organization_id))
 ```
 
 ### `checklist_items` (3 policies)
@@ -250,7 +259,7 @@ is_org_member(organization_id)
 
 ### `items` (3 policies)
 
-#### MEMBERS INSERT ITEMS
+#### MIEMBROS CREAN ITEMS
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {authenticated}
@@ -259,7 +268,16 @@ is_org_member(organization_id)
 is_org_member(organization_id)
 ```
 
-#### MEMBERS SELECT ITEMS
+#### MIEMBROS EDITAN ITEMS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MIEMBROS VEN ITEMS
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {authenticated}
@@ -268,18 +286,9 @@ is_org_member(organization_id)
 ((is_deleted = false) AND is_org_member(organization_id))
 ```
 
-#### MEMBERS UPDATE ITEMS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {authenticated}
-- **USING**:
-```sql
-is_org_member(organization_id)
-```
-
 ### `labels` (3 policies)
 
-#### MEMBERS INSERT LABELS
+#### MIEMBROS CREAN LABELS
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {authenticated}
@@ -288,18 +297,18 @@ is_org_member(organization_id)
 is_org_member(organization_id)
 ```
 
-#### MEMBERS SELECT LABELS
+#### MIEMBROS EDITAN LABELS
 
-- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
 - **Roles**: {authenticated}
 - **USING**:
 ```sql
 is_org_member(organization_id)
 ```
 
-#### MEMBERS UPDATE LABELS
+#### MIEMBROS VEN LABELS
 
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {authenticated}
 - **USING**:
 ```sql
@@ -308,7 +317,7 @@ is_org_member(organization_id)
 
 ### `lists` (3 policies)
 
-#### MEMBERS INSERT LISTS
+#### MIEMBROS CREAN LISTS
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {authenticated}
@@ -317,22 +326,22 @@ is_org_member(organization_id)
 is_org_member(organization_id)
 ```
 
-#### MEMBERS SELECT LISTS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {authenticated}
-- **USING**:
-```sql
-((is_deleted = false) AND is_org_member(organization_id))
-```
-
-#### MEMBERS UPDATE LISTS
+#### MIEMBROS EDITAN LISTS
 
 - **Command**: UPDATE | **Permissive**: PERMISSIVE
 - **Roles**: {authenticated}
 - **USING**:
 ```sql
 is_org_member(organization_id)
+```
+
+#### MIEMBROS VEN LISTS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+((is_deleted = false) AND is_org_member(organization_id))
 ```
 
 ### `mentions` (2 policies)

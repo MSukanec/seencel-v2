@@ -10,7 +10,7 @@ import {
     Settings,
     FileText,
     CreditCard,
-    FileChartColumn,
+
     Hammer,
     HardHat,
     Video,
@@ -35,9 +35,9 @@ import {
     Zap,
     LayoutGrid,
     Tag,
-    Library,
+
     FileType,
-    TrendingUp,
+
     Ruler,
     Shield,
     Activity,
@@ -45,6 +45,7 @@ import {
     UserCircle,
     Sliders,
     Bell,
+    BookUser,
 } from "lucide-react";
 import { NavigationContext } from "@/stores/layout-store";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
@@ -105,14 +106,14 @@ export const contextRoutes: Record<NavigationContext, string> = {
     learnings: '/academy/my-courses',
     community: '/community',
     admin: '/admin',
-    profile: '/profile'
+    settings: '/settings'
 };
 
 export function useSidebarNavigation() {
     const tMega = useTranslations('MegaMenu');
     const tSidebar = useTranslations('Sidebar');
     const { statuses, isAdmin, isBetaTester } = useFeatureFlags();
-    const { isFounder } = useOrganization();
+    const { isFounder, activeOrgId } = useOrganization();
     const { accessMode, externalActorType } = useAccessContext();
     const viewingAs = useViewingAs();
     const memberVisibleModules = useMemberModules();
@@ -206,31 +207,54 @@ export function useSidebarNavigation() {
     };
 
 
-    const getNavGroups = (ctx: 'organization' | 'project' | 'admin' | 'profile'): NavGroup[] => {
-        // Profile context — independent sidebar
-        if (ctx === 'profile') {
-            return [
+    const getNavGroups = (ctx: 'organization' | 'project' | 'admin' | 'settings'): NavGroup[] => {
+        // Unified Settings context — independent sidebar
+        if (ctx === 'settings') {
+            const settingsGroups: NavGroup[] = [
                 {
                     id: 'cuenta',
-                    label: 'Cuenta',
+                    label: 'Mi Cuenta',
                     defaultOpen: true,
                     items: [
-                        {
-                            title: 'Configuración',
-                            href: '/profile',
-                            icon: Settings,
-                            children: [
-                                { title: 'Perfil', href: '/profile', icon: UserCircle },
-                                { title: 'Organizaciones', href: '/profile/organizations', icon: Building },
-                                { title: 'Seguridad', href: '/profile/security', icon: Shield },
-                                { title: 'Facturación', href: '/profile/billing', icon: CreditCard },
-                                { title: 'Notificaciones', href: '/profile/notifications', icon: Bell },
-                                { title: 'Preferencias', href: '/profile/preferences', icon: Sliders },
-                            ],
-                        },
+                        { title: 'Perfil', href: '/settings/profile', icon: UserCircle },
+                        { title: 'Preferencias', href: '/settings/preferences', icon: Sliders },
+                        { title: 'Notificaciones', href: '/settings/notifications', icon: Bell },
+                        { title: 'Seguridad', href: '/settings/security', icon: Shield },
+                        { title: 'Mis Organizaciones', href: '/settings/organizations', icon: Landmark },
                     ],
                 },
             ];
+
+            // Solo mostrar opciones de organización y espacio si hay una organización activa en contexto
+            if (activeOrgId) {
+                settingsGroups.push({
+                    id: 'organizacion',
+                    label: 'Organización',
+                    defaultOpen: true,
+                    items: [
+                        { title: 'General', href: '/settings/organization', icon: Building },
+                        { title: 'Miembros', href: '/settings/members', icon: Users },
+                        { title: 'Roles y Permisos', href: '/settings/permissions', icon: Shield },
+                        { title: 'Facturación', href: '/settings/billing', icon: CreditCard },
+                        { title: 'Actividad', href: '/settings/activity', icon: Activity },
+                    ],
+                });
+
+                settingsGroups.push({
+                    id: 'espacio_trabajo',
+                    label: 'Espacio de Trabajo',
+                    defaultOpen: true,
+                    items: [
+                        { title: 'Proyectos', href: '/settings/projects', icon: Building },
+                        { title: 'Contactos', href: '/settings/contacts', icon: BookUser },
+                        { title: 'Archivos', href: '/settings/files', icon: FolderOpen },
+                        { title: 'Finanzas', href: '/settings/finance', icon: DollarSign },
+                        { title: 'Plantillas', href: '/settings/templates', icon: FileType, status: 'maintenance' as const, disabled: !canBypassRestrictions },
+                    ],
+                });
+            }
+
+            return settingsGroups;
         }
         // "Viewing As" mode: show external actor's own nav groups
         if (ctx === 'organization' && viewingAs) {
@@ -316,51 +340,25 @@ export function useSidebarNavigation() {
                     getItemStatus('sidebar_overview', { title: 'Visión General', href: '/organization', icon: LayoutDashboard }),
                 ].filter((i): i is NavItem => i !== null),
             },
-            // Organización
+            // Organización (standalone — items sueltos, sin acordeón)
             {
                 id: 'gestion',
-                label: 'Organización',
-                defaultOpen: true,
+                label: '',
+                standalone: true,
                 items: [
-                    getItemStatus('sidebar_projects', {
-                        title: 'Proyectos',
-                        href: '/organization/projects',
-                        icon: Building,
+                    getItemStatus('sidebar_projects', { title: 'Proyectos', href: '/organization/projects', icon: Building }),
+                    getItemStatus('sidebar_files', { title: 'Archivos', href: '/organization/files', icon: FolderOpen }),
+                    getItemStatus('sidebar_contacts', { title: 'Contactos', href: '/organization/contacts', icon: BookUser }),
+                    getItemStatus('sidebar_catalog', {
+                        title: 'Catálogo Técnico',
+                        href: '/organization/catalog',
+                        icon: Wrench,
                         children: [
-                            { title: 'Visión General', href: '/organization/projects', icon: LayoutGrid },
-                            { title: 'Ubicación', href: '/organization/projects/location', icon: MapPin },
-                            { title: 'Ajustes', href: '/organization/projects/settings', icon: Settings },
-                        ],
-                    }),
-                    getItemStatus('sidebar_files', {
-                        title: 'Archivos',
-                        href: '/organization/files',
-                        icon: FolderOpen,
-                        children: [
-                            { title: 'Visión General', href: '/organization/files', icon: LayoutGrid },
-                            { title: 'Ajustes', href: '/organization/files/settings', icon: Settings },
-                        ],
-                    }),
-                    getItemStatus('sidebar_contacts', {
-                        title: 'Contactos',
-                        href: '/organization/contacts',
-                        icon: Users,
-                        children: [
-                            { title: 'Visión General', href: '/organization/contacts', icon: LayoutGrid },
-                            { title: 'Ajustes', href: '/organization/contacts/categories', icon: Settings },
-                        ],
-                    }),
-                    getItemStatus('sidebar_settings', {
-                        title: 'Configuración',
-                        href: '/organization/settings',
-                        icon: Settings,
-                        children: [
-                            { title: 'Información', href: '/organization/settings', icon: Info },
-                            { title: 'Miembros', href: '/organization/settings/members', icon: Users },
-                            { title: 'Permisos', href: '/organization/settings/permissions', icon: Shield },
-                            { title: 'Planes y Facturación', href: '/organization/settings/billing', icon: CreditCard },
-                            { title: 'Ajustes Financieros', href: '/organization/settings/finance', icon: Wallet },
-                            { title: 'Actividad', href: '/organization/settings/activity', icon: Activity },
+                            { title: 'Visión General', href: '/organization/catalog', icon: LayoutGrid },
+                            { title: 'Tareas', href: '/organization/catalog/tasks', icon: ClipboardList },
+                            { title: 'Materiales', href: '/organization/catalog/materials', icon: Package },
+                            { title: 'Mano de Obra', href: '/organization/catalog/labor', icon: HardHat },
+                            { title: 'Unidades', href: '/organization/catalog/units', icon: Ruler },
                         ],
                     }),
                 ].filter((i): i is NavItem => i !== null),
@@ -391,47 +389,14 @@ export function useSidebarNavigation() {
                         children: [
                             { title: 'Visión General', href: '/organization/general-costs', icon: LayoutGrid },
                             { title: 'Pagos', href: '/organization/general-costs/payments', icon: Banknote },
-                            { title: 'Conceptos', href: '/organization/general-costs/concepts', icon: Tag },
-                            { title: 'Ajustes', href: '/organization/general-costs/settings', icon: Settings },
+                            { title: 'Conceptos', href: '/organization/general-costs/concepts', icon: Tag }
                         ],
                     }),
                     getItemStatus('sidebar_quotes', { title: 'Presupuestos', href: '/organization/quotes', icon: FileText }),
                     getItemStatus('sidebar_clients', { title: 'Cobros', href: '/organization/clients', icon: Banknote }),
                 ].filter((i): i is NavItem => i !== null),
             },
-            // Biblioteca
-            {
-                id: 'biblioteca',
-                label: 'Biblioteca',
-                items: [
-                    getItemStatus('sidebar_catalog', {
-                        title: 'Catálogo Técnico',
-                        href: '/organization/catalog',
-                        icon: Wrench,
-                        children: [
-                            { title: 'Visión General', href: '/organization/catalog', icon: LayoutGrid },
-                            { title: 'Tareas', href: '/organization/catalog/tasks', icon: ClipboardList },
-                            { title: 'Materiales', href: '/organization/catalog/materials', icon: Package },
-                            { title: 'Mano de Obra', href: '/organization/catalog/labor', icon: HardHat },
-                            { title: 'Unidades', href: '/organization/catalog/units', icon: Ruler },
-                        ],
-                    }),
-                    getItemStatus('sidebar_templates', {
-                        title: 'Plantillas',
-                        href: '/organization/advanced',
-                        icon: FileType,
-                        children: [
-                            { title: 'Plantillas PDF', href: '/organization/advanced', icon: FileType },
-                            { title: 'Plantillas Informes', href: '/organization/reports', icon: FileChartColumn },
-                        ],
-                    }),
-                    getItemStatus('sidebar_indices', {
-                        title: 'Índices Económicos',
-                        href: '/organization/advanced/indices',
-                        icon: TrendingUp,
-                    }),
-                ].filter((i): i is NavItem => i !== null),
-            },
+
         ];
 
         // Filter by member's visible modules (from onboarding / preferences)
@@ -455,6 +420,8 @@ export function useSidebarNavigation() {
                 return [foundersItem, mapItem].filter((i): i is NavItem => i !== null);
             case 'admin':
                 return getNavGroups('admin').flatMap(g => g.items);
+            case 'settings':
+                return getNavGroups('settings').flatMap(g => g.items);
             default:
                 return [];
         }

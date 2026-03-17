@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeft, TrendingUp, TrendingDown, Minus, Calendar, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { Link } from "@/i18n/routing";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useModal } from "@/stores/modal-store";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +36,8 @@ import { ViewEmptyState } from "@/components/shared/empty-state";
 interface IndexValuesViewProps {
     organizationId: string;
     indexType: EconomicIndexType;
-    onBack: () => void;
+    /** Optional back callback. If not provided, renders a Link back to settings/finance. */
+    onBack?: () => void;
 }
 
 function calculateVariation(current: number | undefined, previous: number | undefined): number | null {
@@ -168,10 +170,19 @@ export function IndexValuesView({
                 <Toolbar
                     portalToHeader
                     leftActions={
-                        <Button variant="ghost" size="sm" onClick={onBack}>
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Volver
-                        </Button>
+                        onBack ? (
+                            <Button variant="ghost" size="sm" onClick={onBack}>
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Volver
+                            </Button>
+                        ) : (
+                            <Button variant="ghost" size="sm" asChild>
+                                <Link href="/settings/finance">
+                                    <ArrowLeft className="mr-2 h-4 w-4" />
+                                    Volver a Finanzas
+                                </Link>
+                            </Button>
+                        )
                     }
                     actions={[
                         {

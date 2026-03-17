@@ -178,7 +178,7 @@ app/[locale]/(dashboard)/organization/<feature>/
 ├── layout.tsx         ← Auth + PageWrapper (SIN ContentLayout, SIN queries)
 ├── page.tsx           ← ContentLayout variant="wide" (lista)
 ├── settings/
-│   └── page.tsx       ← ContentLayout variant="settings"
+│   └── page.tsx       ← ContentLayout variant="narrow"
 └── [entityId]/
     └── page.tsx       ← Detail page con parentLabel + DetailContentTabs
 ```

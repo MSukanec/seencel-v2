@@ -14,9 +14,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { useUser } from "@/stores/user-store";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { useLayoutStore } from "@/stores/layout-store";
-import { FeedbackForm } from "@/components/shared/forms/feedback-form";
 import { HeaderIconButton } from "@/components/layout/dashboard/shared/header-icon-button";
 import {
     Home,
@@ -48,8 +47,7 @@ export function HeaderAvatarButton({ variant = 'header' }: { variant?: 'header' 
     const tUser = useTranslations('UserMenu');
     const { setTheme } = useTheme();
 
-    const { openModal, closeModal } = useModal();
-    const tFeedback = useTranslations('Feedback');
+    const { openPanel } = usePanel();
     const pathname = usePathname();
 
     const name = user?.full_name || "Usuario";
@@ -65,14 +63,7 @@ export function HeaderAvatarButton({ variant = 'header' }: { variant?: 'header' 
 
     const handleFeedbackClick = () => {
         setOpen(false);
-        openModal(
-            <FeedbackForm onSuccess={closeModal} onCancel={closeModal} />,
-            {
-                title: tFeedback('title') || "Feedback",
-                description: tFeedback('modalDescription') || "Envíanos tus comentarios o reporta un problema.",
-                size: 'md'
-            }
-        );
+        openPanel('feedback-form');
     };
 
     const handleLogout = async () => {
@@ -189,10 +180,10 @@ export function HeaderAvatarButton({ variant = 'header' }: { variant?: 'header' 
                 {/* Menu Items — dense, border-separated like notification items */}
                 <div className="flex flex-col">
                     <Link
-                        href="/profile"
+                        href="/settings"
                         onClick={() => {
                             // Save current path so "Volver a la app" works
-                            if (!pathname.includes('/profile')) {
+                            if (!pathname.includes('/settings')) {
                                 useLayoutStore.getState().actions.setPreviousPath(pathname);
                             }
                             handleClose();

@@ -17,12 +17,12 @@ import { format, isPast, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuSeparator,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Archive, Trash2, RotateCcw, Pencil } from "lucide-react";
 import { updateCard, deleteCard } from "@/features/planner/actions";
@@ -93,6 +93,8 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging, onOpti
     };
     return (
         <>
+            <ContextMenu>
+            <ContextMenuTrigger asChild>
             <div
                 onClick={onClick}
                 className={cn(
@@ -110,43 +112,7 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging, onOpti
                     />
                 )}
 
-                {/* Quick Actions Menu */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 bg-background/80 backdrop-blur-sm border shadow-sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                onClick?.();
-                            }}>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleArchive}>
-                                {optimisticCard.is_archived ? (
-                                    <>
-                                        <RotateCcw className="h-4 w-4 mr-2" />
-                                        Restaurar
-                                    </>
-                                ) : (
-                                    <>
-                                        <Archive className="h-4 w-4 mr-2" />
-                                        Archivar
-                                    </>
-                                )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Eliminar
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
+
 
                 {/* Cover Image */}
                 {card.cover_image_url && (
@@ -263,6 +229,37 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging, onOpti
                     );
                 })()}
             </div>
+            </ContextMenuTrigger>
+
+            <ContextMenuContent className="w-40">
+                <ContextMenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    onClick?.();
+                }} className="gap-2 text-xs">
+                    <Pencil className="h-4 w-4" />
+                    Editar
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={handleArchive} className="gap-2 text-xs">
+                    {optimisticCard.is_archived ? (
+                        <>
+                            <RotateCcw className="h-4 w-4" />
+                            Restaurar
+                        </>
+                    ) : (
+                        <>
+                            <Archive className="h-4 w-4" />
+                            Archivar
+                        </>
+                    )}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={handleDelete} className="gap-2 text-xs">
+                    <Trash2 className="h-4 w-4" />
+                    Eliminar
+                </ContextMenuItem>
+            </ContextMenuContent>
+            </ContextMenu>
 
             <DeleteConfirmationDialog
                 open={showDeleteDialog}

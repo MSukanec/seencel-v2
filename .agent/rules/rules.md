@@ -147,7 +147,7 @@ app/[locale]/(dashboard)/organization/[feature]/
 ├── [section1]/
 │   └── page.tsx    ← ContentLayout variant según necesidad
 └── [section2]/
-    └── page.tsx    ← ContentLayout variant="settings" (si es config)
+    └── page.tsx    ← ContentLayout variant="narrow" (si es config)
 ```
 
 ### Reglas:
@@ -175,14 +175,14 @@ app/[locale]/(dashboard)/organization/[feature]/
 - Avatar y notificaciones están en el bottom del sidebar.
 
 ### Referencia implementada:
-- **Proyectos**: `projects/layout.tsx` (solo PageWrapper) + `projects/page.tsx` (variant="wide") + `projects/settings/page.tsx` (variant="settings") — ContentLayout desacoplado
+- **Proyectos**: `projects/layout.tsx` (solo PageWrapper) + `projects/page.tsx` (variant="wide") + `projects/settings/page.tsx` (variant="narrow") — ContentLayout desacoplado
 - **Gastos Generales**: `general-costs/layout.tsx` + `page.tsx`, `payments/page.tsx`, `concepts/page.tsx`
 - **Configuración**: `settings/layout.tsx` + 6 sub-páginas
 - **Avanzado**: `advanced/layout.tsx` + 2 sub-páginas
 
 ### ContentLayout desacoplado:
 - `ContentLayout` se aplica **en cada sub-página**, NO en el layout compartido
-- Permite `variant="wide"` para listas/tablas y `variant="settings"` para config en el mismo feature
+- Permite `variant="wide"` para listas/tablas y `variant="narrow"` para config en el mismo feature
 - ⛔ PROHIBIDO poner `ContentLayout` en `layout.tsx` — cada sub-página define su propia variante
 
 📖 **Detalle:** Skill [seencel-page-layout](../skills/seencel-page-layout/SKILL.md)

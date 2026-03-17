@@ -3,12 +3,14 @@
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useTransition } from "react";
+import { useEffect, useTransition } from "react";
 import { toast } from "sonner";
+import { Columns3 } from "lucide-react";
 
-import { FormFooter } from "@/components/shared/forms/form-footer";
-import { TextField, ColorField } from "@/components/shared/forms/fields";
-import { useModal } from "@/stores/modal-store";
+import { FormHeroField } from "@/components/shared/forms/fields";
+import { ChipRow } from "@/components/shared/chips/chip-row";
+import { ColorChip } from "@/components/shared/chips/chips/color-chip";
+import { usePanel } from "@/stores/panel-store";
 import { createList, updateList } from "@/features/planner/actions";
 import { DEFAULT_LIST_COLORS, KanbanList } from "@/features/planner/types";
 
@@ -26,11 +28,13 @@ interface KanbanListFormProps {
     onOptimisticCreate?: (tempList: KanbanList) => void;
     onOptimisticUpdate?: (list: KanbanList) => void;
     onRollback?: (listId: string) => void;
+    /** Auto-injected by PanelStore */
+    formId?: string;
 }
 
-export function KanbanListForm({ boardId, organizationId, initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback }: KanbanListFormProps) {
+export function KanbanListForm({ boardId, organizationId, initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback, formId }: KanbanListFormProps) {
     const [isPending, startTransition] = useTransition();
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -39,6 +43,23 @@ export function KanbanListForm({ boardId, organizationId, initialData, onSuccess
             color: initialData?.color || DEFAULT_LIST_COLORS[0],
         },
     });
+
+    const isEditing = !!initialData;
+
+    // 🚨 OBLIGATORIO: Self-describe panel header + footer
+    useEffect(() => {
+        setPanelMeta({
+            icon: Columns3,
+            title: isEditing ? "Editar Columna" : "Nueva Columna",
+            description: isEditing
+                ? `Modificando detalles de la columna`
+                : "Agrega una nueva columna al panel",
+            size: "sm",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Crear Columna",
+            }
+        });
+    }, [isEditing, setPanelMeta]);
 
     function onSubmit(values: z.infer<typeof formSchema>) {
         if (initialData) {
@@ -49,7 +70,7 @@ export function KanbanListForm({ boardId, organizationId, initialData, onSuccess
                 color: values.color || null,
             };
             onOptimisticUpdate?.(optimisticItem);
-            closeModal();
+            closePanel();
 
             startTransition(async () => {
                 try {
@@ -83,7 +104,7 @@ export function KanbanListForm({ boardId, organizationId, initialData, onSuccess
                 created_at: new Date().toISOString(),
             };
             onOptimisticCreate?.(tempList);
-            closeModal();
+            closePanel();
 
             startTransition(async () => {
                 try {
@@ -105,30 +126,24 @@ export function KanbanListForm({ boardId, organizationId, initialData, onSuccess
     }
 
     return (
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col max-h-full min-h-0">
-            <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
-                <TextField
-                    label="Nombre"
-                    value={form.watch("name") || ""}
-                    onChange={(val) => form.setValue("name", val)}
-                    placeholder="Ej: Por hacer, En progreso, Hecho..."
-                    autoFocus
-                    error={form.formState.errors.name?.message}
-                />
-
-                <ColorField
-                    label="Color (opcional)"
-                    value={form.watch("color")}
-                    onChange={(val) => form.setValue("color", val)}
-                    colors={DEFAULT_LIST_COLORS}
-                />
+        <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1">
+            <div className="pt-5">
+                <ChipRow className="border-b-0 pb-4">
+                    <ColorChip
+                        value={form.watch("color") || ""}
+                        onChange={(val) => form.setValue("color", val)}
+                        colors={DEFAULT_LIST_COLORS}
+                    />
+                </ChipRow>
             </div>
 
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                onCancel={closeModal}
-                isLoading={isPending}
-                submitLabel={initialData ? "Guardar Cambios" : "Crear Columna"}
+            <FormHeroField
+                value={form.watch("name") || ""}
+                onChange={(val) => form.setValue("name", val)}
+                placeholder="Nombre de la columna... (Ej: En proceso)"
+                autoFocus
+                size="default"
+                className="border-t-0"
             />
         </form>
     );

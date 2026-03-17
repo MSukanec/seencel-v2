@@ -19,7 +19,6 @@ import { useRouter, usePathname } from "@/i18n/routing";
 import { updateUserPreferences } from "@/features/users/actions";
 import { TIMEZONES, detectBrowserTimezone } from "@/lib/timezone-data";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { toast } from "sonner";
 import { useLayoutActions, useFontSize, type FontSize } from "@/stores/layout-store";
 
@@ -76,8 +75,7 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
     };
 
     return (
-        <ContentLayout variant="settings">
-            <SettingsSectionContainer>
+        <SettingsSectionContainer>
                 {/* ── Idioma ── */}
                 <SettingsSection
                     icon={Languages}
@@ -169,8 +167,7 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
                         ))}
                     </div>
                 </SettingsSection>
-            </SettingsSectionContainer>
-        </ContentLayout>
+        </SettingsSectionContainer>
     );
 }
 

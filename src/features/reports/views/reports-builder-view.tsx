@@ -8,7 +8,8 @@ import { BlockCatalog } from "../components/block-catalog";
 import { ReportCanvas } from "../components/report-canvas";
 import { BlockConfigPanel } from "../components/block-config-panel";
 import { BlockRenderer } from "../components/block-renderer";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { PageHeaderActionPortal } from "@/components/layout/dashboard/shared/page-header-action-portal";
+import { Button } from "@/components/ui/button";
 import { Download, Eye, Trash2, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import type { PdfGlobalTheme } from "@/features/organization/actions/pdf-settings";
@@ -259,30 +260,36 @@ export function ReportsBuilderView({ organizationId, projects, pdfTheme, logoUrl
 
     return (
         <>
-            <Toolbar
-                portalToHeader
-                actions={[
-                    {
-                        label: blocks.length > 0 ? "Limpiar" : "",
-                        icon: Trash2,
-                        onClick: handleClearAll,
-                        variant: "ghost",
-                        disabled: blocks.length === 0,
-                    },
-                    {
-                        label: isPreviewMode ? "Editar" : "Vista Previa",
-                        icon: Eye,
-                        onClick: () => setIsPreviewMode(!isPreviewMode),
-                        variant: "secondary",
-                    },
-                    {
-                        label: "Exportar PDF",
-                        icon: Download,
-                        onClick: handleExport,
-                        disabled: blocks.length === 0,
-                    },
-                ]}
-            />
+            <PageHeaderActionPortal>
+                <div className="flex items-center gap-2">
+                    {blocks.length > 0 && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleClearAll}
+                        >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Limpiar
+                        </Button>
+                    )}
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setIsPreviewMode(!isPreviewMode)}
+                    >
+                        <Eye className="h-4 w-4 mr-1" />
+                        {isPreviewMode ? "Editar" : "Vista Previa"}
+                    </Button>
+                    <Button
+                        size="sm"
+                        onClick={handleExport}
+                        disabled={blocks.length === 0}
+                    >
+                        <Download className="h-4 w-4 mr-1" />
+                        Exportar PDF
+                    </Button>
+                </div>
+            </PageHeaderActionPortal>
 
             {/* Context Sidebar: Block Catalog (injected into layout's right sidebar) */}
             {!isPreviewMode && (

@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { useTranslations } from "next-intl";
 import { Loader2, ShieldCheck, LogOut, Monitor } from "lucide-react";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { TOTPSetup } from "@/features/security/components/totp-setup";
 import { toast } from "sonner";
 import {
@@ -117,8 +116,7 @@ export function ProfileSecurityView() {
 
     return (
         <>
-            <ContentLayout variant="settings">
-                <SettingsSectionContainer>
+            <SettingsSectionContainer>
                     {/* ── Autenticación de Dos Factores ── */}
                     <SettingsSection
                         icon={ShieldCheck}
@@ -192,8 +190,7 @@ export function ProfileSecurityView() {
                             </Button>
                         </div>
                     </SettingsSection>
-                </SettingsSectionContainer>
-            </ContentLayout>
+            </SettingsSectionContainer>
 
             {/* Disable 2FA Confirmation */}
             <AlertDialog open={showDisableDialog} onOpenChange={setShowDisableDialog}>

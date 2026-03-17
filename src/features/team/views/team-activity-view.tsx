@@ -147,7 +147,7 @@ export function TeamActivityView({ logs: initialLogs }: TeamActivityViewProps) {
     // ─── Render ──────────────────────────────────────────
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 w-full">
             <ToolbarCard
                 right={
                     <>

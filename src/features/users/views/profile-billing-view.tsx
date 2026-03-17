@@ -12,7 +12,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Receipt } from "lucide-react";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { updateBillingProfile } from "@/features/billing/actions";
 import { BillingProfile } from "@/features/billing/queries";
 import { useAutoSave } from "@/hooks/use-auto-save";
@@ -133,8 +132,7 @@ export function ProfileBillingView({ billingProfile, countries }: ProfileBilling
     };
 
     return (
-        <ContentLayout variant="settings">
-            <SettingsSectionContainer>
+        <SettingsSectionContainer>
                 {/* ── Datos de Facturación ── */}
                 <SettingsSection
                     icon={Receipt}
@@ -222,7 +220,6 @@ export function ProfileBillingView({ billingProfile, countries }: ProfileBilling
                         <p className="text-xs text-muted-foreground pt-2">{t('footer')}</p>
                     </div>
                 </SettingsSection>
-            </SettingsSectionContainer>
-        </ContentLayout>
+        </SettingsSectionContainer>
     );
 }

@@ -3,9 +3,7 @@
 import * as React from "react";
 import { MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useModal } from "@/stores/modal-store";
-import { FeedbackForm } from "@/components/shared/forms/feedback-form";
-import { useTranslations } from "next-intl";
+import { usePanel } from "@/stores/panel-store";
 
 interface SidebarFeedbackButtonProps {
     isExpanded?: boolean;
@@ -16,21 +14,10 @@ export function SidebarFeedbackButton({
     isExpanded = false,
     className
 }: SidebarFeedbackButtonProps) {
-    const { openModal, closeModal } = useModal();
-    const t = useTranslations('Feedback');
+    const { openPanel } = usePanel();
 
     const handleClick = () => {
-        openModal(
-            <FeedbackForm
-                onSuccess={closeModal}
-                onCancel={closeModal}
-            />,
-            {
-                title: t('title') || "Feedback",
-                description: t('modalDescription') || "Envíanos tus comentarios o reporta un problema.",
-                size: 'md'
-            }
-        );
+        openPanel('feedback-form');
     };
 
     return (

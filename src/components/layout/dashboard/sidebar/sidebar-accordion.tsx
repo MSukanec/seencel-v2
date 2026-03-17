@@ -11,6 +11,8 @@ interface SidebarAccordionGroupsProps {
     renderItem: (item: NavItem, idx: number) => React.ReactNode;
     isExpanded: boolean;
     activePath: string;
+    /** When true, renders group labels as static headers (no collapsible accordion) */
+    flat?: boolean;
 }
 
 export function SidebarAccordionGroups({
@@ -18,6 +20,7 @@ export function SidebarAccordionGroups({
     renderItem,
     isExpanded,
     activePath,
+    flat = false,
 }: SidebarAccordionGroupsProps) {
     // Single accordion open at a time
     const [openGroup, setOpenGroup] = React.useState<string>(() => {
@@ -52,6 +55,38 @@ export function SidebarAccordionGroups({
                     group.items.map(item => renderItem(item, idx++))
                 )}
             </>
+        );
+    }
+
+    // Flat mode: static labels + items, no collapsible behavior
+    if (flat) {
+        let idx = 0;
+        return (
+            <div className="flex flex-col gap-1.5">
+                {visibleGroups.map(group => {
+                    if (group.standalone) {
+                        return group.items.map(item => (
+                            <React.Fragment key={`s-${idx}`}>
+                                {renderItem(item, idx++)}
+                            </React.Fragment>
+                        ));
+                    }
+
+                    const itemElements = group.items.map(item => renderItem(item, idx++));
+
+                    return (
+                        <div key={group.id}>
+                            {/* Static group label */}
+                            <div className="px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                                {group.label}
+                            </div>
+                            <div className="flex flex-col gap-0.5 pb-1">
+                                {itemElements}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         );
     }
 

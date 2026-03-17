@@ -89,6 +89,7 @@ function deriveViewName(pathname: string): string {
         '/organization/projects': 'Proyectos',
         '/organization/quotes': 'Presupuestos',
         '/organization/reports': 'Reportes',
+        '/settings/templates': 'Plantillas',
         '/organization/files': 'Archivos',
         '/organization/team': 'Equipo',
 

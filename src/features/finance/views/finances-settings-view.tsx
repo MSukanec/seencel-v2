@@ -1,22 +1,28 @@
 "use client";
 
 import { OrganizationPreferences, OrganizationCurrency, OrganizationWallet, Currency, Wallet, OrganizationSubscription } from "@/types/organization";
-import { Coins, Wallet as WalletIcon, Lightbulb } from "lucide-react";
+import { Coins, Wallet as WalletIcon, Lightbulb, TrendingUp, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { FormGroup } from "@/components/ui/form-group";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { useTransition } from "react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useOptimistic } from "react";
 import { updateOrganizationPreferences, addOrganizationCurrency, removeOrganizationCurrency, addOrganizationWallet, removeOrganizationWallet } from "@/actions/organization-settings";
 import { updateInsightConfig } from "@/features/organization/actions";
 import { Slider } from "@/components/ui/slider";
 import { FeatureGuard, FeatureLockBadge } from "@/components/ui/feature-guard";
 import { toast } from "sonner";
-import { useRouter } from "@/i18n/routing";
+import { useRouter, Link } from "@/i18n/routing";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
+import { ListItem, type ListItemContextMenuAction } from "@/components/shared/list-item";
+import { usePanel } from "@/stores/panel-store";
+import type { EconomicIndexType } from "@/features/advanced/types";
+import { PERIODICITY_LABELS } from "@/features/advanced/types";
+import type { IndexTypeFormData } from "@/features/advanced/forms/advanced-index-type-form";
+import { createIndexTypeAction, updateIndexTypeAction, deleteIndexTypeAction } from "@/features/advanced/actions";
 
 interface FinancesSettingsViewProps {
     preferences?: OrganizationPreferences | null;
@@ -26,6 +32,7 @@ interface FinancesSettingsViewProps {
     availableWallets?: Wallet[];
     organizationId: string;
     subscription?: OrganizationSubscription | null;
+    indexTypes?: EconomicIndexType[];
 }
 
 export function FinancesSettingsView({
@@ -35,7 +42,8 @@ export function FinancesSettingsView({
     availableCurrencies = [],
     availableWallets = [],
     organizationId,
-    subscription
+    subscription,
+    indexTypes = [],
 }: FinancesSettingsViewProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
@@ -459,6 +467,9 @@ export function FinancesSettingsView({
                     </div>
                 </SettingsSection>
 
+                {/* ── SECTION 4: ÍNDICES ECONÓMICOS ─────────────── */}
+                <IndicesSection organizationId={organizationId} initialIndexTypes={indexTypes} />
+
             </SettingsSectionContainer>
 
             <DeleteConfirmationDialog
@@ -477,5 +488,181 @@ export function FinancesSettingsView({
                 isDeleting={isPending}
             />
         </>
+    );
+}
+
+// ─── Indices Section ────────────────────────────────────────────
+
+function IndicesSection({ organizationId, initialIndexTypes }: { organizationId: string; initialIndexTypes: EconomicIndexType[] }) {
+    const { openPanel } = usePanel();
+    const router = useRouter();
+    const [indices, setIndices] = useState<EconomicIndexType[]>(initialIndexTypes);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [indexToDelete, setIndexToDelete] = useState<EconomicIndexType | null>(null);
+
+    // 🚀 OPTIMISTIC: Create index
+    const handleCreate = (data: IndexTypeFormData) => {
+        // Server call — the panel closes itself, we refresh after
+        createIndexTypeAction({
+            organization_id: organizationId,
+            name: data.name,
+            description: data.description,
+            periodicity: data.periodicity,
+            source: data.source,
+            base_year: data.base_year,
+            components: data.components || [{ key: 'general', name: 'Nivel General', is_main: true, sort_order: 0 }],
+        })
+            .then(() => {
+                toast.success("Índice creado");
+                router.refresh();
+            })
+            .catch(() => {
+                toast.error("Error al crear índice");
+            });
+    };
+
+    // 🚀 OPTIMISTIC: Edit index
+    const handleEdit = (indexType: EconomicIndexType, data: IndexTypeFormData) => {
+        const previousItem = indexType;
+        const optimisticItem: EconomicIndexType = { ...indexType, name: data.name, description: data.description || null, periodicity: data.periodicity, source: data.source || null };
+
+        setIndices(prev => prev.map(i => i.id === indexType.id ? optimisticItem : i));
+
+        updateIndexTypeAction(indexType.id, {
+            name: data.name,
+            description: data.description,
+            periodicity: data.periodicity,
+            source: data.source,
+            base_year: data.base_year,
+        })
+            .then(() => {
+                toast.success("Índice actualizado");
+                router.refresh();
+            })
+            .catch(() => {
+                setIndices(prev => prev.map(i => i.id === indexType.id ? previousItem : i));
+                toast.error("Error al actualizar índice");
+            });
+    };
+
+    // 🚀 OPTIMISTIC: Delete index
+    const handleDeleteConfirm = () => {
+        if (!indexToDelete) return;
+        const deletedItem = indexToDelete;
+
+        setIndices(prev => prev.filter(i => i.id !== deletedItem.id));
+        setDeleteDialogOpen(false);
+        setIndexToDelete(null);
+
+        deleteIndexTypeAction(deletedItem.id)
+            .then(() => {
+                toast.success("Índice eliminado");
+            })
+            .catch(() => {
+                setIndices(prev => [...prev, deletedItem]);
+                toast.error("Error al eliminar índice");
+            });
+    };
+
+    const handleOpenCreate = () => {
+        openPanel('index-type-form', {
+            organizationId,
+            onSubmit: handleCreate,
+        });
+    };
+
+    const handleOpenEdit = (indexType: EconomicIndexType) => {
+        openPanel('index-type-form', {
+            organizationId,
+            initialData: indexType,
+            onSubmit: (data: IndexTypeFormData) => handleEdit(indexType, data),
+        });
+    };
+
+    return (
+        <>
+            <SettingsSection
+                contentVariant="inset"
+                icon={TrendingUp}
+                title="Índices Económicos"
+                description="Los índices económicos te permiten ajustar presupuestos y contratos según la inflación. Creá índices como el CAC, ICC o IPC con sus componentes."
+                actions={[
+                    { label: "Crear Índice", icon: Plus, onClick: handleOpenCreate },
+                ]}
+            >
+                {indices.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4">No hay índices configurados aún.</p>
+                ) : (
+                    <div className="space-y-2.5">
+                        {indices.map((indexType) => (
+                            <IndexListItem
+                                key={indexType.id}
+                                indexType={indexType}
+                                onEdit={handleOpenEdit}
+                                onDelete={(item) => { setIndexToDelete(item); setDeleteDialogOpen(true); }}
+                            />
+                        ))}
+                    </div>
+                )}
+            </SettingsSection>
+
+            <DeleteConfirmationDialog
+                open={deleteDialogOpen}
+                onOpenChange={(open) => { if (!open) { setDeleteDialogOpen(false); setIndexToDelete(null); } }}
+                onConfirm={handleDeleteConfirm}
+                title="¿Eliminar índice?"
+                description={
+                    <span>
+                        Se eliminará <strong>&quot;{indexToDelete?.name}&quot;</strong> junto con todos sus {indexToDelete?.values_count || 0} registros de valores.
+                        Esta acción no se puede deshacer.
+                    </span>
+                }
+                confirmLabel="Eliminar"
+            />
+        </>
+    );
+}
+
+// ─── Reusable Index List Item ────────────────────────────────────
+
+function IndexListItem({
+    indexType,
+    onEdit,
+    onDelete,
+}: {
+    indexType: EconomicIndexType;
+    onEdit: (item: EconomicIndexType) => void;
+    onDelete: (item: EconomicIndexType) => void;
+}) {
+    const contextMenuActions = useMemo((): ListItemContextMenuAction[] => [
+        {
+            label: "Editar",
+            icon: <Pencil className="h-3.5 w-3.5" />,
+            onClick: () => onEdit(indexType),
+        },
+        {
+            label: "Eliminar",
+            icon: <Trash2 className="h-3.5 w-3.5" />,
+            onClick: () => onDelete(indexType),
+            variant: "destructive" as const,
+        },
+    ], [indexType, onEdit, onDelete]);
+
+    const periodLabel = PERIODICITY_LABELS[indexType.periodicity];
+    const valuesCount = indexType.values_count || 0;
+    const subtitle = [periodLabel, `${valuesCount} registro${valuesCount !== 1 ? 's' : ''}`, indexType.source].filter(Boolean).join(' · ');
+
+    return (
+        <Link href={`/settings/finance/indices/${indexType.id}` as any}>
+            <ListItem variant="row" contextMenuActions={contextMenuActions}>
+                <ListItem.Content>
+                    <ListItem.Title>{indexType.name}</ListItem.Title>
+                    <ListItem.Description>{subtitle}</ListItem.Description>
+                </ListItem.Content>
+                <ListItem.Trailing>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </ListItem.Trailing>
+            </ListItem>
+        </Link>
     );
 }

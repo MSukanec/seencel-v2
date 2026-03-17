@@ -160,9 +160,11 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
 
     let template;
 
+    const templateColumns = 'id, organization_id, name, page_size, page_orientation, margin_top, margin_bottom, margin_left, margin_right, font_family, primary_color, secondary_color, text_color, logo_width, logo_height, company_name_size, company_name_color, title_size, subtitle_size, body_size, company_info_size, show_footer_info, footer_text, footer_show_page_numbers, show_company_name, show_company_address, pdf_logo_path';
+
     if (targetId) {
         // Try fetch specific ID
-        const { data } = await supabase.schema('finance').from('pdf_templates').select('*').eq('id', targetId).single();
+        const { data } = await supabase.schema('finance').from('pdf_templates').select(templateColumns).eq('id', targetId).single();
         if (data && (data.organization_id === orgId || data.organization_id === null)) {
             template = data;
         }
@@ -172,7 +174,7 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
     if (!template) {
         const { data } = await supabase
             .schema('finance').from('pdf_templates')
-            .select('*')
+            .select(templateColumns)
             .is('organization_id', null)
             .order('created_at', { ascending: true })
             .limit(1)
@@ -261,7 +263,7 @@ export async function createOrganizationPdfTemplate(name: string): Promise<{ suc
 
     await supabase.schema('iam').from('organization_preferences').update({ default_pdf_template_id: data.id }).eq('organization_id', orgId);
 
-    revalidatePath('/organization/settings');
+    revalidatePath('/settings/templates');
     return { success: true, newTemplateId: data.id };
 }
 
@@ -316,7 +318,7 @@ export async function updateOrganizationPdfTheme(theme: PdfGlobalTheme): Promise
         return { success: false, error: "Database update failed." };
     }
 
-    revalidatePath('/organization/details');
+    revalidatePath('/settings/templates');
     return { success: true };
 }
 
@@ -338,13 +340,16 @@ export async function deleteOrganizationPdfTemplate(templateId: string): Promise
         await supabase.schema('iam').from('organization_preferences').update({ default_pdf_template_id: null }).eq('organization_id', orgId);
     }
 
-    const { error } = await supabase.schema('finance').from('pdf_templates').delete().eq('id', templateId);
+    // Soft delete — NUNCA .delete() real
+    const { error } = await supabase.schema('finance').from('pdf_templates')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .eq('id', templateId);
 
     if (error) {
         return { success: false, error: "Failed to delete template." };
     }
 
-    revalidatePath('/organization/details');
+    revalidatePath('/settings/templates');
     return { success: true };
 }
 
@@ -415,7 +420,7 @@ export async function uploadPdfLogo(formData: FormData): Promise<{
         // Return success with URL
         const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${filePath}`;
 
-        revalidatePath('/organization/settings');
+        revalidatePath('/settings/templates');
         return { success: true, pdfLogoUrl: publicUrl };
 
     } catch (error: any) {

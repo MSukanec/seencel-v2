@@ -54,28 +54,28 @@ const QUICK_ACCESS: QuickAccessItem[] = [
         label: "Mi Perfil",
         icon: User,
         keywords: "perfil cuenta usuario avatar",
-        href: "/profile",
+        href: "/settings",
     },
     {
         id: "settings",
         label: "Configuración",
         icon: Settings,
         keywords: "configuracion ajustes opciones preferencias",
-        href: "/organization/settings",
+        href: "/settings/organization",
     },
     {
         id: "members",
         label: "Miembros del Equipo",
         icon: Users,
         keywords: "equipo miembros personas roles permisos",
-        href: "/organization/settings/members",
+        href: "/settings/members",
     },
     {
         id: "billing",
         label: "Facturación y Plan",
         icon: CreditCard,
         keywords: "facturacion plan suscripcion pago cuenta",
-        href: "/organization/settings/billing",
+        href: "/settings/billing",
     },
 ];
 

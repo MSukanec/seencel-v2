@@ -10,6 +10,7 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Card } from "@/components/ui/card";
 
 // ============================================================================
 // Types
@@ -59,13 +60,18 @@ const ListItemRoot = React.forwardRef<HTMLDivElement, ListItemProps>(
     ({ className, variant = "card", selected, disabled, onClick, contextMenuActions, children, ...props }, ref) => {
         const isClickable = !!onClick && !disabled;
 
+        const isIsland = variant === "card" || variant === "row";
+        const RootElement = isIsland ? Card : "div";
+        const rootProps = isIsland ? { variant: "island" as const } : {};
+
         const innerDiv = (
-            <div
+            <RootElement
                 ref={ref}
+                {...rootProps}
                 role={isClickable ? "button" : undefined}
                 tabIndex={isClickable ? 0 : undefined}
                 onClick={disabled ? undefined : onClick}
-                onKeyDown={isClickable ? (e) => {
+                onKeyDown={isClickable ? (e: React.KeyboardEvent) => {
                     if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         onClick?.();
@@ -74,17 +80,12 @@ const ListItemRoot = React.forwardRef<HTMLDivElement, ListItemProps>(
                 className={cn(
                     // Base styles
                     "flex items-center gap-3 transition-colors group overflow-hidden",
-                    // Variant styles
-                    variant === "card" && [
-                        "p-3 rounded-lg border bg-card",
-                        !disabled && "hover:bg-accent",
+                    isIsland && [
+                        "px-4 py-3",
                     ],
                     variant === "flat" && [
                         "py-2 px-1",
                         !disabled && "hover:bg-muted/30 rounded-md",
-                    ],
-                    variant === "row" && [
-                        "cincel-island px-4 py-3",
                     ],
                     // States - Selected uses primary border, remove default border
                     selected && "border-primary border-2",
@@ -92,10 +93,10 @@ const ListItemRoot = React.forwardRef<HTMLDivElement, ListItemProps>(
                     isClickable && "cursor-pointer",
                     className
                 )}
-                {...props}
+                {...(props as any)}
             >
                 {children}
-            </div>
+            </RootElement>
         );
 
         // Wrap with ContextMenu if actions are provided

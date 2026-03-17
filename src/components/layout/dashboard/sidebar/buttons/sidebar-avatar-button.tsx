@@ -24,8 +24,7 @@ import {
     Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useModal } from "@/stores/modal-store";
-import { FeedbackForm } from "@/components/shared/forms/feedback-form";
+import { usePanel } from "@/stores/panel-store";
 
 // ============================================================================
 // AVATAR BUTTON WITH USER MENU POPOVER
@@ -55,23 +54,12 @@ export function SidebarAvatarButton({
     const tUser = useTranslations('UserMenu');
     const { setTheme } = useTheme();
 
-    // Modal controls for Feedback
-    const { openModal, closeModal } = useModal();
-    const tFeedback = useTranslations('Feedback');
+    // Panel controls for Feedback
+    const { openPanel } = usePanel();
 
     const handleFeedbackClick = () => {
-        setOpen(false); // Close popover
-        openModal(
-            <FeedbackForm
-                onSuccess={closeModal}
-                onCancel={closeModal}
-            />,
-            {
-                title: tFeedback('title') || "Feedback",
-                description: tFeedback('modalDescription') || "Envíanos tus comentarios o reporta un problema.",
-                size: 'md'
-            }
-        );
+        setOpen(false);
+        openPanel('feedback-form');
     };
 
     // Generate initials from name
@@ -153,7 +141,7 @@ export function SidebarAvatarButton({
                 <div className="flex flex-col gap-0.5">
                     {/* 1. Configuración */}
                     <Link
-                        href="/profile"
+                        href="/settings"
                         onClick={handleClose}
                         className="flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors"
                     >

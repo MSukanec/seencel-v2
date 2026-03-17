@@ -3,13 +3,13 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { useActiveProjectId } from "@/stores/layout-store";
 
 import { PlannerItem } from "@/features/planner/types";
-import { CalendarEventForm } from "../forms/calendar-event-form";
-import { Project } from "@/types/project";
+
 import { addDays, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subMonths, addMonths, isSameMonth, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -37,15 +37,14 @@ function hexToRgba(hex: string, alpha: number) {
 interface PlannerCalendarProps {
     organizationId: string;
     events: PlannerItem[];
-    projects?: Project[];
 }
 
 const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-export function PlannerCalendar({ organizationId, events, projects }: PlannerCalendarProps) {
+export function PlannerCalendar({ organizationId, events }: PlannerCalendarProps) {
     const activeProjectId = useActiveProjectId();
     const [currentDate, setCurrentDate] = React.useState(new Date());
-    const { openModal, closeModal } = useModal();
+    const { openPanel } = usePanel();
 
     // Optimistic state for events
     const [optimisticEvents, setOptimisticEvents] = React.useState(events);
@@ -73,29 +72,19 @@ export function PlannerCalendar({ organizationId, events, projects }: PlannerCal
     const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
     const goToToday = () => setCurrentDate(new Date());
 
-    // Open event form modal
+    // Open event form in panel
     const openEventForm = (defaultDate?: Date, event?: PlannerItem) => {
-        openModal(
-            <CalendarEventForm
-                organizationId={organizationId}
-                projectId={activeProjectId}
-                initialData={event}
-                defaultDate={defaultDate}
-                projects={projects}
-                onOptimisticCreate={addOptimisticEvent}
-                onOptimisticUpdate={updateOptimisticEvent}
-                onRollback={rollbackOptimistic}
-                onCancel={closeModal}
-            />,
-            {
-                title: event ? "Editar evento" : "Nuevo evento",
-                description: event
-                    ? "Modificá los detalles del evento."
-                    : "Completá los campos para crear un nuevo evento.",
-                size: 'md'
-            }
-        );
+        openPanel('planner-event-form', {
+            organizationId,
+            projectId: activeProjectId,
+            initialData: event,
+            defaultDate,
+            onOptimisticCreate: addOptimisticEvent,
+            onOptimisticUpdate: updateOptimisticEvent,
+            onRollback: rollbackOptimistic,
+        });
     };
+
 
     // Event handlers
     const handleDayClick = (date: Date) => {
@@ -135,40 +124,40 @@ export function PlannerCalendar({ organizationId, events, projects }: PlannerCal
 
 
     return (
-        <div className="h-full flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+        <Card variant="inset" className="h-full flex flex-col overflow-hidden">
 
-            {/* Calendar Navigation Row */}
-            <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
-                <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToPrevMonth}>
+            {/* Calendar Navigation Row (flat on inset surface) */}
+            <div className="flex items-center justify-between px-3 py-2">
+                <div className="flex items-center gap-1.5">
+                    <Button variant="ghost" size="icon" className="cincel-island h-7 w-7" onClick={goToPrevMonth}>
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-sm font-medium w-36 text-center select-none capitalize">
                         {format(currentDate, "MMMM yyyy", { locale: es })}
                     </span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToNextMonth}>
+                    <Button variant="ghost" size="icon" className="cincel-island h-7 w-7" onClick={goToNextMonth}>
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
-                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={goToToday}>
+                <Button variant="ghost" size="sm" className="cincel-island h-7 text-xs" onClick={goToToday}>
                     Hoy
                 </Button>
             </div>
 
-            {/* Day Headers Row */}
-            <div className="grid grid-cols-7 border-b bg-muted/30">
+            {/* Day Headers Row (flat on surface) */}
+            <div className="grid grid-cols-7">
                 {DAYS.map((dayName) => (
                     <div
                         key={dayName}
-                        className="py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+                        className="py-2 text-center text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider"
                     >
                         {dayName}
                     </div>
                 ))}
             </div>
 
-            {/* Calendar Grid - Days Only */}
-            <div className="flex-1 overflow-y-auto min-h-0 grid grid-cols-7 bg-border gap-px">
+            {/* Calendar Grid */}
+            <div className="flex-1 overflow-y-auto min-h-0 grid grid-cols-7 gap-1.5 p-1.5">
                 {calendarDays.map((date, idx) => {
                     const isCurrentMonth = isSameMonth(date, currentDate);
                     const isToday = isSameDay(date, new Date());
@@ -182,11 +171,11 @@ export function PlannerCalendar({ organizationId, events, projects }: PlannerCal
                         <div
                             key={date.toISOString()}
                             className={cn(
-                                "relative min-h-[100px] md:min-h-[120px] p-1.5 md:p-2 transition-colors cursor-pointer group flex flex-col",
-                                // Background - Solid colors for contrast
+                                "relative min-h-[100px] md:min-h-[120px] p-1.5 md:p-2 transition-all cursor-pointer group flex flex-col rounded-lg",
+                                // Island effect for current month cells
                                 isCurrentMonth
-                                    ? "bg-card hover:bg-accent/50"
-                                    : "bg-muted/40 hover:bg-muted/60",
+                                    ? "bg-background border border-white/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.25),0_1px_1px_rgba(0,0,0,0.15)] hover:shadow-[0_0.5px_1px_rgba(0,0,0,0.15)]"
+                                    : "bg-transparent opacity-40",
                                 // Today highlight
                                 isToday && "ring-2 ring-primary ring-inset"
                             )}
@@ -250,6 +239,6 @@ export function PlannerCalendar({ organizationId, events, projects }: PlannerCal
                     );
                 })}
             </div>
-        </div>
+        </Card>
     );
 }

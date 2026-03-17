@@ -17,7 +17,6 @@ import type { ExternalActorType } from "@/features/external-actors/types";
 import { MemberListItem, ListItem } from "@/components/shared/list-item";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { SettingsSection } from "@/components/shared/settings-section";
-import { ContentLayout } from "@/components/layout";
 import { useContextSidebarOverlay } from "@/stores/sidebar-store";
 import { DocsInlinePanel } from "@/features/docs/components/docs-inline-panel";
 import { toast } from "sonner";
@@ -239,7 +238,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
     const isCurrentUser = (member: OrganizationMemberDetail) => member.user_id === currentUserId;
 
     return (
-        <ContentLayout variant="settings">
+        <>
             <div className="space-y-12 pb-12">
                 {/* Members Section */}
                 <SettingsSection
@@ -639,7 +638,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                     </AlertDialogContent>
                 </AlertDialog>
             </div>
-        </ContentLayout>
+        </>
     );
 }
 

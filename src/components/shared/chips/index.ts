@@ -20,3 +20,7 @@ export { PeriodChip, type PeriodChipProps, type PeriodGranularity } from "./chip
 export { AttachmentChip, type AttachmentChipProps } from "./chips/attachment-chip";
 export { ColorChip, type ColorChipProps } from "./chips/color-chip";
 export { AddressChip, type AddressChipProps, type AddressData } from "./chips/address-chip";
+export { TimeChip, type TimeChipProps } from "./chips/time-chip";
+export { LocationChip, type LocationChipProps } from "./chips/location-chip";
+export { ProjectChip, type ProjectChipProps, type ProjectChipProject } from "./chips/project-chip";
+export { DateTimeRangeChip, type DateTimeRangeChipProps } from "./chips/date-time-range-chip";

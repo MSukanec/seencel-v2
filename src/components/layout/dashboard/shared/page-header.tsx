@@ -5,43 +5,78 @@ import { cn } from "@/lib/utils"
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
 import { usePathname, Link } from "@/i18n/routing";
 import { CurrencyModeSelector } from "@/components/shared/currency-mode-selector";
-// CommandBarTrigger moved to sidebar
 import { HeaderIconButton } from "@/components/layout/dashboard/shared/header-icon-button";
-import { BookOpen } from "lucide-react";
+import { MoreHorizontal, BookOpen, Sparkles } from "lucide-react";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 
 import { getDocsSlugForPath } from "@/features/docs/lib/docs-mapping";
 import { useContextSidebarOverlay } from "@/stores/sidebar-store";
 import { DocsInlinePanel } from "@/features/docs/components/docs-inline-panel";
+import { usePanel } from "@/stores/panel-store";
 
 export interface BreadcrumbItem {
     label: string | React.ReactNode
     href?: string
 }
 
-// ─── Header Docs Button ─────────────────────────────────
-// Auto-detects the docs page for the current route.
-// Only renders when a matching docs slug exists.
-// Opens docs inline in the ContextSidebar overlay.
+// ─── Header More Button ─────────────────────────────────
+// "..." button in the header actions area.
+// Popover with contextual options:
+//   - Documentación (only when docs exist for current route)
+//   - Reportar un Problema (opens feedback panel)
 
-function HeaderDocsButton() {
+function HeaderMoreButton() {
+    const [open, setOpen] = React.useState(false);
     const pathname = usePathname();
     const docsSlug = getDocsSlugForPath(pathname);
     const { pushOverlay, hasOverlay } = useContextSidebarOverlay();
+    const { openPanel } = usePanel();
 
-    if (!docsSlug) return null;
+    const itemClass = "flex items-center gap-2 px-2 py-1.5 text-xs rounded-md transition-colors hover:bg-secondary cursor-pointer w-full text-left";
 
-    const handleClick = () => {
-        if (hasOverlay) return; // Already open
+    const handleDocs = () => {
+        setOpen(false);
+        if (hasOverlay) return;
         pushOverlay(
-            <DocsInlinePanel slug={docsSlug} />,
+            <DocsInlinePanel slug={docsSlug!} />,
             { title: "Documentación" }
         );
     };
 
+    const handleFeedback = () => {
+        setOpen(false);
+        openPanel('feedback-form');
+    };
+
     return (
-        <HeaderIconButton title="Documentación" onClick={handleClick}>
-            <BookOpen className="h-4 w-4" />
-        </HeaderIconButton>
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <HeaderIconButton title="Más opciones" active={open}>
+                    <MoreHorizontal className="h-4 w-4" />
+                </HeaderIconButton>
+            </PopoverTrigger>
+            <PopoverContent
+                side="bottom"
+                align="end"
+                sideOffset={4}
+                className="w-[180px] p-1"
+            >
+                {docsSlug && (
+                    <button onClick={handleDocs} className={itemClass}>
+                        <BookOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        Documentación
+                    </button>
+                )}
+                <button onClick={handleFeedback} className={itemClass}>
+                    <Sparkles className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    Reportar un Problema
+                </button>
+            </PopoverContent>
+        </Popover>
     );
 }
 
@@ -84,6 +119,13 @@ export function PageHeader({
 
     // Helper to find the matching item in all contexts
     const findActiveItem = () => {
+        // Settings context is NOT in ALL_CONTEXTS (it's a separate portal),
+        // so we search it explicitly when the pathname matches
+        if (pathname.includes('/settings')) {
+            const settingsItems = getNavItems('settings');
+            const match = settingsItems.find(item => pathname === item.href);
+            if (match) return match;
+        }
         for (const ctx of contexts) {
             const items = getNavItems(ctx.id);
             const match = items.find(item => pathname === item.href);
@@ -95,8 +137,8 @@ export function PageHeader({
     // Detect if current page is a sub-page of a nav item with children
     const findSubPageInfo = () => {
         // Determine which contexts to search
-        const contextsToSearch: ('organization' | 'admin' | 'profile')[] = pathname.includes('/profile')
-            ? ['profile']
+        const contextsToSearch: ('organization' | 'admin' | 'settings')[] = pathname.includes('/settings')
+            ? ['settings']
             : ['organization'];
 
         for (const ctx of contextsToSearch) {
@@ -191,6 +233,17 @@ export function PageHeader({
                             )}>
                                 {tabs}
                             </div>
+                        ) : activeItem && titleItem?.label && titleItem.label !== activeItem.title ? (
+                            /* activeItem found in a different context (e.g. Settings portal) — breadcrumb */
+                            <>
+                                <span className="text-sm text-muted-foreground">
+                                    {titleItem.label}
+                                </span>
+                                <span className="text-sm text-muted-foreground/50 mx-2">/</span>
+                                <span className="text-sm font-medium text-foreground">
+                                    {activeItem.title}
+                                </span>
+                            </>
                         ) : (
                             /* No sub-page, no tabs — show simple title */
                             <h1 className="text-sm font-medium text-foreground">
@@ -199,14 +252,14 @@ export function PageHeader({
                         )}
                     </div>
 
-                    {/* Center: empty (Command Bar moved to sidebar) */}
-                    <div />
+                    {/* Center: Tab portal target */}
+                    <div id="page-header-tabs" className="flex items-center justify-center" />
 
                     {/* Right: Actions */}
                     <div id="page-header-actions" className="flex items-center gap-1.5 justify-self-end">
                         <CurrencyModeSelector />
                         {actions}
-                        <HeaderDocsButton />
+                        <HeaderMoreButton />
                     </div>
                 </div>
 

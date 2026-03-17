@@ -4,8 +4,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Home, ArrowLeft, Zap, Hammer, HardHat, Construction, Wrench } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useModal } from "@/stores/modal-store";
-import { FeedbackForm } from "@/components/shared/forms/feedback-form";
+import { usePanel } from "@/stores/panel-store";
 
 interface ErrorPageProps {
     error: Error & { digest?: string };
@@ -26,29 +25,17 @@ const constructionMessages = [
 
 export default function DashboardError({ error, reset }: ErrorPageProps) {
     const t = useTranslations('Errors'); // Assuming we keep generic keys or fallback
-    const { openModal, closeModal } = useModal();
-    const tFeedback = useTranslations('Feedback');
+    const { openPanel } = usePanel();
 
     // Pick a random message
     const randomMessage = constructionMessages[Math.floor(Math.random() * constructionMessages.length)];
 
     useEffect(() => {
-        // Log to error tracking service
         console.error("Dashboard Error:", error);
     }, [error]);
 
     const handleFeedback = () => {
-        openModal(
-            <FeedbackForm
-                onSuccess={closeModal}
-                onCancel={closeModal}
-            />,
-            {
-                title: tFeedback('title') || "Reportar Problema",
-                description: tFeedback('modalDescription') || "Cuéntanos qué estabas haciendo cuando ocurrió el error.",
-                size: 'md'
-            }
-        );
+        openPanel('feedback-form');
     };
 
     return (

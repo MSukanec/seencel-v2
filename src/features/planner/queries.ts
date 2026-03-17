@@ -46,6 +46,7 @@ export async function getBoard(boardId: string): Promise<PlannerBoard | null> {
         .schema('planner').from('boards')
         .select('*')
         .eq('id', boardId)
+        .eq('is_deleted', false)
         .single();
 
     if (error) {
@@ -68,11 +69,12 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
 } | null> {
     const supabase = await createClient();
 
-    // Get board
+    // Get board first (needed for org_id in subsequent queries)
     const { data: board, error: boardError } = await supabase
         .schema('planner').from('boards')
         .select('*')
         .eq('id', boardId)
+        .eq('is_deleted', false)
         .single();
 
     if (boardError || !board) {
@@ -80,60 +82,64 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
         return null;
     }
 
-    // Get project name (cross-schema)
-    let boardProjectName: string | null = null;
-    if (board.project_id) {
-        const { data: projectData } = await supabase
-            .schema('projects').from('projects')
-            .select('name')
-            .eq('id', board.project_id)
-            .single();
-        boardProjectName = projectData?.name || null;
-    }
+    // Parallel fetch: lists, labels, members, project name
+    const [listsRes, labelsRes, membersRes, projectRes] = await Promise.all([
+        // Lists with items
+        supabase
+            .schema('planner').from('lists')
+            .select(`
+                *,
+                items (*)
+            `)
+            .eq('board_id', boardId)
+            .eq('is_deleted', false)
+            .order('position', { ascending: true }),
+        // Labels
+        supabase
+            .schema('planner').from('labels')
+            .select('*')
+            .eq('organization_id', board.organization_id)
+            .eq('is_deleted', false)
+            .order('position', { ascending: true }),
+        // Organization members (cross-schema)
+        supabase
+            .schema('iam').from('organization_members')
+            .select(`
+                id,
+                user_id,
+                user: users (
+                    full_name,
+                    avatar_url
+                )
+            `)
+            .eq('organization_id', board.organization_id),
+        // Project name (cross-schema)
+        board.project_id
+            ? supabase
+                .schema('projects').from('projects')
+                .select('name')
+                .eq('id', board.project_id)
+                .single()
+            : Promise.resolve({ data: null }),
+    ]);
 
-    // Get lists with items
-    const { data: lists, error: listsError } = await supabase
-        .schema('planner').from('lists')
-        .select(`
-            *,
-            items (*)
-        `)
-        .eq('board_id', boardId)
-        .eq('is_deleted', false)
-        .order('position', { ascending: true });
-
+    const { data: lists, error: listsError } = listsRes;
     if (listsError) {
         console.error('Error fetching lists:', listsError);
         return null;
     }
 
-    // Get labels
-    const { data: labels, error: labelsError } = await supabase
-        .schema('planner').from('labels')
-        .select('*')
-        .eq('organization_id', board.organization_id)
-        .order('position', { ascending: true });
-
+    const { data: labels, error: labelsError } = labelsRes;
     if (labelsError) {
         console.error('Error fetching labels:', labelsError);
     }
 
-    // Get organization members (cross-schema)
-    const { data: membersData, error: membersError } = await supabase
-        .schema('iam').from('organization_members')
-        .select(`
-            id,
-            user_id,
-            user: users (
-                full_name,
-                avatar_url
-            )
-        `)
-        .eq('organization_id', board.organization_id);
-
+    const { data: membersData, error: membersError } = membersRes;
     if (membersError) {
         console.error('Error fetching members:', membersError);
     }
+
+    const boardProjectName = projectRes.data?.name || null;
 
     const members: PlannerMember[] = (membersData || []).map((m: any) => ({
         id: m.id,
@@ -181,6 +187,7 @@ export async function getItemDetails(itemId: string): Promise<PlannerItem | null
         .schema('planner').from('items')
         .select('*')
         .eq('id', itemId)
+        .eq('is_deleted', false)
         .single();
 
     if (error) {
@@ -202,6 +209,7 @@ export async function getLabels(organizationId: string): Promise<PlannerLabel[]>
         .schema('planner').from('labels')
         .select('*')
         .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
         .order('position', { ascending: true });
 
     if (error) {
@@ -305,6 +313,7 @@ export async function getItemWithAttendees(itemId: string): Promise<PlannerItem 
             )
         `)
         .eq('id', itemId)
+        .eq('is_deleted', false)
         .single();
 
     if (error) {

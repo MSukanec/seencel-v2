@@ -56,9 +56,9 @@ export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
     '/organization/settings/members': { slug: 'equipo/miembros' },
     '/organizacion/configuracion/miembros': { slug: 'equipo/miembros' },
 
-    // Settings (Configuración) — Índices Económicos (exact match to avoid catching members)
-    '/organization/settings': { slug: 'organizacion/indices-economicos', exactOnly: true },
-    '/organizacion/configuracion': { slug: 'organizacion/indices-economicos', exactOnly: true },
+    // Settings (Configuración) — Índices Económicos
+    '/settings/finance': { slug: 'organizacion/indices-economicos', exactOnly: true },
+    '/configuracion/finanzas': { slug: 'organizacion/indices-economicos', exactOnly: true },
 
     // Add more feature -> docs mappings here as documentation is created
 };

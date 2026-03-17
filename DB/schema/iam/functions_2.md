@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-15T18:32:16.410Z
+> Generated: 2026-03-16T12:23:01.346Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -23,6 +23,148 @@ begin
   perform iam.ensure_contact_for_user(new.organization_id, new.user_id);
   return new;
 end;$function$
+```
+</details>
+
+### `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` 🔐
+
+- **Returns**: uuid
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'iam', 'billing'
+AS $function$
+DECLARE
+    v_org_id uuid := gen_random_uuid();
+    v_admin_role_id uuid;
+    v_editor_role_id uuid;
+    v_viewer_role_id uuid;
+    v_member_id uuid;
+    v_board_id uuid;
+    v_recent_count integer;
+    v_plan_free_id uuid := '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2';
+    v_default_currency_id uuid := '58c50aa7-b8b1-4035-b509-58028dd0e33f';
+    v_default_wallet_id uuid := '2658c575-0fa8-4cf6-85d7-6430ded7e188';
+    v_default_pdf_template_id uuid := 'b6266a04-9b03-4f3a-af2d-f6ee6d0a948b';
+BEGIN
+    SELECT count(*) INTO v_recent_count
+    FROM iam.organizations
+    WHERE created_by = p_user_id AND created_at > now() - interval '1 hour';
+
+    IF v_recent_count >= 3 THEN
+        RAISE EXCEPTION 'Has alcanzado el límite de creación de organizaciones. Intentá de nuevo más tarde.'
+            USING ERRCODE = 'P0001';
+    END IF;
+
+    INSERT INTO iam.organizations (
+        id, name, created_by, owner_id, created_at, updated_at, is_active, plan_id, business_mode
+    ) VALUES (
+        v_org_id, p_organization_name, p_user_id, p_user_id, now(), now(), true, v_plan_free_id, p_business_mode
+    );
+
+    INSERT INTO iam.organization_data (organization_id) VALUES (v_org_id);
+
+    INSERT INTO iam.roles (name, description, type, organization_id, is_system)
+    VALUES ('Administrador', 'Acceso total', 'organization', v_org_id, false)
+    RETURNING id INTO v_admin_role_id;
+
+    INSERT INTO iam.roles (name, description, type, organization_id, is_system)
+    VALUES ('Editor', 'Puede editar', 'organization', v_org_id, false)
+    RETURNING id INTO v_editor_role_id;
+
+    INSERT INTO iam.roles (name, description, type, organization_id, is_system)
+    VALUES ('Lector', 'Solo lectura', 'organization', v_org_id, false)
+    RETURNING id INTO v_viewer_role_id;
+
+    INSERT INTO iam.organization_members (
+        user_id, organization_id, role_id, is_active, created_at, joined_at
+    ) VALUES (
+        p_user_id, v_org_id, v_admin_role_id, true, now(), now()
+    )
+    RETURNING id INTO v_member_id;
+
+    -- Admin: todos los permisos
+    INSERT INTO iam.role_permissions (role_id, permission_id)
+    SELECT v_admin_role_id, p.id FROM iam.permissions p WHERE p.is_system = true;
+
+    -- Editor: permisos de gestión (9 permisos consolidados)
+    INSERT INTO iam.role_permissions (role_id, permission_id)
+    SELECT v_editor_role_id, p.id FROM iam.permissions p
+    WHERE p.key IN (
+        'projects.view', 'projects.manage',
+        'construction.view', 'construction.manage',
+        'finance.view', 'finance.manage',
+        'organization.view',
+        'commercial.view', 'commercial.manage'
+    );
+
+    -- Lector: permisos de solo lectura (5 permisos)
+    INSERT INTO iam.role_permissions (role_id, permission_id)
+    SELECT v_viewer_role_id, p.id FROM iam.permissions p
+    WHERE p.key IN (
+        'projects.view',
+        'construction.view',
+        'finance.view',
+        'organization.view',
+        'commercial.view'
+    );
+
+    INSERT INTO finance.organization_currencies (
+        id, organization_id, currency_id, is_active, is_default, created_at
+    ) VALUES (
+        gen_random_uuid(), v_org_id, v_default_currency_id, true, true, now()
+    );
+
+    INSERT INTO finance.organization_wallets (
+        id, organization_id, wallet_id, is_active, is_default, created_at
+    ) VALUES (
+        gen_random_uuid(), v_org_id, v_default_wallet_id, true, true, now()
+    );
+
+    INSERT INTO iam.organization_preferences (
+        organization_id, default_currency_id, default_wallet_id, default_pdf_template_id,
+        use_currency_exchange, created_at, updated_at
+    ) VALUES (
+        v_org_id, v_default_currency_id, v_default_wallet_id, v_default_pdf_template_id,
+        false, now(), now()
+    );
+
+    INSERT INTO planner.kanban_boards (name, organization_id, created_by)
+    VALUES ('General', v_org_id, v_member_id)
+    RETURNING id INTO v_board_id;
+
+    INSERT INTO planner.kanban_lists (board_id, name, position, organization_id, auto_complete, created_by)
+    VALUES
+        (v_board_id, 'Por Hacer',    0, v_org_id, false, v_member_id),
+        (v_board_id, 'En Progreso',  1, v_org_id, false, v_member_id),
+        (v_board_id, 'Hecho',        2, v_org_id, true,  v_member_id);
+
+    UPDATE iam.user_preferences
+    SET last_organization_id = v_org_id, updated_at = now()
+    WHERE user_id = p_user_id;
+
+    RETURN v_org_id;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        PERFORM ops.log_system_error(
+            'function', 'handle_new_organization', 'organization',
+            SQLERRM, jsonb_build_object(
+                'user_id', p_user_id,
+                'organization_name', p_organization_name,
+                'business_mode', p_business_mode
+            ),
+            'critical'
+        );
+        RAISE;
+END;
+$function$
 ```
 </details>
 
@@ -167,148 +309,6 @@ EXCEPTION WHEN OTHERS THEN
         NULL;
     END;
     RAISE;
-END;
-$function$
-```
-</details>
-
-### `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` 🔐
-
-- **Returns**: uuid
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)
- RETURNS uuid
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'iam', 'billing'
-AS $function$
-DECLARE
-    v_org_id uuid := gen_random_uuid();
-    v_admin_role_id uuid;
-    v_editor_role_id uuid;
-    v_viewer_role_id uuid;
-    v_member_id uuid;
-    v_board_id uuid;
-    v_recent_count integer;
-    v_plan_free_id uuid := '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2';
-    v_default_currency_id uuid := '58c50aa7-b8b1-4035-b509-58028dd0e33f';
-    v_default_wallet_id uuid := '2658c575-0fa8-4cf6-85d7-6430ded7e188';
-    v_default_pdf_template_id uuid := 'b6266a04-9b03-4f3a-af2d-f6ee6d0a948b';
-BEGIN
-    SELECT count(*) INTO v_recent_count
-    FROM iam.organizations
-    WHERE created_by = p_user_id AND created_at > now() - interval '1 hour';
-
-    IF v_recent_count >= 3 THEN
-        RAISE EXCEPTION 'Has alcanzado el límite de creación de organizaciones. Intentá de nuevo más tarde.'
-            USING ERRCODE = 'P0001';
-    END IF;
-
-    INSERT INTO iam.organizations (
-        id, name, created_by, owner_id, created_at, updated_at, is_active, plan_id, business_mode
-    ) VALUES (
-        v_org_id, p_organization_name, p_user_id, p_user_id, now(), now(), true, v_plan_free_id, p_business_mode
-    );
-
-    INSERT INTO iam.organization_data (organization_id) VALUES (v_org_id);
-
-    INSERT INTO iam.roles (name, description, type, organization_id, is_system)
-    VALUES ('Administrador', 'Acceso total', 'organization', v_org_id, false)
-    RETURNING id INTO v_admin_role_id;
-
-    INSERT INTO iam.roles (name, description, type, organization_id, is_system)
-    VALUES ('Editor', 'Puede editar', 'organization', v_org_id, false)
-    RETURNING id INTO v_editor_role_id;
-
-    INSERT INTO iam.roles (name, description, type, organization_id, is_system)
-    VALUES ('Lector', 'Solo lectura', 'organization', v_org_id, false)
-    RETURNING id INTO v_viewer_role_id;
-
-    INSERT INTO iam.organization_members (
-        user_id, organization_id, role_id, is_active, created_at, joined_at
-    ) VALUES (
-        p_user_id, v_org_id, v_admin_role_id, true, now(), now()
-    )
-    RETURNING id INTO v_member_id;
-
-    -- Admin: todos los permisos
-    INSERT INTO iam.role_permissions (role_id, permission_id)
-    SELECT v_admin_role_id, p.id FROM iam.permissions p WHERE p.is_system = true;
-
-    -- Editor: permisos de gestión (9 permisos consolidados)
-    INSERT INTO iam.role_permissions (role_id, permission_id)
-    SELECT v_editor_role_id, p.id FROM iam.permissions p
-    WHERE p.key IN (
-        'projects.view', 'projects.manage',
-        'construction.view', 'construction.manage',
-        'finance.view', 'finance.manage',
-        'organization.view',
-        'commercial.view', 'commercial.manage'
-    );
-
-    -- Lector: permisos de solo lectura (5 permisos)
-    INSERT INTO iam.role_permissions (role_id, permission_id)
-    SELECT v_viewer_role_id, p.id FROM iam.permissions p
-    WHERE p.key IN (
-        'projects.view',
-        'construction.view',
-        'finance.view',
-        'organization.view',
-        'commercial.view'
-    );
-
-    INSERT INTO finance.organization_currencies (
-        id, organization_id, currency_id, is_active, is_default, created_at
-    ) VALUES (
-        gen_random_uuid(), v_org_id, v_default_currency_id, true, true, now()
-    );
-
-    INSERT INTO finance.organization_wallets (
-        id, organization_id, wallet_id, is_active, is_default, created_at
-    ) VALUES (
-        gen_random_uuid(), v_org_id, v_default_wallet_id, true, true, now()
-    );
-
-    INSERT INTO iam.organization_preferences (
-        organization_id, default_currency_id, default_wallet_id, default_pdf_template_id,
-        use_currency_exchange, created_at, updated_at
-    ) VALUES (
-        v_org_id, v_default_currency_id, v_default_wallet_id, v_default_pdf_template_id,
-        false, now(), now()
-    );
-
-    INSERT INTO planner.kanban_boards (name, organization_id, created_by)
-    VALUES ('General', v_org_id, v_member_id)
-    RETURNING id INTO v_board_id;
-
-    INSERT INTO planner.kanban_lists (board_id, name, position, organization_id, auto_complete, created_by)
-    VALUES
-        (v_board_id, 'Por Hacer',    0, v_org_id, false, v_member_id),
-        (v_board_id, 'En Progreso',  1, v_org_id, false, v_member_id),
-        (v_board_id, 'Hecho',        2, v_org_id, true,  v_member_id);
-
-    UPDATE iam.user_preferences
-    SET last_organization_id = v_org_id, updated_at = now()
-    WHERE user_id = p_user_id;
-
-    RETURN v_org_id;
-
-EXCEPTION
-    WHEN OTHERS THEN
-        PERFORM ops.log_system_error(
-            'function', 'handle_new_organization', 'organization',
-            SQLERRM, jsonb_build_object(
-                'user_id', p_user_id,
-                'organization_name', p_organization_name,
-                'business_mode', p_business_mode
-            ),
-            'critical'
-        );
-        RAISE;
 END;
 $function$
 ```

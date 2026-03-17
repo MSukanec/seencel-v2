@@ -18,6 +18,81 @@ export const routing = defineRouting({
             en: '/organization',
             es: '/organizacion'
         },
+        
+        // ===== UNIFIED SETTINGS PORTAL =====
+        '/settings': {
+            en: '/settings',
+            es: '/configuracion'
+        },
+        '/settings/profile': {
+            en: '/settings/profile',
+            es: '/configuracion/perfil'
+        },
+        '/settings/organizations': {
+            en: '/settings/organizations',
+            es: '/configuracion/organizaciones'
+        },
+        '/settings/security': {
+            en: '/settings/security',
+            es: '/configuracion/seguridad'
+        },
+        '/settings/billing': {
+            en: '/settings/billing',
+            es: '/configuracion/facturacion'
+        },
+        '/settings/notifications': {
+            en: '/settings/notifications',
+            es: '/configuracion/notificaciones'
+        },
+        '/settings/preferences': {
+            en: '/settings/preferences',
+            es: '/configuracion/preferencias'
+        },
+        '/settings/organization': {
+            en: '/settings/organization',
+            es: '/configuracion/organizacion'
+        },
+        '/settings/members': {
+            en: '/settings/members',
+            es: '/configuracion/miembros'
+        },
+        '/settings/permissions': {
+            en: '/settings/permissions',
+            es: '/configuracion/permisos'
+        },
+        '/settings/activity': {
+            en: '/settings/activity',
+            es: '/configuracion/actividad'
+        },
+        '/settings/projects': {
+            en: '/settings/projects',
+            es: '/configuracion/proyectos'
+        },
+        '/settings/contacts': {
+            en: '/settings/contacts',
+            es: '/configuracion/contactos'
+        },
+        '/settings/files': {
+            en: '/settings/files',
+            es: '/configuracion/archivos'
+        },
+        '/settings/finance': {
+            en: '/settings/finance',
+            es: '/configuracion/finanzas'
+        },
+        '/settings/templates': {
+            en: '/settings/templates',
+            es: '/configuracion/plantillas'
+        },
+        '/settings/personal-billing': {
+            en: '/settings/personal-billing',
+            es: '/configuracion/facturacion-personal'
+        },
+        '/settings/location': {
+            en: '/settings/location',
+            es: '/configuracion/ubicacion'
+        },
+        // ===================================
         '/profile': {
             en: '/profile',
             es: '/perfil'
@@ -91,14 +166,8 @@ export const routing = defineRouting({
             en: '/organization/settings/activity',
             es: '/organizacion/configuracion/actividad'
         },
-        '/organization/advanced': {
-            en: '/organization/advanced',
-            es: '/organizacion/avanzado'
-        },
-        '/organization/advanced/indices': {
-            en: '/organization/advanced/indices',
-            es: '/organizacion/avanzado/indices'
-        },
+
+
         '/organization/contacts': {
             en: '/organization/contacts',
             es: '/organizacion/contactos'
@@ -155,10 +224,8 @@ export const routing = defineRouting({
             es: '/organizacion/finanzas'
         },
 
-        '/organization/reports': {
-            en: '/organization/reports',
-            es: '/organizacion/informes'
-        },
+
+
 
         // ===== Organization Catalog (Technical) =====
         '/organization/catalog': {

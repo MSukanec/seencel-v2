@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-15T18:32:16.410Z
+> Generated: 2026-03-16T12:23:01.346Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -23,8 +23,8 @@
 - `can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(public/functions_1.md)*
-- `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
+- `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_project(p_project_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `cleanup_media_file_storage()` → trigger 🔐 *(public/functions_1.md)*
 - `current_user_id()` → uuid 🔐 *(public/functions_1.md)*
@@ -40,8 +40,8 @@
 - `is_self(p_user_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `is_system_row(p_is_system boolean)` → boolean 🔐 *(public/functions_1.md)*
 - `set_timestamp()` → trigger 🔐 *(public/functions_1.md)*
-- `unaccent(text)` → text *(public/functions_2.md)*
 - `unaccent(regdictionary, text)` → text *(public/functions_2.md)*
+- `unaccent(text)` → text *(public/functions_2.md)*
 - `unaccent_init(internal)` → internal *(public/functions_2.md)*
 - `unaccent_lexize(internal, internal, internal, internal)` → internal *(public/functions_2.md)*
 
@@ -100,8 +100,8 @@
 - `iam.get_user()` → json 🔐 *(iam/functions_1.md)*
 - `iam.handle_new_external_actor_contact()` → trigger 🔐 *(iam/functions_1.md)*
 - `iam.handle_new_org_member_contact()` → trigger 🔐 *(iam/functions_2.md)*
-- `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text, p_default_currency_id uuid DEFAULT NULL::uuid)` → uuid 🔐 *(iam/functions_2.md)*
 - `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_2.md)*
+- `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text, p_default_currency_id uuid DEFAULT NULL::uuid)` → uuid 🔐 *(iam/functions_2.md)*
 - `iam.handle_new_user()` → trigger 🔐 *(iam/functions_2.md)*
 - `iam.handle_registered_invitation()` → trigger 🔐 *(iam/functions_2.md)*
 - `iam.handle_updated_by_organizations()` → trigger 🔐 *(iam/functions_2.md)*
@@ -596,17 +596,23 @@
 - **`planner.item_labels`** (5 cols | FK: item_id → items, label_id → labels)
 - **`planner.item_watchers`** (6 cols | FK: item_id → items)
 - **`planner.items`** (38 cols | FK: list_id → lists, parent_item_id → items, board_id → boards)
-- **`planner.labels`** (11 cols)
+- **`planner.labels`** (13 cols)
 - **`planner.lists`** (15 cols | FK: board_id → boards)
 - **`planner.mentions`** (9 cols | FK: comment_id → comments)
 - **`planner.reminders`** (12 cols | FK: item_id → items)
 
-### Functions (5)
+### Functions (11)
 
 - `planner.auto_complete_item()` → trigger *(planner/functions_1.md)*
+- `planner.log_attachment_activity()` → trigger 🔐 *(planner/functions_1.md)*
+- `planner.log_attendee_activity()` → trigger 🔐 *(planner/functions_1.md)*
 - `planner.log_board_activity()` → trigger 🔐 *(planner/functions_1.md)*
+- `planner.log_checklist_activity()` → trigger 🔐 *(planner/functions_1.md)*
+- `planner.log_checklist_item_activity()` → trigger 🔐 *(planner/functions_1.md)*
 - `planner.log_comment_activity()` → trigger 🔐 *(planner/functions_1.md)*
 - `planner.log_item_activity()` → trigger 🔐 *(planner/functions_1.md)*
+- `planner.log_label_activity()` → trigger 🔐 *(planner/functions_1.md)*
+- `planner.log_list_activity()` → trigger 🔐 *(planner/functions_1.md)*
 - `planner.set_item_board_id()` → trigger *(planner/functions_1.md)*
 
 ### Views (2)

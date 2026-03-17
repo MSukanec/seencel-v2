@@ -54,24 +54,24 @@ export function SidebarNavButton({
                 isActive
                     ? "bg-white/[0.04] text-foreground border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_3px_rgba(0,0,0,0.25),0_1px_1px_rgba(0,0,0,0.15)]"
                     : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.03] border border-transparent",
-                "p-0 min-h-[32px]",
+                "p-0 min-h-[28px]",
                 disabled && "cursor-not-allowed hover:bg-transparent hover:text-muted-foreground/60",
                 className
             )}
         >
             {/* Icon - 16x16 */}
             <div className={cn(
-                "w-8 h-8 flex items-center justify-center shrink-0",
+                "w-7 h-7 flex items-center justify-center shrink-0",
                 isActive ? "text-foreground" : "text-muted-foreground/50 group-hover:text-muted-foreground",
                 lockedClass
             )}>
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
             </div>
 
             {/* Label - Single line, left-aligned */}
             <span className={cn(
                 "text-[13px] font-medium truncate transition-opacity duration-200 ease-in-out text-left",
-                isExpanded ? "flex-1 opacity-100 ml-2" : "w-0 opacity-0 ml-0",
+                isExpanded ? "flex-1 opacity-100 ml-1" : "w-0 opacity-0 ml-0",
                 lockedClass
             )}>
                 {label}

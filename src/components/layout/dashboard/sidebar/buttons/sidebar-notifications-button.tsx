@@ -137,8 +137,8 @@ export function SidebarNotificationsButton({
         <button
             className={cn(
                 "flex items-center justify-center h-8 w-full rounded-lg transition-all duration-150 relative",
-                "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
-                open && "text-primary bg-primary/10",
+                "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.03]",
+                open && "text-foreground bg-white/[0.04] border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_3px_rgba(0,0,0,0.25),0_1px_1px_rgba(0,0,0,0.15)]",
                 className
             )}
         >

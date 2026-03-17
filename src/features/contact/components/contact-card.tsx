@@ -36,7 +36,7 @@ export function ContactCard({ contact, organizationName, organizationLogoUrl, on
     const avatarUrl = contact.resolved_avatar_url || contact.image_url;
 
     return (
-        <Card className="group relative flex flex-col items-center text-center p-6 h-[400px] hover:bg-accent/30 transition-colors cursor-pointer">
+        <Card variant="island" className="group relative flex flex-col items-center text-center p-6 transition-colors cursor-pointer">
 
 
             {/* Mini Avatar Indicators (Top Left) */}

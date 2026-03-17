@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useTransition, useRef, useCallback } from "react";
+import { useState, useEffect, useTransition, useRef } from "react";
 import { motion } from "framer-motion";
+import { useAutoSave } from "@/hooks/use-auto-save";
 import {
     FileText,
     Type,
@@ -48,8 +49,8 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils";
-import { SplitEditorLayout, SplitEditorSidebar } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { ContextSidebar } from "@/stores/sidebar-store";
+import { PageHeaderActionPortal } from "@/components/layout/dashboard/shared/page-header-action-portal";
 import { BetaBadge } from "@/components/shared/beta-badge";
 import {
     getOrganizationPdfTheme,
@@ -61,8 +62,15 @@ import {
 } from "@/features/organization/actions/pdf-settings";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { useModal } from "@/stores/modal-store";
-import { PdfTemplateForm } from "../forms/pdf-template-form";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+
 
 // --- Constants ---
 const PDF_FONTS = ["Inter", "Roboto", "Open Sans", "Merriweather", "Playfair Display", "Arial"];
@@ -111,7 +119,8 @@ export function BrandPdfTemplates() {
 
     // UI State
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const { openModal, closeModal } = useModal();
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [newTemplateName, setNewTemplateName] = useState("");
 
     const [isLoading, startTransition] = useTransition();
 
@@ -140,27 +149,19 @@ export function BrandPdfTemplates() {
         loadTheme();
     }, []);
 
-    // ── Debounced auto-save (1000ms) ──
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // ── Auto-save via hook centralizado ──
     const lastSavedSnapshot = useRef<string>("");
 
-    const triggerAutoSave = useCallback((currentConfig: PdfGlobalTheme) => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-
-        debounceRef.current = setTimeout(async () => {
-            try {
-                const res = await updateOrganizationPdfTheme(currentConfig);
-                if (res.success) {
-                    lastSavedSnapshot.current = JSON.stringify(currentConfig);
-                    toast.success("Cambios guardados");
-                } else {
-                    toast.error("Error al guardar", { description: res.error });
-                }
-            } catch {
-                toast.error("Error al guardar los cambios.");
-            }
-        }, 1000);
-    }, []);
+    const { triggerAutoSave } = useAutoSave<PdfGlobalTheme>({
+        saveFn: async (currentConfig) => {
+            const res = await updateOrganizationPdfTheme(currentConfig);
+            if (!res.success) throw new Error(res.error || "Error al guardar");
+            lastSavedSnapshot.current = JSON.stringify(currentConfig);
+        },
+        delay: 1000,
+        successMessage: "Cambios guardados",
+        errorMessage: "Error al guardar los cambios.",
+    });
 
     // Auto-save on config changes (only if different from last saved state)
     useEffect(() => {
@@ -181,18 +182,14 @@ export function BrandPdfTemplates() {
     };
 
     const handleOpenCreateModal = () => {
-        openModal(
-            <PdfTemplateForm
-                onSubmit={handleCreateTemplate}
-                onSuccess={closeModal}
-                onCancel={closeModal}
-            />,
-            {
-                title: "Nueva Plantilla",
-                description: "Crea una nueva plantilla para personalizar el diseño de tus documentos.",
-                size: "md"
-            }
-        );
+        setNewTemplateName("");
+        setIsCreateDialogOpen(true);
+    };
+
+    const handleSubmitCreate = async () => {
+        if (!newTemplateName.trim()) return;
+        await handleCreateTemplate(newTemplateName);
+        setIsCreateDialogOpen(false);
     };
 
     const handleDeleteTemplate = () => {
@@ -222,77 +219,68 @@ export function BrandPdfTemplates() {
 
     return (
         <>
-            <Toolbar
-                portalToHeader={true}
-                actions={[{
-                    label: "Nueva Plantilla",
-                    icon: Plus,
-                    onClick: handleOpenCreateModal,
-                    featureGuard: {
-                        isEnabled: canCreateCustomTemplates,
-                        featureName: "Plantillas PDF Personalizadas",
-                        requiredPlan: "PRO" as const,
-                    },
-                }]}
-            />
-            <SplitEditorLayout
-                sidebarPosition="right"
-                className="h-full overflow-hidden"
-                sidebar={
-                    <SplitEditorSidebar
-                        header={
-                            <div className="flex flex-col gap-4 pb-4 border-b border-border/40">
-                                <div className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-primary" />
-                                    <span className="font-semibold text-sm">Plantillas PDF</span>
-                                    <BetaBadge />
-                                </div>
+            <PageHeaderActionPortal>
+                <Button
+                    onClick={handleOpenCreateModal}
+                    disabled={!canCreateCustomTemplates}
+                    size="sm"
+                >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Nueva Plantilla
+                </Button>
+            </PageHeaderActionPortal>
+            <ContextSidebar title="Plantillas PDF">
+                <div className="flex flex-col gap-4 pb-4 border-b border-border/40">
+                    <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-primary" />
+                        <span className="font-semibold text-sm">Plantillas PDF</span>
+                        <BetaBadge />
+                    </div>
 
-                                <div className="flex items-center gap-2">
-                                    <Select
-                                        disabled={!isPro && availableTemplates.length === 0}
-                                        value={isGlobal ? "default" : config.id}
-                                        onValueChange={handleTemplateChange}
-                                    >
-                                        <SelectTrigger className="flex-1 h-9 text-xs">
-                                            <SelectValue placeholder="Seleccionar plantilla" />
-                                        </SelectTrigger>
-                                        <SelectContent
-                                            position="popper"
-                                            side="bottom"
-                                            align="start"
-                                            sideOffset={4}
-                                            className="max-h-[200px] w-[var(--radix-select-trigger-width)]"
-                                        >
-                                            <SelectItem value="default" className="cursor-pointer">
-                                                <div className="flex items-center justify-between w-full gap-2 min-w-0">
-                                                    <span className="truncate">Plantilla Predeterminada</span>
-                                                    <Badge variant="secondary" className="ml-auto text-[9px] h-4 px-1 bg-[var(--plan-pro)]/10 text-[var(--plan-pro)] font-medium border-0 shrink-0">Solo Lectura</Badge>
-                                                </div>
-                                            </SelectItem>
-                                            {availableTemplates.map(t => (
-                                                <SelectItem key={t.id} value={t.id} className="cursor-pointer">
-                                                    {t.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {!isGlobal && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                            onClick={() => setIsDeleteDialogOpen(true)}
-                                            disabled={isLoading}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
-                        }
-                    >
-                        <div className="space-y-6 animate-in fade-in duration-500 pb-20 pt-4 -mt-4">
+                    <div className="flex items-center gap-2">
+                        <Select
+                            disabled={!isPro && availableTemplates.length === 0}
+                            value={isGlobal ? "default" : config.id}
+                            onValueChange={handleTemplateChange}
+                        >
+                            <SelectTrigger className="flex-1 h-9 text-xs">
+                                <SelectValue placeholder="Seleccionar plantilla" />
+                            </SelectTrigger>
+                            <SelectContent
+                                position="popper"
+                                side="bottom"
+                                align="start"
+                                sideOffset={4}
+                                className="max-h-[200px] w-[var(--radix-select-trigger-width)]"
+                            >
+                                <SelectItem value="default" className="cursor-pointer">
+                                    <div className="flex items-center justify-between w-full gap-2 min-w-0">
+                                        <span className="truncate">Plantilla Predeterminada</span>
+                                        <Badge variant="secondary" className="ml-auto text-[9px] h-4 px-1 bg-[var(--plan-pro)]/10 text-[var(--plan-pro)] font-medium border-0 shrink-0">Solo Lectura</Badge>
+                                    </div>
+                                </SelectItem>
+                                {availableTemplates.map(t => (
+                                    <SelectItem key={t.id} value={t.id} className="cursor-pointer">
+                                        {t.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {!isGlobal && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setIsDeleteDialogOpen(true)}
+                                disabled={isLoading}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="space-y-6 animate-in fade-in duration-500 pb-20 pt-4">
                             <Accordion type="single" collapsible defaultValue="general" className="w-full space-y-2">
 
                                 {/* --- FORMATO GENERAL --- */}
@@ -628,13 +616,13 @@ export function BrandPdfTemplates() {
                             </Accordion>
 
 
-                        </div>
-                    </SplitEditorSidebar>
-                }
-            >
-                <ZoomPanCanvas>
-                    <PdfPreview config={config} logoUrl={pdfLogoUrl || logoUrl} demoData={demoData} />
-                </ZoomPanCanvas>
+                </div>
+            </ContextSidebar>
+
+            {/* Main content: PDF Preview */}
+            <ZoomPanCanvas>
+                <PdfPreview config={config} logoUrl={pdfLogoUrl || logoUrl} demoData={demoData} />
+            </ZoomPanCanvas>
 
                 {/* Delete Confirmation Dialog */}
                 <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -657,7 +645,44 @@ export function BrandPdfTemplates() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-            </SplitEditorLayout>
+
+                {/* Create Template Dialog */}
+                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                    <DialogContent className="rounded-xl shadow-2xl border-border/50">
+                        <DialogHeader>
+                            <DialogTitle>Nueva Plantilla</DialogTitle>
+                            <DialogDescription>
+                                Crea una nueva plantilla para personalizar el diseño de tus documentos.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Input
+                                value={newTemplateName}
+                                onChange={(e) => setNewTemplateName(e.target.value)}
+                                placeholder="Ej: Facturas Corporativas"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleSubmitCreate();
+                                    }
+                                }}
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                                Cancelar
+                            </Button>
+                            <Button
+                                onClick={handleSubmitCreate}
+                                disabled={!newTemplateName.trim()}
+                            >
+                                Crear Plantilla
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
         </>
     );
 }

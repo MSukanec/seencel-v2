@@ -21,10 +21,9 @@
  */
 export type NavModule =
     | 'overview'        // "principal" — Visión General
-    | 'management'      // "gestion" — Proyectos, Docs, Contactos, Config, Presupuestos, Informes
+    | 'management'      // "gestion" — Proyectos, Archivos, Contactos, Catálogo Técnico
     | 'construction'    // "construccion" — Tareas, Materiales, MO, Subcontratos, Sitelog, Salud
-    | 'finance'         // "finanzas" — Finanzas, Capital, Gastos Generales, Clientes
-    | 'library';        // "biblioteca" — Catálogo Técnico, Plantillas PDF, Índices Económicos
+    | 'finance';        // "finanzas" — Finanzas, Capital, Gastos Generales, Clientes
 
 // ============================================
 // Module ↔ Accordion Mapping
@@ -36,7 +35,6 @@ export const MODULE_TO_ACCORDION_ID: Record<NavModule, string> = {
     management: 'gestion',
     construction: 'construccion',
     finance: 'finanzas',
-    library: 'biblioteca',
 };
 
 /** Mapeo inverso: accordion ID → módulo */
@@ -45,7 +43,6 @@ export const ACCORDION_TO_MODULE: Record<string, NavModule> = {
     gestion: 'management',
     construccion: 'construction',
     finanzas: 'finance',
-    biblioteca: 'library',
 };
 
 // ============================================
@@ -53,7 +50,7 @@ export const ACCORDION_TO_MODULE: Record<string, NavModule> = {
 // ============================================
 
 /** Todos los módulos — default para miembros sin preferencia específica */
-export const ALL_MODULES: NavModule[] = ['overview', 'management', 'construction', 'finance', 'library'];
+export const ALL_MODULES: NavModule[] = ['overview', 'management', 'construction', 'finance'];
 
 /**
  * Presets de visibilidad para miembros según industria/rubro.
@@ -62,11 +59,11 @@ export const ALL_MODULES: NavModule[] = ['overview', 'management', 'construction
  */
 export const MEMBER_INDUSTRY_PRESETS: Record<string, NavModule[]> = {
     // Constructora o empresa de obra: ve todo
-    construction_firm: ['overview', 'management', 'construction', 'finance', 'library'],
+    construction_firm: ['overview', 'management', 'construction', 'finance'],
     // Estudio de diseño/arquitectura: sin construcción
-    design_studio: ['overview', 'management', 'finance', 'library'],
+    design_studio: ['overview', 'management', 'finance'],
     // General / sin especificar: ve todo
-    general: ['overview', 'management', 'construction', 'finance', 'library'],
+    general: ['overview', 'management', 'construction', 'finance'],
 };
 
 // ============================================

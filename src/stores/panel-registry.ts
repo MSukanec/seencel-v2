@@ -14,6 +14,7 @@ import {
     UserCheck,
     Mail,
     Upload,
+    CalendarDays,
 } from 'lucide-react';
 
 export interface PanelQuickAction {
@@ -120,6 +121,14 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
     'projects-modality-form': {
         component: dynamic(() => import('@/features/projects/forms/projects-modality-form').then(mod => ({ default: mod.ProjectsModalityForm }))),
         defaultOptions: { size: 'sm' },
+    },
+
+    // ========================================================================
+    // Economic Indices (Settings > Finance)
+    // ========================================================================
+    'index-type-form': {
+        component: dynamic(() => import('@/features/advanced/forms/advanced-index-type-form').then(mod => ({ default: mod.AdvancedIndexTypeForm }))),
+        defaultOptions: { size: 'lg' },
     },
 
     // ========================================================================
@@ -260,6 +269,32 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
             icon: Upload,
             keywords: "subir documento archivo upload media",
         },
+    },
+
+    // ========================================================================
+    // Planner Feature
+    // ========================================================================
+    'planner-event-form': {
+        component: dynamic(() => import('@/features/planner/forms/calendar-event-form').then(mod => ({ default: mod.CalendarEventForm }))),
+        defaultOptions: { size: 'md' },
+        quickAction: {
+            label: "Nueva Actividad",
+            icon: CalendarDays,
+            keywords: "crear actividad evento tarea reunión planificador calendario kanban",
+            defaultProps: { mode: 'create' },
+        },
+    },
+    'planner-list-form': {
+        component: dynamic(() => import('@/features/planner/forms/kanban-list-form').then(mod => ({ default: mod.KanbanListForm }))),
+        defaultOptions: { size: 'sm' },
+    },
+
+    // ========================================================================
+    // Shared / System
+    // ========================================================================
+    'feedback-form': {
+        component: dynamic(() => import('@/components/shared/forms/feedback-form').then(mod => ({ default: mod.FeedbackForm }))),
+        defaultOptions: { size: 'sm' },
     },
 };
 

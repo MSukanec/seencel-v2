@@ -364,7 +364,7 @@ export function ProjectParticipantsView({
     const dialogProps = getConfirmDialogProps();
 
     return (
-        <ContentLayout variant="settings">
+        <ContentLayout variant="narrow">
             <div className="space-y-12 pb-12">
 
                 {/* ===== CLIENTES SECTION ===== */}

@@ -161,7 +161,7 @@
 ### ✅:
 - ✅ `layout.tsx` — Solo auth, sin queries, sin ContentLayout
 - ✅ `page.tsx` — `generateMetadata` + `robots`, `try/catch`, `Promise.all`, `PageWrapper` + `ContentLayout variant="wide"`
-- ✅ `settings/page.tsx` — `ContentLayout variant="settings"`, `try/catch`
+- ✅ `settings/page.tsx` — `ContentLayout variant="narrow"`, `try/catch`
 - ✅ `location/page.tsx` — `generateMetadata`, `try/catch`, `variant="full"`
 - ✅ `[projectId]/page.tsx` — `generateMetadata`, `try/catch`, `Promise.all`, `parentLabel`, `BackButton`, `DetailContentTabs`
 - ✅ `loading.tsx` × 2 — ambos con `PageSkeleton`

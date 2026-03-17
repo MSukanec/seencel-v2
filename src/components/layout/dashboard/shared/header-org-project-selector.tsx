@@ -357,7 +357,6 @@ export function HeaderOrgProjectSelector() {
         '/organization/settings', '/organizacion/configuracion',
         '/organization/contacts', '/organizacion/contactos',
         '/organization/catalog', '/organizacion/catalogo',
-        '/organization/reports', '/organizacion/informes',
         '/organization/projects', '/organizacion/proyectos',
         '/organization/team', '/organizacion/equipo',
     ];

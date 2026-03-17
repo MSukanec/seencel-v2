@@ -1,22 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
-import { createIndexTypeAction, updateIndexTypeAction } from "@/features/advanced/actions";
-import { FormFooter } from "@/components/shared/forms/form-footer";
+import { usePanel } from "@/stores/panel-store";
 import { TextField, SelectField, NotesField } from "@/components/shared/forms/fields";
 import { FormGroup } from "@/components/ui/form-group";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2, GripVertical, TrendingUp } from "lucide-react";
 import type { EconomicIndexType, Periodicity } from "@/features/advanced/types";
 import { PERIODICITY_LABELS, DEFAULT_ICC_COMPONENTS } from "@/features/advanced/types";
 
 interface AdvancedIndexTypeFormProps {
     organizationId: string;
     initialData?: EconomicIndexType | null;
+    /** Called with form data. The VIEW handles server calls + optimistic updates. */
+    onSubmit?: (data: IndexTypeFormData) => void;
+    formId?: string;
+}
+
+export interface IndexTypeFormData {
+    name: string;
+    description?: string;
+    periodicity: Periodicity;
+    source?: string;
+    base_year?: number;
+    components?: Array<{ key: string; name: string; is_main: boolean; sort_order: number }>;
 }
 
 interface ComponentInput {
@@ -34,21 +43,26 @@ const PERIODICITY_OPTIONS = Object.entries(PERIODICITY_LABELS).map(([value, labe
 export function AdvancedIndexTypeForm({
     organizationId,
     initialData,
+    onSubmit,
+    formId,
 }: AdvancedIndexTypeFormProps) {
-    const router = useRouter();
-    const { closeModal } = useModal();
-    const [isLoading, setIsLoading] = useState(false);
+    const { closePanel, setPanelMeta, completePanel } = usePanel();
     const isEditing = !!initialData;
 
-    // Callbacks internos (semi-autónomo)
-    const handleSuccess = () => {
-        closeModal();
-        router.refresh();
-    };
-
-    const handleCancel = () => {
-        closeModal();
-    };
+    // Self-describe
+    useEffect(() => {
+        setPanelMeta({
+            icon: TrendingUp,
+            title: isEditing ? "Editar Índice" : "Crear Índice",
+            description: isEditing
+                ? `Modificar configuración de ${initialData?.name}`
+                : "Definí un nuevo tipo de índice económico con sus componentes.",
+            size: "lg",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Crear Índice",
+            }
+        });
+    }, [isEditing, setPanelMeta, initialData?.name]);
 
     // Form state
     const [name, setName] = useState(initialData?.name || "");
@@ -121,7 +135,7 @@ export function AdvancedIndexTypeForm({
         }));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!name.trim()) {
@@ -144,46 +158,40 @@ export function AdvancedIndexTypeForm({
             return;
         }
 
-        setIsLoading(true);
-        try {
-            if (isEditing && initialData) {
-                await updateIndexTypeAction(initialData.id, {
-                    name: name.trim(),
-                    description: description.trim() || undefined,
-                    periodicity,
-                    source: source.trim() || undefined,
-                    base_year: baseYear ? parseInt(baseYear) : undefined,
-                });
-                toast.success("Índice actualizado");
-            } else {
-                await createIndexTypeAction({
-                    organization_id: organizationId,
-                    name: name.trim(),
-                    description: description.trim() || undefined,
-                    periodicity,
-                    source: source.trim() || undefined,
-                    base_year: baseYear ? parseInt(baseYear) : undefined,
-                    components: components.map((c, index) => ({
-                        key: c.key,
-                        name: c.name,
-                        is_main: c.is_main,
-                        sort_order: index,
-                    })),
-                });
-                toast.success("Índice creado");
-            }
-            handleSuccess();
-        } catch (error) {
-            console.error(error);
-            toast.error("Error al guardar");
-        } finally {
-            setIsLoading(false);
+        const formData: IndexTypeFormData = {
+            name: name.trim(),
+            description: description.trim() || undefined,
+            periodicity,
+            source: source.trim() || undefined,
+            base_year: baseYear ? parseInt(baseYear) : undefined,
+            components: !isEditing ? components.map((c, index) => ({
+                key: c.key,
+                name: c.name,
+                is_main: c.is_main,
+                sort_order: index,
+            })) : undefined,
+        };
+
+        if (onSubmit) {
+            onSubmit(formData);
+        }
+
+        if (isEditing) {
+            closePanel();
+        } else {
+            completePanel(() => {
+                setName("");
+                setDescription("");
+                setSource("");
+                setBaseYear("");
+                setComponents([{ id: crypto.randomUUID(), key: 'general', name: 'Nivel General', is_main: true }]);
+            });
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            <div className="flex-1 overflow-y-auto">
+        <form id={formId} onSubmit={handleSubmit}>
+            <div>
                 <div className="space-y-4">
                     {/* Basic Info */}
                     <div className="grid grid-cols-2 gap-4">
@@ -317,12 +325,6 @@ export function AdvancedIndexTypeForm({
                 </div>
             </div>
 
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                isLoading={isLoading}
-                submitLabel={isEditing ? "Guardar Cambios" : "Crear Índice"}
-                onCancel={handleCancel}
-            />
         </form>
     );
 }

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 
 interface ContentLayoutProps {
     /** Layout variant */
-    variant: 'wide' | 'full' | 'narrow' | 'settings'
+    variant: 'wide' | 'full' | 'narrow'
     /** Content */
     children: React.ReactNode
     /** Additional className */
@@ -22,8 +22,7 @@ interface ContentLayoutProps {
  * 
  * Variantes:
  * - wide: padding lateral 6/8, para tablas y listas
- * - narrow: max-width 4xl, centrado, para formularios
- * - settings: max-width 5xl, centrado, para settings
+ * - narrow: max-width 5xl (1024px), centrado, sin padding lateral
  * - full: sin padding, para canvas/mapas
  */
 export function ContentLayout({
@@ -49,20 +48,10 @@ export function ContentLayout({
             );
 
         case 'narrow':
-            // Centrado con max-width 4xl
+            // Centrado con max-width 5xl (1024px), sin padding lateral
             return (
                 <div className={cn(baseClasses, className)}>
-                    <div className={cn("mx-auto max-w-4xl px-2 md:px-8", paddingY)}>
-                        {children}
-                    </div>
-                </div>
-            );
-
-        case 'settings':
-            // Centrado con max-width 5xl
-            return (
-                <div className={cn(baseClasses, className)}>
-                    <div className={cn("mx-auto max-w-5xl px-2 md:px-8", paddingY)}>
+                    <div className={cn("mx-auto max-w-5xl w-full", paddingY)}>
                         {children}
                     </div>
                 </div>
@@ -84,4 +73,5 @@ export function ContentLayout({
             );
     }
 }
+
 

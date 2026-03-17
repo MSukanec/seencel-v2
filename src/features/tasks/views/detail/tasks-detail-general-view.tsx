@@ -210,7 +210,7 @@ export function TasksDetailGeneralView({
     ];
 
     return (
-        <ContentLayout variant="settings">
+        <ContentLayout variant="narrow">
             <SettingsSectionContainer>
 
                 {/* ── Información General ── */}

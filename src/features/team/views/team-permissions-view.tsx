@@ -5,7 +5,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ContentLayout } from "@/components/layout";
 import { useMemo, useState, useTransition, useOptimistic } from "react";
 import {
     Info, ShieldCheck, Database, Shield, Edit, Eye, User, Briefcase, Loader2,
@@ -226,8 +225,7 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
     const hasPermissions = permissions.length > 0;
 
     return (
-        <ContentLayout variant="settings">
-            <div className="space-y-6 pb-12">
+        <div className="space-y-6 pb-12">
                 {!hasPermissions && (
                     <div className="flex justify-end">
                         <Button onClick={handleSeed} disabled={isSeeding} variant="outline" size="sm">
@@ -380,7 +378,6 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
                     </div>
                 )}
                 </Card>
-            </div>
-        </ContentLayout>
+        </div>
     );
 }

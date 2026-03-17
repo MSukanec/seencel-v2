@@ -7,7 +7,7 @@ import { SidebarMode } from '@/types/preferences';
 export type FontSize = 'smaller' | 'small' | 'default' | 'large' | 'larger';
 
 export type LayoutMode = 'default' | 'sidebar';
-export type NavigationContext = 'organization' | 'project' | 'learnings' | 'community' | 'admin' | 'home' | 'profile';
+export type NavigationContext = 'organization' | 'project' | 'learnings' | 'community' | 'admin' | 'home' | 'settings';
 
 interface LayoutState {
     layoutMode: LayoutMode;

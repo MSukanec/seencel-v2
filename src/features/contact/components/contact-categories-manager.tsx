@@ -72,7 +72,7 @@ export function ContactCategoriesManager({ organizationId, initialCategories }: 
         <>
             <SettingsSectionContainer>
                 <SettingsSection
-                    contentVariant="card"
+                    contentVariant="inset"
                     icon={Tags}
                     title="Categorías de Contacto"
                     description="Las categorías te permiten clasificar y organizar tus contactos según su relación con tu empresa: clientes, proveedores, subcontratistas, arquitectos, y más. Usá las categorías para filtrar contactos rápidamente y mantener tu directorio organizado."

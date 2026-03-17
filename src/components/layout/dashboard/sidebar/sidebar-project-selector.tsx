@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/popover";
 import { useRouter, usePathname } from "@/i18n/routing";
 import { usePathname as useNextPathname } from "next/navigation";
-import { ChevronsUpDown, Check, Plus, FolderKanban } from "lucide-react";
+import { ChevronsUpDown, Check, Plus, FolderKanban, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLayoutData } from "@/hooks/use-layout-data";
 import { useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
@@ -126,20 +126,20 @@ export function SidebarProjectSelector({ isExpanded = true }: SidebarProjectSele
         if (isMd) {
             // Inset/recessed circle for trigger
             return (
-                <div className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center bg-black/20 shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.35),inset_0_0.5px_1px_rgba(0,0,0,0.25)] border border-white/[0.04]">
-                    {project.image_path ? (
-                        <Avatar className="h-6 w-6 rounded-full">
-                            <AvatarImage src={project.image_path} alt={project.name} className="rounded-full" />
-                            <AvatarFallback delayMs={0} className="rounded-full bg-transparent font-bold text-[10px]" style={{ color }}>
-                                {getInitials(project.name)}
-                            </AvatarFallback>
-                        </Avatar>
-                    ) : (
+                project.image_path ? (
+                    <Avatar className="h-8 w-8 rounded-full shrink-0">
+                        <AvatarImage src={project.image_path} alt={project.name} className="rounded-full" />
+                        <AvatarFallback delayMs={0} className="rounded-full bg-primary/10 font-bold text-[10px]" style={{ color }}>
+                            {getInitials(project.name)}
+                        </AvatarFallback>
+                    </Avatar>
+                ) : (
+                    <div className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center bg-primary/10">
                         <span className="font-bold text-[11px]" style={{ color }}>
                             {getInitials(project.name)}
                         </span>
-                    )}
-                </div>
+                    </div>
+                )
             );
         }
         // Small size for popover list
@@ -205,7 +205,7 @@ export function SidebarProjectSelector({ isExpanded = true }: SidebarProjectSele
                         </>
                     ) : (
                         <>
-                            <div className="h-8 w-8 rounded-full flex items-center justify-center bg-black/20 shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.35),inset_0_0.5px_1px_rgba(0,0,0,0.25)] border border-white/[0.04]">
+                            <div className="h-8 w-8 rounded-full flex items-center justify-center bg-primary/10">
                                 <FolderKanban className="h-4 w-4 text-muted-foreground" />
                             </div>
                             <div className="flex flex-col items-start flex-1 min-w-0">
@@ -226,7 +226,7 @@ export function SidebarProjectSelector({ isExpanded = true }: SidebarProjectSele
                 side="right"
                 align="start"
                 sideOffset={12}
-                className="w-[240px] p-0"
+                className="w-[220px] p-0"
             >
                 <div className="flex flex-col max-h-[320px]">
                     {/* Scrollable: General + projects */}
@@ -235,13 +235,13 @@ export function SidebarProjectSelector({ isExpanded = true }: SidebarProjectSele
                         <button
                             onClick={handleSelectGeneral}
                             className={cn(
-                                "flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-secondary transition-colors",
+                                "flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded-md hover:bg-secondary transition-colors",
                                 !activeProjectId && "bg-secondary"
                             )}
                         >
-                            <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                            <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="flex-1 text-left">General</span>
-                            {!activeProjectId && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                            {!activeProjectId && <Check className="h-3 w-3 text-muted-foreground shrink-0" />}
                         </button>
 
                         {/* Project list */}
@@ -255,13 +255,13 @@ export function SidebarProjectSelector({ isExpanded = true }: SidebarProjectSele
                                             key={project.id}
                                             onClick={() => handleSelectProject(project.id)}
                                             className={cn(
-                                                "flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-secondary transition-colors",
+                                                "flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded-md hover:bg-secondary transition-colors",
                                                 isActive && "bg-secondary"
                                             )}
                                         >
                                             {renderProjectAvatar(project)}
                                             <span className="truncate flex-1 text-left">{project.name}</span>
-                                            {isActive && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                                            {isActive && <Check className="h-3 w-3 text-muted-foreground shrink-0" />}
                                         </button>
                                     );
                                 })}
@@ -273,10 +273,10 @@ export function SidebarProjectSelector({ isExpanded = true }: SidebarProjectSele
                     <div className="border-t p-1.5 shrink-0">
                         <button
                             onClick={handleNewProject}
-                            className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
                         >
-                            <Plus className="h-4 w-4" />
-                            <span>Nuevo Proyecto</span>
+                            <Settings className="h-3.5 w-3.5" />
+                            <span>Gestionar proyectos</span>
                         </button>
                     </div>
                 </div>

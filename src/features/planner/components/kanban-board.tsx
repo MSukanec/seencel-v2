@@ -5,15 +5,14 @@ import { KanbanBoard as KanbanBoardType, KanbanCard, KanbanLabel, KanbanList, Ka
 import { Project } from "@/types/project";
 import { KanbanColumn } from "./kanban-column";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Plus, LayoutGrid, Columns3 } from "lucide-react";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useState, useCallback, useEffect } from "react";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { useActiveProjectId } from "@/stores/layout-store";
-import { KanbanCardForm } from "../forms/kanban-card-form";
-import { KanbanListForm } from "../forms/kanban-list-form";
-import { MoveListModal } from "./move-list-modal";
 import { toast } from "sonner";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { deleteList, reorderLists, moveCard, reorderCards } from "@/features/planner/actions";
 import { useRouter } from "next/navigation";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -43,10 +42,11 @@ export function KanbanBoard({
     selectedLabels = [],
     isTeamsEnabled = false
 }: KanbanBoardProps) {
-    const { openModal, closeModal } = useModal();
+    const { openPanel, closePanel } = usePanel();
     const router = useRouter();
     const activeProjectId = useActiveProjectId();
     const [orderedLists, setOrderedLists] = useState(lists);
+    const [deleteTargetList, setDeleteTargetList] = useState<KanbanList | null>(null);
 
     useEffect(() => {
         setOrderedLists(lists);
@@ -186,27 +186,20 @@ export function KanbanBoard({
         }));
     }, []);
 
-    // Open card creation modal
+    // Open card creation panel (unified form)
     const handleAddCard = useCallback((listId: string) => {
-        openModal(
-            <KanbanCardForm
-                organizationId={board.organization_id}
-                boardId={board.id}
-                listId={listId}
-                projectId={activeProjectId || board.project_id}
-                projects={projects}
-                members={members}
-                isTeamsEnabled={isTeamsEnabled}
-                onOptimisticCreate={addOptimisticCard}
-                onRollback={() => setOrderedLists(lists)}
-            />,
-            {
-                title: "Nueva Tarjeta",
-                description: "Crea una nueva tarjeta en este panel",
-                size: "md"
-            }
-        );
-    }, [board.id, openModal, members, addOptimisticCard, lists]);
+        openPanel('planner-event-form', {
+            organizationId: board.organization_id,
+            projectId: activeProjectId || board.project_id,
+            boardId: board.id,
+            listId,
+            members,
+            isTeamsEnabled,
+            onOptimisticCreate: addOptimisticCard,
+            onCancel: closePanel,
+            onSuccess: () => { closePanel(); router.refresh(); },
+        });
+    }, [board.id, board.organization_id, board.project_id, activeProjectId, members, isTeamsEnabled, openPanel, closePanel, router, addOptimisticCard]);
 
     // Optimistic list management
     const addOptimisticList = useCallback((tempList: KanbanList) => {
@@ -227,89 +220,61 @@ export function KanbanBoard({
 
     // Open list creation modal
     const handleAddList = useCallback(() => {
-        openModal(
-            <KanbanListForm
-                boardId={board.id}
-                organizationId={board.organization_id}
-                onOptimisticCreate={addOptimisticList}
-                onSuccess={(realList) => {
-                    // Replace temp list with real one
-                    setOrderedLists(prev => {
-                        const tempIdx = prev.findIndex(l => l.id.startsWith('temp-'));
-                        if (tempIdx >= 0) {
-                            const updated = [...prev];
-                            updated[tempIdx] = { ...realList, cards: [] };
-                            return updated;
-                        }
-                        return prev;
-                    });
-                }}
-            />,
-            {
-                title: "Nueva Columna",
-                description: "Agrega una nueva columna al panel",
-                size: "md"
+        openPanel('planner-list-form', {
+            boardId: board.id,
+            organizationId: board.organization_id,
+            onOptimisticCreate: addOptimisticList,
+            onSuccess: (realList: KanbanList) => {
+                // Replace temp list with real one
+                setOrderedLists(prev => {
+                    const tempIdx = prev.findIndex(l => l.id.startsWith('temp-'));
+                    if (tempIdx >= 0) {
+                        const updated = [...prev];
+                        updated[tempIdx] = { ...realList, cards: [] };
+                        return updated;
+                    }
+                    return prev;
+                });
             }
-        );
-    }, [board.id, openModal, addOptimisticList]);
+        });
+    }, [board.id, board.organization_id, openPanel, addOptimisticList]);
 
     // Open list edit modal
     const handleEditList = useCallback((list: KanbanList) => {
-        openModal(
-            <KanbanListForm
-                boardId={board.id}
-                organizationId={board.organization_id}
-                initialData={list}
-                onOptimisticUpdate={updateOptimisticList}
-                onRollback={(listId) => {
-                    // Restore original list on error
-                    setOrderedLists(lists);
-                }}
-            />,
-            {
-                title: "Editar Columna",
-                description: `Modifica los detalles de ${list.name}`,
-                size: "md"
+        openPanel('planner-list-form', {
+            boardId: board.id,
+            organizationId: board.organization_id,
+            initialData: list,
+            onOptimisticUpdate: updateOptimisticList,
+            onRollback: (listId: string) => {
+                // Restore original list on error
+                setOrderedLists(lists);
             }
-        );
-    }, [board.id, openModal, lists, updateOptimisticList]);
+        });
+    }, [board.id, board.organization_id, openPanel, lists, updateOptimisticList]);
 
     // Handle delete list
     const handleDeleteList = useCallback((list: KanbanList) => {
-        openModal(
-            <div className="flex flex-col gap-4">
-                <p>¿Estás seguro de eliminar la columna <strong>{list.name}</strong>? Esta acción no se puede deshacer.</p>
-                <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={closeModal}>
-                        Cancelar
-                    </Button>
-                    <Button
-                        variant="destructive"
-                        onClick={async () => {
-                            // Optimistic delete
-                            removeOptimisticList(list.id);
-                            closeModal();
+        setDeleteTargetList(list);
+    }, []);
 
-                            try {
-                                await deleteList(list.id);
-                                toast.success("Columna eliminada");
-                            } catch (error) {
-                                // Rollback on error
-                                setOrderedLists(lists);
-                                toast.error("Error al eliminar la columna");
-                            }
-                        }}
-                    >
-                        Eliminar
-                    </Button>
-                </div>
-            </div>,
-            {
-                title: "Eliminar Columna",
-                description: "Confirmación de eliminación"
-            }
-        );
-    }, [openModal, closeModal, removeOptimisticList, lists]);
+    const confirmDeleteList = async () => {
+        if (!deleteTargetList) return;
+        const listId = deleteTargetList.id;
+        
+        // Optimistic delete
+        removeOptimisticList(listId);
+        setDeleteTargetList(null);
+
+        try {
+            await deleteList(listId);
+            toast.success("Columna eliminada");
+        } catch (error) {
+            // Rollback on error
+            setOrderedLists(lists);
+            toast.error("Error al eliminar la columna");
+        }
+    };
 
     // 🚀 OPTIMISTIC DELETE CARD: Remove card from UI instantly
     const handleOptimisticDeleteCard = useCallback((cardId: string) => {
@@ -321,52 +286,34 @@ export function KanbanBoard({
         );
     }, []);
 
-    // Handle move list to another board (optimistic: remove from current view)
-    const handleMoveList = useCallback((list: KanbanList) => {
-        openModal(
-            <MoveListModal
-                listId={list.id}
-                currentBoardId={board.id}
-                organizationId={board.organization_id}
-                onSuccess={() => {
-                    // Optimistic: remove list from current board
-                    removeOptimisticList(list.id);
-                    closeModal();
-                }}
-            />,
-            {
-                title: "Mover columna",
-                description: `Mover la columna "${list.name}" a otro panel`,
-                size: "md"
-            }
-        );
-    }, [board.id, openModal, closeModal, removeOptimisticList]);
 
-    // Open card edit modal
+
+    // Open card edit panel (unified form)
     const handleCardClick = useCallback((card: KanbanCard) => {
-        openModal(
-            <KanbanCardForm
-                organizationId={board.organization_id}
-                boardId={board.id}
-                listId={card.list_id || ''}
-                projectId={activeProjectId || board.project_id}
-                projects={projects}
-                initialData={card}
-                members={members}
-                isTeamsEnabled={isTeamsEnabled}
-                onOptimisticUpdate={updateOptimisticCard}
-                onRollback={() => setOrderedLists(lists)}
-            />,
-            {
-                title: "Editar Tarjeta",
-                description: `Modifica los detalles de ${card.title}`,
-                size: "md"
-            }
-        );
-    }, [board.id, openModal, members, updateOptimisticCard, lists]);
+        openPanel('planner-event-form', {
+            organizationId: board.organization_id,
+            initialData: card,
+            boardId: board.id,
+            listId: card.list_id || '',
+            members,
+            isTeamsEnabled,
+            onOptimisticUpdate: updateOptimisticCard,
+            onRollback: () => setOrderedLists(lists),
+            onCancel: closePanel,
+            onSuccess: () => { closePanel(); router.refresh(); },
+        });
+    }, [board.id, board.organization_id, members, isTeamsEnabled, openPanel, closePanel, router, updateOptimisticCard, lists]);
 
     return (
-        <div className="flex flex-col h-full">
+        <Card variant="inset" className="flex flex-col h-full overflow-hidden w-full border-0">
+            <DeleteConfirmationDialog
+                open={!!deleteTargetList}
+                onOpenChange={(open) => !open && setDeleteTargetList(null)}
+                onConfirm={confirmDeleteList}
+                title="Eliminar Columna"
+                description={`¿Estás seguro de eliminar la columna "${deleteTargetList?.name}"? Esta acción no se puede deshacer.`}
+            />
+
             {orderedLists.length === 0 ? (
                 /* Empty State - No columns yet, centered */
                 <div className="flex-1 flex items-center justify-center p-8">
@@ -389,7 +336,7 @@ export function KanbanBoard({
                                 <div
                                     ref={provided.innerRef}
                                     {...provided.droppableProps}
-                                    className="flex h-full gap-3 md:gap-4 px-[10vw] md:px-8 py-4 snap-x snap-mandatory md:snap-none scroll-smooth"
+                                    className="flex h-full gap-3 md:gap-4 pt-1 pb-2 snap-x snap-mandatory md:snap-none scroll-smooth items-start"
                                 >
                                     {/* Columns */}
                                     {orderedLists.map((list, index) => (
@@ -411,7 +358,6 @@ export function KanbanBoard({
                                                         onCardClick={handleCardClick}
                                                         onEditList={() => handleEditList(list)}
                                                         onDeleteList={() => handleDeleteList(list)}
-                                                        onMoveList={() => handleMoveList(list)}
                                                         onOptimisticDeleteCard={handleOptimisticDeleteCard}
                                                     />
                                                 </div>
@@ -437,7 +383,7 @@ export function KanbanBoard({
                     </div>
                 </DragDropContext>
             )}
-        </div>
+        </Card>
     );
 }
 

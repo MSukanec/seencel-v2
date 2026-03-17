@@ -67,7 +67,7 @@ app/[locale]/(dashboard)/organization/files/
 ├── page.tsx       ← ContentLayout variant="wide", generateMetadata, Promise.all, try/catch ✅
 ├── loading.tsx    ← PageSkeleton ✅
 └── settings/
-    └── page.tsx   ← ContentLayout variant="settings", generateMetadata, Promise.all, try/catch ✅
+    └── page.tsx   ← ContentLayout variant="narrow", generateMetadata, Promise.all, try/catch ✅
 ```
 
 - ✅ Sidebar-first: sub-secciones "Visión General" + "Ajustes" como rutas reales

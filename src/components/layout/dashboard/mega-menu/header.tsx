@@ -117,7 +117,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                                 <ListItem href="/organization/projects" title={tMega('Organization.items.projectManagement')} />
                                                 <ListItem href="#" title={tMega('Organization.items.contacts')} />
                                                 <ListItem href="#" title={tMega('Organization.items.technicalCatalog')} />
-                                                <ListItem href="/profile" title={tMega('Organization.items.settings')} />
+                                                <ListItem href="/settings/organization" title={tMega('Organization.items.settings')} />
                                             </div>
 
                                             <div className="flex flex-col space-y-2">
@@ -390,7 +390,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                             )}
 
                                             <DropdownMenuItem asChild>
-                                                <Link href="/profile">{tUser('settings')}</Link>
+                                                <Link href="/settings">{tUser('settings')}</Link>
                                             </DropdownMenuItem>
 
                                             <DropdownMenuSeparator />

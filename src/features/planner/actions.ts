@@ -230,13 +230,52 @@ export async function reorderLists(boardId: string, listIds: string[]) {
 export async function createItem(input: CreateItemInput) {
     const supabase = await createClient();
 
-    // If board_id provided, get max position in the list
+    // Auto-assign board_id and list_id if not provided
+    // This ensures every new item appears in the kanban by default
+    let boardId = input.board_id || null;
+    let listId = input.list_id || null;
+
+    if (!boardId && !listId) {
+        // Find the default board for this organization
+        const { data: defaultBoard } = await supabase
+            .schema('planner').from('boards')
+            .select('id, default_list_id')
+            .eq('organization_id', input.organization_id)
+            .eq('is_deleted', false)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .single();
+
+        if (defaultBoard) {
+            boardId = defaultBoard.id;
+
+            if (defaultBoard.default_list_id) {
+                listId = defaultBoard.default_list_id;
+            } else {
+                // Fallback: get the first list (lowest position)
+                const { data: firstList } = await supabase
+                    .schema('planner').from('lists')
+                    .select('id')
+                    .eq('board_id', defaultBoard.id)
+                    .eq('is_deleted', false)
+                    .order('position', { ascending: true })
+                    .limit(1)
+                    .single();
+
+                if (firstList) {
+                    listId = firstList.id;
+                }
+            }
+        }
+    }
+
+    // If list_id provided, get max position in the list
     let position = 0;
-    if (input.list_id) {
+    if (listId) {
         const { data: existingItems } = await supabase
             .schema('planner').from('items')
             .select('position')
-            .eq('list_id', input.list_id)
+            .eq('list_id', listId)
             .order('position', { ascending: false })
             .limit(1);
 
@@ -264,8 +303,8 @@ export async function createItem(input: CreateItemInput) {
             // Event
             location: input.location || null,
             // Kanban
-            board_id: input.board_id || null,
-            list_id: input.list_id || null,
+            board_id: boardId,
+            list_id: listId,
             position,
             // Context
             project_id: input.project_id || null,
@@ -318,6 +357,12 @@ export async function updateItem(itemId: string, input: UpdateItemInput) {
 export async function deleteItem(itemId: string) {
     const supabase = await createClient();
 
+    // Verify auth first
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        throw new Error('No autenticado');
+    }
+
     const { error } = await supabase
         .schema('planner').from('items')
         .update({
@@ -327,8 +372,15 @@ export async function deleteItem(itemId: string) {
         .eq('id', itemId);
 
     if (error) {
-        console.error('Error deleting item:', error);
-        throw new Error('Error al eliminar el item');
+        console.error('Error deleting item:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            itemId,
+            userId: user.id,
+        });
+        throw new Error(`Error al eliminar el item: ${sanitizeError(error)}`);
     }
 
     revalidatePath(PLANNER_PATH);

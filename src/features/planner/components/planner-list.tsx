@@ -6,10 +6,13 @@ import { es } from "date-fns/locale";
 import { PlannerItem } from "@/features/planner/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Calendar as CalendarIcon } from "lucide-react";
-import { PlannerEventActions } from "./planner-event-actions";
+import { MapPin, Calendar as CalendarIcon, Pencil, Trash2 } from "lucide-react";
+import { ListItem, type ListItemContextMenuAction } from "@/components/shared/list-item";
+import { Card } from "@/components/ui/card";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
+import { deleteCalendarEvent } from "@/features/planner/actions";
+import { toast } from "sonner";
 
 interface PlannerListProps {
     events: PlannerItem[];
@@ -25,7 +28,25 @@ interface PlannerListProps {
 }
 
 export function PlannerList({ events, onEventClick, totalEvents, onCreateEvent, onResetFilters, onOptimisticDeleteEvent }: PlannerListProps) {
-    // Group events by date category
+    const [deleteTarget, setDeleteTarget] = React.useState<PlannerItem | null>(null);
+
+    // ── Delete handler ──────────────────────────────────
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        const eventId = deleteTarget.id;
+        setDeleteTarget(null);
+        onOptimisticDeleteEvent?.(eventId);
+
+        try {
+            await deleteCalendarEvent(eventId);
+            toast.success("Evento eliminado correctamente");
+        } catch (error) {
+            toast.error("Error al eliminar el evento");
+            console.error(error);
+        }
+    };
+
+    // ── Group events by date ────────────────────────────
     const groupedEvents = React.useMemo(() => {
         const sorted = [...events].sort((a, b) => {
             const dateA = a.start_at ? new Date(a.start_at) : new Date(0);
@@ -62,14 +83,10 @@ export function PlannerList({ events, onEventClick, totalEvents, onCreateEvent, 
             }
             return new Date(key);
         };
-
-        const dateA = getDate(a);
-        const dateB = getDate(b);
-
-        // Descending sort: B - A
-        return compareDesc(dateA, dateB);
+        return compareDesc(getDate(a), getDate(b));
     });
 
+    // ── Empty states ────────────────────────────────────
     if (events.length === 0) {
         const isReallyEmpty = (totalEvents ?? 0) === 0;
 
@@ -97,103 +114,132 @@ export function PlannerList({ events, onEventClick, totalEvents, onCreateEvent, 
         );
     }
 
+    // ── Context menu builder ────────────────────────────
+    const getContextMenuActions = (event: PlannerItem): ListItemContextMenuAction[] => [
+        {
+            label: "Editar",
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: () => onEventClick?.(event),
+        },
+        {
+            label: "Eliminar",
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => setDeleteTarget(event),
+            variant: "destructive",
+        },
+    ];
+
     return (
-        <div className="flex flex-col gap-8 p-6 max-w-4xl mx-auto w-full">
-            {groupKeys.map(key => {
-                const groupEvents = groupedEvents[key];
-                let title = "";
-                let subtitle = "";
+        <>
+            <DeleteConfirmationDialog
+                open={!!deleteTarget}
+                onOpenChange={(open) => !open && setDeleteTarget(null)}
+                onConfirm={handleDelete}
+                title="¿Eliminar evento?"
+                description="Esta acción eliminará el evento del calendario. ¿Estás seguro?"
+                confirmLabel="Eliminar"
+                cancelLabel="Cancelar"
+            />
 
-                if (key === "today") {
-                    title = "Hoy";
-                    subtitle = format(new Date(), "EEEE d 'de' MMMM", { locale: es });
-                } else if (key === "tomorrow") {
-                    title = "Mañana";
-                    const tmrw = new Date();
-                    tmrw.setDate(tmrw.getDate() + 1);
-                    subtitle = format(tmrw, "EEEE d 'de' MMMM", { locale: es });
-                } else {
-                    const realDate = new Date(groupEvents[0].start_at!);
-                    title = format(realDate, "EEEE d", { locale: es });
-                    subtitle = format(realDate, "MMMM yyyy", { locale: es });
-                }
+            <Card variant="inset" className="w-full space-y-1.5">
+                {groupKeys.map((key, groupIdx) => {
+                    const groupEvents = groupedEvents[key];
+                    let title = "";
+                    let subtitle = "";
 
-                return (
-                    <div key={key} className="space-y-4">
-                        <div className="flex items-baseline gap-3 border-b pb-2">
-                            <h3 className="text-2xl font-bold capitalize text-foreground">{title}</h3>
-                            <span className="text-muted-foreground capitalize">{subtitle}</span>
-                        </div>
+                    if (key === "today") {
+                        title = "Hoy";
+                        subtitle = format(new Date(), "EEEE d 'de' MMMM", { locale: es });
+                    } else if (key === "tomorrow") {
+                        title = "Mañana";
+                        const tmrw = new Date();
+                        tmrw.setDate(tmrw.getDate() + 1);
+                        subtitle = format(tmrw, "EEEE d 'de' MMMM", { locale: es });
+                    } else {
+                        const realDate = new Date(groupEvents[0].start_at!);
+                        title = format(realDate, "EEEE d", { locale: es });
+                        subtitle = format(realDate, "MMMM yyyy", { locale: es });
+                    }
 
-                        <div className="grid gap-3">
+                    return (
+                        <React.Fragment key={key}>
+                            {/* ── Date group header (flat on inset surface, like table group rows) ── */}
+                            <div className={cn(
+                                "flex items-baseline gap-3 px-3 py-2",
+                                groupIdx > 0 && "mt-2"
+                            )}>
+                                <h3 className="text-sm font-semibold capitalize text-foreground">{title}</h3>
+                                <span className="text-xs text-muted-foreground capitalize">{subtitle}</span>
+                            </div>
+
+                            {/* ── Event rows (cincel-island elevated) ── */}
                             {groupEvents.map(event => (
-                                <div
+                                <ListItem
                                     key={event.id}
+                                    variant="row"
                                     onClick={() => onEventClick?.(event)}
-                                    className="group relative flex items-center gap-4 bg-card hover:bg-accent/50 p-4 rounded-xl border border-transparent hover:border-border transition-all cursor-pointer shadow-sm hover:shadow-md"
+                                    contextMenuActions={getContextMenuActions(event)}
                                 >
-                                    {/* Color Strip */}
+                                    {/* Color strip */}
                                     <div
-                                        className="absolute left-0 top-3 bottom-3 w-1.5 rounded-r-md"
+                                        className="w-1 self-stretch rounded-full shrink-0"
                                         style={{ backgroundColor: event.color || '#3b82f6' }}
                                     />
 
                                     {/* Time */}
-                                    <div className="flex flex-col items-center min-w-[80px] px-2 pl-4">
-                                        <span className="text-lg font-bold">
-                                            {event.start_at ? format(new Date(event.start_at), "HH:mm") : "--:--"}
-                                        </span>
-                                        {event.end_at && (
-                                            <span className="text-xs text-muted-foreground">
-                                                {format(new Date(event.end_at), "HH:mm")}
+                                    <ListItem.Leading className="min-w-[60px]">
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-sm font-bold font-mono">
+                                                {event.is_all_day
+                                                    ? "Día"
+                                                    : event.start_at
+                                                        ? format(new Date(event.start_at), "HH:mm")
+                                                        : "--:--"
+                                                }
                                             </span>
-                                        )}
-                                    </div>
+                                            {!event.is_all_day && event.end_at && (
+                                                <span className="text-[10px] text-muted-foreground font-mono">
+                                                    {format(new Date(event.end_at), "HH:mm")}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </ListItem.Leading>
 
                                     {/* Content */}
-                                    <div className="flex-1 space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="font-semibold text-lg leading-none group-hover:text-primary transition-colors">
-                                                {event.title}
-                                            </h4>
+                                    <ListItem.Content>
+                                        <ListItem.Title>
+                                            {event.title}
                                             {event.source_type && (
-                                                <Badge variant="outline" className="ml-2 text-[10px] h-5 px-1.5 font-normal uppercase tracking-wider">
+                                                <Badge variant="outline" className="ml-2 text-[10px] h-4 px-1 font-normal uppercase tracking-wider">
                                                     {event.source_type.replace('_', ' ')}
                                                 </Badge>
                                             )}
-                                        </div>
-
-                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                            {(event as any).project_name && (
-                                                <span className="flex items-center gap-1">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
-                                                    {(event as any).project_name}
+                                        </ListItem.Title>
+                                        {((event as any).project_name || event.location) && (
+                                            <ListItem.Description>
+                                                <span className="flex items-center gap-3">
+                                                    {(event as any).project_name && (
+                                                        <span className="flex items-center gap-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+                                                            {(event as any).project_name}
+                                                        </span>
+                                                    )}
+                                                    {event.location && (
+                                                        <span className="flex items-center gap-1">
+                                                            <MapPin className="h-3 w-3" />
+                                                            {event.location}
+                                                        </span>
+                                                    )}
                                                 </span>
-                                            )}
-                                            {event.location && (
-                                                <span className="flex items-center gap-1">
-                                                    <MapPin className="h-3.5 w-3.5" />
-                                                    {event.location}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Action Arrow (Visible on Hover) */}
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-2">
-                                        <PlannerEventActions
-                                            event={event as any}
-                                            onEdit={() => onEventClick?.(event)}
-                                            onOptimisticDelete={onOptimisticDeleteEvent}
-                                            className="h-8 w-8 rounded-full hover:bg-muted"
-                                        />
-                                    </div>
-                                </div>
+                                            </ListItem.Description>
+                                        )}
+                                    </ListItem.Content>
+                                </ListItem>
                             ))}
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
+                        </React.Fragment>
+                    );
+                })}
+            </Card>
+        </>
     );
 }

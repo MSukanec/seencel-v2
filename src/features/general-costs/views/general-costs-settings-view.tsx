@@ -9,16 +9,19 @@
 
 import { Settings } from "lucide-react";
 import { ViewEmptyState } from "@/components/shared/empty-state";
+import { ContentLayout } from "@/components/layout";
 
 // ─── Component ───────────────────────────────────────────
 
 export function GeneralCostsSettingsView() {
     return (
-        <ViewEmptyState
-            mode="empty"
-            icon={Settings}
-            viewName="Ajustes"
-            featureDescription="Próximamente: configuraciones avanzadas para gastos generales."
-        />
+        <ContentLayout variant="narrow">
+            <ViewEmptyState
+                mode="empty"
+                icon={Settings}
+                viewName="Ajustes"
+                featureDescription="Próximamente: configuraciones avanzadas para gastos generales."
+            />
+        </ContentLayout>
     );
 }

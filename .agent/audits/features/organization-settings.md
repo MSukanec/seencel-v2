@@ -50,7 +50,7 @@
 ## Capa 4: Arquitectura de Página
 
 ### `settings/layout.tsx` y `settings/page.tsx`
-- ❌ **`ContentLayout` encapsulado en Layout**: `layout.tsx` abraza estáticamente a sus children usando `<ContentLayout variant="settings">`. La regla Nro 4 exige que `PageWrapper` viva en `layout.tsx` PERO que `ContentLayout` sea declarado individualmente en cada sub-página para posibilitar variantes distintas.
+- ❌ **`ContentLayout` encapsulado en Layout**: `layout.tsx` abraza estáticamente a sus children usando `<ContentLayout variant="narrow">`. La regla Nro 4 exige que `PageWrapper` viva en `layout.tsx` PERO que `ContentLayout` sea declarado individualmente en cada sub-página para posibilitar variantes distintas.
 
 ---
 
