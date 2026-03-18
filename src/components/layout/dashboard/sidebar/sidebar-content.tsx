@@ -289,9 +289,7 @@ export function SidebarContent({
             <div className="flex flex-col h-full py-2 bg-sidebar transition-all duration-150 ease-in-out relative w-full">
                 <div className="flex flex-col w-full h-full overflow-hidden">
                     {/* Header: Project Selector or Context Title */}
-                    {drillState === 'settings' ? (
-                        <div className="w-full px-2 mb-1" />
-                    ) : drillState === 'organization' ? (
+                    {drillState === 'organization' ? (
                         <div className="w-full px-2 mb-1">
                             <SidebarProjectSelector isExpanded={isExpanded} />
                         </div>
@@ -303,6 +301,7 @@ export function SidebarContent({
                                     founders: { icon: Sparkles, label: 'Fundadores', subtitle: 'Programa exclusivo' },
                                     community: { icon: Users, label: 'Comunidad', subtitle: 'Red de profesionales' },
                                     admin: { icon: Shield, label: 'Administración', subtitle: 'Panel de control' },
+                                    settings: { icon: SettingsIcon, label: 'Configuración', subtitle: 'Cuenta y organización' },
                                 };
                                 const meta = contextMeta[drillState];
                                 if (!meta || !isExpanded) return null;
@@ -518,22 +517,6 @@ export function SidebarContent({
                         {/* ============================================================ */}
                         {drillState === "settings" && (
                             <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="settings">
-                                {/* Back to app */}
-                                <SidebarNavButton
-                                    icon={ArrowLeft}
-                                    label="Volver a la app"
-                                    href={(previousPath || '/organization') as any}
-                                    isActive={false}
-                                    isExpanded={isExpanded}
-                                    onClick={() => {
-                                        setSlideDirection("left");
-                                        actions.setActiveContext("organization");
-                                    }}
-                                />
-
-                                {/* Separator */}
-                                <div className="w-8 h-px bg-border/50 my-1 mx-auto" />
-
                                 {/* Settings Nav Groups with Accordion */}
                                 <SidebarAccordionGroups
                                     groups={getNavGroups('settings')}
@@ -554,7 +537,7 @@ export function SidebarContent({
                     )}
 
                     {/* Org Selector */}
-                    {!isMobile && (activeContext === 'organization' || activeContext === 'settings') && (
+                    {!isMobile && activeContext === 'organization' && (
                         <div className="px-2 pb-2 shrink-0">
                             <SidebarOrgSelector isExpanded={isExpanded} />
                         </div>

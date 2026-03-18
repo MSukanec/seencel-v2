@@ -21,12 +21,13 @@ interface SettingsSectionAction {
     href?: string;
     /** Variante: primary (default) o secondary */
     variant?: "primary" | "secondary";
-    /** Feature guard para bloquear según plan */
+    /** Feature guard para bloquear según plan o mantenimiento */
     featureGuard?: {
         isEnabled: boolean;
         featureName: string;
         requiredPlan?: string;
         customMessage?: string;
+        mode?: 'plan' | 'maintenance';
     };
 }
 
@@ -113,6 +114,7 @@ export function SettingsSection({
                                         featureName={action.featureGuard.featureName}
                                         requiredPlan={action.featureGuard.requiredPlan}
                                         customMessage={action.featureGuard.customMessage}
+                                        mode={action.featureGuard.mode}
                                     >
                                         {button}
                                     </FeatureGuard>

@@ -9,6 +9,11 @@ import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import { useSidebarMode } from "@/stores/layout-store";
 import { SidebarToggleButton } from "./sidebar-toggle-button";
+import { usePathname } from "@/i18n/routing";
+
+// URL path segments that ALWAYS force the sidebar expanded
+// (they depend on sidebar navigation for sub-pages)
+const ALWAYS_EXPANDED_PATHS = ['/settings'];
 
 interface SidebarLayoutProps {
     children: React.ReactNode;
@@ -25,6 +30,11 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
     const { popOverlay } = useContextSidebarOverlay();
     const hasContextSidebar = !!contextContent;
     const sidebarMode = useSidebarMode();
+    const pathname = usePathname();
+
+    // Settings (and similar) always force sidebar expanded — detected via URL
+    // to avoid deadlock: activeContext syncs inside SidebarContent which doesn't mount when collapsed
+    const forceExpanded = ALWAYS_EXPANDED_PATHS.some(p => pathname.includes(p));
 
     // Hover state for expand-on-hover mode + toggle button visibility
     const [isHovered, setIsHovered] = React.useState(false);
@@ -49,7 +59,8 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
     }, []);
 
     // Determine if sidebar nav panel should be shown
-    const showSidebarNav = sidebarMode === 'docked' || (sidebarMode === 'expanded_hover' && isHovered);
+    // Force expanded for contexts that depend on sidebar navigation (e.g., Settings)
+    const showSidebarNav = forceExpanded || sidebarMode === 'docked' || (sidebarMode === 'expanded_hover' && isHovered);
 
     // Mounted state to avoid hydration mismatch
     const [mounted, setMounted] = React.useState(false);
@@ -119,8 +130,8 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
                     <div className={cn(
                         "transition-all duration-200 ease-in-out overflow-hidden",
                         showSidebarNav ? "opacity-100" : "w-0 opacity-0",
-                        // In hover mode, sidebar floats over content
-                        sidebarMode === 'expanded_hover' && showSidebarNav && "absolute left-[50px] top-0 bottom-0 z-50 shadow-xl"
+                        // In hover mode, sidebar floats over content (but not when force-expanded)
+                        !forceExpanded && sidebarMode === 'expanded_hover' && showSidebarNav && "absolute left-[50px] top-0 bottom-0 z-50 shadow-xl"
                     )}>
                         <Sidebar user={user} />
                     </div>
