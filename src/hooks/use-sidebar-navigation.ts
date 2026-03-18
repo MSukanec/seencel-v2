@@ -68,7 +68,7 @@ export interface NavItem {
     // Status properties
     disabled?: boolean;
     hidden?: boolean;
-    status?: 'maintenance' | 'founders';
+    status?: 'maintenance' | 'founders' | 'coming_soon';
     // Drill-down children (sidebar sub-navigation)
     children?: NavSubItem[];
 }
@@ -87,7 +87,7 @@ export interface ContextItem {
     icon: React.ElementType;
     disabled?: boolean;
     hidden?: boolean;
-    status?: 'maintenance' | 'founders';
+    status?: 'maintenance' | 'founders' | 'coming_soon';
 }
 
 const ALL_CONTEXTS: ContextItem[] = [
@@ -134,7 +134,7 @@ export function useSidebarNavigation() {
             let flagKey = null;
             if (ctx.id === 'organization' || ctx.id === 'project') flagKey = 'context_workspace_enabled';
             if (ctx.id === 'learnings') flagKey = 'context_academy_enabled';
-            if (ctx.id === 'founders') flagKey = 'context_community_founders_enabled';
+            if (ctx.id === 'founders') flagKey = 'context_founders_enabled';
             if (ctx.id === 'community') flagKey = 'context_community_enabled';
 
             if (!flagKey) return ctx;
@@ -165,7 +165,18 @@ export function useSidebarNavigation() {
                 }
             }
 
-            // 3. Founders
+            // 3. Coming Soon
+            if (status === 'coming_soon') {
+                const comingSoonItem: ContextItem = { ...ctx, status: 'coming_soon' };
+
+                if (canBypassRestrictions) {
+                    return comingSoonItem;
+                } else {
+                    return { ...comingSoonItem, disabled: true };
+                }
+            }
+
+            // 4. Founders
             if (status === 'founders') {
                 const foundersItem: ContextItem = { ...ctx, status: 'founders' };
 
@@ -177,7 +188,7 @@ export function useSidebarNavigation() {
                 }
             }
 
-            // 4. Active
+            // 5. Active
             return ctx;
         }).filter((ctx): ctx is ContextItem => ctx !== null);
     }, [statuses, isAdmin, isBetaTester, isFounder, canBypassRestrictions]);
@@ -193,6 +204,11 @@ export function useSidebarNavigation() {
 
         if (flag === 'maintenance') {
             const updated = { ...baseItem, status: 'maintenance' as 'maintenance' };
+            return canBypassRestrictions ? updated : { ...updated, disabled: true };
+        }
+
+        if (flag === 'coming_soon') {
+            const updated = { ...baseItem, status: 'coming_soon' as 'coming_soon' };
             return canBypassRestrictions ? updated : { ...updated, disabled: true };
         }
 
@@ -432,9 +448,9 @@ export function useSidebarNavigation() {
                     { title: 'Programa Fundadores', href: '/founders/program', icon: Sparkles },
                 ];
             case 'community':
-                const mapItem = getItemStatus('context_community_map_enabled', { title: 'Mapa Seencel', href: '/community/map', icon: MapPin });
-
-                return [mapItem].filter((i): i is NavItem => i !== null);
+                return [
+                    { title: 'Mapa Seencel', href: '/community/map', icon: MapPin },
+                ];
             case 'admin':
                 return getNavGroups('admin').flatMap(g => g.items);
             case 'settings':

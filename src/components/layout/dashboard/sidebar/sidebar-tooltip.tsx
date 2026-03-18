@@ -3,7 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { Medal, Lock, EyeOff, ChevronRight } from "lucide-react";
+import { Medal, Lock, EyeOff, ChevronRight, Clock } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 //   - Speech-bubble style with caret pointing left
 // ============================================================================
 
-export type SidebarRestriction = "founders" | "maintenance" | "hidden" | null;
+export type SidebarRestriction = "founders" | "maintenance" | "hidden" | "coming_soon" | null;
 
 // --- Restriction visual config ---
 const restrictionConfig = {
@@ -35,6 +35,15 @@ const restrictionConfig = {
         iconClass: "text-semantic-warning",
         bgClass: "bg-semantic-warning/10",
         text: "En mantenimiento. Estará disponible pronto.",
+        linkHref: null,
+        linkText: null,
+        linkClass: null,
+    },
+    coming_soon: {
+        icon: Clock,
+        iconClass: "text-blue-400",
+        bgClass: "bg-blue-400/10",
+        text: "Próximamente. Estamos trabajando en esta sección.",
         linkHref: null,
         linkText: null,
         linkClass: null,

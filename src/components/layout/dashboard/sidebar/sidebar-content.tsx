@@ -31,7 +31,7 @@ import {
 import { useSidebarNavigation, contextRoutes, type NavItem, type NavSubItem } from "@/hooks/use-sidebar-navigation";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Medal } from "lucide-react";
+import { Lock, Medal, Clock } from "lucide-react";
 import { useAccessContextStore, useIsDualAccess, useAccessMode } from "@/stores/access-context-store";
 import { EXTERNAL_ACTOR_TYPE_LABELS } from "@/features/external-actors/types";
 
@@ -223,6 +223,12 @@ export function SidebarContent({
             badge = (
                 <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-semantic-warning/10 hover:bg-semantic-warning/20 shadow-none">
                     <Lock className="h-3 w-3 text-semantic-warning" />
+                </Badge>
+            );
+        } else if (status === 'coming_soon') {
+            badge = (
+                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-blue-400/10 hover:bg-blue-400/20 shadow-none">
+                    <Clock className="h-3 w-3 text-blue-400" />
                 </Badge>
             );
         } else if (status === 'founders') {
