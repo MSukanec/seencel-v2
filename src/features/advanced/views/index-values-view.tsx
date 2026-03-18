@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeft, TrendingUp, TrendingDown, Minus, Calendar, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { Link } from "@/i18n/routing";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { useModal } from "@/stores/modal-store";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";

@@ -93,7 +93,6 @@ export default async function TaskDetailPage({ params, searchParams }: TaskDetai
         return (
             <Tabs defaultValue={view} className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title={truncatedName}
                     backButton={
                         <BackButton fallbackHref="/organization/catalog" />

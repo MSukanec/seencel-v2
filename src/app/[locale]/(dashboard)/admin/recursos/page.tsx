@@ -89,7 +89,6 @@ export default async function AdminRecursosPage() {
         return (
             <Tabs defaultValue="materials" className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title="Recursos"
                     icon={<Layers />}
                     actions={

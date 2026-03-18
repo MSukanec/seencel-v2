@@ -4,7 +4,7 @@ import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Plus, Users, Wallet, CheckCircle2, AlertCircle } from "lucide-react";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 
 import { useModal } from "@/stores/modal-store";
 import { SubcontractsSubcontractForm } from "../forms/subcontracts-subcontract-form";

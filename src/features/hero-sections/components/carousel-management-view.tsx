@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useModal } from "@/stores/modal-store";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { HeroSectionForm } from "./forms/hero-section-form";
 import { deleteHeroSection, toggleHeroSectionActive } from "@/features/hero-sections/actions";

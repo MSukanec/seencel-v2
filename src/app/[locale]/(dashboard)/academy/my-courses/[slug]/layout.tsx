@@ -3,9 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { StudentCourseTabs } from "@/features/academy/components/student-course-tabs";
 import { getAuthUser } from "@/lib/auth";
 import { PageWrapper } from "@/components/layout";
-import { Video, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Link } from "@/i18n/routing";
+import { BackButton } from "@/components/shared/back-button";
 
 interface CourseLayoutProps {
     children: React.ReactNode;
@@ -13,11 +11,10 @@ interface CourseLayoutProps {
 }
 
 export default async function StudentCourseLayout({ children, params }: CourseLayoutProps) {
-    const { slug, locale } = await params;
+    const { slug } = await params;
 
-    // Require authentication
+    // Auth already handled by parent academy/layout.tsx
     const authUser = await getAuthUser();
-
     if (!authUser) {
         redirect('/auth/login');
     }
@@ -33,26 +30,22 @@ export default async function StudentCourseLayout({ children, params }: CourseLa
     const isEnrolled = enrolledCourseIds.has(course.id);
 
     if (!isEnrolled) {
-        // Not enrolled - redirect to course landing
-        redirect(`/${locale}/academy/courses/${slug}`);
+        redirect(`/academy/courses/${slug}`);
     }
 
     return (
         <PageWrapper
-            type="page"
             title={course.title}
-            icon={<Video />}
-            tabs={<StudentCourseTabs courseSlug={slug} />}
+            parentLabel="Academia"
             backButton={
-                <Button variant="ghost" size="icon" asChild className="shrink-0">
-                    <Link href="/academy/my-courses">
-                        <ArrowLeft className="h-5 w-5" />
-                    </Link>
-                </Button>
+                <BackButton fallbackHref="/academy/my-courses" />
             }
         >
-            {/* Wide layout - no max-width constraint */}
-            <div className="h-full overflow-auto">
+            {/* Course tabs navigation via Portal */}
+            <StudentCourseTabs courseSlug={slug} />
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto">
                 {children}
             </div>
         </PageWrapper>

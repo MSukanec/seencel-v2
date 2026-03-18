@@ -109,9 +109,11 @@ function PanelUrlSynchronizerContent() {
 }
 
 export function PanelUrlSynchronizer() {
-    return (
-        <Suspense fallback={null}>
-            <PanelUrlSynchronizerContent />
-        </Suspense>
-    );
+    // TEMPORARILY DISABLED — investigating crash loop
+    return null;
+    // return (
+    //     <Suspense fallback={null}>
+    //         <PanelUrlSynchronizerContent />
+    //     </Suspense>
+    // );
 }

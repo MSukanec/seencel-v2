@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { LazyAreaChart as BaseAreaChart, LazyDonutChart as BaseDonutChart } from "@/components/charts/lazy-charts";

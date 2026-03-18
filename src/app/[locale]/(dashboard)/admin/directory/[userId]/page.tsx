@@ -35,7 +35,6 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
         return (
             <Tabs defaultValue="profile" className="w-full h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title={user.full_name || user.email}
                     icon={<Users />}
                     backButton={

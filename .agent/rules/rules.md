@@ -196,6 +196,9 @@ app/[locale]/(dashboard)/organization/[feature]/
 - Field Factories OBLIGATORIOS: `TextField`, `AmountField`, `SelectField`, etc.
 - ⛔ NUNCA usar `<Input>`, `<Select>`, `<Textarea>` raw si existe Field Factory.
 - Form define su presentación con `setPanelMeta` (icon, title, description, size, footer).
+- ⛔ NUNCA usar viejos componentes como `<FormFooter>` o pasar acciones dentro del panel manualmente, ya que el footer es manejado globalmente por el PanelProvider.
+- Para el estado de carga al enviar: extraer `setSubmitting` desde `usePanel()` en vez de definir un prop `isLoading` o usar useState localmente.
+- Revisar y cumplir el skill: 📖 **Detalle:** Skill [seencel-panel-forms](../skills/seencel-panel-forms/SKILL.md) para más detalles de arquitectura.
 
 ### Chips (metadata selectors en forms)
 

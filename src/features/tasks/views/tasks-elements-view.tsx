@@ -7,7 +7,7 @@ import { deleteTaskElement, toggleElementSystem } from "../actions";
 import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Boxes, ChevronDown, ChevronRight, Wrench } from "lucide-react";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

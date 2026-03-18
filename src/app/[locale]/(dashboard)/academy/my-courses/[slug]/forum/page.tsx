@@ -4,6 +4,12 @@ import { CourseForumView } from "@/features/academy/views";
 import { getAuthUser } from "@/lib/auth";
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+
+export const generateMetadata = async (): Promise<Metadata> => ({
+    title: 'Foro del Curso | Seencel',
+    robots: 'noindex, nofollow',
+});
 
 interface PageProps {
     params: Promise<{

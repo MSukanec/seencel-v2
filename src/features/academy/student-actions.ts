@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAuthUser } from '@/lib/auth';
 import { CourseWithDetails } from "@/features/academy/types";
+import { revalidatePath } from 'next/cache';
 
 export async function getCourses(): Promise<CourseWithDetails[]> {
     const supabase = await createClient();
@@ -366,6 +367,56 @@ export async function markLessonCompleted(lessonId: string) {
 }
 
 /**
+ * Mark all lessons in a module as completed
+ */
+export async function markModuleAsCompleted(courseId: string, lessonIds: string[]) {
+    const supabase = await createClient();
+
+    const user = await getAuthUser();
+    if (!user) {
+        return { success: false, error: 'Not authenticated' };
+    }
+
+    // Get internal user ID
+    const { data: internalUser } = await supabase
+        .schema('iam').from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!internalUser) {
+        return { success: false, error: 'User not found' };
+    }
+
+    if (!lessonIds || lessonIds.length === 0) {
+        return { success: true };
+    }
+
+    const payload = lessonIds.map(id => ({
+        user_id: internalUser.id,
+        lesson_id: id,
+        is_completed: true,
+        completed_at: new Date().toISOString(),
+        progress_pct: 100
+    }));
+
+    // Upsert progress records
+    const { error } = await supabase
+        .schema('academy').from('course_lesson_progress')
+        .upsert(payload, {
+            onConflict: 'user_id,lesson_id'
+        });
+
+    if (error) {
+        console.error('Error marking module as completed:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath(`/academy/my-courses`);
+    return { success: true };
+}
+
+/**
  * Toggle lesson completion status
  */
 export async function toggleLessonCompleted(lessonId: string) {
@@ -701,10 +752,22 @@ export async function updateLessonMarker(markerId: string, body: string) {
         return { success: false, error: 'Not authenticated' };
     }
 
+    // Get internal user ID
+    const { data: internalUser } = await supabase
+        .schema('iam').from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!internalUser) {
+        return { success: false, error: 'User not found' };
+    }
+
     const { error } = await supabase
         .schema('academy').from('course_lesson_notes')
         .update({ body })
-        .eq('id', markerId);
+        .eq('id', markerId)
+        .eq('user_id', internalUser.id);
 
     if (error) {
         console.error('Error updating lesson marker:', error);
@@ -725,10 +788,23 @@ export async function deleteLessonMarker(markerId: string) {
         return { success: false, error: 'Not authenticated' };
     }
 
+    // Get internal user ID
+    const { data: internalUser } = await supabase
+        .schema('iam').from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!internalUser) {
+        return { success: false, error: 'User not found' };
+    }
+
+    // Soft delete — never use .delete() real
     const { error } = await supabase
         .schema('academy').from('course_lesson_notes')
-        .delete()
-        .eq('id', markerId);
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .eq('id', markerId)
+        .eq('user_id', internalUser.id);
 
     if (error) {
         console.error('Error deleting lesson marker:', error);
@@ -852,4 +928,98 @@ export async function getLatestUserMarkersWithDetails(courseId: string, limit: n
     return (markers || []) as unknown as MarkerWithDetails[];
 }
 
+export interface GlobalAcademyOverviewData {
+    progressPct: number;
+    doneLessons: number;
+    totalLessons: number;
+    secondsLifetime: number;
+    secondsThisMonth: number;
+}
 
+/**
+ * Get global course overview data (progress, study time) across all courses
+ */
+export async function getGlobalAcademyOverviewData(): Promise<GlobalAcademyOverviewData> {
+    const supabase = await createClient();
+
+    const user = await getAuthUser();
+    if (!user) {
+        return { progressPct: 0, doneLessons: 0, totalLessons: 0, secondsLifetime: 0, secondsThisMonth: 0 };
+    }
+
+    const { data: internalUser } = await supabase
+        .schema('iam').from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!internalUser) {
+        return { progressPct: 0, doneLessons: 0, totalLessons: 0, secondsLifetime: 0, secondsThisMonth: 0 };
+    }
+
+    const { data: progressData } = await supabase
+        .schema('academy').from('course_user_global_progress_view')
+        .select('progress_pct, done_lessons_total, total_lessons_total')
+        .eq('user_id', internalUser.id)
+        .maybeSingle();
+
+    const { data: studyTimeData } = await supabase
+        .schema('academy').from('course_user_study_time_view')
+        .select('seconds_lifetime, seconds_this_month')
+        .eq('user_id', internalUser.id)
+        .maybeSingle();
+
+    return {
+        progressPct: Number(progressData?.progress_pct) || 0,
+        doneLessons: progressData?.done_lessons_total || 0,
+        totalLessons: progressData?.total_lessons_total || 0,
+        secondsLifetime: Number(studyTimeData?.seconds_lifetime) || 0,
+        secondsThisMonth: Number(studyTimeData?.seconds_this_month) || 0,
+    };
+}
+
+export interface RecentLessonProgress {
+    progress_id: string;
+    lesson_id: string;
+    is_completed: boolean;
+    last_position_sec: number;
+    updated_at: string;
+    lesson_title: string;
+    module_id: string;
+    module_title: string;
+    course_id: string;
+    course_title: string;
+    course_slug: string;
+}
+
+/**
+ * Get the most recently accessed lessons across all courses
+ */
+export async function getRecentLessons(limit: number = 4): Promise<RecentLessonProgress[]> {
+    const supabase = await createClient();
+
+    const user = await getAuthUser();
+    if (!user) return [];
+
+    const { data: internalUser } = await supabase
+        .schema('iam').from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!internalUser) return [];
+
+    const { data, error } = await supabase
+        .schema('academy').from('course_lesson_completions_view')
+        .select('*')
+        .eq('user_id', internalUser.id)
+        .order('updated_at', { ascending: false })
+        .limit(limit);
+
+    if (error) {
+        console.error('Error fetching recent lessons:', error);
+        return [];
+    }
+
+    return (data || []) as RecentLessonProgress[];
+}

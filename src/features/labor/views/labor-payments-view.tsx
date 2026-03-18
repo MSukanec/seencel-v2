@@ -17,8 +17,8 @@ import { createDateColumn, createTextColumn, createMoneyColumn } from "@/compone
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
+import { DateRangeFilterValue } from "@/components/layout/dashboard/toolbar/toolbar-date-range-filter";
 import { useModal } from "@/stores/modal-store";
 
 import {

@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";

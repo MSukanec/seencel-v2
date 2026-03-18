@@ -10,7 +10,7 @@ import { deleteMaterialPaymentAction, createMaterialType } from "../actions";
 
 
 import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";

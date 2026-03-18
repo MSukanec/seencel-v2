@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { requireAuthContext } from "@/lib/auth";
 import { getOrganizationProjects } from "@/features/projects/queries";
 import { getOrganizationPdfTheme } from "@/features/organization/actions/pdf-settings";
-import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
+import { PageWrapper } from "@/components/layout/dashboard/shell/page-wrapper";
+import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileChartColumn } from "lucide-react";
 import { ReportsBuilderView } from "@/features/reports/views/reports-builder-view";
@@ -35,7 +35,6 @@ export default async function ReportsPage() {
         return (
             <Tabs defaultValue="builder" syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title="Informes"
                     icon={<FileChartColumn className="h-5 w-5" />}
                     tabs={

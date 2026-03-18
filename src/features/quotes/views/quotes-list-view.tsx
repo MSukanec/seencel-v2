@@ -6,8 +6,8 @@ import { FileText, Plus, Circle, FileCheck, Send as SendIcon, XCircle as XCircle
 import { useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
 import { toast } from "sonner";
 
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
+import { FacetedFilter } from "@/components/layout/dashboard/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { QuoteListItem } from "@/components/shared/list-item/items/quote-list-item";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";

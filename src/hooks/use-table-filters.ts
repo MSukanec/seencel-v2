@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
+import { DateRangeFilterValue } from "@/components/layout/dashboard/toolbar/toolbar-date-range-filter";
 
 // ─── Types ───────────────────────────────────────────────
 

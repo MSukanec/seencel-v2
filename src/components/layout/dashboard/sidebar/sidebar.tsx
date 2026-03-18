@@ -11,27 +11,21 @@ interface SidebarProps {
 }
 
 export function Sidebar({ user }: SidebarProps) {
-    const { sidebarMode } = useLayoutStore();
+    const { activeContext } = useLayoutStore();
 
-    // Local state for hover expansion
-    const [isHovered, setIsHovered] = React.useState(false);
-
-    const isExpanded =
-        sidebarMode === 'docked' ||
-        (sidebarMode === 'expanded_hover' && isHovered);
-    // 'collapsed' mode: siempre colapsado, sin hover expansion
+    // Hub context: no detail panel needed (the page IS the hub)
+    const showPanel = activeContext !== 'home';
 
     return (
         <aside
             className={cn(
-                "hidden md:flex flex-col bg-sidebar z-40 h-full shrink-0 transition-all duration-300 ease-in-out",
-                isExpanded ? "w-[240px]" : "w-[50px]",
+                "flex flex-col bg-sidebar z-40 h-full shrink-0 transition-all duration-200 ease-in-out overflow-hidden",
+                showPanel ? "w-[230px]" : "w-0",
             )}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
         >
-            <SidebarContent isExpanded={isExpanded} user={user} />
+            {showPanel && (
+                <SidebarContent isExpanded={true} user={user} />
+            )}
         </aside>
     );
 }
-

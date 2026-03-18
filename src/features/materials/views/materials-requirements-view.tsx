@@ -7,7 +7,7 @@ import { Package, ShoppingCart, ChevronDown, ChevronRight } from "lucide-react";
 import { MaterialRequirement } from "../types";
 
 import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { DataTable } from "@/components/shared/data-table";
 import { createTextColumn, createProjectColumn } from "@/components/shared/data-table/columns";
 import { ViewEmptyState } from "@/components/shared/empty-state";

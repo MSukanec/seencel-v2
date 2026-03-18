@@ -8,7 +8,6 @@ export default function AdminSettingsPage() {
     return (
         <Tabs defaultValue="ui" className="w-full h-full flex flex-col">
             <PageWrapper
-                type="page"
                 title="Plantillas"
                 icon={<Settings />}
                 tabs={

@@ -2,10 +2,13 @@
 
 import * as React from "react"
 import { Sidebar } from "./sidebar";
+import { ActivityBar } from "./activity-bar";
 import { UserProfile } from "@/types/user";
 import { useContextSidebarContent, useContextSidebarOverlay } from "@/stores/sidebar-store";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { useSidebarMode } from "@/stores/layout-store";
+import { SidebarToggleButton } from "./sidebar-toggle-button";
 
 interface SidebarLayoutProps {
     children: React.ReactNode;
@@ -21,6 +24,32 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
     const { content: contextContent, title: contextTitle, hasOverlay } = useContextSidebarContent();
     const { popOverlay } = useContextSidebarOverlay();
     const hasContextSidebar = !!contextContent;
+    const sidebarMode = useSidebarMode();
+
+    // Hover state for expand-on-hover mode + toggle button visibility
+    const [isHovered, setIsHovered] = React.useState(false);
+    const [sidebarHovered, setSidebarHovered] = React.useState(false);
+    const hoverTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleMouseEnter = React.useCallback(() => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        setSidebarHovered(true);
+        if (sidebarMode === 'expanded_hover') setIsHovered(true);
+    }, [sidebarMode]);
+
+    const handleMouseLeave = React.useCallback(() => {
+        hoverTimerRef.current = setTimeout(() => {
+            setSidebarHovered(false);
+            if (sidebarMode === 'expanded_hover') setIsHovered(false);
+        }, 200);
+    }, [sidebarMode]);
+
+    React.useEffect(() => {
+        return () => { if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current); };
+    }, []);
+
+    // Determine if sidebar nav panel should be shown
+    const showSidebarNav = sidebarMode === 'docked' || (sidebarMode === 'expanded_hover' && isHovered);
 
     // Mounted state to avoid hydration mismatch
     const [mounted, setMounted] = React.useState(false);
@@ -80,9 +109,24 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
     return (
         <div className="h-screen flex flex-col bg-shell overflow-hidden">
             <div className="flex flex-1 overflow-hidden relative">
-                {/* Desktop Sidebar - Hidden on Mobile */}
-                <div className="hidden md:block h-full shrink-0">
-                    <Sidebar user={user} />
+                {/* Desktop: Activity Bar + Sidebar Detail Panel */}
+                <div
+                    className="hidden md:flex h-full shrink-0 relative"
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                >
+                    <ActivityBar user={user} />
+                    <div className={cn(
+                        "transition-all duration-200 ease-in-out overflow-hidden",
+                        showSidebarNav ? "opacity-100" : "w-0 opacity-0",
+                        // In hover mode, sidebar floats over content
+                        sidebarMode === 'expanded_hover' && showSidebarNav && "absolute left-[50px] top-0 bottom-0 z-50 shadow-xl"
+                    )}>
+                        <Sidebar user={user} />
+                    </div>
+
+                    {/* Toggle button — Vercel-style chevron at the edge, visible on sidebar hover */}
+                    <SidebarToggleButton isVisible={sidebarHovered} />
                 </div>
 
                 {/* Main Content — Canvas (encapsulated inset effect) */}

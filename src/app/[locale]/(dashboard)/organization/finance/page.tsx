@@ -153,7 +153,7 @@ export default async function FinancePage({ params, searchParams }: { params: Pr
 
     if (error || !movements) {
         return (
-            <PageWrapper type="page" title={t('title')} icon={<DollarSign />}>
+            <PageWrapper title={t('title')} icon={<DollarSign />}>
                 <ContentLayout variant="wide">
                     <ErrorDisplay
                         title="Error al cargar contenidos"
@@ -183,7 +183,6 @@ export default async function FinancePage({ params, searchParams }: { params: Pr
     return (
         <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
             <PageWrapper
-                type="page"
                 title={t('title')}
                 icon={<DollarSign />}
                 tabs={

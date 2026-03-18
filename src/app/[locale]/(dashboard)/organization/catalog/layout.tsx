@@ -11,7 +11,6 @@ export default async function CatalogLayout({
 
     return (
         <PageWrapper
-            type="page"
             title="Catálogo Técnico"
             icon={<Wrench />}
         >

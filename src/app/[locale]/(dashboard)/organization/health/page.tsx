@@ -21,7 +21,7 @@ export async function generateMetadata({
 
 export default async function HealthPage() {
     return (
-        <PageWrapper type="page" title="Salud" icon={<HeartPulse />}>
+        <PageWrapper title="Salud" icon={<HeartPulse />}>
             <ContentLayout variant="wide">
                 <ProjectHealthView />
             </ContentLayout>

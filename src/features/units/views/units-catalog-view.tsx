@@ -4,8 +4,8 @@ import { useState, useMemo } from "react";
 import { useRouter } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { ListItem } from "@/components/ui/list-item";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
+import { ToolbarTabs } from "@/components/layout/dashboard/toolbar/toolbar-tabs";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { ContextSidebar } from "@/stores/sidebar-store";
 import {

@@ -98,7 +98,6 @@ export default async function OrganizationLaborPage({ params, searchParams }: Pa
         return (
             <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title="Mano de Obra"
                     icon={<HardHat />}
                     tabs={

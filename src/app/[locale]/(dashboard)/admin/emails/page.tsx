@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
+import { PageWrapper } from "@/components/layout/dashboard/shell/page-wrapper";
+import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
 import { LayoutTemplate } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmailsPreviewView } from "@/features/admin/views/emails-preview-view";
@@ -16,7 +16,6 @@ export default function AdminTemplatesPage() {
     return (
         <Tabs defaultValue="emails" className="h-full flex flex-col">
             <PageWrapper
-                type="page"
                 title="Plantillas"
                 icon={<LayoutTemplate className="h-5 w-5" />}
                 tabs={

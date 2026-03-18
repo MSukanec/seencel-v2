@@ -5,7 +5,7 @@ import { useRouter } from "@/i18n/routing";
 import { FilePlus2, Plus, FileText, MoreHorizontal, Pencil, Trash2, Calendar, Hash, Copy } from "lucide-react";
 import { toast } from "sonner";
 
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

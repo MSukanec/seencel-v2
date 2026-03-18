@@ -3,8 +3,8 @@
 import { useState, useMemo } from "react";
 import { AdminActivityLog } from "@/actions/admin-actions";
 import { AdminActivityLogsDataTable } from "./admin-activity-logs-data-table";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
+import { ToolbarTabs } from "@/components/layout/dashboard/toolbar/toolbar-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";

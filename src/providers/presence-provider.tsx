@@ -98,7 +98,7 @@ function deriveViewName(pathname: string): string {
         '/academy/my-courses': 'Academia - Mis Cursos',
 
         // ── Community ──
-        '/community/founders': 'Comunidad - Fundadores',
+        '/founders/program': 'Fundadores',
         '/community/map': 'Comunidad - Mapa',
 
         // ── Checkout ──

@@ -42,7 +42,7 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
     const activeOrgLogo = activeOrg?.logo_url || null;
 
     return (
-        <PageWrapper type="page" title="Hub" icon={<LayoutDashboard />}>
+        <PageWrapper title="Hub" icon={<LayoutDashboard />}>
             <HubView
                 user={profile}
                 activeOrgId={orgId}

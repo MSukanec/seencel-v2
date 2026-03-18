@@ -96,7 +96,6 @@ export default async function QuoteDetailAppPage({
         return (
             <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title={
                         quote.quote_type === "change_order" && quote.parent_contract_name ? (
                             <div className="flex items-center gap-2 overflow-hidden">

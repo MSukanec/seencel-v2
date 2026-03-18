@@ -43,11 +43,11 @@ export function VideoPlayer({ videoId, title, className, autoPlay = false, start
         if (provider === "vimeo") {
             // Vimeo uses #t=XXs format for start time
             const timeParam = startTime ? `#t=${startTime}s` : "";
-            return `https://player.vimeo.com/video/${videoId}?badge=0&autopause=0&player_id=0&app_id=58479${autoPlay ? '&autoplay=1' : ''}${timeParam}`;
+            return `https://player.vimeo.com/video/${videoId}?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=${autoPlay ? '1' : '0'}${timeParam}`;
         } else {
             // YouTube uses start=XX parameter
             const startParam = startTime ? `&start=${startTime}` : "";
-            return `https://www.youtube.com/embed/${videoId}?rel=0${autoPlay ? '&autoplay=1' : ''}${startParam}`;
+            return `https://www.youtube.com/embed/${videoId}?rel=0&autoplay=${autoPlay ? '1' : '0'}${startParam}`;
         }
     }, [videoId, provider, startTime, autoPlay]);
 
@@ -69,7 +69,7 @@ export function VideoPlayer({ videoId, title, className, autoPlay = false, start
     }
 
     return (
-        <div className={cn("relative aspect-video w-full overflow-hidden rounded-xl bg-black border border-border shadow-md", className)}>
+        <div className={cn("relative aspect-video w-full overflow-hidden rounded-xl bg-black shadow-md", className)}>
             {provider === "vimeo" ? (
                 <iframe
                     key={`vimeo-${videoId}-${startTime}`}

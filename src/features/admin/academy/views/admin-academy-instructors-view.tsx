@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Users } from "lucide-react";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { useRouter } from "next/navigation";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { InstructorsTable } from "@/features/academy/components/instructors-table";

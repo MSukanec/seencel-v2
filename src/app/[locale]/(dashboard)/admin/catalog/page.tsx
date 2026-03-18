@@ -94,7 +94,6 @@ export default async function AdminCatalogPage() {
         return (
             <Tabs defaultValue="divisions" className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title="Tareas"
                     icon={<ClipboardList />}
                     actions={

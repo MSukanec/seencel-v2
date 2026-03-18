@@ -67,7 +67,7 @@ export function ForumPostForm({
     };
 
     return (
-        <div className="space-y-3">
+        <div className="relative group focus-within:ring-2 focus-within:ring-primary/20 rounded-md transition-all">
             <RichTextEditor
                 value={content}
                 onChange={setContent}
@@ -77,13 +77,15 @@ export function ForumPostForm({
                 maxHeight="300px"
             />
 
-            <div className="flex items-center justify-end gap-2">
+            <div className="absolute bottom-3 right-3 flex items-center gap-2">
                 {onCancel && (
                     <Button
                         type="button"
-                        variant="ghost"
+                        variant="secondary"
+                        size="sm"
                         onClick={onCancel}
                         disabled={isSubmitting}
+                        className="rounded-full shadow-sm px-4"
                     >
                         {t("cancel")}
                     </Button>
@@ -91,13 +93,14 @@ export function ForumPostForm({
                 <Button
                     onClick={handleSubmit}
                     disabled={isSubmitting || !content.trim()}
+                    size="icon"
+                    className="rounded-full h-10 w-10 shadow-md transition-transform active:scale-95 hover:shadow-lg"
                 >
                     {isSubmitting ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                        <Send className="h-4 w-4 mr-2" />
+                        <Send className="h-4 w-4 ml-0.5" />
                     )}
-                    {t("sendReply")}
                 </Button>
             </div>
         </div>

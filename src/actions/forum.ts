@@ -314,7 +314,8 @@ export async function getThreadById(threadId: string): Promise<{
 export async function createThread(
     courseId: string,
     title: string,
-    content: Record<string, unknown>
+    content: Record<string, unknown>,
+    categoryId?: string
 ): Promise<{ success: boolean; threadId?: string; error?: string }> {
     const supabase = await createClient();
 
@@ -335,7 +336,7 @@ export async function createThread(
     }
 
     try {
-        const categoryId = await getOrCreateCourseCategory(courseId);
+        const targetCategoryId = categoryId || await getOrCreateCourseCategory(courseId);
 
         // Generate slug from title
         const slug = title
@@ -349,7 +350,7 @@ export async function createThread(
         const { data, error } = await supabase
             .from('forum_threads')
             .insert({
-                category_id: categoryId,
+                category_id: targetCategoryId,
                 organization_id: profile.current_org_id,
                 author_id: user.id,
                 title,

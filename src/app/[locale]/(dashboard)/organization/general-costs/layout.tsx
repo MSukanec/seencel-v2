@@ -19,7 +19,6 @@ export default async function GeneralCostsLayout({
 
     return (
         <PageWrapper
-            type="page"
             title="Gastos Generales"
             icon={<CreditCard />}
         >

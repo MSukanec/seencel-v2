@@ -1,7 +1,7 @@
 "use client";
 
 import { CourseWithDetails, CourseModule, CourseLesson } from "@/features/academy/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ContentCard } from "@/components/cards";
 import { Button } from "@/components/ui/button";
 import {
     Play,
@@ -12,7 +12,8 @@ import {
     Bookmark,
     ChevronRight,
     TrendingUp,
-    Calendar
+    Calendar,
+    ArrowRight
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
@@ -158,150 +159,129 @@ export function CourseOverviewView({
                 {/* Activity Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Forum Card */}
-                    <Card className="flex flex-col">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <MessageSquare className="w-4 h-4 text-primary" />
-                                {t("cards.forum.title")}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1 flex flex-col">
-                            {latestThreads.length === 0 ? (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-                                    <MessageSquare className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                                    <p className="text-sm text-muted-foreground">{t("cards.forum.empty")}</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3 flex-1">
-                                    {latestThreads.slice(0, 3).map((thread) => (
-                                        <Link
-                                            key={thread.id}
-                                            href={`/academy/my-courses/${courseSlug}/forum?thread=${thread.id}` as any}
-                                            className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                                        >
-                                            <MessageSquare className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-sm font-medium line-clamp-1">{thread.title}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {t("cards.forum.by")} {thread.author?.full_name || "Usuario"}
-                                                </p>
-                                            </div>
-                                            <span className="text-xs text-muted-foreground shrink-0">
-                                                {formatRelativeDate(thread.created_at)}
-                                            </span>
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                            <Link
-                                href={`/academy/my-courses/${courseSlug}/forum` as any}
-                                className="mt-4 text-sm text-primary hover:underline flex items-center gap-1"
-                            >
-                                {t("cards.forum.viewAll")}
-                                <ChevronRight className="w-3 h-3" />
+                    <ContentCard
+                        title={t("cards.forum.title")}
+                        icon={<MessageSquare className="w-4 h-4" />}
+                        headerAction={
+                            <Link href={`/academy/my-courses/${courseSlug}/forum` as any} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                                {t("cards.forum.viewAll")} <ArrowRight className="w-3 h-3" />
                             </Link>
-                        </CardContent>
-                    </Card>
+                        }
+                    >
+                        {latestThreads.length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center h-[200px]">
+                                <MessageSquare className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                                <p className="text-sm text-muted-foreground">{t("cards.forum.empty")}</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {latestThreads.slice(0, 3).map((thread) => (
+                                    <Link
+                                        key={thread.id}
+                                        href={`/academy/my-courses/${courseSlug}/forum?thread=${thread.id}` as any}
+                                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                                    >
+                                        <MessageSquare className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium line-clamp-1">{thread.title}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("cards.forum.by")} {thread.author?.full_name || "Usuario"}
+                                            </p>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground shrink-0">
+                                            {formatRelativeDate(thread.created_at)}
+                                        </span>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </ContentCard>
 
                     {/* Notes Card */}
-                    <Card className="flex flex-col">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-primary" />
-                                {t("cards.notes.title")}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1 flex flex-col">
-                            {latestSummaries.length === 0 ? (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-                                    <FileText className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                                    <p className="text-sm text-muted-foreground mb-4">{t("cards.notes.empty")}</p>
-                                    <Link href={`/academy/my-courses/${courseSlug}/player` as any}>
-                                        <Button size="sm" variant="outline">
-                                            <Play className="w-3 h-3 mr-1" />
-                                            {t("cards.notes.goToPlayer")}
-                                        </Button>
-                                    </Link>
-                                </div>
-                            ) : (
-                                <div className="space-y-3 flex-1">
-                                    {latestSummaries.slice(0, 3).map((summary) => (
-                                        <Link
-                                            key={summary.id}
-                                            href={`/academy/my-courses/${courseSlug}/notes?lesson=${summary.lesson_id}` as any}
-                                            className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                                        >
-                                            <FileText className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-sm font-medium line-clamp-1">{summary.lesson.title}</p>
-                                                <p className="text-xs text-muted-foreground line-clamp-1">
-                                                    {summary.body.substring(0, 60)}...
-                                                </p>
-                                            </div>
-                                            <span className="text-xs text-muted-foreground shrink-0">
-                                                {formatRelativeDate(summary.updated_at)}
-                                            </span>
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                            <Link
-                                href={`/academy/my-courses/${courseSlug}/notes` as any}
-                                className="mt-4 text-sm text-primary hover:underline flex items-center gap-1"
-                            >
-                                {t("cards.notes.viewAll")}
-                                <ChevronRight className="w-3 h-3" />
+                    <ContentCard
+                        title={t("cards.notes.title")}
+                        icon={<FileText className="w-4 h-4" />}
+                        headerAction={
+                            <Link href={`/academy/my-courses/${courseSlug}/notes` as any} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                                {t("cards.notes.viewAll")} <ArrowRight className="w-3 h-3" />
                             </Link>
-                        </CardContent>
-                    </Card>
+                        }
+                    >
+                        {latestSummaries.length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center h-[200px]">
+                                <FileText className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                                <p className="text-sm text-muted-foreground mb-4">{t("cards.notes.empty")}</p>
+                                <Link href={`/academy/my-courses/${courseSlug}/player` as any}>
+                                    <Button size="sm" variant="outline">
+                                        <Play className="w-3 h-3 mr-1" />
+                                        {t("cards.notes.goToPlayer")}
+                                    </Button>
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {latestSummaries.slice(0, 3).map((summary) => (
+                                    <Link
+                                        key={summary.id}
+                                        href={`/academy/my-courses/${courseSlug}/notes?lesson=${summary.lesson_id}` as any}
+                                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                                    >
+                                        <FileText className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium line-clamp-1">{summary.lesson.title}</p>
+                                            <p className="text-xs text-muted-foreground line-clamp-1">
+                                                {summary.body.substring(0, 60)}...
+                                            </p>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground shrink-0">
+                                            {formatRelativeDate(summary.updated_at)}
+                                        </span>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </ContentCard>
 
                     {/* Markers Card */}
-                    <Card className="flex flex-col">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <Bookmark className="w-4 h-4 text-primary" />
-                                {t("cards.markers.title")}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1 flex flex-col">
-                            {latestMarkers.length === 0 ? (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-                                    <Bookmark className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                                    <p className="text-sm text-muted-foreground">{t("cards.markers.empty")}</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3 flex-1">
-                                    {latestMarkers.slice(0, 3).map((marker) => (
-                                        <Link
-                                            key={marker.id}
-                                            href={`/academy/my-courses/${courseSlug}/player?lesson=${marker.lesson.id}&t=${marker.time_sec}` as any}
-                                            className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                                        >
-                                            <Bookmark className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-sm font-medium line-clamp-1">
-                                                    {marker.body || t("cards.markers.noDescription")}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {marker.lesson.title} · {formatMarkerTime(marker.time_sec)}
-                                                </p>
-                                            </div>
-                                            <span className="text-xs text-muted-foreground shrink-0">
-                                                {formatRelativeDate(marker.created_at)}
-                                            </span>
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                            <Link
-                                href={`/academy/my-courses/${courseSlug}/player` as any}
-                                className="mt-4 text-sm text-primary hover:underline flex items-center gap-1"
-                            >
-                                {t("cards.markers.viewAll")}
-                                <ChevronRight className="w-3 h-3" />
+                    <ContentCard
+                        title={t("cards.markers.title")}
+                        icon={<Bookmark className="w-4 h-4" />}
+                        headerAction={
+                            <Link href={`/academy/my-courses/${courseSlug}/player` as any} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                                {t("cards.markers.viewAll")} <ArrowRight className="w-3 h-3" />
                             </Link>
-                        </CardContent>
-                    </Card>
+                        }
+                    >
+                        {latestMarkers.length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center h-[200px]">
+                                <Bookmark className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                                <p className="text-sm text-muted-foreground">{t("cards.markers.empty")}</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {latestMarkers.slice(0, 3).map((marker) => (
+                                    <Link
+                                        key={marker.id}
+                                        href={`/academy/my-courses/${courseSlug}/player?lesson=${marker.lesson.id}&t=${marker.time_sec}` as any}
+                                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                                    >
+                                        <Bookmark className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium line-clamp-1">
+                                                {marker.body || t("cards.markers.noDescription")}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {marker.lesson.title} · {formatMarkerTime(marker.time_sec)}
+                                            </p>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground shrink-0">
+                                            {formatRelativeDate(marker.created_at)}
+                                        </span>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </ContentCard>
                 </div>
             </div>
         </ContentLayout>

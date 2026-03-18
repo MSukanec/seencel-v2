@@ -38,7 +38,6 @@ export default async function NotificationsPage() {
 
         return (
             <PageWrapper
-                type="page"
                 title="Notificaciones"
                 icon={<Bell />}
             >

@@ -10,7 +10,7 @@ import { Clock, Monitor, Mail } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "@/i18n/routing";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 
 interface UsersTableProps {
     users: AdminUser[];

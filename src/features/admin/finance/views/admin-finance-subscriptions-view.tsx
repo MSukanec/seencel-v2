@@ -11,7 +11,7 @@
 import { useMemo } from "react";
 import { Wallet } from "lucide-react";
 
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";

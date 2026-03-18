@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, ReactNode } from "react";
 import { useMoney } from "@/hooks/use-money";
 import { useCurrency } from "@/stores/organization-store";
 import { startOfDay, endOfDay, isAfter, isBefore, isEqual } from "date-fns";
-import { DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
+import { DateRangeFilterValue } from "@/components/layout/dashboard/toolbar/toolbar-date-range-filter";
 
 // === TYPES ===
 interface FinanceDashboardContextValue {

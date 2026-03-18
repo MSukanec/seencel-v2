@@ -93,17 +93,19 @@ export function ContentCard({
                     ) : undefined
                 }
             />
-            <CardBase.Body className={cn("overflow-hidden", value && "flex flex-col", contentClassName)}>
-                {value && (
-                    <div className="shrink-0">
-                        <p className="text-5xl font-bold tracking-tight">{value}</p>
-                        <div className="min-h-[24px] mt-0.5">{badge}</div>
+            {(value || children) && (
+                <CardBase.Body className={cn("overflow-hidden", value && "flex flex-col", contentClassName)}>
+                    {value && (
+                        <div className="shrink-0">
+                            <p className="text-5xl font-bold tracking-tight">{value}</p>
+                            <div className="min-h-[24px] mt-0.5">{badge}</div>
+                        </div>
+                    )}
+                    <div className={cn(value && "flex-1 min-h-0 mt-3 flex flex-col justify-end")}>
+                        {children}
                     </div>
-                )}
-                <div className={cn(value && "flex-1 min-h-0 mt-3 flex flex-col justify-end")}>
-                    {children}
-                </div>
-            </CardBase.Body>
+                </CardBase.Body>
+            )}
             {footer && <CardBase.Footer>{footer}</CardBase.Footer>}
         </CardBase>
     );

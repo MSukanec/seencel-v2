@@ -4,16 +4,10 @@ import { useState } from "react";
 import { LessonMarker, CourseLesson } from "@/features/academy/types";
 import { deleteLessonMarker } from "@/features/academy/student-actions";
 import { MarkerForm } from "@/features/academy/forms/marker-form";
-import { useModal } from "@/stores/modal-store";
-import { Bookmark, Clock, Play, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { usePanel } from "@/stores/panel-store";
+import { Bookmark, Clock, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { EntityContextMenu } from "@/components/shared/entity-context-menu";
 import { DeleteDialog } from "@/components/shared/forms/general/delete-dialog";
 import { toast } from "sonner";
 
@@ -40,7 +34,7 @@ export function LessonMarkersList({
     onMarkerDelete,
     className
 }: LessonMarkersListProps) {
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
     const [deleteMarker, setDeleteMarker] = useState<LessonMarker | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -60,21 +54,16 @@ export function LessonMarkersList({
 
     const lessonsWithMarkers = lessons.filter(lesson => markersByLesson[lesson.id]?.length > 0);
 
-    const handleEdit = (marker: LessonMarker, e: React.MouseEvent) => {
-        e.stopPropagation();
-        openModal(
-            <MarkerForm
-                mode="edit"
-                lessonId={marker.lesson_id}
-                initialData={marker}
-                onSuccess={(updated) => {
-                    if (updated) onMarkerUpdate?.(updated);
-                }}
-            />,
+    const handleEdit = (marker: LessonMarker) => {
+        openPanel(
+            'academy-marker-form',
             {
-                title: "Editar Marcador",
-                description: `Modificá el comentario de este marcador en ${formatTime(marker.time_sec)}`,
-                size: "md"
+                mode: "edit",
+                lessonId: marker.lesson_id,
+                initialData: marker,
+                onSuccess: (updated: any) => {
+                    if (updated) onMarkerUpdate?.(updated);
+                }
             }
         );
     };
@@ -121,57 +110,31 @@ export function LessonMarkersList({
                         </div>
                         <div className="space-y-1">
                             {markersByLesson[lesson.id].map(marker => (
-                                <div
+                                <EntityContextMenu
                                     key={marker.id}
-                                    className="w-full flex items-start gap-3 px-4 py-2 hover:bg-muted/50 transition-colors text-left group relative"
+                                    data={marker}
+                                    onEdit={handleEdit}
+                                    onDelete={setDeleteMarker}
                                 >
-                                    <button
-                                        onClick={() => onMarkerClick(marker, lesson)}
-                                        className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                                    >
-                                        <Play className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                        onClick={() => onMarkerClick(marker, lesson)}
-                                        className="flex-1 min-w-0 text-left"
-                                    >
-                                        <p className="text-sm line-clamp-2">{marker.body}</p>
-                                        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                                            <Clock className="h-3 w-3" />
-                                            <span>{formatTime(marker.time_sec)}</span>
-                                        </div>
-                                    </button>
-
-                                    {/* Actions Menu */}
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={(e) => handleEdit(marker, e)}>
-                                                <Pencil className="h-4 w-4 mr-2" />
-                                                Editar
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setDeleteMarker(marker);
-                                                }}
-                                                className="text-destructive focus:text-destructive"
-                                            >
-                                                <Trash2 className="h-4 w-4 mr-2" />
-                                                Eliminar
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
+                                    <div className="w-full flex items-start gap-3 px-4 py-2 hover:bg-muted/50 transition-colors text-left group cursor-context-menu relative">
+                                        <button
+                                            onClick={() => onMarkerClick(marker, lesson)}
+                                            className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors mt-0.5"
+                                        >
+                                            <Play className="h-3 w-3 ml-0.5" />
+                                        </button>
+                                        <button
+                                            onClick={() => onMarkerClick(marker, lesson)}
+                                            className="flex-1 min-w-0 text-left"
+                                        >
+                                            <p className="text-sm line-clamp-2">{marker.body}</p>
+                                            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                                                <Clock className="h-3 w-3" />
+                                                <span>{formatTime(marker.time_sec)}</span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </EntityContextMenu>
                             ))}
                         </div>
                     </div>

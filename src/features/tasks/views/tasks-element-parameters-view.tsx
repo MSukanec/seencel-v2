@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { CheckboxGrid } from "../components/checkbox-grid";
 import { TasksParameterForm } from "../forms";
 import { toggleElementParameter } from "../actions";

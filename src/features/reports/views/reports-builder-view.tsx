@@ -8,7 +8,7 @@ import { BlockCatalog } from "../components/block-catalog";
 import { ReportCanvas } from "../components/report-canvas";
 import { BlockConfigPanel } from "../components/block-config-panel";
 import { BlockRenderer } from "../components/block-renderer";
-import { PageHeaderActionPortal } from "@/components/layout/dashboard/shared/page-header-action-portal";
+import { PageHeaderActionPortal } from "@/components/layout/dashboard/header/page-header";
 import { Button } from "@/components/ui/button";
 import { Download, Eye, Trash2, Building2 } from "lucide-react";
 import { toast } from "sonner";

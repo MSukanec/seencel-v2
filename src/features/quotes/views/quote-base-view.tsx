@@ -23,8 +23,8 @@ import { toast } from "sonner";
 
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { createMoneyColumn, createTextColumn } from "@/components/shared/data-table/columns";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
+import { FacetedFilter } from "@/components/layout/dashboard/toolbar/toolbar-faceted-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ViewEmptyState } from "@/components/shared/empty-state";

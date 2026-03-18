@@ -17,9 +17,9 @@ import { es, enUS } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
+import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {

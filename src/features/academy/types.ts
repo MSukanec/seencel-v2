@@ -54,6 +54,7 @@ export interface CourseLesson {
 export interface CourseDetail {
     id: string;
     course_id: string;
+    instructor_id: string | null;
     instructor_name: string | null;
     instructor_title: string | null;
     instructor_bio: string | null;

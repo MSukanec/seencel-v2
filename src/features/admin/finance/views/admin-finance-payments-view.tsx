@@ -16,7 +16,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { MetricCard } from "@/components/cards";
 
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";

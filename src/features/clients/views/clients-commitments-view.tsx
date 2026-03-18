@@ -17,9 +17,9 @@ import { deleteCommitmentAction } from "@/features/clients/actions";
 import { CommitmentForm } from "../forms/clients-commitment-form";
 import { CommitmentCard } from "../components/commitment-card";
 import { ProjectClientView, OrganizationFinancialData } from "../types";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
+import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
 
 // ========================================
 // TYPES

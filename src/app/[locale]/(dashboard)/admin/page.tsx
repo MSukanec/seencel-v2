@@ -29,7 +29,6 @@ export default async function AdminPage({ params }: PageProps) {
     return (
         <Tabs defaultValue="dashboard" className="w-full h-full flex flex-col">
             <PageWrapper
-                type="page"
                 title="Visión General"
                 icon={<LayoutDashboard />}
                 tabs={

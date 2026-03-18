@@ -95,15 +95,17 @@ const ALL_CONTEXTS: ContextItem[] = [
     // Portal removed — now lives as tab inside project detail page
     // Project removed from top-level sidebar as requested
     { id: 'learnings', label: 'Academia', icon: GraduationCap },
+    { id: 'founders', label: 'Fundadores', icon: Sparkles },
     { id: 'community', label: 'Comunidad', icon: Users },
-    // Admin removed from home state — access via SidebarAdminButton at bottom
+    { id: 'admin', label: 'Admin', icon: Shield },
 ];
 
 export const contextRoutes: Record<NavigationContext, string> = {
     home: '/hub',
     organization: '/organization',
     project: '/organization/projects',
-    learnings: '/academy/my-courses',
+    learnings: '/academy/overview',
+    founders: '/founders/program',
     community: '/community',
     admin: '/admin',
     settings: '/settings'
@@ -132,6 +134,7 @@ export function useSidebarNavigation() {
             let flagKey = null;
             if (ctx.id === 'organization' || ctx.id === 'project') flagKey = 'context_workspace_enabled';
             if (ctx.id === 'learnings') flagKey = 'context_academy_enabled';
+            if (ctx.id === 'founders') flagKey = 'context_community_founders_enabled';
             if (ctx.id === 'community') flagKey = 'context_community_enabled';
 
             if (!flagKey) return ctx;
@@ -310,7 +313,17 @@ export function useSidebarNavigation() {
                     id: 'contenido',
                     label: 'Contenido',
                     items: [
-                        { title: 'Academia', href: '/admin/academy', icon: GraduationCap },
+                        { 
+                            title: 'Academia', 
+                            href: '/admin/academy', 
+                            icon: GraduationCap,
+                            children: [
+                                { title: 'Visión General', href: '/admin/academy', icon: LayoutDashboard },
+                                { title: 'Alumnos', href: '/admin/academy/students', icon: Users },
+                                { title: 'Cursos', href: '/admin/academy/courses', icon: Video },
+                                { title: 'Instructores', href: '/admin/academy/instructors', icon: BookUser }
+                            ]
+                        },
                         { title: 'Contenido HUB', href: '/admin/hub-content', icon: Sparkles },
                         { title: 'Changelog', href: '/admin/changelog', icon: FileText },
                     ],
@@ -411,13 +424,17 @@ export function useSidebarNavigation() {
 
             case 'learnings':
                 return [
-                    { title: 'Mis Cursos', href: '/academy/my-courses', icon: Video },
+                    { title: 'Visión General', href: '/academy/overview', icon: LayoutDashboard },
+                    { title: 'Cursos', href: '/academy/my-courses', icon: Video },
+                ];
+            case 'founders':
+                return [
+                    { title: 'Programa Fundadores', href: '/founders/program', icon: Sparkles },
                 ];
             case 'community':
-                const foundersItem = getItemStatus('context_community_founders_enabled', { title: 'Fundadores', href: '/community/founders', icon: Sparkles });
                 const mapItem = getItemStatus('context_community_map_enabled', { title: 'Mapa Seencel', href: '/community/map', icon: MapPin });
 
-                return [foundersItem, mapItem].filter((i): i is NavItem => i !== null);
+                return [mapItem].filter((i): i is NavItem => i !== null);
             case 'admin':
                 return getNavGroups('admin').flatMap(g => g.items);
             case 'settings':

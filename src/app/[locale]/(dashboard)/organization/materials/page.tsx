@@ -101,7 +101,6 @@ export default async function OrganizationMaterialsPage({ params, searchParams }
         return (
             <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title="Materiales"
                     icon={<Package />}
                     tabs={

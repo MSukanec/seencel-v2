@@ -3,7 +3,7 @@ import { ContentLayout } from "@/components/layout";
 
 export default function AdminUsersPage() {
     return (
-        <PageWrapper type="page" title="Usuarios">
+        <PageWrapper title="Usuarios">
             <ContentLayout variant="wide">
                 <div className="p-4 border border-dashed rounded-lg">
                     <p className="text-muted-foreground text-sm">Contenido en construcción...</p>

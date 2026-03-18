@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { MobileNav } from "./mobile-nav";
-import { BreadcrumbItem } from "../shared/page-header";
+import { BreadcrumbItem } from "../header/page-header";
 
 interface MobileHeaderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
     title?: string | React.ReactNode;

@@ -18,7 +18,6 @@ export default async function PlannerLayout({
 
     return (
         <PageWrapper
-            type="page"
             title={t('title')}
             icon={<CalendarDays />}
         >

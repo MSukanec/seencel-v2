@@ -8,9 +8,9 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Plus, CreditCard, Trash2 } from "lucide-react";
 import { useModal } from "@/stores/modal-store";
-import { useRouter } from "next/navigation";
+import { usePanel } from "@/stores/panel-store";
+import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
-import { EnrollmentForm } from "@/features/academy/forms/enrollment-form";
 import { deleteEnrollment } from "@/actions/enrollment-actions";
 import type { AdminCourseEnrollment, AdminCourse } from "@/features/admin/academy-queries";
 import { format } from "date-fns";
@@ -79,6 +79,7 @@ function getPaymentBadge(payment: AdminCourseEnrollment["payment"]) {
 
 export function StudentsDataTable({ enrollments, courses }: StudentsDataTableProps) {
     const { openModal, closeModal } = useModal();
+    const { openPanel } = usePanel();
     const router = useRouter();
 
     // 🚀 OPTIMISTIC UI: Instant visual updates for delete
@@ -96,25 +97,16 @@ export function StudentsDataTable({ enrollments, courses }: StudentsDataTablePro
     };
 
     const handleOpenCreate = () => {
-        openModal(
-            <EnrollmentForm onSuccess={handleSuccess} />,
-            {
-                title: "Inscribir Alumno",
-                description: "Agrega un alumno a un curso.",
-                size: "md"
-            }
-        );
+        openPanel("enrollment-form", {
+            onSuccess: () => router.refresh(),
+        });
     };
 
     const handleOpenEdit = (enrollment: AdminCourseEnrollment) => {
-        openModal(
-            <EnrollmentForm initialData={enrollment} onSuccess={handleSuccess} />,
-            {
-                title: "Editar Inscripción",
-                description: `Modificando inscripción de ${enrollment.user?.full_name || enrollment.user?.email}`,
-                size: "md"
-            }
-        );
+        openPanel("enrollment-form", {
+            initialData: enrollment,
+            onSuccess: () => router.refresh(),
+        });
     };
 
     // 🚀 OPTIMISTIC DELETE: Enrollment disappears instantly

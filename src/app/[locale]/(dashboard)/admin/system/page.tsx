@@ -16,7 +16,6 @@ export default async function AdminSystemPage() {
     return (
         <Tabs defaultValue="panel" className="w-full h-full flex flex-col">
             <PageWrapper
-                type="page"
                 title="Plataforma"
                 icon={<Monitor />}
                 tabs={

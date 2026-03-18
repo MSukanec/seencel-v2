@@ -3,8 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { Handshake } from "lucide-react";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
+import { PageWrapper } from "@/components/layout/dashboard/shell/page-wrapper";
+import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubcontractsOverviewView } from "@/features/subcontracts/views/subcontracts-overview-view";
 import { SubcontractsListView } from "@/features/subcontracts/views/subcontracts-list-view";
@@ -50,7 +50,6 @@ export default async function SubcontractsPage({ params }: { params: Promise<{ l
         return (
             <Tabs defaultValue="list" syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title={t('title', { default: 'Subcontratos' })}
                     icon={<Handshake />}
                     className="h-full"

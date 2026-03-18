@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { LaborListItem } from "@/components/shared/list-item";
 import { ContextSidebar } from "@/stores/sidebar-store";

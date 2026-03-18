@@ -1,6 +1,7 @@
 "use client";
 
 import { ForumPost, updatePost, deletePost } from "@/actions/forum";
+import { Card } from "@/components/ui/card";
 import { RichTextRenderer } from "@/components/shared/rich-text-editor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -78,8 +79,8 @@ export function ForumPostItem({
 
     return (
         <>
-            <div className={cn(
-                "bg-card rounded-lg border p-4",
+            <Card variant="island" className={cn(
+                "p-4",
                 post.is_accepted_answer && "border-green-500/50 bg-green-500/5"
             )}>
                 {/* Accepted answer badge */}
@@ -137,8 +138,10 @@ export function ForumPostItem({
                 </div>
 
                 {/* Content */}
-                <RichTextRenderer content={post.content} />
-            </div>
+                <div className="prose prose-sm max-w-none dark:prose-invert text-[14px] [&>*:first-child]:mt-0">
+                    <RichTextRenderer content={post.content} />
+                </div>
+            </Card>
 
             <DeleteDialog
                 open={showDeleteDialog}

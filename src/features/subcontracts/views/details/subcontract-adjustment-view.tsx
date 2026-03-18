@@ -16,7 +16,7 @@ import { createMoney } from "@/lib/money/money";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 
 // ✅ Recharts + Project Chart Components
 import {

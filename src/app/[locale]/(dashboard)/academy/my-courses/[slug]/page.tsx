@@ -9,6 +9,12 @@ import { getForumThreads } from "@/actions/forum";
 import { CourseOverviewView } from "@/features/academy/views";
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+
+export const generateMetadata = async (): Promise<Metadata> => ({
+    title: 'Visión General del Curso | Seencel',
+    robots: 'noindex, nofollow',
+});
 
 interface PageProps {
     params: Promise<{

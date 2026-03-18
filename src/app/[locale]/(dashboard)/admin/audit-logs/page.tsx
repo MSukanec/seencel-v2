@@ -8,7 +8,7 @@ export default async function AdminAuditLogsPage() {
     const logs = await getAllActivityLogs(500);
 
     return (
-        <PageWrapper type="page" title="Actividad" icon={<FileText />}>
+        <PageWrapper title="Actividad" icon={<FileText />}>
             <ContentLayout variant="wide">
                 <AdminActivityLogsDataTable data={logs} />
             </ContentLayout>

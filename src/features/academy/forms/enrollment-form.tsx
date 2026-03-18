@@ -1,32 +1,35 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { toast } from "sonner";
-import { FormFooter } from "@/components/shared/forms/form-footer";
 import { createEnrollment, updateEnrollment, getEnrollableUsers, getEnrollableCourses, getExistingEnrollments } from "@/actions/enrollment-actions";
 import type { AdminCourseEnrollment } from "@/features/admin/academy-queries";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2 } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
+import { useRouter } from "@/i18n/routing";
 
 interface EnrollmentFormProps {
     initialData?: AdminCourseEnrollment;
     onSuccess?: () => void;
+    formId?: string; // ← PanelProvider lo pasa automáticamente
 }
 
 type User = { id: string; full_name: string | null; email: string; avatar_url: string | null };
 type Course = { id: string; title: string; slug: string };
 type ExistingEnrollment = { user_id: string; course_id: string };
 
-export function EnrollmentForm({ initialData, onSuccess }: EnrollmentFormProps) {
-    const { closeModal } = useModal();
-    const [isLoading, setIsLoading] = useState(false);
-    const [isLoadingData, setIsLoadingData] = useState(true);
+export function EnrollmentForm({ initialData, onSuccess, formId }: EnrollmentFormProps) {
+    const { closePanel, setPanelMeta, setSubmitting } = usePanel();
+    const router = useRouter();
+    const isEditing = !!initialData;
+    const metaSet = useRef(false);
 
+    const [isLoadingData, setIsLoadingData] = useState(true);
     const [users, setUsers] = useState<User[]>([]);
     const [courses, setCourses] = useState<Course[]>([]);
     const [existingEnrollments, setExistingEnrollments] = useState<ExistingEnrollment[]>([]);
@@ -38,8 +41,31 @@ export function EnrollmentForm({ initialData, onSuccess }: EnrollmentFormProps) 
         expires_at: initialData?.expires_at ? initialData.expires_at.split("T")[0] : "",
     });
 
+    // 🚨 OBLIGATORIO: Self-describe panel metadata — ONCE only
+    // Usamos useRef para evitar loops: setPanelMeta muta el store, lo cual
+    // puede causar re-renders. Solo lo llamamos una vez.
+    useEffect(() => {
+        if (metaSet.current) return;
+        metaSet.current = true;
+
+        const userName = initialData?.user?.full_name || initialData?.user?.email || "alumno";
+        setPanelMeta({
+            icon: UserPlus,
+            title: isEditing ? "Editar Inscripción" : "Inscribir Alumno",
+            description: isEditing
+                ? `Modificando inscripción de ${userName}`
+                : "Agrega un alumno a un curso",
+            size: "md",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Inscribir Alumno",
+            },
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Load users, courses, and existing enrollments on mount
     useEffect(() => {
+        let cancelled = false;
         async function loadData() {
             try {
                 const [usersData, coursesData, enrollmentsData] = await Promise.all([
@@ -47,34 +73,31 @@ export function EnrollmentForm({ initialData, onSuccess }: EnrollmentFormProps) 
                     getEnrollableCourses(),
                     getExistingEnrollments(),
                 ]);
+                if (cancelled) return;
                 setUsers(usersData);
                 setCourses(coursesData);
                 setExistingEnrollments(enrollmentsData);
             } catch (error) {
                 console.error("Error loading data:", error);
-                toast.error("Error al cargar datos");
+                if (!cancelled) toast.error("Error al cargar datos");
             } finally {
-                setIsLoadingData(false);
+                if (!cancelled) setIsLoadingData(false);
             }
         }
         loadData();
+        return () => { cancelled = true; };
     }, []);
 
     // Filter users: exclude those already enrolled in the selected course
     const availableUsers = useMemo(() => {
         if (!formData.course_id || initialData) {
-            // If no course selected or editing, show all users
             return users;
         }
-
-        // Get user IDs already enrolled in this course
         const enrolledUserIds = new Set(
             existingEnrollments
                 .filter((e) => e.course_id === formData.course_id)
                 .map((e) => e.user_id)
         );
-
-        // Return only users not enrolled
         return users.filter((user) => !enrolledUserIds.has(user.id));
     }, [users, existingEnrollments, formData.course_id, initialData]);
 
@@ -90,15 +113,15 @@ export function EnrollmentForm({ initialData, onSuccess }: EnrollmentFormProps) 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
+
+        if (!formData.user_id || !formData.course_id) {
+            toast.error("Selecciona usuario y curso");
+            return;
+        }
+
+        setSubmitting(true);
 
         try {
-            if (!formData.user_id || !formData.course_id) {
-                toast.error("Selecciona usuario y curso");
-                setIsLoading(false);
-                return;
-            }
-
             const dataToSave = {
                 user_id: formData.user_id,
                 course_id: formData.course_id,
@@ -117,8 +140,9 @@ export function EnrollmentForm({ initialData, onSuccess }: EnrollmentFormProps) 
                 toast.success("Alumno inscrito correctamente");
             }
 
-            if (onSuccess) onSuccess();
-            closeModal();
+            onSuccess?.();
+            router.refresh();
+            closePanel();
         } catch (error: any) {
             console.error("Failed to save enrollment:", error);
             if (error.message?.includes("enroll_unique")) {
@@ -127,11 +151,9 @@ export function EnrollmentForm({ initialData, onSuccess }: EnrollmentFormProps) 
                 toast.error("Error al guardar la inscripción");
             }
         } finally {
-            setIsLoading(false);
+            setSubmitting(false);
         }
     };
-
-    const selectedUser = users.find((u) => u.id === formData.user_id);
 
     if (isLoadingData) {
         return (
@@ -141,114 +163,105 @@ export function EnrollmentForm({ initialData, onSuccess }: EnrollmentFormProps) 
         );
     }
 
+    // 🚨 OBLIGATORIO: <form id={formId}> conecta con el footer del container
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            <div className="flex-1 overflow-y-auto space-y-4">
-                {/* Course Selector - FIRST */}
-                <div className="space-y-2">
-                    <Label>Curso</Label>
-                    <Select
-                        value={formData.course_id}
-                        onValueChange={(value) => setFormData({ ...formData, course_id: value, user_id: "" })}
-                        disabled={!!initialData}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Selecciona un curso" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {courses.map((course) => (
-                                <SelectItem key={course.id} value={course.id}>
-                                    <span>{course.title}</span>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                {/* User Selector - SECOND (disabled until course is selected) */}
-                <div className="space-y-2">
-                    <Label>Alumno</Label>
-                    <Combobox
-                        value={formData.user_id}
-                        onValueChange={(value) => setFormData({ ...formData, user_id: value })}
-                        disabled={!!initialData || !formData.course_id}
-                        placeholder={formData.course_id ? "Selecciona un alumno" : "Primero selecciona un curso"}
-                        searchPlaceholder="Buscar alumno..."
-                        emptyMessage={availableUsers.length === 0 ? "Todos los usuarios ya están inscriptos" : "No se encontraron alumnos"}
-                        options={availableUsers.map(user => ({
-                            value: user.id,
-                            label: user.full_name || user.email,
-                            searchTerms: user.email, // Allow searching by email too
-                            content: (
-                                <div className="flex items-center gap-2">
-                                    <Avatar className="h-5 w-5">
-                                        <AvatarImage src={user.avatar_url || undefined} />
-                                        <AvatarFallback className="text-[10px]">
-                                            {user.full_name?.[0] || user.email[0]}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-medium leading-none">{user.full_name || "Sin nombre"}</span>
-                                        <span className="text-xs text-muted-foreground leading-none">{user.email}</span>
-                                    </div>
-                                </div>
-                            ),
-                            selectedContent: (
-                                <div className="flex items-center gap-2">
-                                    <Avatar className="h-5 w-5">
-                                        <AvatarImage src={user.avatar_url || undefined} />
-                                        <AvatarFallback className="text-[10px]">
-                                            {user.full_name?.[0] || user.email[0]}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <span>{user.full_name || user.email}</span>
-                                </div>
-                            )
-                        }))}
-                    />
-                </div>
-
-                {/* Status Selector */}
-                <div className="space-y-2">
-                    <Label>Estado</Label>
-                    <Select
-                        value={formData.status}
-                        onValueChange={(value) => setFormData({ ...formData, status: value })}
-                    >
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="active">Activo</SelectItem>
-                            <SelectItem value="completed">Completado</SelectItem>
-                            <SelectItem value="expired">Expirado</SelectItem>
-                            <SelectItem value="cancelled">Cancelado</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                {/* Expiration Date */}
-                <div className="space-y-2">
-                    <Label>Fecha de Vencimiento (opcional)</Label>
-                    <Input
-                        type="date"
-                        value={formData.expires_at}
-                        onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-                        placeholder="Dejar vacío para acceso lifetime"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                        Dejar vacío para acceso de por vida (lifetime)
-                    </p>
-                </div>
+        <form id={formId} onSubmit={handleSubmit} className="space-y-4">
+            {/* Course Selector - FIRST */}
+            <div className="space-y-2">
+                <Label>Curso</Label>
+                <Select
+                    value={formData.course_id}
+                    onValueChange={(value) => setFormData({ ...formData, course_id: value, user_id: "" })}
+                    disabled={!!initialData}
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un curso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {courses.map((course) => (
+                            <SelectItem key={course.id} value={course.id}>
+                                <span>{course.title}</span>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
-            <FormFooter
-                onCancel={closeModal}
-                isLoading={isLoading}
-                submitLabel={initialData ? "Guardar Cambios" : "Inscribir Alumno"}
-                className="-mx-4 -mb-4 mt-6"
-            />
+            {/* User Selector - SECOND (disabled until course is selected) */}
+            <div className="space-y-2">
+                <Label>Alumno</Label>
+                <Combobox
+                    value={formData.user_id}
+                    onValueChange={(value) => setFormData({ ...formData, user_id: value })}
+                    disabled={!!initialData || !formData.course_id}
+                    placeholder={formData.course_id ? "Selecciona un alumno" : "Primero selecciona un curso"}
+                    searchPlaceholder="Buscar alumno..."
+                    emptyMessage={availableUsers.length === 0 ? "Todos los usuarios ya están inscriptos" : "No se encontraron alumnos"}
+                    options={availableUsers.map(user => ({
+                        value: user.id,
+                        label: user.full_name || user.email,
+                        searchTerms: user.email,
+                        content: (
+                            <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                    <AvatarImage src={user.avatar_url || undefined} />
+                                    <AvatarFallback className="text-[10px]">
+                                        {user.full_name?.[0] || user.email[0]}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium leading-none">{user.full_name || "Sin nombre"}</span>
+                                    <span className="text-xs text-muted-foreground leading-none">{user.email}</span>
+                                </div>
+                            </div>
+                        ),
+                        selectedContent: (
+                            <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                    <AvatarImage src={user.avatar_url || undefined} />
+                                    <AvatarFallback className="text-[10px]">
+                                        {user.full_name?.[0] || user.email[0]}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span>{user.full_name || user.email}</span>
+                            </div>
+                        )
+                    }))}
+                />
+            </div>
+
+            {/* Status Selector */}
+            <div className="space-y-2">
+                <Label>Estado</Label>
+                <Select
+                    value={formData.status}
+                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                >
+                    <SelectTrigger>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="active">Activo</SelectItem>
+                        <SelectItem value="completed">Completado</SelectItem>
+                        <SelectItem value="expired">Expirado</SelectItem>
+                        <SelectItem value="cancelled">Cancelado</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Expiration Date */}
+            <div className="space-y-2">
+                <Label>Fecha de Vencimiento (opcional)</Label>
+                <Input
+                    type="date"
+                    value={formData.expires_at}
+                    onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
+                    placeholder="Dejar vacío para acceso lifetime"
+                />
+                <p className="text-xs text-muted-foreground">
+                    Dejar vacío para acceso de por vida (lifetime)
+                </p>
+            </div>
         </form>
     );
 }
-

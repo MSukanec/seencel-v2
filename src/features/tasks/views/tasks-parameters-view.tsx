@@ -9,7 +9,7 @@ import { useModal } from "@/stores/modal-store";
 import { ContextSidebar } from "@/stores/sidebar-store";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Hash, Type, ToggleLeft, List, Package, ChevronDown, ChevronRight, Settings } from "lucide-react";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

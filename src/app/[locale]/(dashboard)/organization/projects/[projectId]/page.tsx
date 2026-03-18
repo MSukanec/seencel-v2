@@ -75,7 +75,6 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
         return (
             <Tabs defaultValue={view} className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title={truncatedName}
                     parentLabel="Proyectos"
                     backButton={

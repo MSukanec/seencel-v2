@@ -180,6 +180,22 @@ export const routing = defineRouting({
             en: '/organization/team',
             es: '/organizacion/equipo'
         },
+        "/admin/academy": {
+            es: "/admin/academia",
+            en: "/admin/academy"
+        },
+        "/admin/academy/students": {
+            es: "/admin/academia/alumnos",
+            en: "/admin/academy/students"
+        },
+        "/admin/academy/courses": {
+            es: "/admin/academia/cursos",
+            en: "/admin/academy/courses"
+        },
+        "/admin/academy/instructors": {
+            es: "/admin/academia/instructores",
+            en: "/admin/academy/instructors"
+        },
         "/academy": {
             es: "/academia",
             en: "/academy"
@@ -216,6 +232,10 @@ export const routing = defineRouting({
         "/academy/my-courses/[slug]/forum": {
             es: "/academia/mis-cursos/[slug]/foro",
             en: "/academy/my-courses/[slug]/forum"
+        },
+        "/academy/my-courses/[slug]/certificate": {
+            es: "/academia/mis-cursos/[slug]/certificado",
+            en: "/academy/my-courses/[slug]/certificate"
         },
 
 
@@ -364,6 +384,10 @@ export const routing = defineRouting({
         '/founders': {
             en: '/founders',
             es: '/fundadores'
+        },
+        '/founders/program': {
+            en: '/founders/program',
+            es: '/fundadores/programa'
         },
 
 

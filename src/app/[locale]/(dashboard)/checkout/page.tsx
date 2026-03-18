@@ -134,7 +134,6 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
 
     return (
         <PageWrapper
-            type="page"
             title="Checkout"
             icon={<ShoppingCart className="h-5 w-5" />}
         >

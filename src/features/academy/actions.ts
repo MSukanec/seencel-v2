@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export type UpdateCourseState = {
@@ -23,6 +24,8 @@ export async function updateCourseGeneral(
         endorsement_image_path?: string;
     }
 ): Promise<UpdateCourseState> {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
 
     try {
@@ -76,6 +79,8 @@ export async function updateCourseMarketing(
         landing_sections: any; // JSONB structure
     }
 ): Promise<UpdateCourseState> {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
 
     try {
@@ -138,6 +143,8 @@ export async function createCourse(formData: {
     status?: string;
     visibility?: string;
 }): Promise<UpdateCourseState> {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
 
     try {
@@ -184,6 +191,8 @@ export async function createCourse(formData: {
 }
 
 export async function deleteCourse(courseId: string): Promise<UpdateCourseState> {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
 
     try {
@@ -211,6 +220,8 @@ export async function deleteCourse(courseId: string): Promise<UpdateCourseState>
 // --- Content Actions ---
 
 export async function createModule(courseId: string, title: string) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
     try {
         const { data: max } = await supabase
@@ -238,6 +249,8 @@ export async function createModule(courseId: string, title: string) {
 }
 
 export async function updateModule(moduleId: string, title: string, courseId: string) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
     const { error } = await supabase
         .schema('academy').from('course_modules')
@@ -250,6 +263,8 @@ export async function updateModule(moduleId: string, title: string, courseId: st
 }
 
 export async function deleteModule(moduleId: string, courseId: string) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
     const { error } = await supabase
         .schema('academy').from('course_modules')
@@ -263,6 +278,8 @@ export async function deleteModule(moduleId: string, courseId: string) {
 }
 
 export async function createLesson(moduleId: string, title: string, courseId: string) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
     try {
         const { data: max } = await supabase
@@ -292,6 +309,8 @@ export async function createLesson(moduleId: string, title: string, courseId: st
 }
 
 export async function updateLesson(lessonId: string, data: { title?: string; duration?: number; free_preview?: boolean }, courseId: string) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
 
     const updateData: any = {};
@@ -310,11 +329,11 @@ export async function updateLesson(lessonId: string, data: { title?: string; dur
 }
 
 export async function deleteLesson(lessonId: string, courseId: string) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
     const { error } = await supabase
-        .schema('academy').from('course_lessons')
-        .delete()
-        .eq("id", lessonId);
+        .schema("academy").from("course_lessons").update({ is_deleted: true, deleted_at: new Date().toISOString() }).eq("id", lessonId);
 
     if (error) return { success: false, message: error.message };
     revalidatePath(`/admin/academy/${courseId}`);
@@ -330,6 +349,8 @@ export type InstructorState = {
 };
 
 export async function getInstructors() {
+    const user = await getAuthUser();
+    if (!user) return [];
     const supabase = await createClient();
     const { data } = await supabase
         .schema('academy').from('course_instructors')
@@ -350,6 +371,8 @@ export async function createInstructor(formData: {
     youtube_url?: string;
     instagram_url?: string;
 }): Promise<InstructorState> {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
 
     try {
@@ -387,6 +410,8 @@ export async function updateInstructor(
         instagram_url?: string;
     }
 ): Promise<InstructorState> {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
 
     try {
@@ -415,6 +440,8 @@ export async function updateInstructor(
 }
 
 export async function deleteInstructor(id: string): Promise<InstructorState> {
+    const user = await getAuthUser();
+    if (!user) return { success: false, message: "No autorizado" };
     const supabase = await createClient();
 
     try {

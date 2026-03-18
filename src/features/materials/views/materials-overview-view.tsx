@@ -10,7 +10,7 @@ import { DollarSign, TrendingUp, CreditCard, PieChart as PieChartIcon, Clock, Ba
 import { LazyAreaChart as BaseAreaChart, LazyDonutChart as BaseDonutChart } from "@/components/charts/lazy-charts";
 import { useMoney } from "@/hooks/use-money";
 import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { useActiveProjectId } from "@/stores/layout-store";
 
 interface MaterialsOverviewViewProps {

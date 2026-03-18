@@ -97,7 +97,6 @@ export default async function OrganizationClientsPage({ searchParams }: PageProp
         return (
             <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title="Cobros"
                     tabs={tabs}
                     icon={<Banknote />}

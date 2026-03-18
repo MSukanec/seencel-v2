@@ -5,7 +5,7 @@ import { useRouter } from "@/i18n/routing";
 import { QuoteView, ContractSummary, QuoteItemView } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 
 import {
     TextField,

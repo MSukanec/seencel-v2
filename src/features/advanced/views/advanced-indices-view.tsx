@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Plus, TrendingUp, Calendar, MoreHorizontal, Pencil, Trash2, ChevronRight } from "lucide-react";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { useModal } from "@/stores/modal-store";
 import { Badge } from "@/components/ui/badge";
 import { AdvancedIndexTypeForm } from "../forms/advanced-index-type-form";

@@ -5,20 +5,17 @@ import { cn } from "@/lib/utils";
 import { useLayoutStore, NavigationContext } from "@/stores/layout-store";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { useRouter as useNextRouter } from "next/navigation";
-import { SidebarContextButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarAdminButton, SidebarUserButton } from "./buttons";
+import { SidebarNavButton } from "./sidebar-button";
 import { SidebarProjectSelector } from "./sidebar-project-selector";
+import { SidebarOrgSelector } from "./sidebar-org-selector";
 import { SidebarAccordionGroups } from "./sidebar-accordion";
-import { SidebarPlanButton } from "./plan-button";
-import { getPlanAccentVars } from "@/components/shared/plan-badge";
-import { useOrganization } from "@/stores/organization-store";
 import { SidebarInstallButton } from "./install-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SidebarCommandBarTrigger } from "@/components/layout/dashboard/shared/command-bar";
+import { SidebarCommandBarTrigger } from "@/components/layout/dashboard/command-bar";
 import {
     ArrowLeft,
     Building,
     EyeOff,
-    Bell,
     CalendarDays,
     Users,
     ClipboardList,
@@ -28,6 +25,8 @@ import {
     CreditCard,
     Settings as SettingsIcon,
     Sliders,
+    GraduationCap,
+    Sparkles,
 } from "lucide-react";
 import { useSidebarNavigation, contextRoutes, type NavItem, type NavSubItem } from "@/hooks/use-sidebar-navigation";
 import { ChevronRight } from "lucide-react";
@@ -39,11 +38,11 @@ import { EXTERNAL_ACTOR_TYPE_LABELS } from "@/features/external-actors/types";
 import { SidebarTooltipProvider, SidebarTooltip, type SidebarRestriction } from "./sidebar-tooltip";
 
 // ============================================================================
-// V2 EXPERIMENTAL - DRILL-DOWN SIDEBAR
+// SIDEBAR CONTENT — Detail panel for the active context
 // ============================================================================
-// Home State: Only context buttons (Dashboard, Academia, Comunidad, Admin)
-// Context State: Back button + Accordions/Items for that context
-// Animation: Slide right when entering, slide left when going back
+// Renders the navigation items for the currently selected context from the
+// Activity Bar. No more "home" state — that's handled by the Activity Bar.
+// Always renders in expanded mode (isExpanded is always true now).
 // ============================================================================
 
 interface SidebarContentProps {
@@ -57,10 +56,6 @@ interface SidebarContentProps {
     } | null;
 }
 
-// For Dashboard context, we show Organization and Project as sub-accordions
-// For Dashboard context, we show Organization and Project as sub-accordions
-type DrillDownState = NavigationContext;
-
 export function SidebarContent({
     onLinkClick,
     mode = "desktop",
@@ -72,8 +67,6 @@ export function SidebarContent({
     const nativeRouter = useNextRouter();
     const { activeContext, actions, previousPath } = useLayoutStore();
     const { contexts, contextRoutes, getNavItems, getNavGroups } = useSidebarNavigation();
-    const { planSlug } = useOrganization();
-    const planAccentVars = React.useMemo(() => getPlanAccentVars(planSlug), [planSlug]);
 
     // Access mode
     const isDualAccess = useIsDualAccess();
@@ -81,15 +74,11 @@ export function SidebarContent({
     const switchMode = useAccessContextStore((s) => s.switchMode);
     const externalActorType = useAccessContextStore((s) => s.externalActorType);
 
-
-
     const isMobile = mode === "mobile";
-    const isExpanded = propIsExpanded ?? isMobile;
+    const isExpanded = propIsExpanded ?? true;
 
-    // Drill-down state: "home" or a specific context
-    const [drillState, setDrillState] = React.useState<DrillDownState>(() => {
-        return "home";
-    });
+    // The active context determines what we show
+    const drillState = activeContext;
 
     // Page-level drill-down: when a NavItem has children, we track it here
     const [pageSubItems, setPageSubItems] = React.useState<{
@@ -99,26 +88,18 @@ export function SidebarContent({
         children: NavSubItem[];
     } | null>(null);
 
-    // EFFECT: Sync drillState with activeContext
-    React.useEffect(() => {
-        if (activeContext && activeContext !== drillState) {
-            setDrillState(activeContext);
-        }
-    }, [activeContext]);
-
     // EFFECT: Auto-detect page sub-items from URL
     React.useEffect(() => {
-        if (drillState !== 'organization') return;
-        const groups = getNavGroups('organization');
+        if (drillState !== 'organization' && drillState !== 'admin') return;
+        const ctx = drillState === 'admin' ? 'admin' : 'organization';
+        const groups = getNavGroups(ctx);
         for (const group of groups) {
             for (const item of group.items) {
                 if (item.children && item.children.length > 0) {
-                    // Check if current pathname matches any child href OR is a sub-route of the parent
                     const isOnParent = pathname === item.href;
                     const isOnChild = item.children.some(child => pathname === child.href);
                     const isOnDynamicChild = pathname.startsWith(item.href + '/');
                     if (isOnParent || isOnChild || isOnDynamicChild) {
-                        // Only set if not already showing these sub-items
                         if (!pageSubItems || pageSubItems.parentHref !== item.href) {
                             setPageSubItems({
                                 parentTitle: item.title,
@@ -141,30 +122,6 @@ export function SidebarContent({
 
     // Animation direction
     const [slideDirection, setSlideDirection] = React.useState<"left" | "right">("right");
-    const [sidebarPopoverOpen, setSidebarPopoverOpen] = React.useState(false);
-
-    // Handle context button click - drill into that context AND navigate instantly
-    const handleContextEnter = (ctx: NavigationContext) => {
-        setSlideDirection("right");
-        setDrillState(ctx);
-        actions.setActiveContext(ctx);
-        // Navigate to the context's main page instantly
-        router.push(contextRoutes[ctx] as any);
-    };
-
-    // Handle back button - return to home (HUB)
-    const handleBack = () => {
-        setSlideDirection("left");
-        setDrillState("home");
-        actions.setActiveContext("home");
-        // Navigate to HUB page immediately
-        router.push("/hub");
-    };
-
-
-
-    // Get unified nav groups for accordion rendering
-    const navGroups = getNavGroups("organization");
 
     // 1. Sync Context based on URL (Navigation)
     React.useEffect(() => {
@@ -174,9 +131,21 @@ export function SidebarContent({
             return;
         }
 
+        // Admin Context — MUST be before academy to avoid /admin/academy matching /academy
+        if (pathname.includes('/admin')) {
+            if (activeContext !== 'admin') actions.setActiveContext('admin');
+            return;
+        }
+
         // Learnings Context
         if (pathname.includes('/academy')) {
             if (activeContext !== 'learnings') actions.setActiveContext('learnings');
+            return;
+        }
+
+        // Founders Context
+        if (pathname.includes('/founders')) {
+            if (activeContext !== 'founders') actions.setActiveContext('founders');
             return;
         }
 
@@ -198,12 +167,6 @@ export function SidebarContent({
             return;
         }
 
-        // Admin Context
-        if (pathname.includes('/admin')) {
-            if (activeContext !== 'admin') actions.setActiveContext('admin');
-            return;
-        }
-
         // Hub Context
         if (pathname.includes('/hub')) {
             if (activeContext !== 'home') actions.setActiveContext('home');
@@ -212,16 +175,8 @@ export function SidebarContent({
 
     }, [pathname, actions, activeContext]);
 
-
-
-    // Slide animation classes
-    const slideClass = cn(
-        "transition-transform duration-200 ease-out",
-        slideDirection === "right" ? "animate-slide-in-right" : "animate-slide-in-left"
-    );
-
-    // Width class
-    const widthClass = isExpanded ? "w-[240px]" : "w-[50px]";
+    // Get unified nav groups for accordion rendering
+    const navGroups = getNavGroups("organization");
 
     // Handle drill into page sub-items
     const handlePageDrillIn = (item: NavItem) => {
@@ -233,7 +188,6 @@ export function SidebarContent({
                 parentIcon: item.icon,
                 children: item.children,
             });
-            // Navigate to the parent page
             router.push(item.href as any);
         }
     };
@@ -318,151 +272,66 @@ export function SidebarContent({
         );
     };
 
+    // Slide animation classes
+    const slideClass = cn(
+        "transition-transform duration-200 ease-out",
+        slideDirection === "right" ? "animate-slide-in-right" : "animate-slide-in-left"
+    );
+
     return (
-
         <SidebarTooltipProvider>
-            <div
-                className={cn(
-                    "flex flex-col h-full py-2 bg-sidebar transition-all duration-150 ease-in-out relative",
-                    widthClass
-                )}
-                style={planAccentVars as React.CSSProperties}
-            >
-
-
+            <div className="flex flex-col h-full py-2 bg-sidebar transition-all duration-150 ease-in-out relative w-full">
                 <div className="flex flex-col w-full h-full overflow-hidden">
-                    {drillState === "home" || drillState === "settings" ? (
-                        <div className="w-full flex items-center gap-1.5 mb-2 px-2">
-                            <div className="flex-1 min-w-0">
-                                <SidebarBrandButton isExpanded={isExpanded} />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="w-full px-2 mb-1 mt-1">
+                    {/* Header: Project Selector or Context Title */}
+                    {drillState === 'settings' ? (
+                        <div className="w-full px-2 mb-1" />
+                    ) : drillState === 'organization' ? (
+                        <div className="w-full px-2 mb-1">
                             <SidebarProjectSelector isExpanded={isExpanded} />
                         </div>
+                    ) : (
+                        <div className="w-full px-2 mb-1">
+                            {(() => {
+                                const contextMeta: Record<string, { icon: React.ElementType; label: string; subtitle: string }> = {
+                                    learnings: { icon: GraduationCap, label: 'Academia', subtitle: 'Cursos y formación' },
+                                    founders: { icon: Sparkles, label: 'Fundadores', subtitle: 'Programa exclusivo' },
+                                    community: { icon: Users, label: 'Comunidad', subtitle: 'Red de profesionales' },
+                                    admin: { icon: Shield, label: 'Administración', subtitle: 'Panel de control' },
+                                };
+                                const meta = contextMeta[drillState];
+                                if (!meta || !isExpanded) return null;
+                                const Icon = meta.icon;
+                                return (
+                                    <div className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 w-full">
+                                        <div className="h-8 w-8 rounded-full flex items-center justify-center bg-primary/10 shrink-0">
+                                            <Icon className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div className="flex flex-col items-start flex-1 min-w-0">
+                                            <span className="text-sm font-semibold truncate w-full text-left leading-tight text-sidebar-foreground">
+                                                {meta.label}
+                                            </span>
+                                            <span className="text-[11px] text-muted-foreground leading-tight truncate w-full text-left">
+                                                {meta.subtitle}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
                     )}
 
-                    {/* Separator — hidden in settings mode (has its own after "Volver a la app") */}
-                    {drillState !== "settings" && (
-                        <div className="w-8 h-px bg-border/50 mb-2 mx-auto" />
-                    )}
+                    {/* Separator */}
+                    <div className="w-8 h-px bg-border/50 mb-2 mx-auto" />
 
                     <ScrollArea className="flex-1 min-h-0" type="scroll">
-                        {/* ... (Previous Content Kept Same via Context, but I need to re-render it because replace_file requires context) 
-                        Wait, this content is huge. using replace_file_content for the whole return is risky on size.
-                        I should target START and END specific lines if possible.
-                        But I am wrapping EVERYTHING inside the root div.
-                        
-                        I'll try to just wrap the RETURN statement content.
-                    */}
-                        {/* Only showing the modified structure here for clarity, will use code below */}
-
-                        {/* ============================================================ */}
-                        {/* HOME STATE: Context Buttons */}
-                        {/* ============================================================ */}
-                        {drillState === "home" && (
-                            <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="home">
-                                {contexts.map(ctx => {
-                                    const descriptions: Record<string, string> = {
-                                        organization: "Organización y proyectos",
-                                        learnings: "Cursos y capacitaciones",
-                                        community: "Fundadores y red Seencel",
-                                        admin: "Panel de administración"
-                                    };
-
-                                    const labels: Record<string, string> = {
-                                        organization: "Espacio de Trabajo"
-                                    };
-
-                                    const isDisabled = ctx.disabled;
-                                    const status = ctx.status;
-
-                                    // Badge Logic
-                                    let badge = null;
-                                    if (status === 'maintenance') {
-                                        badge = (
-                                            <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-semantic-warning/10 hover:bg-semantic-warning/20 shadow-none">
-                                                <Lock className="h-3 w-3 text-semantic-warning" />
-                                            </Badge>
-                                        );
-                                    } else if (status === 'founders') {
-                                        badge = (
-                                            <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-slate-400/10 hover:bg-slate-400/20 shadow-none">
-                                                <Medal className="h-3 w-3 text-slate-400" />
-                                            </Badge>
-                                        );
-                                    }
-
-                                    const restriction: SidebarRestriction = (status as SidebarRestriction) || null;
-                                    const ctxLabel = labels[ctx.id] || ctx.label;
-
-                                    return (
-                                        <SidebarTooltip
-                                            key={ctx.id}
-                                            label={ctxLabel}
-                                            restriction={restriction}
-                                            isExpanded={isExpanded}
-                                        >
-                                            <SidebarContextButton
-                                                icon={ctx.icon}
-                                                label={ctxLabel}
-                                                description={descriptions[ctx.id]}
-                                                isExpanded={isExpanded}
-                                                onClick={() => {
-                                                    if (isDisabled) return;
-                                                    handleContextEnter(ctx.id);
-                                                }}
-                                                badge={isExpanded ? badge : null}
-                                                isLocked={!!status}
-                                                className={cn(
-                                                    isDisabled && "cursor-not-allowed hover:bg-transparent",
-                                                    !isDisabled && status && "cursor-pointer hover:opacity-60",
-                                                    ctx.hidden && "opacity-40 border border-dashed border-primary/20 bg-muted/20"
-                                                )}
-                                            />
-                                        </SidebarTooltip>
-                                    );
-                                })}
-                            </nav>
-                        )}
-
                         {/* ============================================================ */}
                         {/* ORGANIZATION STATE: Direct navigation buttons */}
                         {/* ============================================================ */}
                         {drillState === "organization" && !pageSubItems && (
                             <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="organization">
 
-                                {/* Toolbar: Command Bar + Planner + Notifications (inline) */}
-                                <div className={cn(
-                                    "flex gap-1.5",
-                                    isExpanded ? "flex-row" : "flex-col"
-                                )}>
-                                    <div className="flex-1 min-w-0">
-                                        <SidebarCommandBarTrigger isExpanded={isExpanded} />
-                                    </div>
-                                    <SidebarTooltip label="Planificador" isExpanded={isExpanded}>
-                                        <Link
-                                            href={"/organization/planner" as any}
-                                            onClick={onLinkClick}
-                                            className={cn(
-                                                "flex items-center justify-center h-8 rounded-lg transition-all duration-150 relative",
-                                                "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.03]",
-                                                pathname === '/organization/planner' && "text-foreground bg-white/[0.04] border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_3px_rgba(0,0,0,0.25),0_1px_1px_rgba(0,0,0,0.15)]",
-                                                isExpanded ? "w-8 bg-sidebar-accent/40 hover:bg-sidebar-accent/70 border border-sidebar-border/30" : "w-full"
-                                            )}
-                                        >
-                                            <CalendarDays className="h-4 w-4" />
-                                        </Link>
-                                    </SidebarTooltip>
-                                    <SidebarNotificationsButton
-                                        isExpanded={false}
-                                        variant="quick-access"
-                                        className={cn(
-                                            isExpanded ? "w-8 h-8 rounded-lg bg-sidebar-accent/40 hover:bg-sidebar-accent/70 border border-sidebar-border/30" : ""
-                                        )}
-                                    />
-                                </div>
+                                {/* Command Bar */}
+                                <SidebarCommandBarTrigger isExpanded={isExpanded} />
 
                                 {/* Spacer */}
                                 <div className="h-1" />
@@ -473,6 +342,16 @@ export function SidebarContent({
                                     label="Visión General"
                                     href="/organization"
                                     isActive={pathname === '/organization'}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+
+                                {/* Planificador */}
+                                <SidebarNavButton
+                                    icon={CalendarDays}
+                                    label="Planificador"
+                                    href="/organization/planner"
+                                    isActive={pathname === '/organization/planner'}
                                     isExpanded={isExpanded}
                                     onClick={onLinkClick}
                                 />
@@ -532,8 +411,6 @@ export function SidebarContent({
                             </nav>
                         )}
 
-
-
                         {/* LEARNINGS STATE */}
                         {drillState === "learnings" && (
                             <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="learnings">
@@ -551,38 +428,33 @@ export function SidebarContent({
                             </nav>
                         )}
 
+                        {/* FOUNDERS STATE */}
+                        {drillState === "founders" && (
+                            <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="founders">
+                                {getNavItems("founders").map((item, idx) => (
+                                    <SidebarNavButton
+                                        key={idx}
+                                        icon={item.icon}
+                                        label={item.title}
+                                        href={item.href}
+                                        isActive={pathname === item.href || pathname.startsWith(item.href + '/')}
+                                        isExpanded={isExpanded}
+                                        onClick={onLinkClick}
+                                    />
+                                ))}
+                            </nav>
+                        )}
+
                         {/* COMMUNITY STATE */}
                         {drillState === "community" && (
                             <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="community">
-                                {isExpanded && (
-                                    <div className="px-3 py-2 text-sm font-semibold text-primary">
-                                        Comunidad
-                                    </div>
-                                )}
                                 {getNavItems("community").map(renderNavItem)}
                             </nav>
                         )}
 
-                        {/* ADMIN STATE — Accordion groups identical to organization */}
-                        {drillState === "admin" && (
+                        {/* ADMIN STATE — Accordion groups */}
+                        {drillState === "admin" && !pageSubItems && (
                             <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="admin">
-
-                                {/* Back to app — same pattern as Settings */}
-                                <SidebarNavButton
-                                    icon={ArrowLeft}
-                                    label="Volver a la app"
-                                    href={(previousPath || '/organization') as any}
-                                    isActive={false}
-                                    isExpanded={isExpanded}
-                                    onClick={() => {
-                                        setSlideDirection("left");
-                                        setDrillState("organization");
-                                        actions.setActiveContext("organization");
-                                    }}
-                                />
-
-                                {/* Separator */}
-                                <div className="w-8 h-px bg-border/50 my-1 mx-auto" />
 
                                 {/* Visión General */}
                                 <SidebarNavButton
@@ -594,13 +466,44 @@ export function SidebarContent({
                                     onClick={onLinkClick}
                                 />
 
-                                {/* Admin Nav Groups with Accordion (exclude standalone 'principal' group) */}
+                                {/* Admin Nav Groups with Accordion */}
                                 <SidebarAccordionGroups
                                     groups={getNavGroups('admin').filter(g => g.id !== 'principal')}
                                     renderItem={renderNavItem}
                                     isExpanded={isExpanded}
                                     activePath={pathname}
+                                    flat
                                 />
+                            </nav>
+                        )}
+
+                        {/* ADMIN PAGE SUB-ITEMS STATE: Drill-down into admin page children */}
+                        {drillState === "admin" && pageSubItems && (
+                            <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key={`admin-page-${pageSubItems.parentHref}`}>
+                                {/* Back button */}
+                                <SidebarNavButton
+                                    icon={ArrowLeft}
+                                    label={pageSubItems.parentTitle}
+                                    isActive={false}
+                                    isExpanded={isExpanded}
+                                    onClick={handlePageDrillBack}
+                                />
+
+                                {/* Separator */}
+                                <div className="w-8 h-px bg-border/50 my-1 mx-auto" />
+
+                                {/* Sub-items */}
+                                {pageSubItems.children.map((child, idx) => (
+                                    <SidebarNavButton
+                                        key={idx}
+                                        icon={child.icon || pageSubItems.parentIcon}
+                                        label={child.title}
+                                        href={child.href as any}
+                                        isActive={pathname === child.href}
+                                        isExpanded={isExpanded}
+                                        onClick={onLinkClick}
+                                    />
+                                ))}
                             </nav>
                         )}
 
@@ -618,7 +521,6 @@ export function SidebarContent({
                                     isExpanded={isExpanded}
                                     onClick={() => {
                                         setSlideDirection("left");
-                                        setDrillState("organization");
                                         actions.setActiveContext("organization");
                                     }}
                                 />
@@ -640,112 +542,58 @@ export function SidebarContent({
 
                     {/* PWA Install prompt */}
                     {!isMobile && (
-                        <div className="mt-auto px-2 pb-2 shrink-0">
+                        <div className="mt-auto px-2 pb-1 shrink-0">
                             <SidebarInstallButton isExpanded={isExpanded} />
                         </div>
                     )}
 
-                    {/* Admin, Hub & System Toggle (bottom, desktop only) */}
-                    {!isMobile && drillState !== 'settings' && drillState !== 'admin' && (
-                        <div className="px-2 pb-0 space-y-1.5 mt-1 shrink-0">
-                            {/* Admin Button (only visible to admins) */}
-                            <SidebarAdminButton isExpanded={isExpanded} />
+                    {/* Org Selector */}
+                    {!isMobile && (activeContext === 'organization' || activeContext === 'settings') && (
+                        <div className="px-2 pb-2 shrink-0">
+                            <SidebarOrgSelector isExpanded={isExpanded} />
+                        </div>
+                    )}
 
-                            {/* Navigation Out/Back — Below Admin */}
-                            <div className={cn("space-y-1", slideClass)}>
-                                {/* Hub Button — visible when in organization context (not admin, not home) */}
-                                {drillState === "organization" && (
-                                    <SidebarNavButton
-                                        icon={ArrowLeft}
-                                        label="Volver al Hub"
-                                        href={"/hub" as any}
-                                        isActive={false}
-                                        isExpanded={isExpanded}
-                                        onClick={onLinkClick}
-                                    />
-                                )}
-                            </div>
-
-                            {/* Access Mode Selector — only when user has dual access */}
-                            {isDualAccess && isExpanded && (
-                                <div
-                                    className="rounded-lg bg-sidebar-accent/30 border border-sidebar-border/40 p-1 space-y-0.5"
+                    {/* Access Mode Selector — only when user has dual access */}
+                    {!isMobile && drillState === 'organization' && isDualAccess && (
+                        <div className="px-2 pb-2 shrink-0">
+                            <div className="rounded-lg bg-sidebar-accent/30 border border-sidebar-border/40 p-1 space-y-0.5">
+                                <button
+                                    onClick={() => {
+                                        switchMode("member");
+                                        router.push("/organization" as any);
+                                    }}
+                                    className={cn(
+                                        "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all duration-150 cursor-pointer",
+                                        accessMode === "member"
+                                            ? "bg-primary/10 text-primary font-medium"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                    )}
                                 >
-                                    <button
-                                        onClick={() => {
-                                            switchMode("member");
-                                            router.push("/organization" as any);
-                                        }}
-                                        className={cn(
-                                            "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all duration-150 cursor-pointer",
-                                            accessMode === "member"
-                                                ? "bg-primary/10 text-primary font-medium"
-                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                                        )}
-                                    >
-                                        <Building className="h-3.5 w-3.5 shrink-0" />
-                                        <span className="truncate">Miembro</span>
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            switchMode("external");
-                                            // Navigate to the external actor overview
-                                            if (externalActorType === "client") {
-                                                router.push("/organization/external/client" as any);
-                                            }
-                                        }}
-                                        className={cn(
-                                            "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all duration-150 cursor-pointer",
-                                            accessMode === "external"
-                                                ? "bg-primary/10 text-primary font-medium"
-                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                                        )}
-                                    >
-                                        <UserCircle className="h-3.5 w-3.5 shrink-0" />
-                                        <span className="truncate">
-                                            {externalActorType
-                                                ? EXTERNAL_ACTOR_TYPE_LABELS[externalActorType]
-                                                : "Externo"}
-                                        </span>
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* Access Mode Selector — collapsed sidebar (icon only) */}
-                            {isDualAccess && !isExpanded && (
-                                <SidebarTooltip
-                                    label={accessMode === "member" ? "Cambiar a modo externo" : "Cambiar a modo miembro"}
-                                    isExpanded={false}
-                                >
-                                    <button
-                                        onClick={() => {
-                                            const newMode = accessMode === "member" ? "external" : "member";
-                                            switchMode(newMode);
-                                            if (newMode === "external" && externalActorType === "client") {
-                                                router.push("/organization/external/client" as any);
-                                            } else {
-                                                router.push("/organization" as any);
-                                            }
-                                        }}
-                                        className={cn(
-                                            "w-full flex items-center justify-center h-8 rounded-lg transition-all duration-150",
-                                            "text-muted-foreground hover:text-foreground hover:bg-secondary/80 cursor-pointer"
-                                        )}
-                                    >
-                                        {accessMode === "member"
-                                            ? <UserCircle className="h-4 w-4" />
-                                            : <Building className="h-4 w-4" />
+                                    <Building className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate">Miembro</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        switchMode("external");
+                                        if (externalActorType === "client") {
+                                            router.push("/organization/external/client" as any);
                                         }
-                                    </button>
-                                </SidebarTooltip>
-                            )}
-
-                            {/* Plan Badge — deshabilitado temporalmente */}
-                            {/* <SidebarPlanButton isExpanded={isExpanded} /> */}
-
-                            {/* Unified User Button (avatar + org info) */}
-                            <div className="pt-1.5 border-t border-sidebar-border/50">
-                                <SidebarUserButton isExpanded={isExpanded} />
+                                    }}
+                                    className={cn(
+                                        "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all duration-150 cursor-pointer",
+                                        accessMode === "external"
+                                            ? "bg-primary/10 text-primary font-medium"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                    )}
+                                >
+                                    <UserCircle className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate">
+                                        {externalActorType
+                                            ? EXTERNAL_ACTOR_TYPE_LABELS[externalActorType]
+                                            : "Externo"}
+                                    </span>
+                                </button>
                             </div>
                         </div>
                     )}
@@ -754,4 +602,3 @@ export function SidebarContent({
         </SidebarTooltipProvider>
     );
 }
-

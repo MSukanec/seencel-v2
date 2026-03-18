@@ -5,6 +5,7 @@ import { ForumThread, ForumPost, getThreadById, markAsAnswer } from "@/actions/f
 import { ForumPostItem } from "./forum-post-item";
 import { ForumPostForm } from "./forum-post-form";
 import { RichTextRenderer } from "@/components/shared/rich-text-editor";
+import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +19,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface ForumThreadViewProps {
     thread: ForumThread;
@@ -97,9 +99,9 @@ export function ForumThreadView({
     const isThreadAuthor = currentUserId === thread.author?.id;
 
     return (
-        <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+        <div className="h-full overflow-y-auto p-4 md:p-6 space-y-6">
             {/* Original Post */}
-            <div className="bg-card rounded-lg border p-4 md:p-6">
+            <Card variant="island" className="p-4 md:p-6">
                 {/* Badges */}
                 <div className="flex items-center gap-2 mb-4">
                     {thread.is_pinned && (
@@ -131,58 +133,59 @@ export function ForumThreadView({
                 </div>
 
                 {/* Content */}
-                <RichTextRenderer
-                    content={thread.content}
-                    className="mt-4"
-                />
-            </div>
+                <div className="prose prose-sm max-w-none dark:prose-invert text-[14px] [&>*:first-child]:mt-0">
+                    <RichTextRenderer
+                        content={thread.content}
+                    />
+                </div>
+            </Card>
 
             <Separator />
 
             {/* Replies section */}
-            <div className="space-y-4">
-                <h3 className="font-medium flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    {t("replies")} ({posts.length})
+            <div className="space-y-6">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    {t("replies")}
+                    <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px] font-medium h-auto leading-none">
+                        {posts.length}
+                    </Badge>
                 </h3>
 
                 {isLoading ? (
                     <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
-                ) : posts.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                        {t("noReplies")}
-                    </div>
                 ) : (
-                    <div className="space-y-4">
-                        {posts.map((post) => (
-                            <ForumPostItem
-                                key={post.id}
-                                post={post}
-                                currentUserId={currentUserId}
-                                isThreadAuthor={isThreadAuthor}
-                                onDelete={handlePostDelete}
-                                onMarkAsAnswer={handleMarkAsAnswer}
-                            />
-                        ))}
+                    <div className="space-y-6">
+                        {posts.length > 0 && (
+                            <div className="space-y-4">
+                                {posts.map((post) => (
+                                    <ForumPostItem
+                                        key={post.id}
+                                        post={post}
+                                        currentUserId={currentUserId}
+                                        isThreadAuthor={isThreadAuthor}
+                                        onDelete={handlePostDelete}
+                                        onMarkAsAnswer={handleMarkAsAnswer}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Reply form */}
+                        {!thread.is_locked && (
+                            <div className={cn(posts.length > 0 && "pt-6 border-t")}>
+                                <h3 className="text-sm font-semibold mb-3">{t("writeReply")}</h3>
+                                <ForumPostForm
+                                    threadId={thread.id}
+                                    onSuccess={handleNewPost}
+                                />
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
-
-            {/* Reply form */}
-            {!thread.is_locked && (
-                <>
-                    <Separator />
-                    <div className="space-y-3">
-                        <h3 className="font-medium">{t("writeReply")}</h3>
-                        <ForumPostForm
-                            threadId={thread.id}
-                            onSuccess={handleNewPost}
-                        />
-                    </div>
-                </>
-            )}
         </div>
     );
 }

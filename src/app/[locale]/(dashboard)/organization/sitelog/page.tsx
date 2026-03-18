@@ -49,7 +49,6 @@ export default async function OrganizationSitelogPage({ params }: Props) {
         return (
             <Tabs defaultValue="entries" className="w-full h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title="Bitácora de Obra"
                     icon={<FileText />}
                     tabs={
@@ -85,7 +84,7 @@ export default async function OrganizationSitelogPage({ params }: Props) {
         );
     } catch (error) {
         return (
-            <PageWrapper type="page" title="Bitácora de Obra" icon={<FileText />}>
+            <PageWrapper title="Bitácora de Obra" icon={<FileText />}>
                 <div className="h-full w-full flex items-center justify-center">
                     <ErrorDisplay
                         title="Error al cargar"

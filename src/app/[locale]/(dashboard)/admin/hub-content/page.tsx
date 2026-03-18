@@ -24,7 +24,6 @@ export default async function HubContentPage({ params }: PageProps) {
     return (
         <Tabs defaultValue="carousel" className="w-full h-full flex flex-col">
             <PageWrapper
-                type="page"
                 title="Contenido HUB"
                 icon={<Sparkles />}
                 tabs={

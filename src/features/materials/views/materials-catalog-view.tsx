@@ -7,9 +7,9 @@ import { ContentLayout } from "@/components/layout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ListItem, MaterialListItem } from "@/components/shared/list-item";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
-import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
+import { ToolbarTabs } from "@/components/layout/dashboard/toolbar/toolbar-tabs";
+import { FacetedFilter } from "@/components/layout/dashboard/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { ContextSidebar } from "@/stores/sidebar-store";
 import {

@@ -2,6 +2,12 @@ import { getCourseBySlug, getUserLessonSummariesWithDetails } from "@/features/a
 import { CourseNotesView } from "@/features/academy/views";
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+
+export const generateMetadata = async (): Promise<Metadata> => ({
+    title: 'Apuntes del Curso | Seencel',
+    robots: 'noindex, nofollow',
+});
 
 interface PageProps {
     params: Promise<{

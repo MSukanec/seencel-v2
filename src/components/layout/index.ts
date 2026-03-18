@@ -8,13 +8,11 @@ export * from "./public";
 export * from "./dashboard";
 
 // Explicit exports for backward compatibility
-export { Header } from "./dashboard/mega-menu/header";
-export { HeaderPortal } from "./dashboard/mega-menu/header-portal";
-export { LayoutSwitcher } from "./dashboard/shared/layout-switcher";
-export { PageWrapper } from "./dashboard/shared/page-wrapper";
-export { ContentLayout } from "./dashboard/shared/content-layout";
+export { Header } from "./public/header";
+export { LayoutSwitcher } from "./dashboard/shell/layout-switcher";
+export { PageWrapper } from "./dashboard/shell/page-wrapper";
+export { ContentLayout } from "./dashboard/shell/content-layout";
 export { SidebarLayout } from "./dashboard/sidebar/sidebar-layout";
 
 // Shared dashboard components
-export { HeaderTitleUpdater } from "./dashboard/shared/header-title-updater";
-export { PageHeaderActionPortal } from "./dashboard/shared/page-header-action-portal";
+export { PageHeaderActionPortal } from "./dashboard/header/page-header";

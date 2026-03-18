@@ -8,8 +8,8 @@ import { TasksByDivision, Unit, TaskDivision, TaskAction, TaskElement } from "@/
 import { TaskCatalog } from "@/features/tasks/components/tasks-catalog";
 import { TasksForm, TasksTypeSelector, TaskCreationType, TasksParametricForm } from "@/features/tasks/forms";
 import { TasksBulkEditForm } from "@/features/tasks/forms/tasks-bulk-edit-form";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
+import { FacetedFilter } from "@/components/layout/dashboard/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { Button } from "@/components/ui/button";

@@ -10,12 +10,12 @@ import { TaskDivision } from "@/features/tasks/types";
 import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { Plus, FolderTree, Building2, User } from "lucide-react";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { createImportBatch, revertImportBatch, importDivisionsBatch, ImportConfig } from "@/lib/import";
 import { useRouter } from "@/i18n/routing";
-import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
+import { ToolbarTabs } from "@/components/layout/dashboard/toolbar/toolbar-tabs";
 import { Badge } from "@/components/ui/badge";
 
 // ============================================================================

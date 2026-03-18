@@ -82,7 +82,6 @@ export default async function DivisionDetailPage({ params, searchParams }: Divis
         return (
             <Tabs defaultValue={view} className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title={division.name}
                     icon={<FolderTree />}
                     backButton={

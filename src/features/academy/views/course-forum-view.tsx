@@ -20,7 +20,7 @@ export function CourseForumView({
     currentUserId,
 }: CourseForumViewProps) {
     return (
-        <ContentLayout variant="wide" className="pb-0">
+        <ContentLayout variant="wide">
             <ForumContainer
                 courseId={courseId}
                 courseSlug={courseSlug}

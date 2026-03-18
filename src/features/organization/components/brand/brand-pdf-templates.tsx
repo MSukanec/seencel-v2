@@ -50,7 +50,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils";
 import { ContextSidebar } from "@/stores/sidebar-store";
-import { PageHeaderActionPortal } from "@/components/layout/dashboard/shared/page-header-action-portal";
+import { PageHeaderActionPortal } from "@/components/layout/dashboard/header/page-header";
 import { BetaBadge } from "@/components/shared/beta-badge";
 import {
     getOrganizationPdfTheme,

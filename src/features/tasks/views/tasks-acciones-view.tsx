@@ -5,7 +5,7 @@ import { TaskAction, TaskElement } from "@/features/tasks/types";
 import { toggleElementAction } from "../actions";
 import { toast } from "sonner";
 import { Zap, ChevronDown, ChevronRight, Boxes } from "lucide-react";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

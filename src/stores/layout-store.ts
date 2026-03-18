@@ -7,7 +7,7 @@ import { SidebarMode } from '@/types/preferences';
 export type FontSize = 'smaller' | 'small' | 'default' | 'large' | 'larger';
 
 export type LayoutMode = 'default' | 'sidebar';
-export type NavigationContext = 'organization' | 'project' | 'learnings' | 'community' | 'admin' | 'home' | 'settings';
+export type NavigationContext = 'organization' | 'project' | 'learnings' | 'founders' | 'community' | 'admin' | 'home' | 'settings';
 
 interface LayoutState {
     layoutMode: LayoutMode;
@@ -66,7 +66,8 @@ export const useLayoutStore = create<LayoutState>()(
                 activeContext: state.activeContext,
                 activeProjectId: state.activeProjectId,
                 fontSize: state.fontSize,
-                // sidebarMode intentionally NOT persisted — always 'docked' for now
+                sidebarMode: state.sidebarMode,
+                // sidebarMode now persisted to localStorage
                 sidebarProjectAvatars: state.sidebarProjectAvatars,
                 // headerTitle is not persisted as it depends on current page
             }),

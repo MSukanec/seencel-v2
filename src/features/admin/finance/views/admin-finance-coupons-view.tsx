@@ -13,7 +13,7 @@ import { useRouter } from "@/i18n/routing";
 import { Ticket, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DataTable } from "@/components/shared/data-table/data-table";

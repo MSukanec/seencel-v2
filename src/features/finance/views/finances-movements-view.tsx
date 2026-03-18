@@ -17,7 +17,7 @@ import { usePanel } from "@/stores/panel-store";
 import { useTableActions } from "@/hooks/use-table-actions";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { FilterPopover, SearchButton, DisplayButton } from "@/components/shared/toolbar-controls";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { exportToCSV, exportToExcel } from "@/lib/export";

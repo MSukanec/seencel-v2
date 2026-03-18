@@ -44,7 +44,6 @@ export default async function SupportPage({ params }: PageProps) {
     return (
         <Tabs defaultValue="tickets" className="w-full h-full flex flex-col">
             <PageWrapper
-                type="page"
                 title="Soporte"
                 icon={<MessageCircle />}
                 tabs={

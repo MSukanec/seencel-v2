@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";

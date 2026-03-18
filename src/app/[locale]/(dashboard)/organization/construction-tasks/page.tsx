@@ -93,7 +93,6 @@ export default async function OrganizationConstructionTasksPage({ params, search
         return (
             <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title="Tareas de Construcción"
                     icon={<ClipboardList />}
                     tabs={

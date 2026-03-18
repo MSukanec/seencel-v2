@@ -14,7 +14,7 @@ import { useMoney } from "@/hooks/use-money";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { generateFinanceInsights } from "@/features/insights/logic/finance";
 import { cn } from "@/lib/utils";
-import { DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
+import { DateRangeFilterValue } from "@/components/layout/dashboard/toolbar/toolbar-date-range-filter";
 
 interface FinancesOverviewViewProps {
     movements: any[];

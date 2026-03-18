@@ -38,7 +38,6 @@ export default async function AdminFinancePage() {
         return (
             <Tabs defaultValue="payments" className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title="Finanzas"
                     icon={<Wallet />}
                     tabs={

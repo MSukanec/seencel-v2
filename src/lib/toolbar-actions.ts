@@ -1,7 +1,7 @@
 "use client";
 
 import { Upload, FileSpreadsheet, History, FileText } from "lucide-react";
-import type { ToolbarAction } from "@/components/layout/dashboard/shared/toolbar/toolbar-button";
+import type { ToolbarAction } from "@/components/layout/dashboard/toolbar/toolbar-button";
 
 // ============================================================================
 // Standard Toolbar Actions — OBLIGATORIO para unificar split button

@@ -27,7 +27,6 @@ export default async function AdminDirectoryPage() {
         return (
             <Tabs defaultValue="users" className="w-full h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title="Directorio"
                     icon={<Users />}
                     tabs={

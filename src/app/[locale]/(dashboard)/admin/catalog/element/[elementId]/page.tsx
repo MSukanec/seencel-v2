@@ -72,7 +72,6 @@ export default async function ElementDetailPage({ params, searchParams }: Elemen
         return (
             <Tabs defaultValue={view} className="h-full flex flex-col">
                 <PageWrapper
-                    type="page"
                     title={element.name}
                     icon={<Box />}
                     backButton={

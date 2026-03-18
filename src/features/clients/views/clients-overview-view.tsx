@@ -23,9 +23,9 @@ import { sumMoney, calculateDisplayAmount as calcDisplayAmount } from "@/lib/mon
 import { createMoney } from "@/lib/money/money";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
-import { DateRangeFilter, type DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
+import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
+import { DateRangeFilter, type DateRangeFilterValue } from "@/components/layout/dashboard/toolbar/toolbar-date-range-filter";
 import { parseDateFromDB } from "@/lib/timezone-data";
 import { useActiveProjectId } from "@/stores/layout-store";
 

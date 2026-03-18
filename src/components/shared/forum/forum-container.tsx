@@ -1,15 +1,20 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ForumThread, ForumCategory } from "@/actions/forum";
 import { ForumThreadView } from "./forum-thread-view";
 import { ForumThreadForm } from "./forum-thread-form";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
 import { Plus, ChevronLeft, ChevronRight, MessageSquare, Layers, ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { cn } from "@/lib/utils";
+import { useContextSidebar } from "@/stores/sidebar-store";
+import { PageHeaderActionPortal } from "@/components/layout/dashboard/header/page-header";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 interface ForumContainerProps {
     courseId: string;
@@ -50,7 +55,6 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
     Star,
 };
 
-// Mobile view states: single column navigation
 type MobileView = "categories" | "threads" | "conversation";
 
 export function ForumContainer({
@@ -61,7 +65,8 @@ export function ForumContainer({
     currentUserId,
 }: ForumContainerProps) {
     const t = useTranslations("Forum");
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
+    const { setContent, clearContent } = useContextSidebar();
     const [threads, setThreads] = useState(initialThreads);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>("all");
 
@@ -74,7 +79,7 @@ export function ForumContainer({
     };
     const [selectedThreadId, setSelectedThreadId] = useState<string | null>(getFirstThreadId);
 
-    // Mobile-specific view state - start on conversation if there's a thread
+    // Mobile-specific view state
     const [mobileView, setMobileView] = useState<MobileView>(
         initialThreads.length > 0 ? "threads" : "categories"
     );
@@ -93,33 +98,38 @@ export function ForumContainer({
     const allThreadsCount = threads.length;
 
     const handleNewThread = () => {
-        openModal(
-            <ForumThreadForm
-                courseId={courseId}
-                categoryId={selectedCategoryId === "all" ? undefined : selectedCategoryId || undefined}
-                onSuccess={(newThread: ForumThread) => {
-                    setThreads(prev => [newThread, ...prev]);
-                    setSelectedThreadId(newThread.id);
-                    setMobileView("conversation");
-                }}
-            />,
-            {
-                title: t("newThread"),
-                description: t("newThreadDescription"),
-                size: "lg",
+        openPanel('forum-thread-form', {
+            courseId: courseId,
+            categoryId: selectedCategoryId === "all" ? undefined : selectedCategoryId || undefined,
+            categories: categories,
+            onSuccess: (newThread: ForumThread) => {
+                setThreads(prev => [newThread, ...prev]);
+                setSelectedThreadId(newThread.id);
+                setMobileView("conversation");
             }
-        );
+        });
     };
 
     const handleCategorySelect = (categoryId: string) => {
         setSelectedCategoryId(categoryId);
-        setSelectedThreadId(null);
-        setMobileView("threads"); // Navigate to threads on mobile
+        
+        // Auto-select the first (most recent) thread in the new category
+        const newFilteredThreads = categoryId === "all" 
+            ? threads 
+            : threads.filter(t => t.category_id === categoryId);
+            
+        if (newFilteredThreads.length > 0) {
+            setSelectedThreadId(newFilteredThreads[0].id);
+        } else {
+            setSelectedThreadId(null);
+        }
+        
+        setMobileView("threads");
     };
 
     const handleThreadSelect = (threadId: string) => {
         setSelectedThreadId(threadId);
-        setMobileView("conversation"); // Navigate to conversation on mobile
+        setMobileView("conversation");
     };
 
     const handleMobileBack = () => {
@@ -137,6 +147,39 @@ export function ForumContainer({
         );
     };
 
+    // === Mount Categories to Context Sidebar ===
+    useEffect(() => {
+        const sidebarContent = (
+            <div className="flex flex-col h-full">
+                <div className="flex-1 overflow-auto divide-y">
+                    <CategoryItem
+                        id="all"
+                        name={t("allThreads")}
+                        threadCount={allThreadsCount}
+                        icon="Layers"
+                        selected={selectedCategoryId === "all"}
+                        onSelect={() => handleCategorySelect("all")}
+                    />
+                    {categories.map((category) => (
+                        <CategoryItem
+                            key={category.id}
+                            id={category.id}
+                            name={category.name}
+                            threadCount={category.thread_count}
+                            icon={category.icon || undefined}
+                            selected={selectedCategoryId === category.id}
+                            onSelect={() => handleCategorySelect(category.id)}
+                        />
+                    ))}
+                </div>
+            </div>
+        );
+
+        setContent(sidebarContent, { title: t("categories") });
+        return () => clearContent();
+    }, [categories, selectedCategoryId, allThreadsCount, t, setContent, clearContent]);
+
+
     // Get mobile header title
     const getMobileTitle = () => {
         if (mobileView === "categories") return t("title");
@@ -147,9 +190,20 @@ export function ForumContainer({
     };
 
     return (
-        <div className="h-full flex flex-col">
+        <Card variant="inset" className="flex-1 h-full min-h-[500px] flex flex-col pt-0">
+            
+            {/* Action Portal to put the New Thread Button in the main header */}
+            <PageHeaderActionPortal>
+                {!(selectedCategory?.is_read_only) && (
+                    <Button onClick={handleNewThread} size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        {t("newThread")}
+                    </Button>
+                )}
+            </PageHeaderActionPortal>
+
             {/* Mobile Header - only visible on mobile */}
-            <div className="md:hidden flex items-center justify-between pb-4">
+            <div className="md:hidden flex items-center justify-between p-4 border-b shrink-0 bg-transparent">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     {mobileView !== "categories" && (
                         <Button
@@ -171,142 +225,102 @@ export function ForumContainer({
                 )}
             </div>
 
-            {/* Desktop Header - only visible on desktop */}
-            <div className="hidden md:flex items-center justify-between pb-4">
-                <h2 className="text-lg font-semibold">{t("title")}</h2>
-                {!(selectedCategory?.is_read_only) && (
-                    <Button onClick={handleNewThread} size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t("newThread")}
-                    </Button>
-                )}
-            </div>
-
-            {/* Two-column layout (Desktop) */}
+            {/* Desktop View (Threads | Conversation) */}
             <div className="flex-1 overflow-hidden flex">
-                {/* LEFT COLUMN - Categories/Threads */}
-                <div
-                    className={cn(
-                        "h-full border-r bg-muted/30 shrink-0 overflow-hidden",
-                        "w-[27rem] lg:w-[30rem]",
-                        // Mobile: show based on mobileView
-                        mobileView === "categories" ? "flex md:flex w-full md:w-[27rem] lg:w-[30rem]" :
-                            mobileView === "threads" ? "flex md:flex w-full md:w-[27rem] lg:w-[30rem]" :
-                                "hidden md:flex"
-                    )}
-                >
-                    <div className="w-full flex flex-col">
-                        {/* Column Header - Desktop only */}
-                        <div className="hidden md:block px-4 py-3 border-b">
-                            <span className="font-medium text-sm">{t("categories")}</span>
-                        </div>
-
-                        {/* Mobile: Show categories OR threads based on mobileView */}
-                        {/* Desktop: Always show categories */}
-                        <div className="flex-1 overflow-auto">
-                            {/* Categories - visible on desktop always, on mobile only when mobileView is categories */}
-                            <div className={cn(
-                                "divide-y",
-                                mobileView !== "categories" && "hidden md:block"
-                            )}>
-                                {/* "All" Category */}
-                                <CategoryItem
-                                    id="all"
-                                    name={t("allThreads")}
-                                    threadCount={allThreadsCount}
-                                    icon="Layers"
-                                    selected={selectedCategoryId === "all"}
-                                    onSelect={() => handleCategorySelect("all")}
-                                />
-
-                                {categories.map((category) => (
-                                    <CategoryItem
-                                        key={category.id}
-                                        id={category.id}
-                                        name={category.name}
-                                        threadCount={category.thread_count}
-                                        icon={category.icon || undefined}
-                                        selected={selectedCategoryId === category.id}
-                                        onSelect={() => handleCategorySelect(category.id)}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Threads - visible on mobile when mobileView is threads */}
-                            <div className={cn(
-                                mobileView !== "threads" && "hidden"
-                            )}>
-                                <ThreadList
-                                    threads={filteredThreads}
-                                    selectedId={selectedThreadId}
-                                    onSelect={handleThreadSelect}
-                                    showCategory={selectedCategoryId === "all"}
-                                    onCategoryClick={handleCategorySelect}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* RIGHT COLUMN - Threads list (desktop) or Conversation */}
-                <div
-                    className={cn(
-                        "flex-1 h-full overflow-auto bg-background",
-                        // Mobile: only show when mobileView is conversation
-                        mobileView === "conversation" ? "flex w-full" : "hidden md:flex"
-                    )}
-                >
-                    {/* Desktop: Show thread list in right column */}
-                    <div className="hidden md:flex flex-col w-80 lg:w-96 shrink-0 border-r h-full bg-muted/30">
-                        <div className="px-4 py-3 border-b">
-                            <span className="font-medium text-sm">
-                                {selectedCategoryId === "all"
-                                    ? t("allThreads")
-                                    : selectedCategory?.name || t("threads")
-                                }
-                                <span className="text-muted-foreground ml-2">({filteredThreads.length})</span>
-                            </span>
-                        </div>
-                        <div className="flex-1 overflow-auto">
-                            {filteredThreads.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                                    <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                                    <p className="text-muted-foreground mb-4">{t("noThreads")}</p>
-                                    <Button onClick={handleNewThread} variant="outline" size="sm">
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        {t("startDiscussion")}
-                                    </Button>
-                                </div>
-                            ) : (
-                                <ThreadList
-                                    threads={filteredThreads}
-                                    selectedId={selectedThreadId}
-                                    onSelect={handleThreadSelect}
-                                    showCategory={selectedCategoryId === "all"}
-                                    onCategoryClick={handleCategorySelect}
-                                />
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Conversation View */}
-                    <div className="flex-1 h-full overflow-auto">
-                        {selectedThread ? (
-                            <ForumThreadView
-                                thread={selectedThread}
-                                currentUserId={currentUserId}
-                                onThreadUpdate={handleThreadUpdate}
+                
+                {/* Mobile: Categories fallback (when not pushed to sidebar on desktop) */}
+                {mobileView === "categories" && (
+                    <div className="md:hidden flex-1 overflow-auto divide-y bg-transparent">
+                        <CategoryItem
+                            id="all"
+                            name={t("allThreads")}
+                            threadCount={allThreadsCount}
+                            icon="Layers"
+                            selected={selectedCategoryId === "all"}
+                            onSelect={() => handleCategorySelect("all")}
+                        />
+                        {categories.map((category) => (
+                            <CategoryItem
+                                key={category.id}
+                                id={category.id}
+                                name={category.name}
+                                threadCount={category.thread_count}
+                                icon={category.icon || undefined}
+                                selected={selectedCategoryId === category.id}
+                                onSelect={() => handleCategorySelect(category.id)}
                             />
-                        ) : (
-                            <div className="hidden md:flex flex-col items-center justify-center h-full p-8 text-center">
-                                <MessageSquare className="h-16 w-16 text-muted-foreground/30 mb-4" />
-                                <p className="text-muted-foreground">{t("selectThreadToView")}</p>
+                        ))}
+                    </div>
+                )}
+
+                {/* LEFT COLUMN - Threads list */}
+                <div
+                    className={cn(
+                        "h-full shrink-0",
+                        "w-full md:w-[320px] lg:w-[380px] flex-col",
+                        mobileView === "threads" ? "flex" : "hidden md:flex"
+                    )}
+                >
+                    <div className="px-4 py-3 shrink-0">
+                        <span className="font-medium text-sm text-foreground/80">
+                            {selectedCategoryId === "all"
+                                ? t("allThreads")
+                                : selectedCategory?.name || t("threads")
+                            }
+                            <span className="text-muted-foreground ml-2">({filteredThreads.length})</span>
+                        </span>
+                    </div>
+                    
+                    <div className="flex-1 overflow-auto p-3">
+                        {filteredThreads.length === 0 ? (
+                            <div className="h-full">
+                                <ViewEmptyState
+                                    mode="empty"
+                                    icon={MessageSquare}
+                                    viewName={t("threads")}
+                                    featureDescription={t("noThreads")}
+                                    actionLabel={t("startDiscussion")}
+                                    onAction={handleNewThread}
+                                />
                             </div>
+                        ) : (
+                            <ThreadList
+                                threads={filteredThreads}
+                                selectedId={selectedThreadId}
+                                onSelect={handleThreadSelect}
+                                showCategory={selectedCategoryId === "all"}
+                                onCategoryClick={handleCategorySelect}
+                            />
                         )}
                     </div>
                 </div>
+
+                {/* RIGHT COLUMN - Conversation View */}
+                <div
+                    className={cn(
+                        "flex-1 h-full overflow-hidden bg-transparent",
+                        mobileView === "conversation" ? "flex flex-col" : "hidden md:flex md:flex-col"
+                    )}
+                >
+                    {selectedThread ? (
+                        <ForumThreadView
+                            thread={selectedThread}
+                            currentUserId={currentUserId}
+                            onThreadUpdate={handleThreadUpdate}
+                        />
+                    ) : (
+                        <div className="h-full">
+                            <ViewEmptyState
+                                mode="empty"
+                                icon={MessageSquare}
+                                viewName={t("title")}
+                                featureDescription={t("selectThreadToView")}
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
+        </Card>
     );
 }
 
@@ -337,18 +351,18 @@ function CategoryItem({
                 selected && "bg-primary/10 border-l-2 border-l-primary"
             )}
         >
-            <div className="w-8 h-8 rounded-md flex items-center justify-center text-primary-foreground bg-primary shrink-0">
+            <div className="w-8 h-8 rounded-md flex items-center justify-center text-primary-foreground bg-primary shrink-0 shadow-sm">
                 <IconComponent className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0">
                 <p className={cn("font-medium text-sm truncate", selected && "text-primary")}>
                     {name}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground font-medium tracking-wider mt-0.5">
                     {threadCount || 0} {t("threads")}
                 </p>
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
         </button>
     );
 }
@@ -367,12 +381,11 @@ function ThreadList({
     showCategory?: boolean;
     onCategoryClick?: (categoryId: string) => void;
 }) {
-    // Separate pinned threads
     const pinnedThreads = threads.filter(t => t.is_pinned);
     const regularThreads = threads.filter(t => !t.is_pinned);
 
     return (
-        <div className="divide-y">
+        <div className="flex flex-col gap-2 pb-2">
             {pinnedThreads.map((thread) => (
                 <ThreadItem
                     key={thread.id}
@@ -427,46 +440,46 @@ function ThreadItem({
         <button
             onClick={onSelect}
             className={cn(
-                "w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors",
-                selected && "bg-primary/10 border-l-2 border-l-primary",
-                thread.is_pinned && "bg-amber-500/5"
+                "w-full text-left p-4 rounded-xl border transition-all outline-none",
+                selected
+                    ? "bg-primary/[0.04] border-primary/50 ring-1 ring-primary/50 shadow-sm relative z-10"
+                    : "bg-card border-border/50 shadow-xs hover:bg-muted/30 hover:border-border/80",
+                thread.is_pinned && !selected && "bg-amber-500/5 border-amber-500/20 hover:bg-amber-500/10"
             )}
         >
             <div className="flex items-start gap-3">
-                {/* Avatar */}
-                <Avatar className="h-9 w-9 shrink-0">
-                    <AvatarImage src={thread.author?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                        {initials}
-                    </AvatarFallback>
-                </Avatar>
+                    <Avatar className="h-9 w-9 shrink-0 border border-border/50 shadow-sm">
+                        <AvatarImage src={thread.author?.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs bg-primary/5 text-primary">
+                            {initials}
+                        </AvatarFallback>
+                    </Avatar>
 
-                <div className="flex-1 min-w-0">
-                    <p className={cn(
-                        "font-medium text-sm line-clamp-2",
-                        selected && "text-primary"
-                    )}>
-                        {thread.is_pinned && <span className="text-amber-500 mr-1">📌</span>}
-                        {thread.is_locked && <span className="text-muted-foreground mr-1">🔒</span>}
-                        {thread.title}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <p className="text-xs text-muted-foreground">
-                            {authorName} · {thread.reply_count} respuestas
+                    <div className="flex-1 min-w-0">
+                        <p className={cn(
+                            "font-medium text-[13px] leading-tight mb-1",
+                            selected ? "text-foreground" : "text-foreground/80"
+                        )}>
+                            {thread.is_pinned && <span className="text-amber-500 mr-1 opacity-80 inline-flex items-center translate-y-[-1px]"><Rocket className="w-3.5 h-3.5"/></span>}
+                            {thread.is_locked && <span className="text-muted-foreground mr-1 opacity-80 inline-flex items-center translate-y-[-1px]"><Layers className="w-3.5 h-3.5"/></span>}
+                            <span className="line-clamp-2">{thread.title}</span>
                         </p>
-                        {showCategory && thread.category?.name && (
-                            <span
-                                onClick={handleCategoryBadgeClick}
-                                className="text-xs px-1.5 py-0.5 rounded bg-primary/20 text-primary hover:bg-primary/30 cursor-pointer transition-colors"
-                            >
-                                {thread.category.name}
-                            </span>
-                        )}
+                        <div className="flex items-center gap-x-2 gap-y-1 mt-1.5 flex-wrap">
+                            <p className="text-[11px] text-muted-foreground/80 font-medium">
+                                {authorName} · {thread.reply_count} res.
+                            </p>
+                            {showCategory && thread.category?.name && (
+                                <span
+                                    onClick={handleCategoryBadgeClick}
+                                    className="text-[10px] px-1.5 py-0.5 rounded-sm bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-colors font-medium border border-primary/10"
+                                >
+                                    {thread.category.name}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-2" />
-            </div>
-        </button>
+            </button>
     );
 }
 

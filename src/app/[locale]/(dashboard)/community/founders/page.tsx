@@ -16,7 +16,6 @@ export default async function FoundersPage({ params }: PageProps) {
 
     return (
         <PageWrapper
-            type="page"
             title="Fundadores"
             icon={<Sparkles />}
         >

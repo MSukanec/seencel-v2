@@ -4,4 +4,5 @@ export { CoursePlayerView } from './course-player-view';
 export { CourseContentView } from './course-content-view';
 export { CourseNotesView } from './course-notes-view';
 export { CourseForumView } from './course-forum-view';
+export { CourseCertificateView } from './course-certificate-view';
 

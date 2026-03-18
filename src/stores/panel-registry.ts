@@ -290,6 +290,30 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
     },
 
     // ========================================================================
+    // Academy Feature
+    // ========================================================================
+    'academy-marker-form': {
+        component: dynamic(() => import('@/features/academy/forms/marker-form').then(mod => ({ default: mod.MarkerForm }))),
+        defaultOptions: { size: 'md' },
+    },
+    'enrollment-form': {
+        component: dynamic(() => import('@/features/academy/forms/enrollment-form').then(mod => ({ default: mod.EnrollmentForm }))),
+        defaultOptions: { size: 'md' },
+    },
+
+    // ========================================================================
+    // Forum Feature
+    // ========================================================================
+    'forum-thread-form': {
+        component: dynamic(() => import('@/components/shared/forum/forum-thread-form').then(mod => ({ default: mod.ForumThreadForm }))),
+        defaultOptions: { size: 'md' },
+    },
+    'forum-post-form': {
+        component: dynamic(() => import('@/components/shared/forum/forum-post-form').then(mod => ({ default: mod.ForumPostForm }))),
+        defaultOptions: { size: 'md' },
+    },
+
+    // ========================================================================
     // Shared / System
     // ========================================================================
     'feedback-form': {

@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { MetricCard } from "@/components/cards";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { FilterPopover, SearchButton, DisplayButton } from "@/components/shared/toolbar-controls";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { useMoney } from "@/hooks/use-money";

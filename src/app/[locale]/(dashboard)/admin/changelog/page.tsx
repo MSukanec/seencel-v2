@@ -18,7 +18,6 @@ export default async function ChangelogPage({ params }: PageProps) {
 
     return (
         <PageWrapper
-            type="page"
             title="Changelog"
             icon={<FileText />}
             actions={

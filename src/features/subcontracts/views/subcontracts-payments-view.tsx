@@ -8,7 +8,7 @@ import { createDateColumn, createTextColumn, createMoneyColumn } from "@/compone
 import { DataTableAvatarCell } from "@/components/shared/data-table/data-table-avatar-cell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { Plus, Banknote, Trash2 } from "lucide-react";
 import { useModal } from "@/stores/modal-store";

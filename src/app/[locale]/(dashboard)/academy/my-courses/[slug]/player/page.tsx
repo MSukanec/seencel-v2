@@ -3,7 +3,12 @@ import { CoursePlayerView } from "@/features/academy/views";
 import { LessonMarker, LessonProgress, LessonNote } from "@/features/academy/types";
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
+export const generateMetadata = async (): Promise<Metadata> => ({
+    title: 'Reproductor | Seencel',
+    robots: 'noindex, nofollow',
+});
 interface PageProps {
     params: Promise<{
         slug: string;

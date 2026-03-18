@@ -46,7 +46,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 
 // ============================================================================
 // TYPES

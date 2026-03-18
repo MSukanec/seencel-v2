@@ -8,8 +8,8 @@ import { SubcontractPaymentForm } from "@/features/subcontracts/forms/subcontrac
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
+import { FacetedFilter } from "@/components/layout/dashboard/toolbar/toolbar-faceted-filter";
 import { useMoney } from "@/hooks/use-money";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DataTable } from "@/components/shared/data-table/data-table";

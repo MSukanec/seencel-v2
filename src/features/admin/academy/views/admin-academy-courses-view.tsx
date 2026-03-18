@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Video } from "lucide-react";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { ViewEmptyState } from "@/components/shared/empty-state";

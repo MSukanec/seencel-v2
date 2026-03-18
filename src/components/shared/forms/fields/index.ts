@@ -37,3 +37,4 @@ export { PeriodField, type PeriodFieldProps, type PeriodGranularity } from "./pe
 export { FormHeroField, type FormHeroFieldProps } from "./form-hero-field";
 export { FormNotesField, type FormNotesFieldProps } from "./form-notes-field";
 export { FormReferenceField, type FormReferenceFieldProps } from "./form-reference-field";
+export { RichTextField, type RichTextFieldProps } from "./rich-text-field";

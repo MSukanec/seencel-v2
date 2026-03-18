@@ -37,7 +37,7 @@ export default async function AdminFeedbackPage() {
     }
 
     return (
-        <PageWrapper type="page" title="Feedback">
+        <PageWrapper title="Feedback">
             <ContentLayout variant="wide">
                 <div className="space-y-6">
                     <Card>

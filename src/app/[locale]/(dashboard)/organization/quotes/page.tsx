@@ -63,7 +63,7 @@ export default async function QuotesPage({
 
 
         return (
-            <PageWrapper type="page" title="Presupuestos" icon={<FileText />}>
+            <PageWrapper title="Presupuestos" icon={<FileText />}>
                 <ContentLayout variant="wide">
                     <QuotesListView
                         organizationId={orgId}
@@ -79,7 +79,7 @@ export default async function QuotesPage({
         );
     } catch (error) {
         return (
-            <PageWrapper type="page" title="Presupuestos" icon={<FileText />}>
+            <PageWrapper title="Presupuestos" icon={<FileText />}>
                 <div className="h-full w-full flex items-center justify-center">
                     <ErrorDisplay
                         title="Error al cargar presupuestos"
