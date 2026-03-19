@@ -25,7 +25,7 @@ import { usePanel } from "@/stores/panel-store";
 import { useFileUpload, type UploadedFile } from "@/hooks/use-file-upload";
 import { useDropzone } from "react-dropzone";
 import Image from "next/image";
-import { FormHeroField } from "@/components/shared/forms/fields/form-hero-field";
+import { FormTextField } from "@/components/shared/forms/fields/form-text-field";
 import { ProjectSwapModal } from "@/features/projects/components/project-swap-modal";
 import { type Project } from "@/components/shared/forms/fields";
 
@@ -424,7 +424,8 @@ export function ProjectsProjectForm({
                 </ChipRow>
 
                 {/* ── Hero: Name ────────────────────────────── */}
-                <FormHeroField
+                <FormTextField
+                    variant="hero"
                     value={name}
                     onChange={setName}
                     placeholder={t('namePlaceholder')}

@@ -707,7 +707,7 @@ export function TasksDetailRecipeView({
                         featureDescription="Las recetas definen los recursos necesarios para ejecutar esta tarea: materiales, mano de obra y equipos. Cada organización puede crear múltiples recetas con distintas variantes."
                         onAction={handleCreateRecipe}
                         actionLabel="Crear Receta"
-                        docsPath="/docs/tareas/recetas"
+                        docsPath="/docs/catalogo-tecnico/recetas"
                     />
                 </div>
             </>

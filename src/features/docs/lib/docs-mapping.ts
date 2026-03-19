@@ -19,46 +19,58 @@ interface DocsMapping {
 }
 
 export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
-    // Organization Catalog (Catálogo Técnico)
-    '/organization/catalog': { slug: 'materiales/introduccion' },
-    '/organizacion/catalogo': { slug: 'materiales/introduccion' },
+    // Organization Catalog — root (Catálogo Técnico)
+    '/organization/catalog': { slug: 'catalogo-tecnico/materiales' },
+    '/organizacion/catalogo': { slug: 'catalogo-tecnico/materiales' },
+
+    // Tasks Catalog (Tareas)
+    '/organization/catalog/tasks': { slug: 'catalogo-tecnico/tareas' },
+    '/organizacion/catalogo/tareas': { slug: 'catalogo-tecnico/tareas' },
+
+    // Materials Catalog (Materiales)
+    '/organization/catalog/materials': { slug: 'catalogo-tecnico/materiales' },
+    '/organizacion/catalogo/materiales': { slug: 'catalogo-tecnico/materiales' },
+
+    // Labor Catalog (Mano de Obra) — future
+    '/organization/catalog/labor': { slug: 'catalogo-tecnico/materiales' },
+    '/organizacion/catalogo/mano-de-obra': { slug: 'catalogo-tecnico/materiales' },
 
     // General Costs (Gastos Generales)
-    '/organization/general-costs': { slug: 'gastos-generales/introduccion' },
-    '/organizacion/gastos-generales': { slug: 'gastos-generales/introduccion' },
+    '/organization/general-costs': { slug: 'finanzas/gastos-generales' },
+    '/organizacion/gastos-generales': { slug: 'finanzas/gastos-generales' },
+
+    // Quotes & Contracts (Presupuestos)
+    '/organization/quotes': { slug: 'finanzas/presupuestos' },
+    '/organizacion/presupuestos': { slug: 'finanzas/presupuestos' },
 
     // Projects
-    '/organization/projects': { slug: 'proyectos/introduccion' },
-    '/organizacion/proyectos': { slug: 'proyectos/introduccion' },
+    '/organization/projects': { slug: 'organizacion/proyectos' },
+    '/organizacion/proyectos': { slug: 'organizacion/proyectos' },
 
-    // Construction Tasks (Ejecución de Obra) - project level
-    '/project/': { slug: 'ejecucion-de-obra/introduccion' },
-    '/proyecto/': { slug: 'ejecucion-de-obra/introduccion' },
+    // Construction Tasks (Ejecución de Tareas) - project level
+    '/project/': { slug: 'construccion/ejecucion-de-tareas' },
+    '/proyecto/': { slug: 'construccion/ejecucion-de-tareas' },
 
     // Organization (Dashboard principal) - EXACT ONLY to prevent
     // catch-all for sub-routes like /organizacion/gastos-generales
-    '/organization': { slug: 'organizacion/introduccion', exactOnly: true },
-    '/organizacion': { slug: 'organizacion/introduccion', exactOnly: true },
+    '/organization': { slug: 'organizacion/proyectos', exactOnly: true },
+    '/organizacion': { slug: 'organizacion/proyectos', exactOnly: true },
 
-    // Planner (Planificador) — slug updated from agenda to planificador
-    '/organization/planner': { slug: 'planificador/introduccion' },
-    '/organizacion/planificador': { slug: 'planificador/introduccion' },
+    // Planner (Planificador)
+    '/organization/planner': { slug: 'organizacion/planificador' },
+    '/organizacion/planificador': { slug: 'organizacion/planificador' },
 
-    // Files (Documentación) — slug updated from archivos to documentacion
-    '/organization/files': { slug: 'documentacion/introduccion' },
-    '/organizacion/archivos': { slug: 'documentacion/introduccion' },
+    // Files (Archivos)
+    '/organization/files': { slug: 'organizacion/archivos' },
+    '/organizacion/archivos': { slug: 'organizacion/archivos' },
 
     // Contacts (Contactos)
-    '/organization/contacts': { slug: 'contactos/introduccion' },
-    '/organizacion/contactos': { slug: 'contactos/introduccion' },
+    '/organization/contacts': { slug: 'organizacion/contactos' },
+    '/organizacion/contactos': { slug: 'organizacion/contactos' },
 
     // Settings (Configuración) — Miembros
-    '/organization/settings/members': { slug: 'equipo/miembros' },
-    '/organizacion/configuracion/miembros': { slug: 'equipo/miembros' },
-
-    // Settings (Configuración) — Índices Económicos
-    '/settings/finance': { slug: 'organizacion/indices-economicos', exactOnly: true },
-    '/configuracion/finanzas': { slug: 'organizacion/indices-economicos', exactOnly: true },
+    '/organization/settings/members': { slug: 'organizacion/equipo' },
+    '/organizacion/configuracion/miembros': { slug: 'organizacion/equipo' },
 
     // Add more feature -> docs mappings here as documentation is created
 };

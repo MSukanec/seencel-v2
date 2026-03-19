@@ -1,6 +1,6 @@
 ---
 name: Seencel Page Layout Standard
-description: Estándar OBLIGATORIO para crear nuevas páginas (Page + Views) en Seencel V2. Define arquitectura Server/Client, Sidebar-First Navigation (sin Tabs en Header), Metadata, Error Handling y Toolbars.
+description: Estándar OBLIGATORIO para crear nuevas páginas (Page + Views) en Seencel V2. Define arquitectura Server/Client, Sidebar-First Navigation, Route Tabs (routeTabs), Metadata, Error Handling y Toolbars.
 ---
 
 # Seencel Page Layout Standard
@@ -74,13 +74,14 @@ app/[locale]/.../page.tsx
 
 ## 🚨 Reglas de Oro (Resumen Ejecutivo)
 
-1.  **Architecture**: Páginas con múltiples secciones usan `layout.tsx` + sub-rutas reales (sidebar-first, sin Tabs en Header).
-2.  **Sidebar-First**: Toda navegación de secciones usa **rutas reales** + **sidebar drill-down** (estilo Vercel). ⛔ PROHIBIDO usar `<Tabs>` para secciones de página.
-3.  **Metadata**: TODA página/sub-página debe exportar `generateMetadata` (con título y robots).
-4.  **Error Handling**: Usar `try/catch` y `<ErrorDisplay>` en el servidor para evitar pantallas blancas.
-5.  **Toolbar**: Usar `<Toolbar portalToHeader />` dentro de las Views de Listado/Gestión. **NO usar en Dashboards/Overview**.
-6.  **EmptyState**: Usar `ViewEmptyState` de `@/components/shared/empty-state`. Responsabilidad de la **View**, prohibido en DataTables.
-7.  **Header**: Solo breadcrumb centrado + CurrencyModeSelector (si aplica) + DocsButton. SIN tabs, SIN avatar, SIN notificaciones.
+1.  **Architecture**: Páginas con múltiples secciones usan `layout.tsx` + sub-rutas reales (sidebar-first).
+2.  **Sidebar-First**: Toda navegación de secciones usa **rutas reales** + **sidebar drill-down** (estilo Vercel). ⛔ PROHIBIDO usar `<Tabs>` inline para secciones de página.
+3.  **Route Tabs (Header)**: Páginas con sub-rutas pueden usar `routeTabs` en `PageWrapper` o `DetailContentTabs` para renderizar tabs en el centro del header. Cada tab navega a una ruta real.
+4.  **Metadata**: TODA página/sub-página debe exportar `generateMetadata` (con título y robots).
+5.  **Error Handling**: Usar `try/catch` y `<ErrorDisplay>` en el servidor para evitar pantallas blancas.
+6.  **Toolbar**: Usar `ToolbarCard` inline + `PageHeaderActionPortal`. ⛔ NO usar `Toolbar portalToHeader` (legacy).
+7.  **EmptyState**: Usar `ViewEmptyState` de `@/components/shared/empty-state`. Responsabilidad de la **View**, prohibido en DataTables.
+8.  **Header**: Solo breadcrumb centrado + tabs (si aplica `routeTabs`) + CurrencyModeSelector (si aplica) + DocsButton. SIN avatar, SIN notificaciones.
 
 ---
 
@@ -177,20 +178,22 @@ graph TD
 
 ---
 
-## 🧱 2. Implementación de Páginas con Sub-secciones (Sidebar-First)
+## 🧱 2. Implementación de Páginas con Sub-secciones
 
-> **Decisión de Marzo 2026:** Las tabs en header se eliminan. Toda navegación de secciones se resuelve con **rutas reales** + **sidebar drill-down**.
+> **Decisión de Marzo 2026:** Toda navegación de secciones se resuelve con **rutas reales**. Hay dos patrones válidos para mostrar las secciones al usuario:
+> - **Sidebar drill-down** → para features con muchas sub-secciones (Settings, General Costs)
+> - **Route Tabs (header)** → para features con pocas sub-secciones que se benefician de tabs visuales (Tareas+Rubros, Detalle de Curso)
 
 ### Patrón obligatorio:
 
 ```
 app/[locale]/(dashboard)/organization/[feature]/
-├── layout.tsx      ← Auth + PageWrapper + ContentLayout (COMPARTIDO)
-├── page.tsx        ← Sub-página raíz
+├── layout.tsx      ← Auth + PageWrapper (COMPARTIDO)
+├── page.tsx        ← Sub-página raíz + ContentLayout
 ├── [section1]/
-│   └── page.tsx    ← Sub-página 1
+│   └── page.tsx    ← Sub-página 1 + ContentLayout
 └── [section2]/
-    └── page.tsx    ← Sub-página 2
+    └── page.tsx    ← Sub-página 2 + ContentLayout
 ```
 
 ### layout.tsx (Gold Standard):
@@ -198,16 +201,14 @@ app/[locale]/(dashboard)/organization/[feature]/
 ```tsx
 // app/[locale]/(dashboard)/organization/[feature]/layout.tsx
 import { requireAuthContext } from "@/lib/auth";
-import { PageWrapper, ContentLayout } from "@/components/layout";
+import { PageWrapper } from "@/components/layout";
 import { FeatureIcon } from "lucide-react";
 
 export default async function FeatureLayout({ children }: { children: React.ReactNode }) {
     await requireAuthContext();
     return (
         <PageWrapper title="NombreFeature" icon={<FeatureIcon />}>
-            <ContentLayout variant="wide">
-                {children}
-            </ContentLayout>
+            {children}
         </PageWrapper>
     );
 }
@@ -220,6 +221,7 @@ export default async function FeatureLayout({ children }: { children: React.Reac
 import type { Metadata } from "next";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { SectionView } from "@/features/feature/views/section-view";
+import { ContentLayout } from "@/components/layout";
 import { requireAuthContext } from "@/lib/auth";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -234,7 +236,11 @@ export default async function SectionPage() {
     try {
         const { orgId } = await requireAuthContext();
         // Fetch data específica de esta sección
-        return <SectionView ... />;
+        return (
+            <ContentLayout variant="wide">
+                <SectionView ... />
+            </ContentLayout>
+        );
     } catch (error) {
         return (
             <div className="h-full w-full flex items-center justify-center">
@@ -249,7 +255,77 @@ export default async function SectionPage() {
 }
 ```
 
-### Sidebar Navigation:
+### 2.1 Route Tabs (Tabs en Header via routeTabs)
+
+> Para features con pocas sub-secciones que se benefician de tabs visuales en el header.
+
+**`PageWrapper` tiene una prop `routeTabs: RouteTab[]`** que renderiza tabs en el centro del header automáticamente via `DetailContentTabs` (portal). Cada tab navega a una ruta real.
+
+```tsx
+// Opción A: routeTabs directamente en PageWrapper (si controlas el PageWrapper)
+export default async function FeatureLayout({ children }: { children: React.ReactNode }) {
+    await requireAuthContext();
+    return (
+        <PageWrapper
+            title="Feature"
+            icon={<FeatureIcon />}
+            routeTabs={[
+                { value: "main", label: "Principal", href: "/organization/feature" },
+                { value: "config", label: "Configuración", href: "/organization/feature/config" },
+            ]}
+        >
+            {children}
+        </PageWrapper>
+    );
+}
+```
+
+```tsx
+// Opción B: Client layout con DetailContentTabs (si el PageWrapper vive en un layout padre)
+"use client";
+import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
+import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { usePathname, useRouter } from "@/i18n/routing";
+
+const TABS = [
+    { value: "tasks", label: "Tareas", href: "/organization/catalog/tasks" },
+    { value: "divisions", label: "Rubros", href: "/organization/catalog/tasks/divisions" },
+];
+
+export default function FeatureTabsLayout({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
+    const router = useRouter();
+    // Detect active tab by longest matching href
+    const sorted = [...TABS].sort((a, b) => b.href.length - a.href.length);
+    const active = sorted.find(t => pathname === t.href || pathname.startsWith(t.href + '/'))?.value ?? TABS[0].value;
+
+    return (
+        <>
+            <DetailContentTabs>
+                <TabsPrimitive.Root value={active} onValueChange={v => {
+                    const tab = TABS.find(t => t.value === v);
+                    if (tab) router.push(tab.href as any);
+                }}>
+                    <TabsList>
+                        {TABS.map(t => (
+                            <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
+                        ))}
+                    </TabsList>
+                </TabsPrimitive.Root>
+            </DetailContentTabs>
+            {children}
+        </>
+    );
+}
+```
+
+**Referencia implementada (Route Tabs):**
+- **Tareas+Rubros**: `catalog/tasks/layout.tsx` (client) — 2 tabs portadas al header, cada sub-ruta tiene su `page.tsx`
+- **Curso (Estudiante)**: `academy/my-courses/[slug]/layout.tsx` — 6 tabs portadas al header
+- **Detalle Proyecto**: `projects/[projectId]/page.tsx` — tabs inline con `DetailContentTabs` (patrón legacy, migrar a rutas)
+
+### 2.2 Sidebar Navigation:
 
 En `use-sidebar-navigation.ts`, definir `children` para el item:
 
@@ -267,12 +343,13 @@ getItemStatus('sidebar_feature', {
 ```
 
 ### Header:
-- Solo breadcrumb centrado (`Feature / Sección`)
+- Breadcrumb centrado (`Feature / Sección`)
+- Route Tabs en el centro (si usa `routeTabs` o `DetailContentTabs`)
 - CurrencyModeSelector si aplica
 - DocsButton
-- ⛔ **SIN tabs, SIN avatar, SIN notificaciones**
+- ⛔ **SIN avatar, SIN notificaciones** (viven en sidebar bottom)
 
-### Referencia implementada:
+### Referencia implementada (Sidebar-First):
 - **Gastos Generales**: `general-costs/layout.tsx` + `page.tsx`, `payments/page.tsx`, `concepts/page.tsx`
 - **Configuración**: `settings/layout.tsx` + 6 sub-páginas
 - **Avanzado**: `advanced/layout.tsx` + 2 sub-páginas
@@ -338,27 +415,23 @@ export function EntityListView({ items, wallets, organizationId }: Props) {
     // 3. Columnas desde archivo separado
     const columns = getEntityColumns({ wallets });
 
-    // 4. Render: solo toolbar + table + dialog
+    // 4. Render: toolbar inline + acción en header + table + dialog
     return (
         <div className="space-y-4">
-            <Toolbar
-                portalToHeader
-                searchQuery={filters.searchQuery}
-                onSearchChange={filters.setSearchQuery}
-                filterContent={
-                    <div className="flex items-center gap-2">
-                        {facetConfigs.map(f => (
-                            <FacetedFilter
-                                key={f.key} title={f.title} options={f.options}
-                                selectedValues={filters.facetValues[f.key]}
-                                onSelect={val => filters.toggleFacet(f.key, val)}
-                                onClear={() => filters.clearFacet(f.key)}
-                            />
-                        ))}
-                    </div>
-                }
-                actions={[{ label: "Crear", icon: Plus, onClick: handleCreate }]}
+            {/* Acción primaria vía portal al header */}
+            <PageHeaderActionPortal>
+                <Button onClick={handleCreate} size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" /> Crear
+                </Button>
+            </PageHeaderActionPortal>
+
+            {/* Toolbar inline con filtros y búsqueda — ToolbarCard API estandarizada */}
+            <ToolbarCard
+                filters={filters}
+                searchPlaceholder="Buscar..."
+                display={{ viewMode, onViewModeChange, viewModeOptions }}
             />
+
             <DataTable
                 columns={columns}
                 data={filtered}
@@ -422,11 +495,26 @@ return (
     <div className="space-y-4">
         <div className="flex justify-between">
             <h3>Título</h3>
-            <Button onClick={handleCreate}>Crear</Button>  {/* ❌ NO */}
+            <Button onClick={handleCreate}>Crear</Button>  {/* ❌ NO — va en PageHeaderActionPortal */}
         </div>
         <DataTable />
     </div>
 );
+```
+
+### ❌ Anti-patrón: Toolbar Legacy
+```tsx
+// ❌ INCORRECTO: Toolbar con portalToHeader es LEGACY
+<Toolbar portalToHeader actions={[...]} searchQuery={...} />
+
+// ✅ CORRECTO: ToolbarCard estandarizado + acción en header
+<PageHeaderActionPortal>
+    <Button size="sm">Crear</Button>
+</PageHeaderActionPortal>
+<ToolbarCard
+    filters={filters}
+    searchPlaceholder="Buscar..."
+/>
 ```
 
 ### 🚨 Regla para Overview / Dashboard Views
@@ -548,15 +636,16 @@ pathnames: {
 
 ## ❌ Anti-Patrones (Lo que NO debes hacer)
 
-1.  **Tabs para Secciones**: Usar `<Tabs>` / `<TabsContent>` para secciones de página. Usar rutas reales + sidebar drill-down.
-2.  **Toolbars Manuales**: Crear un `div className="flex justify-between..."` con botones.
-3.  **Botones como Children**: `<Toolbar><Button>...</Button></Toolbar>`. Rompe el diseño mobile.
+1.  **Tabs inline para Secciones**: Usar `<Tabs>` / `<TabsContent>` para secciones de página con estado local. Usar rutas reales + sidebar drill-down o `routeTabs`.
+2.  **Toolbar portalToHeader (legacy)**: Usar `<Toolbar portalToHeader />`. Reemplazar con `ToolbarCard` inline + `PageHeaderActionPortal`.
+3.  **Toolbars Manuales**: Crear un `div className="flex justify-between..."` con botones.
 4.  **Toolbar en Overview Vacío**: Poner una `<Toolbar actions={[]} />` vacía en un Dashboard. Simplemente no la pongas.
 5.  **EmptyState Oculto**: Poner el `EmptyState` dentro de un componente `DataTable`.
 6.  **Hardcoded Strings**: No usar textos quemados en el código. Usar `useTranslations` o `getTranslations`.
 7.  **Link de next/link**: Usar `import Link from "next/link"` en lugar de `import { Link } from "@/i18n/routing"`. 🚨
 8.  **hrefs con locale**: Escribir hrefs como `/${locale}/ruta` en lugar de solo `/ruta`.
 9.  **Avatar/Notificaciones en Header**: El avatar y notificaciones viven en el bottom del sidebar, NO en el header.
+10.  **Modal para Forms**: Usar `openModal()` para formularios. Siempre `openPanel()`. Modales solo para confirmaciones/alertas.
 
 ---
 
@@ -601,24 +690,29 @@ import { LazyAreaChart as BaseAreaChart } from "@/components/charts/lazy-charts"
 
 > **REGLA**: SIEMPRE usar versiones lazy para charts en dashboards.
 
-### 10.3 Navegación de Secciones (Sidebar-First)
+### 10.3 Navegación de Secciones
 
-**Patrón antiguo (DEPRECADO):** `<Tabs>` en header con `router.replace()` o estado local.
+**Patrón DEPRECADO:** `<Tabs>` / `<TabsContent>` con estado local para secciones de página.
 
-**Patrón nuevo (OBLIGATORIO):** Rutas reales + sidebar drill-down.
+**Patrones válidos (OBLIGATORIO):** Rutas reales con una de estas opciones:
 
 ```tsx
-// ❌ DEPRECADO - Tabs en header
+// ❌ DEPRECADO - Tabs inline con estado local para secciones
 <Tabs defaultValue="overview">
     <TabsList>...</TabsList>
     <TabsContent value="overview">...</TabsContent>
 </Tabs>
 
-// ✅ CORRECTO - Rutas reales con layout compartido
-// layout.tsx → PageWrapper + ContentLayout (compartido)
+// ✅ OPCIÓN A - Sidebar drill-down (muchas secciones)
+// layout.tsx → PageWrapper
 // page.tsx → Sección raíz
 // payments/page.tsx → Sub-sección
 // concepts/page.tsx → Sub-sección
+
+// ✅ OPCIÓN B - Route Tabs en header (pocas secciones, visual)
+// layout.tsx → PageWrapper con routeTabs=[...] o client layout con DetailContentTabs
+// page.tsx → Tab principal
+// divisions/page.tsx → Tab secundaria
 ```
 
 > Las tabs de `<Tabs>` solo son válidas para controles DENTRO de una vista (ej: currency selector, toggle de modo), NO para secciones de página.

@@ -144,6 +144,14 @@ interface ViewEmptyStateProps {
      */
     onboardingSteps?: OnboardingStep[];
 
+    /**
+     * Total count of items before filtering/tab selection.
+     * When mode="empty" but totalCount > 0, the component auto-corrects to "context-empty".
+     * This makes the component fail-safe — views that forget to distinguish
+     * true-empty from filtered-empty will still show the correct state.
+     */
+    totalCount?: number;
+
     className?: string;
 }
 
@@ -317,11 +325,17 @@ export function ViewEmptyState({
     onSwitchToOrg,
     quickStartPacks,
     onboardingSteps,
+    totalCount,
     className,
 }: ViewEmptyStateProps) {
-    const isEmptyMode = mode === "empty";
-    const isContextEmpty = mode === "context-empty";
-    const isNoResults = mode === "no-results";
+    // 🛡️ Fail-safe: auto-correct empty → context-empty when totalCount > 0
+    const effectiveMode = (mode === "empty" && totalCount != null && totalCount > 0)
+        ? "context-empty"
+        : mode;
+
+    const isEmptyMode = effectiveMode === "empty";
+    const isContextEmpty = effectiveMode === "context-empty";
+    const isNoResults = effectiveMode === "no-results";
     const hasPacks = isEmptyMode && quickStartPacks && quickStartPacks.length > 0;
     const hasSteps = isEmptyMode && onboardingSteps && onboardingSteps.length > 0;
 
@@ -364,11 +378,11 @@ export function ViewEmptyState({
     // ─── Empty & Context-Empty ───────────────────────────
 
     const title = isContextEmpty
-        ? `No hay ${viewName.toLowerCase()} en ${projectName || "este proyecto"}`
+        ? `No hay ${viewName.toLowerCase()} ${projectName ? `en ${projectName}` : "aquí"}`
         : viewName;
 
     const description = isContextEmpty
-        ? `Este proyecto aún no tiene ${viewName.toLowerCase()} vinculados. Podés crear uno nuevo o ver todos los ${viewName.toLowerCase()} de la organización.`
+        ? (featureDescription || `No se encontraron ${viewName.toLowerCase()} en este contexto. Podés crear uno nuevo o cambiar los filtros.`)
         : featureDescription;
 
     return (
@@ -477,6 +491,9 @@ export function ViewEmptyState({
                                 <ActionIcon className="mr-2 h-4 w-4" />
                                 {actionLabel}
                             </Button>
+                        )}
+                        {docsPath && hasDocsForPath(docsPath) && (
+                            <DocsButton docsPath={docsPath} />
                         )}
                         {onSwitchToOrg && (
                             <Button variant="outline" size="sm" onClick={onSwitchToOrg}>

@@ -14,7 +14,7 @@ import { Landmark } from "lucide-react";
 import { toast } from "sonner";
 
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
+import { ToolbarFilter, ToolbarSearch } from "@/components/shared/toolbar-controls";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useModal } from "@/stores/modal-store";
@@ -107,7 +107,7 @@ export function AdminFinanceTransfersView({ bankTransfers }: AdminFinanceTransfe
             <>
                 <Toolbar
                     portalToHeader
-                    leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar transferencias..." /></>}
+                    leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar transferencias..." /></>}
                 />
                 <ViewEmptyState
                     mode="no-results"
@@ -124,7 +124,7 @@ export function AdminFinanceTransfersView({ bankTransfers }: AdminFinanceTransfe
     // ─── Render ──────────────────────────────────────────
     const embeddedToolbar = (
         <Toolbar
-            leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar transferencias..." /></>}
+            leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar transferencias..." /></>}
         />
     );
 

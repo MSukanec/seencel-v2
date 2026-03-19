@@ -76,7 +76,7 @@ export function CurrencyPopoverContent({
                         value="__manage_currencies__"
                         onSelect={() => {
                             onOpenChange?.(false);
-                            router.push({ pathname: "/organization/settings", query: { view: "finance" } });
+                            router.push("/settings/finance");
                         }}
                         className="flex items-center gap-2 text-xs text-muted-foreground"
                     >

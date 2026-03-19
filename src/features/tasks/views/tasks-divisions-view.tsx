@@ -4,19 +4,22 @@ import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { CategoryTree, CategoryItem } from "@/components/shared/category-tree";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { TasksDivisionForm } from "../forms";
-import { deleteTaskDivision, reorderTaskDivisions } from "../actions";
+import type { QuickStartPack } from "@/components/shared/empty-state";
+import { deleteTaskDivision, reorderTaskDivisions, applyDivisionQuickStart } from "../actions";
 import { TaskDivision } from "@/features/tasks/types";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { toast } from "sonner";
-import { Plus, FolderTree, Building2, User } from "lucide-react";
-import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { getStandardToolbarActions } from "@/lib/toolbar-actions";
+import { Plus, FolderTree, Building2, User, Blocks, Home, Monitor } from "lucide-react";
+import { ToolbarCard, ToolbarToggle } from "@/components/shared/toolbar-controls";
+import { PageHeaderActionPortal } from "@/components/layout";
+import { Button } from "@/components/ui/button";
+import { useTableFilters } from "@/hooks/use-table-filters";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { createImportBatch, revertImportBatch, importDivisionsBatch, ImportConfig } from "@/lib/import";
 import { useRouter } from "@/i18n/routing";
-import { ToolbarTabs } from "@/components/layout/dashboard/toolbar/toolbar-tabs";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // ============================================================================
 // Types
@@ -43,10 +46,11 @@ export function TasksDivisionsView({
     taskCounts = {},
     organizationId,
 }: DivisionsCatalogViewProps) {
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
     const router = useRouter();
-    const [searchQuery, setSearchQuery] = useState("");
-    const [viewFilter, setViewFilter] = useState<DivisionViewFilter>("own");
+    const filters = useTableFilters();
+    const searchQuery = filters.searchQuery;
+    const [viewFilter, setViewFilter] = useState<DivisionViewFilter>("system");
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [divisionToDelete, setDivisionToDelete] = useState<TaskDivision | null>(null);
 
@@ -86,11 +90,9 @@ export function TasksDivisionsView({
         return division.is_system === false;
     };
 
-    // Filter divisions by type (own vs system) and search query
-    const filteredDivisions = useMemo(() => {
+    // Filter divisions by type (own vs system) BEFORE search
+    const divisionsByType = useMemo(() => {
         let filtered = allDivisions;
-
-        // Filter by type (only in non-admin mode)
         if (!isAdminMode) {
             if (viewFilter === "own") {
                 filtered = filtered.filter(d => d.is_system === false);
@@ -98,6 +100,12 @@ export function TasksDivisionsView({
                 filtered = filtered.filter(d => d.is_system === true);
             }
         }
+        return filtered;
+    }, [allDivisions, viewFilter, isAdminMode]);
+
+    // Filter divisions by search query
+    const filteredDivisions = useMemo(() => {
+        let filtered = divisionsByType;
 
         // Filter by search query
         if (searchQuery.trim()) {
@@ -109,7 +117,7 @@ export function TasksDivisionsView({
         }
 
         return filtered;
-    }, [allDivisions, searchQuery, viewFilter, isAdminMode]);
+    }, [divisionsByType, searchQuery]);
 
     // Transform divisions to CategoryItem format
     const items: CategoryItem[] = filteredDivisions.map(d => ({
@@ -129,29 +137,45 @@ export function TasksDivisionsView({
             .map(d => ({ id: d.id, name: d.name }));
     }, [allDivisions, divisionToDelete]);
 
+    // Quick Start Packs for empty state
+    const quickStartPacks: QuickStartPack[] = useMemo(() => {
+        return [
+            {
+                id: "all",
+                icon: Building2,
+                label: "Construcción Completa",
+                description: "Copia toda la estructura jerárquica de rubros estándar del sistema.",
+                onApply: async () => {
+                    const res = await applyDivisionQuickStart("all");
+                    if (res?.error) toast.error(res.error);
+                    else toast.success("Se copiaron " + res.count + " rubros exitosamente");
+                }
+            },
+            {
+                id: "simplified",
+                icon: Blocks,
+                label: "Estructura Simplificada",
+                description: "Copia solo los rubros principales (Albañilería, Instalaciones, etc).",
+                onApply: async () => {
+                    const res = await applyDivisionQuickStart("simplified");
+                    if (res?.error) toast.error(res.error);
+                    else toast.success("Se copiaron " + res.count + " rubros exitosamente");
+                }
+            }
+        ];
+    }, []);
+
     // ========================================================================
     // Handlers
     // ========================================================================
 
     const handleCreateClick = (parentId: string | null = null) => {
-        // Find parent if specified
-        const parentDivision = parentId ? allDivisions.find(d => d.id === parentId) : null;
-
-        openModal(
-            <TasksDivisionForm
-                divisions={allDivisions}
-                defaultParentId={parentId}
-                isAdminMode={isAdminMode}
-                onOptimisticCreate={(item) => setOptimisticAdds(prev => [...prev, item])}
-            />,
-            {
-                title: parentDivision
-                    ? `Crear Sub-rubro de "${parentDivision.name}"`
-                    : "Crear Rubro",
-                description: "Completá los campos para crear un nuevo rubro.",
-                size: "md"
-            }
-        );
+        openPanel('tasks-division-form', {
+            divisions: allDivisions,
+            defaultParentId: parentId,
+            isAdminMode,
+            onOptimisticCreate: (item: TaskDivision) => setOptimisticAdds(prev => [...prev, item]),
+        });
     };
 
     const handleEditClick = (item: CategoryItem) => {
@@ -163,19 +187,12 @@ export function TasksDivisionsView({
             return;
         }
 
-        openModal(
-            <TasksDivisionForm
-                initialData={division}
-                divisions={allDivisions}
-                isAdminMode={isAdminMode}
-                onOptimisticUpdate={(updated) => setOptimisticUpdates(prev => [...prev.filter(u => u.id !== updated.id), updated])}
-            />,
-            {
-                title: "Editar Rubro",
-                description: `Modificando "${division.name}"`,
-                size: "md"
-            }
-        );
+        openPanel('tasks-division-form', {
+            initialData: division,
+            divisions: allDivisions,
+            isAdminMode,
+            onOptimisticUpdate: (updated: TaskDivision) => setOptimisticUpdates(prev => [...prev.filter(u => u.id !== updated.id), updated]),
+        });
     };
 
     const handleDeleteClick = (item: CategoryItem) => {
@@ -285,135 +302,82 @@ export function TasksDivisionsView({
 
     return (
         <>
-            {/* Toolbar with portal to header */}
-            <Toolbar
-                portalToHeader
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                searchPlaceholder="Buscar rubros por nombre o descripción..."
-                leftActions={!isAdminMode ? (
-                    <ToolbarTabs
-                        value={viewFilter}
-                        onValueChange={(v) => setViewFilter(v as DivisionViewFilter)}
-                        options={[
-                            { label: "Propios", value: "own", icon: User },
-                            { label: "Sistema", value: "system", icon: Building2 },
-                        ]}
-                    />
-                ) : undefined}
-                actions={showCreateAction ? [
-                    {
-                        label: "Nuevo Rubro",
-                        icon: Plus,
-                        onClick: () => handleCreateClick(null),
-                    },
-                    ...getStandardToolbarActions({
-                        onImport: organizationId ? () => {
-                            openModal(
-                                <BulkImportModal
-                                    config={{
-                                        entityLabel: "Rubros",
-                                        entityId: "rubros",
-                                        columns: [
-                                            { id: "code", label: "Código", required: false, example: "01" },
-                                            { id: "name", label: "Nombre", required: true, example: "Albañilería" },
-                                            { id: "description", label: "Descripción", required: false, example: "Trabajos de albañilería general" },
-                                        ],
-                                        onImport: async (data) => {
-                                            const batch = await createImportBatch(organizationId, "task_divisions", data.length);
-                                            const result = await importDivisionsBatch(organizationId, data, batch.id);
-                                            return { success: result.success, errors: result.errors ?? [], batchId: batch.id };
-                                        },
-                                        onRevert: async (batchId) => {
-                                            await revertImportBatch(batchId, "task_divisions");
-                                        },
-                                    } as ImportConfig<any>}
-                                    organizationId={organizationId}
-                                />,
-                                {
-                                    size: "2xl",
-                                    title: "Importar Rubros",
-                                    description: "Importa rubros masivamente desde Excel o CSV."
-                                }
-                            );
-                        } : undefined,
-                        onExportCSV: () => toast.info("Exportar CSV: próximamente"),
-                        onExportExcel: () => toast.info("Exportar Excel: próximamente"),
-                    }),
-                ] : [
-                    ...getStandardToolbarActions({
-                        onImport: organizationId ? () => {
-                            openModal(
-                                <BulkImportModal
-                                    config={{
-                                        entityLabel: "Rubros",
-                                        entityId: "rubros",
-                                        columns: [
-                                            { id: "code", label: "Código", required: false, example: "01" },
-                                            { id: "name", label: "Nombre", required: true, example: "Albañilería" },
-                                            { id: "description", label: "Descripción", required: false, example: "Trabajos de albañilería general" },
-                                        ],
-                                        onImport: async (data) => {
-                                            const batch = await createImportBatch(organizationId, "task_divisions", data.length);
-                                            const result = await importDivisionsBatch(organizationId, data, batch.id);
-                                            return { success: result.success, errors: result.errors ?? [], batchId: batch.id };
-                                        },
-                                        onRevert: async (batchId) => {
-                                            await revertImportBatch(batchId, "task_divisions");
-                                        },
-                                    } as ImportConfig<any>}
-                                    organizationId={organizationId}
-                                />,
-                                {
-                                    size: "2xl",
-                                    title: "Importar Rubros",
-                                    description: "Importa rubros masivamente desde Excel o CSV."
-                                }
-                            );
-                        } : undefined,
-                        onExportCSV: () => toast.info("Exportar CSV: próximamente"),
-                        onExportExcel: () => toast.info("Exportar Excel: próximamente"),
-                    }),
-                ]}
-            />
-
-            {/* Content */}
-            {filteredDivisions.length === 0 ? (
-                hasActiveFilters ? (
-                    <ViewEmptyState
-                        mode="no-results"
-                        icon={FolderTree}
-                        viewName="rubros"
-                        filterContext="con esa búsqueda"
-                        onResetFilters={() => setSearchQuery("")}
-                    />
-                ) : (
-                    <ViewEmptyState
-                        mode="empty"
-                        icon={FolderTree}
-                        viewName="Rubros"
-                        featureDescription={
-                            isViewingOwn
-                                ? "Los rubros organizan tus tareas de construcción en categorías jerárquicas. Creá rubros propios para personalizar la estructura de tu organización, o usá los rubros del sistema como base."
-                                : "Los rubros del sistema son categorías predefinidas disponibles para todas las organizaciones. No se pueden modificar, pero podés usarlos como referencia para crear tus propios rubros."
-                        }
-                        onAction={showCreateAction ? () => handleCreateClick(null) : undefined}
-                        actionLabel="Nuevo Rubro"
-                        docsPath="/docs/rubros/introduccion"
-                    />
-                )
-            ) : (
-                <CategoryTree
-                    items={items}
-                    onAddClick={isViewingOwn || isAdminMode ? handleCreateClick : undefined}
-                    onEditClick={isViewingOwn || isAdminMode ? handleEditClick : undefined}
-                    onDeleteClick={isViewingOwn || isAdminMode ? handleDeleteClick : undefined}
-                    onReorder={canReorder ? handleReorder : undefined}
-                    enableDragDrop={canReorder}
-                    showNumbering={true}
-                    renderEndContent={renderTaskCount}
-                />
+            {/* acción primaria → header */}
+            {showCreateAction && (
+                <PageHeaderActionPortal>
+                    <Button
+                        onClick={() => handleCreateClick(null)}
+                        size="sm"
+                        className="gap-2"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Nuevo Rubro
+                    </Button>
+                </PageHeaderActionPortal>
             )}
+
+            <div className="flex flex-col gap-4">
+                {/* Toolbar inline */}
+                <ToolbarCard
+                    left={
+                        !isAdminMode ? (
+                            <ToolbarToggle
+                                value={viewFilter}
+                                onValueChange={(val) => setViewFilter(val as DivisionViewFilter)}
+                                options={[
+                                    { value: "system", label: "Sistema", icon: Monitor },
+                                    { value: "own", label: "Mi Organización", icon: Building2 },
+                                ]}
+                            />
+                        ) : undefined
+                    }
+                    filters={filters}
+                    searchPlaceholder="Buscar rubros..."
+                />
+
+                {/* Content */}
+                {filteredDivisions.length === 0 ? (
+                    hasActiveFilters ? (
+                        <ViewEmptyState
+                            mode="no-results"
+                            icon={FolderTree}
+                            viewName="rubros"
+                            filterContext="con esa búsqueda"
+                            onResetFilters={() => filters.clearAll()}
+                        />
+                    ) : (
+                        <Card variant="inset" className="flex flex-col min-h-[400px]">
+                            <ViewEmptyState
+                                mode="empty"
+                                icon={FolderTree}
+                                viewName="Rubros"
+                                totalCount={divisionsByType.length}
+                                featureDescription={
+                                    isViewingOwn
+                                        ? "Los rubros organizan tus tareas de construcción en categorías jerárquicas. Creá rubros propios para personalizar la estructura de tu organización, o usá los rubros del sistema como base."
+                                        : "Los rubros del sistema son categorías predefinidas disponibles para todas las organizaciones. No se pueden modificar, pero podés usarlos como referencia para crear tus propios rubros."
+                                }
+                                onAction={showCreateAction ? () => handleCreateClick(null) : undefined}
+                                actionLabel="Nuevo Rubro"
+                                docsPath="/docs/catalogo-tecnico/tareas"
+                                quickStartPacks={isViewingOwn ? quickStartPacks : undefined}
+                            />
+                        </Card>
+                    )
+                ) : (
+                    <CategoryTree
+                        items={items}
+                        onAddClick={isViewingOwn || isAdminMode ? handleCreateClick : undefined}
+                        onEditClick={isViewingOwn || isAdminMode ? handleEditClick : undefined}
+                        onDeleteClick={isViewingOwn || isAdminMode ? handleDeleteClick : undefined}
+                        onReorder={canReorder ? handleReorder : undefined}
+                        enableDragDrop={canReorder}
+                        showNumbering={true}
+                        renderEndContent={renderTaskCount}
+                        addChildLabel="Nuevo Sub-rubro"
+                    />
+                )}
+            </div>
 
             {/* Delete Modal with Replacement */}
             <DeleteReplacementModal

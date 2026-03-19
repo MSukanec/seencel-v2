@@ -15,7 +15,7 @@ import { DataTable } from "@/components/shared/data-table/data-table";
 import { MetricCard } from "@/components/cards";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { FilterPopover, SearchButton, DisplayButton } from "@/components/shared/toolbar-controls";
+import { ToolbarFilter, ToolbarSearch, ToolbarDisplay } from "@/components/shared/toolbar-controls";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { useMoney } from "@/hooks/use-money";
 import { updateMovementField } from "../actions";
@@ -142,7 +142,7 @@ export function FinancesCapitalView({
     // ─── Embedded toolbars (controls left, actions right) ──
     const participantsToolbar = (table: any) => (
         <Toolbar
-            leftActions={<DisplayButton table={table} />}
+            leftActions={<ToolbarDisplay table={table} />}
             actions={[{ label: "Agregar Socio", icon: UserPlus, onClick: handleCreateParticipant }]}
         />
     );
@@ -151,9 +151,9 @@ export function FinancesCapitalView({
         <Toolbar
             leftActions={
                 <>
-                    <FilterPopover filters={filters} />
-                    <DisplayButton table={table} />
-                    <SearchButton filters={filters} placeholder="Buscar movimientos..." />
+                    <ToolbarFilter filters={filters} />
+                    <ToolbarDisplay table={table} />
+                    <ToolbarSearch filters={filters} placeholder="Buscar movimientos..." />
                 </>
             }
             actions={[{ label: "Nuevo Movimiento", icon: Plus, onClick: handleCreateMovement }]}

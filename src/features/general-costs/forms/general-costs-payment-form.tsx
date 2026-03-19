@@ -41,9 +41,7 @@ import type { UploadedFile } from "@/hooks/use-file-upload";
 import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import { GeneralCost, GeneralCostPaymentView } from "@/features/general-costs/types";
 import { createGeneralCostPayment, updateGeneralCostPayment } from "@/features/general-costs/actions";
-import { FormHeroField } from "@/components/shared/forms/fields/form-hero-field";
-import { FormNotesField } from "@/components/shared/forms/fields/form-notes-field";
-import { FormReferenceField } from "@/components/shared/forms/fields/form-reference-field";
+import { FormTextField } from "@/components/shared/forms/fields/form-text-field";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -297,7 +295,8 @@ export function GeneralCostsPaymentForm({
             </ChipRow>
 
             {/* ── Hero: Amount ──────────────────────────── */}
-            <FormHeroField
+            <FormTextField
+                variant="hero"
                 value={amount ? formatAmountDisplay(amount) : ""}
                 onChange={(v) => {
                     const raw = v.replace(/\./g, "").replace(",", ".");
@@ -324,18 +323,20 @@ export function GeneralCostsPaymentForm({
                         className="w-20 bg-transparent text-xs text-muted-foreground placeholder:text-muted-foreground/30 outline-none border-none text-right font-mono"
                     />
                 </div>
-            </FormHeroField>
+            </FormTextField>
 
             {/* ── Borderless fields ─────────────────────── */}
             <div className="flex-1 mt-4 space-y-1">
                 {/* Notes */}
-                <FormNotesField
+                <FormTextField
+                    variant="body"
                     value={notes}
                     onChange={setNotes}
                 />
 
                 {/* Reference */}
-                <FormReferenceField
+                <FormTextField
+                    variant="caption"
                     value={reference}
                     onChange={setReference}
                 />

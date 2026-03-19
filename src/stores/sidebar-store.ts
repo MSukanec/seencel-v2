@@ -18,6 +18,7 @@ import { ReactNode, useEffect } from 'react';
 interface SidebarLayer {
     content: ReactNode | null;
     title: string | undefined;
+    action?: ReactNode;
 }
 
 interface ContextSidebarState {
@@ -27,11 +28,11 @@ interface ContextSidebarState {
     overlay: SidebarLayer | null;
 
     // Base operations (existing API — backward compatible)
-    setContent: (content: ReactNode | null, options?: { title?: string }) => void;
+    setContent: (content: ReactNode | null, options?: { title?: string; action?: ReactNode }) => void;
     clearContent: () => void;
 
     // Overlay operations (new)
-    pushOverlay: (content: ReactNode, options?: { title?: string }) => void;
+    pushOverlay: (content: ReactNode, options?: { title?: string; action?: ReactNode }) => void;
     popOverlay: () => void;
 }
 
@@ -40,17 +41,17 @@ export const useContextSidebarStore = create<ContextSidebarState>((set) => ({
     overlay: null,
 
     setContent: (content, options) => set({
-        base: { content, title: options?.title },
+        base: { content, title: options?.title, action: options?.action },
     }),
 
     clearContent: () => set({
-        base: { content: null, title: undefined },
+        base: { content: null, title: undefined, action: undefined },
         // Also clear overlay when base is cleared (navigation cleanup)
         overlay: null,
     }),
 
     pushOverlay: (content, options) => set({
-        overlay: { content, title: options?.title },
+        overlay: { content, title: options?.title, action: options?.action },
     }),
 
     popOverlay: () => set({
@@ -87,7 +88,7 @@ export function useContextSidebarContent() {
 
     // Overlay takes priority over base
     const active = overlay ?? base;
-    return { content: active.content, title: active.title, hasOverlay: !!overlay };
+    return { content: active.content, title: active.title, action: active.action, hasOverlay: !!overlay };
 }
 
 /**
@@ -119,17 +120,18 @@ export function useContextSidebarOverlay() {
 interface ContextSidebarProps {
     children: ReactNode;
     title?: string;
+    action?: ReactNode;
 }
 
-export function ContextSidebar({ children, title }: ContextSidebarProps) {
+export function ContextSidebar({ children, title, action }: ContextSidebarProps) {
     const { setContent, clearContent } = useContextSidebarStore();
 
     useEffect(() => {
-        setContent(children, { title });
+        setContent(children, { title, action });
         return () => {
             clearContent();
         };
-    }, [children, title, setContent, clearContent]);
+    }, [children, title, action, setContent, clearContent]);
 
     // This component doesn't render anything directly
     // It injects its children into the layout's sidebar slot

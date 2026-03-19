@@ -7,7 +7,7 @@ import { useSearchParams, usePathname } from "next/navigation";
 import { CalendarDays, Plus, List, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
 
 import { PageHeaderActionPortal } from "@/components/layout";
-import { ToolbarCard, SearchButton, FilterPopover, DisplayButton } from "@/components/shared/toolbar-controls";
+import { ToolbarCard } from "@/components/shared/toolbar-controls";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 
 import { PlannerCalendar } from "@/features/planner/components/planner-calendar";
@@ -178,7 +178,7 @@ export function PlannerView({
                     featureDescription={t('emptyState.description')}
                     onAction={handleCreateEvent}
                     actionLabel="Nueva Actividad"
-                    docsPath="/docs/planificador/introduccion"
+                    docsPath="/docs/organizacion/planificador"
                 />
             </>
         );
@@ -196,17 +196,13 @@ export function PlannerView({
 
             <div className="flex flex-col h-full gap-4">
                 <ToolbarCard
-                    right={
-                        <>
-                            <FilterPopover filters={filters} />
-                            <SearchButton filters={filters} placeholder="Buscar actividades..." />
-                            <DisplayButton
-                                viewMode={viewMode}
-                                onViewModeChange={handleModeChange}
-                                viewModeOptions={VIEW_MODE_OPTIONS}
-                            />
-                        </>
-                    }
+                    filters={filters}
+                    searchPlaceholder="Buscar actividades..."
+                    display={{
+                        viewMode,
+                        onViewModeChange: handleModeChange,
+                        viewModeOptions: VIEW_MODE_OPTIONS,
+                    }}
                 />
 
 

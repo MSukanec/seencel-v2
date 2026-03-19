@@ -1,0 +1,335 @@
+---
+title: "Materiales"
+description: "Guía completa sobre materiales de construcción en el Catálogo Técnico de SEENCEL"
+---
+
+# ¿Qué es un Material?
+
+Un **Material** en SEENCEL representa cualquier recurso físico que se utiliza en la construcción. Desde cemento y ladrillos hasta tornillos y pintura. Es la unidad fundamental para gestionar costos, compras e inventario de tu organización.
+
+## Tipos de Materiales
+
+SEENCEL distingue dos tipos principales:
+
+| Tipo | Descripción | Ejemplos |
+|------|-------------|----------|
+| **Material** | Materiales de construcción tradicionales, materias primas, productos terminados | Cemento, Arena, Ladrillos, Cerámica, Hierro |
+| **Insumo** | Consumibles, herramientas menores, productos auxiliares | Clavos, Tornillos, Cinta de papel, Lijas, Pinturas |
+
+Esta distinción permite filtrar y organizar el catálogo según el uso: los **materiales** suelen ser los componentes principales de una obra, mientras que los **insumos** son complementarios.
+
+---
+
+## Campos de un Material
+
+Cada material tiene los siguientes campos:
+
+### Información Principal
+
+| Campo | Descripción | Obligatorio |
+|-------|-------------|:-----------:|
+| **Nombre** | Identificador único del material. Ej: "Cemento Portland CPF40" | ✅ |
+| **Código** | Código interno o SKU para identificación rápida. Ej: "CEM-001" | No |
+| **Descripción** | Detalles adicionales, especificaciones técnicas, marcas | No |
+| **Tipo** | Material o Insumo | ✅ |
+
+### Clasificación
+
+| Campo | Descripción | Para qué sirve |
+|-------|-------------|----------------|
+| **Categoría** | Grupo al que pertenece (ej: "Hidráulicos", "Metales") | Organizar el catálogo y filtrar materiales |
+| **Unidad de Medida** | Cómo se mide este material (ej: "kg", "m²", "unidad") | Calcular cantidades en recetas y presupuestos |
+
+### Información Comercial
+
+| Campo | Descripción | Ejemplo |
+|-------|-------------|---------|
+| **Proveedor por defecto** | Contacto principal para compras | "Corralón San Martín" |
+| **Unidad de Venta** | Cómo lo vende el proveedor (puede diferir de la unidad de medida) | Bolsa de 50kg |
+| **Cantidad por Unidad de Venta** | Cuántas unidades de medida contiene cada unidad de venta | 50 (kg por bolsa) |
+
+### Precio
+
+| Campo | Descripción |
+|-------|-------------|
+| **Precio Unitario** | Precio por unidad de medida |
+| **Moneda** | ARS, USD, etc. |
+| **Fecha de Vigencia** | Desde cuándo aplica este precio |
+
+<Callout type="info" title="Historial de Precios">
+SEENCEL guarda un **historial de precios** por material. Cuando actualizás un precio, el anterior queda registrado con su fecha de vigencia. Esto te permite ver la evolución de costos y calcular presupuestos con precios históricos.
+</Callout>
+
+---
+
+## Unidad de Medida vs Unidad de Venta
+
+Es importante entender la diferencia:
+
+- **Unidad de Medida**: Cómo se calcula el material en recetas y presupuestos. Ej: `kg`
+- **Unidad de Venta**: Cómo te lo vende el proveedor. Ej: `Bolsa de 50kg`
+
+**Ejemplo práctico:**
+- El cemento se mide en **kilogramos** (unidad de medida)
+- El proveedor lo vende en **bolsas de 50kg** (unidad de venta)
+- Si una receta necesita 150kg de cemento, SEENCEL sabe que necesitás **3 bolsas**
+
+---
+
+## Categorías de Materiales
+
+Las categorías te permiten organizar tu catálogo. Podés crear una jerarquía con subcategorías:
+
+```
+📁 Hidráulicos
+   ├── 📁 Cementos
+   ├── 📁 Cales
+   └── 📁 Morteros
+📁 Metales
+   ├── 📁 Hierros
+   └── 📁 Alambres
+📁 Terminaciones
+   ├── 📁 Pinturas
+   └── 📁 Cerámicas
+```
+
+En la vista de catálogo, el sidebar derecho muestra las categorías con contadores. Haciendo click, filtrás los materiales.
+
+<Callout type="tip" title="Sin Categoría">
+Los materiales sin categoría asignada aparecen en el grupo "Sin categoría" al final del listado.
+</Callout>
+
+---
+
+## ¿Qué puedo hacer con los Materiales?
+
+### En el Catálogo Técnico
+
+- **Crear** materiales nuevos con todos sus datos
+- **Editar** información, precios y categorías
+- **Eliminar** materiales que ya no uses
+- **Importar masivamente** desde Excel o CSV
+- **Filtrar** por categoría, tipo, o búsqueda libre
+
+### En Proyectos
+
+- **Crear Pedidos** de materiales para una obra
+- **Registrar Compras** con factura y proveedor
+- **Registrar Pagos** de materiales
+- **Ver Dashboard** de gastos de materiales por proyecto
+
+### En Recetas y Tareas
+
+- **Agregar materiales** a [recetas de construcción](/docs/catalogo-tecnico/recetas)
+- **Calcular costos** automáticamente basado en precios del catálogo
+- **Copiar recetas** entre proyectos manteniendo los materiales
+
+---
+
+## Flujo de Trabajo Típico
+
+1. **Crear el Catálogo** - Agregá todos los materiales que usa tu organización
+2. **Asignar Categorías** - Organizá el catálogo para encontrar todo rápido
+3. **Definir Precios** - Cargá los precios actuales de cada proveedor
+4. **Usar en Recetas** - Agregá materiales a las [tareas de construcción](/docs/catalogo-tecnico/tareas)
+5. **Generar Pedidos** - Cuando inicies un proyecto, creá los pedidos
+6. **Registrar Compras** - Cuando lleguen las facturas, registralas
+7. **Registrar Pagos** - Cerrá el ciclo con los pagos efectuados
+
+---
+
+# Importar Materiales
+
+El importador te permite cargar cientos de materiales en minutos desde un archivo Excel o CSV. Esta guía te lleva paso a paso por todo el proceso.
+
+---
+
+## Paso 1: Subir archivo
+
+### Formatos soportados
+
+Podés usar archivos **Excel (.xlsx)** o **CSV** con un tamaño máximo de 5MB.
+
+### Preparar tu archivo
+
+Antes de subirlo, te recomendamos:
+
+1. **Limpiar filas innecesarias**: Eliminá filas vacías, totales, subtotales o cualquier contenido que no sea un material.
+
+2. **Encabezados en la primera fila**: Asegurate de que la primera fila contenga los nombres de las columnas (Nombre, Código, Precio, etc.).
+
+3. **Sin filas vacías intermedias**: Si usás una tabla de Excel, verificá que no haya filas en blanco entre los datos.
+
+4. **Una hoja activa**: Si tu Excel tiene varias hojas, el importador lee la primera. Mové tus datos ahí si es necesario.
+
+<Callout type="tip" title="Selección de encabezado">
+Si tu archivo tiene filas extra antes de los encabezados (títulos, logos, etc.), el importador te preguntará cuál es la fila correcta. Simplemente hacé click en la fila que contiene los nombres de columna.
+</Callout>
+
+### Cómo acceder
+
+1. Ir a **Catálogo > Materiales**
+2. Click en el botón **Importar** de la toolbar
+3. Arrastrá tu archivo o hacé click para seleccionarlo
+
+---
+
+## Paso 2: Mapeo de columnas
+
+En este paso asociás cada columna de tu archivo con los campos del sistema SEENCEL.
+
+### ¿Por qué es necesario?
+
+Tu archivo puede tener columnas con nombres diferentes a los de SEENCEL. Por ejemplo, tu Excel puede decir "Costo" pero SEENCEL espera "Precio Unitario". El mapeo te permite indicar qué columna corresponde a qué campo.
+
+### Campos disponibles
+
+Solo el **Nombre** es obligatorio. El resto es opcional:
+
+| Campo | Descripción | Ejemplo |
+|-------|-------------|---------|
+| **Nombre** ✅ | Identificador principal del material | `Cemento Portland CPF40` |
+| Código | SKU o referencia interna | `CEM-001` |
+| Descripción | Especificaciones técnicas o notas | `Bolsa 50kg, Loma Negra` |
+| Tipo | `Material` o `Insumo` | `Material` |
+| Categoría | Grupo para organizar | `Hidráulicos` |
+| Unidad | Cómo se mide | `kg`, `m²`, `bolsa` |
+| Proveedor | Proveedor por defecto | `Corralón San Martín` |
+| Precio | Precio unitario (número) | `1250.50` |
+| Moneda | `ARS`, `USD`, `EUR`, etc. | `ARS` |
+| Fecha del Precio | Cuándo aplica el precio | `15/01/2026` |
+
+### Cómo mapear
+
+- Cada fila muestra una columna de tu archivo a la izquierda
+- A la derecha, seleccionás el campo de SEENCEL correspondiente
+- Si una columna no te interesa, dejala en "Ignorar columna"
+- Los campos marcados como **(obligatorio)** deben estar mapeados
+
+<Callout type="info" title="Descripción de campos">
+Cada campo incluye una breve explicación y ejemplo en el selector para ayudarte a elegir.
+</Callout>
+
+---
+
+## Paso 3: Vista previa y validación
+
+Antes de importar, SEENCEL te muestra una vista previa de cómo quedarán tus datos.
+
+### Qué verificar
+
+- **Registros válidos**: Cuántos materiales pasaron la validación
+- **Errores**: Filas que tienen problemas (campos vacíos, formatos incorrectos)
+- **Vista previa**: Los primeros registros con los datos mapeados
+
+### Errores comunes
+
+| Error | Causa | Solución |
+|-------|-------|----------|
+| Nombre vacío | Fila sin valor en la columna mapeada como Nombre | Completar el nombre o eliminar la fila |
+| Precio inválido | Texto en lugar de número | Quitar símbolos como `$` o `USD` |
+| Fecha incorrecta | Formato no reconocido | Usar `DD/MM/AAAA` o `AAAA-MM-DD` |
+
+Si hay errores, podés:
+- **Continuar**: Los registros con error se omiten, el resto se importa
+- **Volver atrás**: Corregir el archivo original y subirlo de nuevo
+
+---
+
+## Paso 4: Resolución de conflictos
+
+Este paso aparece solo si tu archivo contiene **categorías, unidades o proveedores que no existen** en SEENCEL.
+
+### Opciones disponibles
+
+Para cada valor nuevo, tenés dos opciones:
+
+| Opción | Qué hace |
+|--------|----------|
+| **Crear nuevo** | SEENCEL crea automáticamente la categoría/unidad/proveedor con ese nombre |
+| **Usar existente** | Elegís un valor que ya tenés en tu catálogo |
+
+<Callout type="tip" title="Recomendación">
+Si vas a importar muchos materiales, revisá primero qué categorías y unidades vas a necesitar. Es más prolijo crearlas antes de importar.
+</Callout>
+
+---
+
+## Paso 5: Confirmación
+
+Una vez resueltos los conflictos, SEENCEL procesa la importación y te muestra un resumen:
+
+- ✅ Cantidad de materiales importados correctamente
+- ⚠️ Cantidad de registros omitidos por errores
+- El **ID de lote** para referencia futura
+
+---
+
+## Deshacer una importación
+
+Si algo salió mal, podés revertir toda la importación:
+
+1. Ir a **Catálogo > Materiales**
+2. Click en la flecha del botón **Importar**
+3. Seleccionar **Ver historial**
+4. Buscar la importación que querés deshacer
+5. Click en **Revertir**
+
+Esto elimina **todos** los materiales creados en esa importación.
+
+<Callout type="warning" title="Limitación">
+Solo podés revertir importaciones si los materiales no fueron usados en pedidos, recetas o compras.
+</Callout>
+
+---
+
+## Referencia de campos para importación
+
+### Nombre ✅ Obligatorio
+
+Identificador principal del material en SEENCEL. Debe ser único dentro de tu organización.
+
+**Ejemplos válidos:**
+- `Cemento Portland CPF40`
+- `Arena Gruesa Lavada`
+- `Clavos 2" Cabeza Plana`
+
+<Callout type="tip" title="Consejo">
+Usá nombres descriptivos que incluyan marca, tipo o especificación técnica. Te ayudará a encontrarlos rápido.
+</Callout>
+
+### Código
+
+Código interno, SKU o referencia que tu organización usa. Ejemplos: `CEM-001`, `AR-GRL-001`
+
+### Tipo
+
+| Valor | Cuándo usar |
+|-------|-------------|
+| `Material` | Cemento, arena, hierro, cerámicas, ladrillos |
+| `Insumo` | Clavos, tornillos, cintas, lijas, pinturas pequeñas |
+
+**Por defecto:** `Material`
+
+### Unidad
+
+Unidad de medida. Ejemplos: `kg`, `m²`, `m³`, `ml`, `unidad`, `bolsa`
+
+Si la unidad no existe, SEENCEL la crea automáticamente.
+
+### Precio
+
+Precio unitario. Formato numérico, sin símbolos de moneda.
+
+| ✅ Correcto | ❌ Incorrecto |
+|------------|--------------|
+| `1250.50` | `$1.250,50` |
+| `1250,50` | `1250 pesos` |
+
+### Moneda
+
+Por defecto: **ARS** (Peso Argentino). Códigos: `ARS`, `USD`, `EUR`, `UYU`
+
+### Fecha del Precio
+
+Formato: `DD/MM/AAAA` o `AAAA-MM-DD`. Por defecto: fecha de hoy.

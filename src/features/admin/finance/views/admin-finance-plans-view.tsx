@@ -12,7 +12,7 @@ import { useMemo } from "react";
 import { PieChart } from "lucide-react";
 
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
+import { ToolbarFilter, ToolbarSearch } from "@/components/shared/toolbar-controls";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useTableFilters } from "@/hooks/use-table-filters";
@@ -65,7 +65,7 @@ export function AdminFinancePlansView({ plans }: AdminFinancePlansViewProps) {
             <>
                 <Toolbar
                     portalToHeader
-                    leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar planes..." /></>}
+                    leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar planes..." /></>}
                 />
                 <ViewEmptyState
                     mode="no-results"
@@ -82,7 +82,7 @@ export function AdminFinancePlansView({ plans }: AdminFinancePlansViewProps) {
     // ─── Render ──────────────────────────────────────────
     const embeddedToolbar = (
         <Toolbar
-            leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar planes..." /></>}
+            leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar planes..." /></>}
         />
     );
 

@@ -1,28 +1,18 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
     ChevronDown,
     ChevronRight,
     Plus,
-    Pencil,
-    Trash2,
     FolderOpen,
     Folder,
-    ExternalLink,
     GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { EntityContextMenu, type EntityCustomAction } from "@/components/shared/entity-context-menu";
 import {
     DragDropContext,
     Droppable,
@@ -63,6 +53,8 @@ interface CategoryTreeProps {
     showNumbering?: boolean;
     /** Optional content to render at the end of the row (before actions) */
     renderEndContent?: (item: CategoryItem) => React.ReactNode;
+    /** Label for "add child" action in context menu (default: "Nuevo Sub-item") */
+    addChildLabel?: string;
 }
 
 // ============================================================================
@@ -135,7 +127,8 @@ export function CategoryTree({
     emptyMessage = "No hay categorías",
     enableDragDrop = false,
     showNumbering = false,
-    renderEndContent
+    renderEndContent,
+    addChildLabel = "Nuevo Sub-item",
 }: CategoryTreeProps) {
     // Accordion behavior: only one expanded per depth level
     // Key = depth level, Value = expanded node id at that level
@@ -250,152 +243,112 @@ export function CategoryTree({
                 ref={provided?.innerRef}
                 {...provided?.draggableProps}
             >
-                {/* Category Card */}
-                <Card
-                    className={cn(
-                        "group cursor-pointer hover:shadow-md transition-all mb-2",
-                        isExpanded && "border-primary/50 shadow-md",
-                        isDragging && "shadow-lg border-primary"
-                    )}
-                    onClick={() => {
-                        if (hasChildren) {
-                            toggleExpanded(node.id, depth);
-                        } else if (onItemClick) {
-                            onItemClick(node);
-                        }
-                    }}
+                {/* Category Card wrapped in EntityContextMenu */}
+                <EntityContextMenu
+                    data={node}
+                    onEdit={onEditClick ? (n) => onEditClick(n) : undefined}
+                    onView={onItemClick ? (n) => onItemClick(n) : undefined}
+                    onDelete={onDeleteClick ? (n) => onDeleteClick(n) : undefined}
+                    customActions={onAddClick ? [
+                        {
+                            label: addChildLabel,
+                            icon: <Plus className="h-3.5 w-3.5" />,
+                            onClick: (n) => onAddClick(n.id),
+                        },
+                    ] : undefined}
                 >
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            {/* Drag Handle (all depths when drag enabled) */}
-                            {enableDragDrop && provided?.dragHandleProps && (
-                                <div
-                                    {...provided.dragHandleProps}
-                                    className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <GripVertical className="h-5 w-5" />
-                                </div>
-                            )}
-
-                            {/* Expand/Collapse Icon */}
-                            <div className="w-5 h-5 flex items-center justify-center text-muted-foreground cursor-pointer"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (hasChildren) toggleExpanded(node.id, depth);
-                                }}
-                            >
-                                {hasChildren ? (
-                                    isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />
-                                ) : (
-                                    <span className="w-5" />
+                    <Card
+                        variant="island"
+                        className={cn(
+                            "group cursor-pointer hover:shadow-md transition-all mb-2",
+                            isExpanded && "border-primary/50 shadow-md",
+                            isDragging && "shadow-lg border-primary"
+                        )}
+                        onClick={() => {
+                            if (hasChildren) {
+                                toggleExpanded(node.id, depth);
+                            } else if (onItemClick) {
+                                onItemClick(node);
+                            }
+                        }}
+                    >
+                        <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                                {/* Drag Handle (all depths when drag enabled) */}
+                                {enableDragDrop && provided?.dragHandleProps && (
+                                    <div
+                                        {...provided.dragHandleProps}
+                                        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <GripVertical className="h-5 w-5" />
+                                    </div>
                                 )}
-                            </div>
 
-                            {/* Number or Folder Icon */}
-                            {showNumbering && node.number ? (
-                                <span className={cn(
-                                    "shrink-0 font-mono text-sm font-medium min-w-[2rem]",
-                                    isExpanded ? "text-primary" : "text-muted-foreground"
-                                )}>
-                                    {node.number}
-                                </span>
-                            ) : (
-                                isExpanded && hasChildren ? (
-                                    <FolderOpen className="h-5 w-5 text-primary shrink-0" />
-                                ) : (
-                                    <Folder className="h-5 w-5 text-muted-foreground shrink-0" />
-                                )
-                            )}
-
-                            {/* Name and Description */}
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-medium">
-                                        {node.name || "Sin nombre"}
-                                        {hasChildren && (
-                                            <span className="text-muted-foreground font-normal ml-1">
-                                                ({node.children.length})
-                                            </span>
-                                        )}
-                                    </span>
-                                    {node.code && (
-                                        <Badge variant="outline" className="text-xs font-mono">
-                                            {node.code}
-                                        </Badge>
+                                {/* Expand/Collapse Icon */}
+                                <div className="w-5 h-5 flex items-center justify-center text-muted-foreground cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (hasChildren) toggleExpanded(node.id, depth);
+                                    }}
+                                >
+                                    {hasChildren ? (
+                                        isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />
+                                    ) : (
+                                        <span className="w-5" />
                                     )}
                                 </div>
-                                {node.description && (
-                                    <p className="text-sm text-muted-foreground truncate">
-                                        {node.description}
-                                    </p>
+
+                                {/* Number or Folder Icon */}
+                                {showNumbering && node.number ? (
+                                    <span className={cn(
+                                        "shrink-0 font-mono text-sm font-medium min-w-[2rem]",
+                                        isExpanded ? "text-primary" : "text-muted-foreground"
+                                    )}>
+                                        {node.number}
+                                    </span>
+                                ) : (
+                                    isExpanded && hasChildren ? (
+                                        <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                                    ) : (
+                                        <Folder className="h-5 w-5 text-muted-foreground shrink-0" />
+                                    )
+                                )}
+
+                                {/* Name and Description */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium">
+                                            {node.name || "Sin nombre"}
+                                            {hasChildren && (
+                                                <span className="text-muted-foreground font-normal ml-1">
+                                                    ({node.children.length})
+                                                </span>
+                                            )}
+                                        </span>
+                                        {node.code && (
+                                            <Badge variant="outline" className="text-xs font-mono">
+                                                {node.code}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    {node.description && (
+                                        <p className="text-sm text-muted-foreground truncate">
+                                            {node.description}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Render Custom End Content */}
+                                {renderEndContent && (
+                                    <div onClick={(e) => e.stopPropagation()}>
+                                        {renderEndContent(node)}
+                                    </div>
                                 )}
                             </div>
-
-                            {/* Render Custom End Content */}
-                            {renderEndContent && (
-                                <div onClick={(e) => e.stopPropagation()}>
-                                    {renderEndContent(node)}
-                                </div>
-                            )}
-
-                            {/* Actions Dropdown */}
-                            {(onAddClick || onEditClick || onDeleteClick || onItemClick) && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                                        <Button
-                                            variant="ghost"
-                                            className="h-8 w-8 p-0"
-                                        >
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        {onAddClick && (
-                                            <DropdownMenuItem onClick={(e) => {
-                                                e.stopPropagation();
-                                                onAddClick(node.id);
-                                            }}>
-                                                <Plus className="mr-2 h-4 w-4" />
-                                                Agregar subcategoría
-                                            </DropdownMenuItem>
-                                        )}
-                                        {onEditClick && (
-                                            <DropdownMenuItem onClick={(e) => {
-                                                e.stopPropagation();
-                                                onEditClick(node);
-                                            }}>
-                                                <Pencil className="mr-2 h-4 w-4" />
-                                                Editar
-                                            </DropdownMenuItem>
-                                        )}
-                                        {onItemClick && (
-                                            <DropdownMenuItem onClick={(e) => {
-                                                e.stopPropagation();
-                                                onItemClick(node);
-                                            }}>
-                                                <ExternalLink className="mr-2 h-4 w-4" />
-                                                Configurar
-                                            </DropdownMenuItem>
-                                        )}
-                                        {onDeleteClick && (
-                                            <DropdownMenuItem
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onDeleteClick(node);
-                                                }}
-                                                className="text-destructive focus:text-destructive"
-                                            >
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Eliminar
-                                            </DropdownMenuItem>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </EntityContextMenu>
 
                 {/* Children */}
                 {isExpanded && enableDragDrop && onReorder && node.children.length > 0 ? (
@@ -423,13 +376,13 @@ export function CategoryTree({
 
     if (tree.length === 0) {
         return (
-            <Card>
-                <CardContent className="py-12">
+            <Card variant="inset">
+                <div className="py-12">
                     <div className="text-center text-muted-foreground">
                         <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p className="text-lg font-medium">{emptyMessage}</p>
                     </div>
-                </CardContent>
+                </div>
             </Card>
         );
     }
@@ -437,31 +390,35 @@ export function CategoryTree({
     // If drag & drop is enabled, wrap with DragDropContext
     if (enableDragDrop && onReorder) {
         return (
-            <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="category-tree" type="root">
-                    {(provided) => (
-                        <div
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                            className="space-y-0"
-                        >
-                            {tree.map((node, index) => (
-                                <Draggable key={node.id} draggableId={node.id} index={index}>
-                                    {(provided, snapshot) => renderNode(node, 0, provided, snapshot)}
-                                </Draggable>
-                            ))}
-                            {provided.placeholder}
-                        </div>
-                    )}
-                </Droppable>
-            </DragDropContext>
+            <Card variant="inset">
+                <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="category-tree" type="root">
+                        {(provided) => (
+                            <div
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                className="space-y-0"
+                            >
+                                {tree.map((node, index) => (
+                                    <Draggable key={node.id} draggableId={node.id} index={index}>
+                                        {(provided, snapshot) => renderNode(node, 0, provided, snapshot)}
+                                    </Draggable>
+                                ))}
+                                {provided.placeholder}
+                            </div>
+                        )}
+                    </Droppable>
+                </DragDropContext>
+            </Card>
         );
     }
 
     // Standard rendering without drag & drop
     return (
-        <div className="space-y-0">
-            {tree.map(node => renderNode(node))}
-        </div>
+        <Card variant="inset">
+            <div className="space-y-0">
+                {tree.map(node => renderNode(node))}
+            </div>
+        </Card>
     );
 }

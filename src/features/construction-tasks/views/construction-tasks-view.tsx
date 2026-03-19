@@ -675,7 +675,7 @@ export function ConstructionTasksView({
                                 featureDescription="La ejecución de obra es donde las tareas del catálogo cobran vida. Desde aquí podés asignar tareas a tu proyecto, planificar fechas, hacer seguimiento de avance y controlar desvíos de cantidad, costo y tiempo. Usá el Gantt interactivo para programar tu obra visualmente."
                                 onAction={handleCreate}
                                 actionLabel="Agregar Tarea"
-                                docsPath="/docs/ejecucion-de-obra/introduccion"
+                                docsPath="/docs/construccion/ejecucion-de-tareas"
                             />
                         </div>
                     ) : (

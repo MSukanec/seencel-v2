@@ -1,0 +1,158 @@
+---
+title: "Tareas y Rubros"
+description: "Guía completa sobre tareas de construcción y rubros en el Catálogo Técnico de SEENCEL"
+---
+
+# Tareas
+
+Las **tareas** son los trabajos unitarios que componen tus proyectos de construcción. Representan unidades de trabajo medibles como "Construcción de muro de ladrillo", "Instalación de cañería de agua fría", o "Colocación de piso cerámico".
+
+## ¿Qué es una Tarea?
+
+Una tarea en SEENCEL es una unidad de trabajo que:
+
+- Tiene un **nombre** descriptivo
+- Se mide en una **unidad** específica (m², ml, u, kg, etc.)
+- Pertenece a un **rubro** o división (Albañilería, Electricidad, Plomería, etc.)
+- Puede tener **materiales** y **mano de obra** asociados
+
+## Tipos de Tareas
+
+### Tareas del Sistema
+
+Son tareas estandarizadas que vienen precargadas y están disponibles para todas las organizaciones. No pueden ser editadas, pero sí copiadas para personalización.
+
+### Tareas Propias
+
+Son tareas que creás específicamente para tu organización. Podés personalizarlas completamente según tus necesidades.
+
+## Catálogo Técnico
+
+El catálogo de tareas te permite:
+
+1. **Crear tareas** manualmente o mediante importación masiva
+2. **Organizar** tareas por rubros y divisiones
+3. **Asociar materiales** y rendimientos a cada tarea
+4. **Reutilizar** tareas en múltiples proyectos
+
+---
+
+# Rubros
+
+Los **rubros** son categorías que organizan jerárquicamente tus tareas de construcción. Funcionan como un árbol de clasificación que te permite agrupar tareas relacionadas bajo un mismo concepto, como "Albañilería", "Electricidad" o "Plomería".
+
+## ¿Qué es un Rubro?
+
+Un rubro en SEENCEL es una categoría organizativa que:
+
+- Tiene un **nombre** descriptivo (ej: "Mampostería")
+- Puede tener un **código** identificador (ej: "MAM")
+- Puede ser **padre** de otros rubros (jerarquía multinivel)
+- Agrupa **tareas** para su clasificación y presupuestación
+
+## Tipos de Rubros
+
+### Rubros del Sistema
+
+Son rubros estandarizados que vienen precargados y están disponibles para todas las organizaciones. Están basados en clasificaciones estándar de la industria de la construcción. No pueden ser editados ni eliminados.
+
+### Rubros Propios
+
+Son rubros que creás específicamente para tu organización. Podés personalizarlos completamente según tus necesidades, crear jerarquías con sub-rubros, y reordernarlos con drag & drop.
+
+## Funcionalidades de Rubros
+
+1. **Crear rubros** con nombre, código y descripción
+2. **Organizar** en jerarquía padre-hijo (sub-rubros)
+3. **Reordenar** visualmente con drag & drop
+4. **Asociar tareas** a cada rubro para clasificación
+5. **Filtrar** entre rubros propios y del sistema
+
+## Jerarquía de Rubros
+
+Los rubros soportan múltiples niveles de anidación:
+
+- **Estructuras** (nivel 1)
+  - Hormigón Armado (nivel 2)
+  - Mampostería (nivel 2)
+- **Instalaciones** (nivel 1)
+  - Electricidad (nivel 2)
+  - Plomería (nivel 2)
+
+---
+
+# Importar Tareas
+
+SEENCEL te permite importar tu catálogo de tareas desde archivos **Excel (.xlsx)** o **CSV** de forma masiva.
+
+## Antes de Empezar
+
+Asegurate de tener tu archivo con al menos la columna de **Nombre** de la tarea. Opcionalmente podés incluir:
+
+| Campo | Requerido | Descripción | Ejemplo |
+|-------|-----------|-------------|---------|
+| Nombre | ✅ Sí | Nombre de la tarea | Construcción de muro de ladrillo hueco |
+| Código | ❌ No | Código interno o identificador | MUR-001 |
+| Descripción | ❌ No | Detalle técnico | Muro de ladrillo hueco de 18cm con mezcla 1:3 |
+| Unidad | ❌ No | Unidad de medida | m² |
+| Rubro | ❌ No | División o categoría | Albañilería |
+
+## Pasos para Importar
+
+### 1. Acceder al Importador
+
+1. Andá a **Catálogo Técnico** → **Tareas**
+2. Hacé clic en el botón **Nueva Tarea** (con la flechita)
+3. Seleccioná **Importar desde Excel/CSV**
+
+### 2. Subir el Archivo
+
+Arrastrá tu archivo Excel o CSV al área de carga, o hacé clic para seleccionarlo desde tu computadora.
+
+### 3. Mapear Columnas
+
+El sistema detectará automáticamente las columnas de tu archivo. Revisá que cada columna esté correctamente asignada:
+
+- **Nombre** → Columna con el nombre de la tarea
+- **Código** → Columna con el código (opcional)
+- **Descripción** → Columna con la descripción técnica (opcional)
+- **Unidad** → Columna con la unidad de medida (opcional)
+- **Rubro** → Columna con el rubro o división (opcional)
+
+### 4. Resolver Conflictos
+
+Si hay unidades o rubros que no existen en el sistema, podés elegir:
+
+- **Crear** una nueva unidad/rubro con ese nombre
+- **Asignar** a una unidad/rubro existente
+- **Ignorar** esa columna
+
+### 5. Confirmar Importación
+
+Revisá el resumen y confirmá la importación. Las tareas se agregarán a tu catálogo inmediatamente.
+
+## Manejo de Duplicados
+
+El sistema detecta duplicados por:
+
+- **Nombre exacto** de la tarea
+- **Código** si está presente
+
+Las tareas duplicadas se marcarán como error y no se importarán.
+
+## Historial de Importaciones
+
+Podés ver el historial de todas tus importaciones y revertirlas si es necesario:
+
+1. Hacé clic en **Nueva Tarea** → **Ver historial de importaciones**
+2. Verás las últimas 20 importaciones con fecha, cantidad y estado
+3. Podés **revertir** una importación para eliminar todas las tareas de ese lote
+
+> **Nota:** Revertir una importación solo elimina las tareas que no fueron modificadas manualmente después de la importación.
+
+## Consejos
+
+- Usá nombres descriptivos y consistentes
+- Asegurate de que los códigos sean únicos
+- Revisá que las unidades coincidan con las del sistema (m², ml, u, kg, etc.)
+- Organizá tus tareas por rubros para facilitar la búsqueda

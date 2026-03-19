@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { MetricCard } from "@/components/cards";
 
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
+import { ToolbarFilter, ToolbarSearch } from "@/components/shared/toolbar-controls";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useModal } from "@/stores/modal-store";
@@ -139,7 +139,7 @@ export function AdminFinancePaymentsView({ payments }: AdminFinancePaymentsViewP
             <>
                 <Toolbar
                     portalToHeader
-                    leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar pagos..." /></>}
+                    leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar pagos..." /></>}
                     actions={toolbarActions}
                 />
                 <ViewEmptyState
@@ -157,7 +157,7 @@ export function AdminFinancePaymentsView({ payments }: AdminFinancePaymentsViewP
     // ─── Render ──────────────────────────────────────────
     const embeddedToolbar = (
         <Toolbar
-            leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar pagos..." /></>}
+            leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar pagos..." /></>}
             actions={toolbarActions}
         />
     );

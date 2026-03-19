@@ -14,6 +14,7 @@ export interface Task {
     // Classification
     unit_id: string;
     task_division_id: string | null;
+    system_division_id: string | null;
 
     // Ownership
     organization_id: string | null;
@@ -34,6 +35,7 @@ export interface TaskView extends Task {
     unit_symbol?: string;
     division_name?: string;
     division_color?: string;
+    system_division_name?: string;
     // Parametric fields
     task_action_id?: string | null;
     task_element_id?: string | null;
@@ -243,6 +245,7 @@ export interface TaskRecipeView extends TaskRecipe {
     task_custom_name: string | null;
     task_display_name: string | null;
     division_name: string | null;
+    system_division_name: string | null;
     unit_name: string | null;
     org_name: string | null;
     item_count: number;

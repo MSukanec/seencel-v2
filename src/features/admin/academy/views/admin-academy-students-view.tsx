@@ -8,8 +8,7 @@ import { useRouter } from "@/i18n/routing";
 import { useTableActions } from "@/hooks/use-table-actions";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { ToolbarCard } from "@/components/shared/toolbar-controls/toolbar-card";
-import { SearchButton } from "@/components/shared/toolbar-controls/search-button";
+import { ToolbarCard } from "@/components/shared/toolbar-controls";
 import { PageHeaderActionPortal } from "@/components/layout/dashboard/header/page-header";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { StudentsTable } from "./students-table";
@@ -104,7 +103,8 @@ export function AdminAcademyStudentsView({ enrollments, courses }: AdminAcademyS
                     </Button>
                 </PageHeaderActionPortal>
                 <ToolbarCard
-                    right={<SearchButton filters={filters} placeholder="Buscar alumnos..." />}
+                    filters={filters}
+                    searchPlaceholder="Buscar alumnos..."
                 />
                 <div className="h-full flex items-center justify-center">
                     <ViewEmptyState
@@ -130,7 +130,8 @@ export function AdminAcademyStudentsView({ enrollments, courses }: AdminAcademyS
 
             <div className="flex flex-col gap-0.5 flex-1 min-h-0">
                 <ToolbarCard
-                    right={<SearchButton filters={filters} placeholder="Buscar alumnos..." />}
+                    filters={filters}
+                    searchPlaceholder="Buscar alumnos..."
                 />
 
                 <StudentsTable

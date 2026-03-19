@@ -1,12 +1,11 @@
 "use server";
 
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getAuthContext } from '@/lib/auth';
 
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { getUserOrganizations } from "@/features/organization/queries";
 
 // ============================================
 // CREATE TASK
@@ -21,8 +20,8 @@ export async function createTask(formData: FormData) {
 
     // For non-system tasks, we need an organization
     if (!isSystemTask && !formOrgId) {
-        const { activeOrgId } = await getUserOrganizations();
-        if (!activeOrgId) {
+        const ctx = await getAuthContext();
+        if (!ctx?.orgId) {
             return { error: "No hay organización activa" };
         }
     }
@@ -32,6 +31,7 @@ export async function createTask(formData: FormData) {
     const description = formData.get("description") as string | null;
     const unit_id = formData.get("unit_id") as string;
     const task_division_id = formData.get("task_division_id") as string | null;
+    const system_division_id = formData.get("system_division_id") as string | null;
     const is_published = formData.get("is_published") === "true";
     const status = (formData.get("status") as string | null) || "draft";
 
@@ -61,7 +61,8 @@ export async function createTask(formData: FormData) {
             description: description?.trim() || null,
             unit_id,
             task_division_id: task_division_id || null,
-            organization_id: isSystemTask ? null : (formOrgId || (await getUserOrganizations()).activeOrgId),
+            system_division_id: system_division_id || null,
+            organization_id: isSystemTask ? null : (formOrgId || (await getAuthContext())?.orgId),
             is_system: isSystemTask,
             is_published,
             status,
@@ -101,6 +102,7 @@ export async function updateTask(formData: FormData) {
     const description = formData.get("description") as string | null;
     const unit_id = formData.get("unit_id") as string;
     const task_division_id = formData.get("task_division_id") as string | null;
+    const system_division_id = formData.get("system_division_id") as string | null;
     const is_published = formData.get("is_published") === "true";
     const status = (formData.get("status") as string | null) || null;
 
@@ -121,6 +123,7 @@ export async function updateTask(formData: FormData) {
             description: description?.trim() || null,
             unit_id,
             task_division_id: task_division_id || null,
+            system_division_id: system_division_id || null,
             is_published,
             ...(status ? { status } : {}),
         })
@@ -129,7 +132,8 @@ export async function updateTask(formData: FormData) {
     // In admin mode, we can edit system tasks and org tasks
     // In normal mode, we can only edit our org's non-system tasks
     if (!isAdminMode) {
-        const { activeOrgId } = await getUserOrganizations();
+        const ctx = await getAuthContext();
+        const activeOrgId = ctx?.orgId;
         if (!activeOrgId) {
             return { error: "No hay organización activa" };
         }
@@ -198,7 +202,8 @@ export async function deleteTask(id: string, isAdminMode: boolean = false) {
     // In admin mode, we can delete system tasks
     // In normal mode, we can only delete our org's non-system tasks
     if (!isAdminMode) {
-        const { activeOrgId } = await getUserOrganizations();
+        const ctx = await getAuthContext();
+        const activeOrgId = ctx?.orgId;
         if (!activeOrgId) {
             return { error: "No hay organización activa" };
         }
@@ -210,6 +215,52 @@ export async function deleteTask(id: string, isAdminMode: boolean = false) {
     if (error) {
         console.error("Error deleting task:", error);
         return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
+}
+
+// ============================================
+// UPDATE TASK INLINE (quick field update from DataTable)
+// ============================================
+export async function updateTaskInline(
+    taskId: string,
+    updates: Record<string, unknown>,
+    isAdminMode: boolean = false
+) {
+    const supabase = isAdminMode ? createServiceClient() : await createClient();
+
+    // Only allow safe inline-editable fields
+    const allowedFields = ["name", "custom_name", "code", "description", "status", "task_division_id", "system_division_id", "unit_id"];
+    const payload: Record<string, unknown> = {};
+    for (const key of Object.keys(updates)) {
+        if (allowedFields.includes(key)) {
+            payload[key] = updates[key];
+        }
+    }
+
+    if (Object.keys(payload).length === 0) {
+        return { success: false, error: "No hay campos válidos para actualizar" };
+    }
+
+    let query = supabase
+        .schema('catalog').from("tasks")
+        .update(payload)
+        .eq("id", taskId);
+
+    if (!isAdminMode) {
+        const ctx = await getAuthContext();
+        const activeOrgId = ctx?.orgId;
+        if (!activeOrgId) return { success: false, error: "No hay organización activa" };
+        query = query.eq("organization_id", activeOrgId).eq("is_system", false);
+    }
+
+    const { error } = await query;
+    if (error) {
+        console.error("Error updating task inline:", error);
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/organization/catalog");
@@ -233,7 +284,8 @@ export async function updateTaskStatus(
         .eq("id", taskId);
 
     if (!isAdminMode) {
-        const { activeOrgId } = await getUserOrganizations();
+        const ctx = await getAuthContext();
+        const activeOrgId = ctx?.orgId;
         if (!activeOrgId) return { error: "No hay organización activa" };
         query = query.eq("organization_id", activeOrgId).eq("is_system", false);
     }
@@ -268,7 +320,8 @@ export async function deleteTasksBulk(ids: string[], isAdminMode: boolean = fals
     // In admin mode, can delete any task type (system or org-owned)
     // In normal mode, only delete our org's non-system tasks
     if (!isAdminMode) {
-        const { activeOrgId } = await getUserOrganizations();
+        const ctx = await getAuthContext();
+        const activeOrgId = ctx?.orgId;
         if (!activeOrgId) {
             return { error: "No hay organización activa" };
         }
@@ -292,7 +345,7 @@ export async function deleteTasksBulk(ids: string[], isAdminMode: boolean = fals
 // ============================================
 export async function updateTasksBulk(
     ids: string[],
-    updates: { task_division_id?: string | null; unit_id?: string | null },
+    updates: { task_division_id?: string | null; system_division_id?: string | null; unit_id?: string | null },
     isAdminMode: boolean = false
 ) {
     if (ids.length === 0) return { success: true, updatedCount: 0, error: null };
@@ -300,6 +353,7 @@ export async function updateTasksBulk(
     // Only include fields that were explicitly provided
     const payload: Record<string, unknown> = {};
     if ("task_division_id" in updates) payload.task_division_id = updates.task_division_id;
+    if ("system_division_id" in updates) payload.system_division_id = updates.system_division_id;
     if ("unit_id" in updates) payload.unit_id = updates.unit_id;
 
     if (Object.keys(payload).length === 0) {
@@ -316,7 +370,8 @@ export async function updateTasksBulk(
     // In admin mode, can update any task type (system or org-owned)
     // In normal mode, only update our org's non-system tasks
     if (!isAdminMode) {
-        const { activeOrgId } = await getUserOrganizations();
+        const ctx = await getAuthContext();
+        const activeOrgId = ctx?.orgId;
         if (!activeOrgId) {
             return { error: "No hay organización activa" };
         }
@@ -364,7 +419,8 @@ export async function createTaskDivision(formData: FormData) {
     let is_system = true;
 
     if (!isAdminMode) {
-        const { activeOrgId } = await getUserOrganizations();
+        const ctx = await getAuthContext();
+        const activeOrgId = ctx?.orgId;
         if (!activeOrgId) {
             return { error: "No hay organización activa" };
         }
@@ -598,6 +654,82 @@ export async function reorderTaskDivisions(
     revalidatePath("/admin/catalog");
     revalidatePath("/organization/catalog");
     return { success: true, error: null };
+}
+
+// Apply a quick start pack for divisions
+export async function applyDivisionQuickStart(packId: "all" | "simplified") {
+    const supabase = await createClient();
+    const ctx = await getAuthContext();
+    const activeOrgId = ctx?.orgId;
+
+    if (!activeOrgId) {
+        return { error: "No hay organización activa" };
+    }
+
+    // 1. Fetch all system divisions
+    const { data: systemDivisions, error: fetchError } = await supabase
+        .schema('catalog').from("task_divisions")
+        .select("*")
+        .eq("is_system", true)
+        .eq("is_deleted", false);
+
+    if (fetchError || !systemDivisions) {
+        console.error("Error fetching system divisions:", fetchError);
+        return { error: sanitizeError(fetchError) };
+    }
+
+    // 2. Filter divisions based on packId
+    let divisionsToCopy = systemDivisions;
+    
+    // Simplificada: Only root divisions (parent_id is null)
+    if (packId === "simplified") {
+        divisionsToCopy = systemDivisions.filter(d => !d.parent_id);
+    } 
+
+    // 3. Map old UUIDs to new UUIDs to preserve hierarchy
+    const idMap = new Map<string, string>();
+    divisionsToCopy.forEach(d => {
+        idMap.set(d.id, crypto.randomUUID());
+    });
+
+    // 4. Prepare insert payload
+    const newDivisions = divisionsToCopy.map(d => ({
+        id: idMap.get(d.id),
+        name: d.name,
+        description: d.description,
+        code: d.code,
+        order: d.order,
+        parent_id: d.parent_id ? idMap.get(d.parent_id) || null : null,
+        organization_id: activeOrgId,
+        is_system: false,
+        is_deleted: false
+    }));
+
+    // Keep only divisions where parent was also copied (if they had one)
+    const finalDivisionsToInsert = newDivisions.filter(d => {
+        const original = divisionsToCopy.find(od => idMap.get(od.id) === d.id);
+        if (original?.parent_id && !idMap.has(original.parent_id)) {
+            return false; // Parent wasn't copied, skip this child
+        }
+        return true;
+    });
+
+    if (finalDivisionsToInsert.length === 0) {
+        return { success: true, count: 0, error: null };
+    }
+
+    // 5. Insert all
+    const { error: insertError } = await supabase
+        .schema('catalog').from("task_divisions")
+        .insert(finalDivisionsToInsert);
+
+    if (insertError) {
+        console.error("Error inserting division quick start pack:", insertError);
+        return { error: sanitizeError(insertError) };
+    }
+
+    revalidatePath("/organization/catalog");
+    return { success: true, count: finalDivisionsToInsert.length, error: null };
 }
 
 // ============================================
@@ -1059,7 +1191,7 @@ import {
  */
 export async function getMyRecipes(taskId: string): Promise<TaskRecipeView[]> {
     const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    const activeOrgId = (await getAuthContext())?.orgId;
 
     const { data, error } = await supabase
         .schema('catalog').from("task_recipes_view")
@@ -1142,7 +1274,7 @@ export async function getRecipeById(recipeId: string): Promise<TaskRecipeView | 
  */
 export async function createRecipe(data: TaskRecipeFormData) {
     const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    const activeOrgId = (await getAuthContext())?.orgId;
 
     const { data: result, error } = await supabase
         .schema('catalog').from("task_recipes")
@@ -1303,7 +1435,7 @@ export async function getRecipeMaterials(recipeId: string): Promise<TaskRecipeMa
  */
 export async function addRecipeMaterial(data: TaskRecipeMaterialFormData) {
     const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    const activeOrgId = (await getAuthContext())?.orgId;
 
     const { data: result, error } = await supabase
         .schema('catalog').from("task_recipe_materials")
@@ -1422,7 +1554,7 @@ export async function getRecipeLabor(recipeId: string): Promise<TaskRecipeLabor[
  */
 export async function addRecipeLabor(data: TaskRecipeLaborFormData) {
     const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    const activeOrgId = (await getAuthContext())?.orgId;
 
     const { data: result, error } = await supabase
         .schema('catalog').from("task_recipe_labor")
@@ -1588,7 +1720,7 @@ export async function addRecipeExternalService(
     data: TaskRecipeExternalServiceFormData
 ) {
     const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    const activeOrgId = (await getAuthContext())?.orgId;
 
     const { data: result, error } = await supabase
         .schema('catalog').from("task_recipe_external_services")
@@ -1662,7 +1794,7 @@ export async function updateRecipeExternalService(
 
     // If price changed, insert new price record in external_service_prices
     if (data.unit_price != null && data.unit_price > 0) {
-        const { activeOrgId } = await getUserOrganizations();
+        const activeOrgId = (await getAuthContext())?.orgId;
 
         // Get current currency_id from the service record if not provided
         let currencyId = data.currency_id;
@@ -1809,7 +1941,7 @@ export async function rateRecipe(data: TaskRecipeRatingFormData) {
     }
 
     // Get user's org
-    const { activeOrgId } = await getUserOrganizations();
+    const activeOrgId = (await getAuthContext())?.orgId;
 
     // Get user's internal ID
     const { data: userData } = await supabase
@@ -1856,7 +1988,7 @@ export async function rateRecipe(data: TaskRecipeRatingFormData) {
  */
 export async function adoptRecipe(taskId: string, recipeId: string) {
     const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    const activeOrgId = (await getAuthContext())?.orgId;
 
     // Upsert preference (one per org per task)
     const { error } = await supabase
@@ -1887,7 +2019,8 @@ export async function adoptRecipe(taskId: string, recipeId: string) {
  */
 export async function getAdoptedRecipe(taskId: string): Promise<string | null> {
     const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    const ctx = await getAuthContext();
+    const activeOrgId = ctx?.orgId;
 
     const { data, error } = await supabase
         .schema('iam').from("organization_recipe_preferences")

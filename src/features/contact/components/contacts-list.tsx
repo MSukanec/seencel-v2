@@ -19,9 +19,6 @@ import { useTableFilters } from "@/hooks/use-table-filters";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { PageHeaderActionPortal } from "@/components/layout";
 import {
-    FilterPopover,
-    SearchButton,
-    DisplayButton,
     ToolbarCard,
     ViewsTabs,
     ViewEditorBar,
@@ -405,17 +402,13 @@ export function ContactsList({ organizationId, initialContacts, contactCategorie
                     onDeleteView={handleDeleteView}
                 />
             }
-            right={
-                <>
-                    <SearchButton filters={filters} placeholder="Buscar contactos..." />
-                    <FilterPopover filters={filters} />
-                    <DisplayButton
-                        viewMode={viewMode}
-                        onViewModeChange={(v) => setViewMode(v as ViewMode)}
-                        viewModeOptions={viewOptions}
-                    />
-                </>
-            }
+            filters={filters}
+            searchPlaceholder="Buscar contactos..."
+            display={{
+                viewMode,
+                onViewModeChange: (v) => setViewMode(v as ViewMode),
+                viewModeOptions: viewOptions,
+            }}
             bottom={
                 editingView ? (
                     <ViewEditorBar
@@ -474,7 +467,7 @@ export function ContactsList({ organizationId, initialContacts, contactCategorie
                     featureDescription="Los contactos son las personas y empresas con las que trabajás: clientes, proveedores, subcontratistas y socios. Organizalos con etiquetas, vincularlos a proyectos y mantenelos actualizados."
                     onAction={handleOpenCreate}
                     actionLabel="Nuevo Contacto"
-                    docsPath="/docs/contactos/introduccion"
+                    docsPath="/docs/organizacion/contactos"
                 />
             ) : (
                 /* Inline toolbar + content */

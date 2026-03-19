@@ -26,7 +26,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FilterPopover, SearchButton, ToolbarCard } from "@/components/shared/toolbar-controls";
+import { ToolbarCard } from "@/components/shared/toolbar-controls";
 import { exportToCSV, exportToExcel } from "@/lib/export";
 import { createImportBatch, revertImportBatch, importGeneralCostPaymentsBatch, type ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
@@ -444,12 +444,8 @@ export function GeneralCostsPaymentsView({
                 <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
                     {/* Toolbar card — inline, content-agnostic */}
                     <ToolbarCard
-                        right={
-                            <>
-                                <SearchButton filters={filters} placeholder="Buscar pagos..." />
-                                <FilterPopover filters={filters} />
-                            </>
-                        }
+                        filters={filters}
+                        searchPlaceholder="Buscar pagos..."
                     />
 
                     {/* Content */}

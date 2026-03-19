@@ -25,9 +25,7 @@ import { ContactWithRelations, ContactCategory, ContactType } from "@/types/cont
 import { usePanel } from "@/stores/panel-store";
 import { useRouter } from "@/i18n/routing";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { FormHeroField } from "@/components/shared/forms/fields/form-hero-field";
-import { FormNotesField } from "@/components/shared/forms/fields/form-notes-field";
-import { FormReferenceField } from "@/components/shared/forms/fields/form-reference-field";
+import { FormTextField } from "@/components/shared/forms/fields/form-text-field";
 import { ChipRow, CategoryChip, SelectChip } from "@/components/shared/chips";
 import { User, Building2, Loader2, ShieldCheck, Users, Mail, Phone, MapPin, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -449,13 +447,15 @@ export function ContactForm({
             {/* ── Hero: Name Fields (stacked) ────────────── */}
             {isPerson ? (
                 <>
-                    <FormHeroField
+                    <FormTextField
+                        variant="hero"
                         value={formData.first_name}
                         onChange={(val) => setFormData(prev => ({ ...prev, first_name: val }))}
                         placeholder="Nombre..."
                         autoFocus={!isLinkedToUser}
                     />
-                    <FormHeroField
+                    <FormTextField
+                        variant="hero"
                         value={formData.last_name}
                         onChange={(val) => setFormData(prev => ({ ...prev, last_name: val }))}
                         placeholder="Apellido..."
@@ -463,7 +463,8 @@ export function ContactForm({
                     />
                 </>
             ) : (
-                <FormHeroField
+                <FormTextField
+                    variant="hero"
                     value={formData.first_name}
                     onChange={(val) => setFormData(prev => ({ ...prev, first_name: val }))}
                     placeholder="Nombre de la Empresa..."
@@ -517,7 +518,8 @@ export function ContactForm({
                 </div>
 
                 {/* Documento / ID */}
-                <FormReferenceField
+                <FormTextField
+                    variant="caption"
                     value={formData.national_id}
                     onChange={(val) => setFormData({ ...formData, national_id: val })}
                     placeholder={isPerson ? "DNI, CUIT, Pasaporte..." : "CUIT, RFC, NIT, EIN..."}
@@ -525,7 +527,8 @@ export function ContactForm({
                 />
 
                 {/* Ubicación */}
-                <FormReferenceField
+                <FormTextField
+                    variant="caption"
                     value={formData.location}
                     onChange={(val) => setFormData({ ...formData, location: val })}
                     placeholder="Ciudad, País"
@@ -534,7 +537,8 @@ export function ContactForm({
 
                 {/* Notas */}
                 <div className="border-t border-border/10 pt-2 mt-1">
-                    <FormNotesField
+                    <FormTextField
+                        variant="body"
                         value={formData.notes}
                         onChange={(val) => setFormData({ ...formData, notes: val })}
                         placeholder="Información adicional..."

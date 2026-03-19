@@ -7,12 +7,9 @@ import { toast } from "sonner";
 
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { TaskListItem } from "@/components/shared/list-item";
-import { useModal } from "@/stores/modal-store";
-import { ContextSidebar } from "@/stores/sidebar-store";
+import { usePanel } from "@/stores/panel-store";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 
-import { DivisionsSidebar } from "./divisions-sidebar";
-import { TasksForm } from "../forms/tasks-form";
 import { deleteTask, updateTaskStatus } from "../actions";
 import { TasksByDivision, TaskView, Unit, TaskDivision } from "../types";
 
@@ -22,25 +19,25 @@ import { TasksByDivision, TaskView, Unit, TaskDivision } from "../types";
 
 function DivisionSectionHeader({ name, count }: { name: string; count: number }) {
     return (
-        <div className="flex items-center gap-3 px-1 py-8">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+        <div className="flex items-center gap-3 px-4 py-3">
+            <span className="text-xs font-semibold text-muted-foreground tracking-wider whitespace-nowrap">
                 {name}
             </span>
             <div className="h-px flex-1 bg-border" />
-            <span className="text-xs tabular-nums text-muted-foreground/60">{count}</span>
+            <span className="text-xs tabular-nums text-muted-foreground/60">({count})</span>
         </div>
     );
 }
 
 function ArchivedSectionHeader({ count }: { count: number }) {
     return (
-        <div className="flex items-center gap-3 px-1 py-8">
+        <div className="flex items-center gap-3 px-4 py-3">
             <Archive className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-            <span className="text-xs font-semibold text-muted-foreground/40 uppercase tracking-wider whitespace-nowrap">
+            <span className="text-xs font-semibold text-muted-foreground/40 tracking-wider whitespace-nowrap">
                 Archivadas
             </span>
             <div className="h-px flex-1 bg-border/40" />
-            <span className="text-xs tabular-nums text-muted-foreground/40">{count}</span>
+            <span className="text-xs tabular-nums text-muted-foreground/40">({count})</span>
         </div>
     );
 }
@@ -59,8 +56,8 @@ interface TaskCatalogProps {
     originFilter?: "all" | "system" | "organization";
     /** Status values to show (empty Set = show all) */
     statusFilter?: Set<string>;
-    isSelected?: (id: string) => boolean;
-    onToggleSelect?: (id: string) => void;
+    /** Division filter from parent sidebar */
+    selectedDivisionId?: string | null;
 }
 
 // ============================================================================
@@ -76,14 +73,11 @@ export function TaskCatalog({
     searchQuery: externalSearchQuery = "",
     originFilter = "all",
     statusFilter,
-    isSelected,
-    onToggleSelect,
+    selectedDivisionId = null,
 }: TaskCatalogProps) {
     const router = useRouter();
-    const { openModal, closeModal } = useModal();
+    const { openPanel } = usePanel();
 
-    // ── State ──────────────────────────────────────────────────────────────
-    const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [taskToDelete, setTaskToDelete] = useState<TaskView | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -186,21 +180,7 @@ export function TaskCatalog({
         return { divisionGroups: groups, archivedTasks: archived };
     }, [filteredTasks, divisions]);
 
-    // ── Sidebar task counts (active+draft only, respects origin filter) ────
-    const taskCounts = useMemo(() => {
-        const counts: Record<string, number> = {};
-        let tasksToCount = allTasks.filter(t => (t.status ?? "active") !== "archived");
 
-        if (originFilter === "system") tasksToCount = tasksToCount.filter(t => t.is_system);
-        else if (originFilter === "organization") tasksToCount = tasksToCount.filter(t => !t.is_system);
-
-        tasksToCount.forEach(t => {
-            const divId = t.task_division_id || "sin-division";
-            counts[divId] = (counts[divId] || 0) + 1;
-        });
-
-        return counts;
-    }, [allTasks, originFilter]);
 
     // ── Handlers ───────────────────────────────────────────────────────────
     const handleViewTask = useCallback((task: TaskView) => {
@@ -211,27 +191,16 @@ export function TaskCatalog({
     }, [isAdminMode, router]);
 
     const handleEditTask = useCallback((task: TaskView) => {
-        openModal(
-            <TasksForm
-                mode="edit"
-                initialData={task}
-                organizationId={orgId}
-                units={units}
-                divisions={divisions}
-                isAdminMode={isAdminMode}
-                onCancel={closeModal}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
-            />,
-            {
-                title: "Editar Tarea",
-                description: "Modifica los datos de esta tarea",
-                size: "lg",
-            }
-        );
-    }, [orgId, units, divisions, isAdminMode, openModal, closeModal, router]);
+        openPanel('tasks-form', {
+            mode: "edit",
+            initialData: task,
+            organizationId: orgId,
+            units,
+            divisions,
+            isAdminMode,
+            directType: "own",
+        });
+    }, [orgId, units, divisions, isAdminMode, openPanel]);
 
     const handleDeleteClick = useCallback((task: TaskView) => {
         setTaskToDelete(task);
@@ -285,21 +254,10 @@ export function TaskCatalog({
 
     // ── Derived ────────────────────────────────────────────────────────────
     const isEmpty = divisionGroups.length === 0 && archivedTasks.length === 0;
-    const activeTaskCount = allTasks.filter(t => (t.status ?? "active") !== "archived").length;
 
     // ── Render ─────────────────────────────────────────────────────────────
     return (
         <>
-            <ContextSidebar title="Rubros">
-                <DivisionsSidebar
-                    divisions={divisions}
-                    taskCounts={taskCounts}
-                    selectedDivisionId={selectedDivisionId}
-                    onSelectDivision={setSelectedDivisionId}
-                    totalTasks={activeTaskCount}
-                />
-            </ContextSidebar>
-
             <div className="pb-8">
                 {isEmpty ? (
                     <div className="flex items-center justify-center py-12">
@@ -312,7 +270,7 @@ export function TaskCatalog({
                                     ? "con ese criterio de búsqueda"
                                     : "en esta categoría"
                             }
-                            onResetFilters={() => setSelectedDivisionId(null)}
+                            onResetFilters={() => {}}
                         />
                     </div>
                 ) : (
@@ -328,8 +286,6 @@ export function TaskCatalog({
                                             task={task}
                                             isAdminMode={isAdminMode}
                                             hideDivisionBadge={true}
-                                            selected={isSelected?.(task.id) ?? false}
-                                            onToggleSelect={onToggleSelect}
                                             onClick={handleViewTask}
                                             onEdit={handleEditTask}
                                             onDelete={handleDeleteClick}
@@ -351,8 +307,6 @@ export function TaskCatalog({
                                             task={task}
                                             isAdminMode={isAdminMode}
                                             hideDivisionBadge={true}
-                                            selected={isSelected?.(task.id) ?? false}
-                                            onToggleSelect={onToggleSelect}
                                             onClick={handleViewTask}
                                             onEdit={handleEditTask}
                                             onDelete={handleDeleteClick}

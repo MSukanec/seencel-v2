@@ -268,6 +268,7 @@ export function useSidebarNavigation() {
                         { title: 'Contactos', href: '/settings/contacts', icon: BookUser },
                         { title: 'Archivos', href: '/settings/files', icon: FolderOpen },
                         { title: 'Finanzas', href: '/settings/finance', icon: DollarSign },
+                        { title: 'Unidades', href: '/settings/units', icon: Ruler },
                         { title: 'Plantillas', href: '/settings/templates', icon: FileType, status: 'maintenance' as const, disabled: !canBypassRestrictions },
                     ],
                 });
@@ -387,7 +388,6 @@ export function useSidebarNavigation() {
                             { title: 'Tareas', href: '/organization/catalog/tasks', icon: ClipboardList },
                             { title: 'Materiales', href: '/organization/catalog/materials', icon: Package },
                             { title: 'Mano de Obra', href: '/organization/catalog/labor', icon: HardHat },
-                            { title: 'Unidades', href: '/organization/catalog/units', icon: Ruler },
                         ],
                     }),
                 ].filter((i): i is NavItem => i !== null),

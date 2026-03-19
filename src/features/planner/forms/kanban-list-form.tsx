@@ -7,7 +7,7 @@ import { useEffect, useTransition } from "react";
 import { toast } from "sonner";
 import { Columns3 } from "lucide-react";
 
-import { FormHeroField } from "@/components/shared/forms/fields";
+import { FormTextField } from "@/components/shared/forms/fields/form-text-field";
 import { ChipRow } from "@/components/shared/chips/chip-row";
 import { ColorChip } from "@/components/shared/chips/chips/color-chip";
 import { usePanel } from "@/stores/panel-store";
@@ -137,7 +137,8 @@ export function KanbanListForm({ boardId, organizationId, initialData, onSuccess
                 </ChipRow>
             </div>
 
-            <FormHeroField
+            <FormTextField
+                variant="hero"
                 value={form.watch("name") || ""}
                 onChange={(val) => form.setValue("name", val)}
                 placeholder="Nombre de la columna... (Ej: En proceso)"

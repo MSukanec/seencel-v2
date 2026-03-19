@@ -1,0 +1,14 @@
+{
+    "order": [
+        "gastos-generales",
+        "presupuestos"
+    ],
+    "items": {
+        "gastos-generales": {
+            "title": "Gastos Generales"
+        },
+        "presupuestos": {
+            "title": "Presupuestos"
+        }
+    }
+}

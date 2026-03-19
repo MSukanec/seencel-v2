@@ -73,7 +73,7 @@ export function WalletPopoverContent({
                         value="__manage_wallets__"
                         onSelect={() => {
                             onOpenChange?.(false);
-                            router.push({ pathname: "/organization/settings", query: { view: "finance" } });
+                            router.push("/settings/finance");
                         }}
                         className="flex items-center gap-2 text-xs text-muted-foreground"
                     >

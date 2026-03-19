@@ -14,3 +14,4 @@ export { CategoryPopoverContent, type CategoryPopoverOption, type CategoryPopove
 export { AttachmentPopoverContent, AttachmentLabel, type AttachmentPopoverContentProps } from "./attachment-popover-content";
 export { ColorPopoverContent, STANDARD_COLORS, type ColorPopoverContentProps } from "./color-popover-content";
 export { AddressPopoverContent, type AddressData, type AddressPopoverContentProps } from "./address-popover-content";
+export { UnitPopoverContent, type UnitPopoverOption, type UnitPopoverContentProps } from "./unit-popover-content";

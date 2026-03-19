@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { FormGroup } from "@/components/ui/form-group";
-import { FormFooter } from "@/components/shared/forms/form-footer";
 import { TextField } from "@/components/shared/forms/fields";
 import {
     Select,
@@ -17,7 +16,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Ruler, Package, Clock } from "lucide-react";
 import { createUnit, updateUnit } from "../actions";
-import type { UnitCategory, CatalogUnit } from "../queries";
+import type { CatalogUnit } from "../queries";
 
 // ============================================================================
 // Types
@@ -27,10 +26,11 @@ export type ApplicableTo = "task" | "material" | "labor";
 
 interface UnitFormProps {
     organizationId: string;
-    categories: UnitCategory[];
     initialData?: CatalogUnit | null;
     /** Tipos de uso por defecto cuando se crea una nueva */
     defaultApplicableTo?: ApplicableTo;
+    /** Inyectado por PanelProvider */
+    formId?: string;
 }
 
 // ============================================================================
@@ -47,10 +47,9 @@ const APPLICABLE_TO_OPTIONS: { value: ApplicableTo; label: string; icon: typeof 
 // Component
 // ============================================================================
 
-export function UnitForm({ organizationId, categories, initialData, defaultApplicableTo = "task" }: UnitFormProps) {
+export function UnitForm({ organizationId, initialData, defaultApplicableTo = "task", formId }: UnitFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
-    const [isLoading, setIsLoading] = useState(false);
+    const { closePanel, setPanelMeta, setSubmitting, completePanel } = usePanel();
     const isEditing = !!initialData;
 
     // Form state
@@ -61,18 +60,15 @@ export function UnitForm({ organizationId, categories, initialData, defaultAppli
             ? initialData.applicable_to as ApplicableTo[]
             : [defaultApplicableTo]
     );
-    const [categoryId, setCategoryId] = useState<string>(
-        initialData?.unit_category_id || ""
-    );
 
     // Callbacks internos
     const handleSuccess = () => {
-        closeModal();
-        router.refresh();
+        closePanel();
+        router.refresh(); // TODO: If we use optimistic updates, this might not be needed. But we refresh the cache.
     };
 
     const handleCancel = () => {
-        closeModal();
+        closePanel();
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -88,7 +84,7 @@ export function UnitForm({ organizationId, categories, initialData, defaultAppli
             return;
         }
 
-        setIsLoading(true);
+        setSubmitting(true);
 
         try {
             const formData = new FormData();
@@ -97,9 +93,6 @@ export function UnitForm({ organizationId, categories, initialData, defaultAppli
             formData.append("organization_id", organizationId);
             // Send as JSON array
             formData.append("applicable_to", JSON.stringify(applicableTo));
-            if (categoryId) {
-                formData.append("unit_category_id", categoryId);
-            }
 
             if (isEditing && initialData) {
                 formData.append("id", initialData.id);
@@ -123,14 +116,25 @@ export function UnitForm({ organizationId, categories, initialData, defaultAppli
             console.error("Error:", error);
             toast.error("Error inesperado");
         } finally {
-            setIsLoading(false);
+            setSubmitting(false);
         }
     };
 
+    // Update panel metadata and footer
+    useEffect(() => {
+        setPanelMeta({
+            title: isEditing ? "Editar Unidad" : "Nueva Unidad",
+            description: isEditing ? "Modificar los datos de esta unidad." : "Creá una nueva unidad de medida.",
+            icon: Ruler,
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Crear Unidad",
+                cancelLabel: "Cancelar",
+            }
+        });
+    }, [isEditing, setPanelMeta]);
+
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            <div className="flex-1 overflow-y-auto">
-                <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4" id={formId}>
                     {/* Nombre - Full width */}
                     <TextField
                         label="Nombre"
@@ -141,30 +145,13 @@ export function UnitForm({ organizationId, categories, initialData, defaultAppli
                         autoFocus
                     />
 
-                    {/* Categoría y Símbolo - 2 columnas */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormGroup label="Categoría" htmlFor="unit_category_id">
-                            <Select value={categoryId} onValueChange={setCategoryId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar categoría" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {categories.map((cat) => (
-                                        <SelectItem key={cat.id} value={cat.id}>
-                                            {cat.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
-
-                        <TextField
-                            label="Símbolo"
-                            value={symbol}
-                            onChange={setSymbol}
-                            placeholder="Ej: m²"
-                        />
-                    </div>
+                    {/* Símbolo */}
+                    <TextField
+                        label="Símbolo"
+                        value={symbol}
+                        onChange={setSymbol}
+                        placeholder="Ej: m²"
+                    />
 
                     {/* Uso - Toggle Group multi-select */}
                     <FormGroup label="Uso" htmlFor="applicable_to" required>
@@ -187,15 +174,6 @@ export function UnitForm({ organizationId, categories, initialData, defaultAppli
                             ))}
                         </ToggleGroup>
                     </FormGroup>
-                </div>
-            </div>
-
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                isLoading={isLoading}
-                submitLabel={isEditing ? "Guardar Cambios" : "Crear Unidad"}
-                onCancel={handleCancel}
-            />
         </form>
     );
 }

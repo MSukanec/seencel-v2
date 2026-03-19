@@ -417,7 +417,7 @@ export function ProjectParticipantsView({
                             featureDescription="Vinculá contactos como clientes de este proyecto para que puedan seguir el avance, ver documentos y consultar estados de cuenta."
                             actionLabel="Agregar Cliente"
                             onAction={handleLinkClient}
-                            docsPath="/docs/equipo/clientes"
+                            docsPath="/docs/organizacion/equipo"
                         />
                     )}
                 </SettingsSection>
@@ -467,7 +467,7 @@ export function ProjectParticipantsView({
                                     featureDescription="Vinculá colaboradores externos de tu organización a este proyecto: contadores, directores de obra, subcontratistas y otros profesionales involucrados."
                                     actionLabel="Vincular Colaborador"
                                     onAction={handleLinkCollaborator}
-                                    docsPath="/docs/equipo/colaboradores"
+                                    docsPath="/docs/organizacion/equipo"
                                 />
                             )}
                         </SettingsSection>

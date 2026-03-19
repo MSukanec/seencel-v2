@@ -215,19 +215,23 @@ app/[locale]/(dashboard)/organization/<feature>/
 - [ ] `docsPath` apunta a doc correcta
 - [ ] Usa lista optimista (`optimisticItems`), NO `initialItems`
 - [ ] `no-results` solo cuando `filters.hasActiveFilters`
+- [ ] **Fail-safe totalCount**: Siempre pasar `totalCount={allItems.length}` — si `mode="empty"` pero `totalCount > 0`, auto-corrige a `context-empty`
 - [ ] **Centrado vertical:** Empty state devuelve early return con `<div className="h-full flex items-center justify-center">` — NO anidado dentro del render normal
 - [ ] **Toolbar condicional:** En modos `empty` y `context-empty` la toolbar NO se muestra. Solo se muestra en `no-results` y render normal
 - [ ] **Patrón de early returns:** Separar empty/context-empty/no-results como returns independientes (ver `ProjectsListView`), NO ternarios anidados
 
-### 5.2 Toolbar — ToolbarCard Inline
+### 5.2 Toolbar — ToolbarCard Estandarizado
 
 - [ ] Usa `ToolbarCard` de `@/components/shared/toolbar-controls`
-- [ ] **Left slot:** `ViewsTabs` (si el feature tiene vistas guardadas) + `SearchButton`
-- [ ] **Right slot:** `FilterPopover` + `DisplayButton` (si hay múltiples modos de vista)
+- [ ] **Prop `filters`:** Pasa `useTableFilters()` → habilita SearchButton + FilterPopover automáticamente en right slot
+- [ ] **Prop `searchPlaceholder`:** Placeholder descriptivo del contexto ("Buscar pagos...", "Buscar tareas...")
+- [ ] **Prop `display`:** Si la vista tiene múltiples modos (tabla/cards/grid), pasa `{ viewMode, onViewModeChange, viewModeOptions }` → habilita DisplayButton
+- [ ] **Left slot:** Solo para contenido custom como `ViewsTabs`, `ToolbarTabs` — NO para controles estándar
 - [ ] **Bottom slot:** `ViewEditorBar` (cuando se crea/edita vista) + `ActiveFiltersBar` (cuando hay filtros activos)
 - [ ] Acción primaria via `PageHeaderActionPortal`
 - [ ] ⛔ NO usa `Toolbar` con `portalToHeader`
-- [ ] ⛔ NO inputs de búsqueda custom
+- [ ] ⛔ NO coloca `SearchButton`, `FilterPopover` o `DisplayButton` manualmente en slots — ToolbarCard los renderiza
+- [ ] ⛔ NO inputs de búsqueda custom — usar el `SearchButton` integrado vía prop `filters`
 
 ### 5.3 DataTable — Columnas y Context Menu
 

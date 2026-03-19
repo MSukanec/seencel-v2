@@ -1,14 +1,26 @@
 {
     "order": [
-        "introduccion",
-        "indices-economicos"
+        "proyectos",
+        "planificador",
+        "archivos",
+        "contactos",
+        "equipo"
     ],
     "items": {
-        "introduccion": {
-            "title": "Introducción"
+        "proyectos": {
+            "title": "Proyectos"
         },
-        "indices-economicos": {
-            "title": "Índices Económicos"
+        "planificador": {
+            "title": "Planificador"
+        },
+        "archivos": {
+            "title": "Archivos"
+        },
+        "contactos": {
+            "title": "Contactos"
+        },
+        "equipo": {
+            "title": "Equipo"
         }
     }
 }

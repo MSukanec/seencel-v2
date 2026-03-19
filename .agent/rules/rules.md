@@ -127,6 +127,7 @@ Los popovers de selección (billetera, moneda, etc.) usan **Shared Popover Conte
 - ⛔ Crear estados de filtro sueltos → usar `useTableFilters`
 - ⛔ Vista de más de 250 líneas
 - ⛔ Toolbar controls manuales → usar `FilterPopover`, `SearchButton`, `DisplayButton` de `@/components/shared/toolbar-controls`
+- ⛔ Colocar controles estándar manualmente en slots → pasar `filters`, `display` como props a `ToolbarCard`
 - ⛔ Duplicar contenido Command entre chip y column → usar Shared Popover Content
 
 📖 **Detalle COMPLETO (LEER SIEMPRE):** Skill [seencel-datatable-system](../skills/seencel-datatable-system/SKILL.md)
@@ -161,6 +162,7 @@ app/[locale]/(dashboard)/organization/[feature]/
   - **Quick Start Packs**: Opcionalmente pasar `quickStartPacks` en `mode="empty"` para templates de inicio rápido.
   - **Smart Docs Button**: Pasar `docsPath`, el componente verifica `@/lib/docs-registry.ts` antes de mostrar el botón.
   - **No-results guard**: Solo mostrar `mode="no-results"` con `filters.hasActiveFilters`.
+  - **Fail-safe totalCount**: Siempre pasar `totalCount={allItems.length}` — si `mode="empty"` pero `totalCount > 0`, auto-corrige a `context-empty`.
   - 📖 **Detalle COMPLETO:** Skill [seencel-ui-patterns](../skills/seencel-ui-patterns/SKILL.md) sección 1
 - ⛔ **PROHIBIDO**: Usar `<Tabs>` / `<TabsContent>` para secciones de página. Las tabs solo son válidas para controles DENTRO de una vista (ej: currency selector).
 
@@ -336,16 +338,36 @@ Para vistas de edición inline (nombre, descripción, etc): usar `useAutoSave` d
 
 ---
 
-## 12. TOOLBAR — ToolbarCard Inline + Header Actions
+## 12. TOOLBAR — ToolbarCard Estandarizado + Header Actions
 
 > **Decisión de Marzo 2026:** El `Toolbar` con `portalToHeader` es legacy. Se reemplaza por `ToolbarCard` inline + `PageHeaderActionPortal`.
 
-### Patrón actual:
-- `ToolbarCard` de `@/components/shared/toolbar-controls`: wrapper inline con `bg-card rounded-xl border border-border/50`
-- Dentro: `FilterPopover` + `SearchButton` a la izquierda, `ViewToggle` con `ml-auto` a la derecha
+### API estandarizada de ToolbarCard:
+`ToolbarCard` tiene **props dedicadas** para controles estándar. La vista decide **QUÉ** habilitar, **nunca DÓNDE** van:
+
+```tsx
+<ToolbarCard
+    filters={filters}                    // UseTableFiltersReturn → habilita SearchButton + FilterPopover
+    searchPlaceholder="Buscar..."        // Placeholder del search (default: "Buscar...")
+    display={{                           // Si se pasa → muestra DisplayButton
+        viewMode, onViewModeChange, viewModeOptions, table?
+    }}
+    left={<ViewsTabs ... />}             // Slot libre: ViewsTabs, ToolbarTabs
+    bottom={<ActiveFiltersBar ... />}    // Slot libre: barras inferiores
+/>
+```
+
+### Reglas internas:
+- Si `filters` presente → renderiza `SearchButton` + `FilterPopover` **automáticamente a la derecha**
+- Si `display` presente → renderiza `DisplayButton` **automáticamente a la derecha**
+- Orden fijo e invariable: **Search → Filter → Display** (siempre right slot)
 - Acción primaria ("Nuevo X") se porta al header con `PageHeaderActionPortal`
+
+### Prohibiciones:
 - ⛔ NO usar `Toolbar` con `portalToHeader` — es el patrón viejo
-- ⛔ NO crear inputs de búsqueda custom — usar `SearchButton`
+- ⛔ NO crear inputs de búsqueda custom — usar `SearchButton` vía prop `filters`
+- ⛔ NO colocar `SearchButton`, `FilterPopover` o `DisplayButton` manualmente en slots — ToolbarCard los renderiza internamente
+- ⛔ NO usar el `right` slot para controles estándar — solo para custom (backwards compat)
 
 ### Context Menu (Right-Click) OBLIGATORIO en DataTables:
 - `enableContextMenu` en `<DataTable>`

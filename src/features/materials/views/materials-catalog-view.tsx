@@ -1,40 +1,24 @@
 "use client";
 
-import { useState, useMemo, useCallback, memo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "@/i18n/routing";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { ContentLayout } from "@/components/layout";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { ListItem, MaterialListItem } from "@/components/shared/list-item";
-import { Toolbar } from "@/components/layout/dashboard/toolbar";
+import { ContentLayout, PageHeaderActionPortal } from "@/components/layout";
 import { ToolbarTabs } from "@/components/layout/dashboard/toolbar/toolbar-tabs";
-import { FacetedFilter } from "@/components/layout/dashboard/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { ContextSidebar } from "@/stores/sidebar-store";
 import {
-    Plus,
-    Package,
-    MoreHorizontal,
-    Pencil,
-    Trash2,
-    Wrench,
-    LayoutGrid,
-    Monitor,
-    Building2,
+    Plus, Package, MoreHorizontal, Wrench, LayoutGrid, Monitor, Building2,
+    Upload, History, Download,
 } from "lucide-react";
 import { ImportConfig } from "@/lib/import";
-import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { ImportHistoryModal } from "@/components/shared/import/import-history-modal";
 import { createImportBatch, importMaterialsCatalogBatch, revertImportBatch } from "@/lib/import";
-import { Button } from "@/components/ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useModal } from "@/stores/modal-store";
 import { usePanel } from "@/stores/panel-store";
 import { type MaterialCategory, type Unit, type Material } from "@/features/materials/forms/material-form";
@@ -42,10 +26,13 @@ import { deleteMaterial, deleteMaterialsBulk } from "@/features/materials/action
 import { createMaterialCategory, updateMaterialCategory, deleteMaterialCategory } from "@/features/admin/material-actions";
 import { toast } from "sonner";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
-import { CategoryTree, CategoryItem } from "@/components/shared/category-tree";
+import { CategoryItem } from "@/components/shared/category-tree";
 import { MaterialCategory as MaterialCategoryType } from "../types";
-import { useMultiSelect } from "@/hooks/use-multi-select";
 import { CategoriesSidebar } from "../components/categories-sidebar";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { ToolbarCard } from "@/components/shared/toolbar-controls";
+import { useTableFilters } from "@/hooks/use-table-filters";
+import { getMaterialColumns } from "@/features/materials/tables/materials-columns";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -57,7 +44,6 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Extended material type with joined data from query
 export interface MaterialWithDetails extends Material {
     unit_name?: string | null;
     unit_symbol?: string | null;
@@ -66,12 +52,10 @@ export interface MaterialWithDetails extends Material {
     org_unit_price?: number | null;
     org_price_currency_id?: string | null;
     org_price_valid_from?: string | null;
-    // Organization info (admin mode)
     organization_name?: string | null;
     organization_logo_url?: string | null;
 }
 
-// Category hierarchy node
 export interface MaterialCategoryNode {
     id: string;
     name: string;
@@ -101,71 +85,77 @@ export function MaterialsCatalogView({
     providers = []
 }: MaterialsCatalogViewProps) {
     const router = useRouter();
-    const { openModal, closeModal } = useModal();
+    const { openModal } = useModal();
     const { openPanel, closePanel } = usePanel();
     const [activeTab, setActiveTab] = useState<"all" | "material" | "consumable">("all");
-    const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-    // Admin origin filter (FacetedFilter with Set-based selection)
-    const [originFilter, setOriginFilter] = useState<Set<string>>(new Set());
 
-    // Determine active source based on origin filter
+    // Sidebar state for admin origin filtering
+    const [sidebarOrigin, setSidebarOrigin] = useState<"system" | "own">("system");
+
+    // Flatten lists if necessary 
     const sourceMaterials = useMemo(() => {
         if (!isAdminMode || !allMaterials) return materials;
-        if (originFilter.size === 0 || originFilter.size === 2) {
-            // No filter or both selected = show all
-            return allMaterials;
-        }
-        if (originFilter.has('system')) return materials; // system-only
-        if (originFilter.has('organization')) {
-            return allMaterials.filter(m => !m.is_system);
-        }
+        // In admin mode, we can show everything together
         return allMaterials;
-    }, [isAdminMode, originFilter, materials, allMaterials]);
+    }, [isAdminMode, materials, allMaterials]);
 
-    // Calculate facet counts for origin filter
-    const originFacets = useMemo(() => {
-        if (!allMaterials) return new Map<string, number>();
-        const facets = new Map<string, number>();
-        facets.set('system', allMaterials.filter(m => m.is_system).length);
-        facets.set('organization', allMaterials.filter(m => !m.is_system).length);
-        return facets;
-    }, [allMaterials]);
-
-    // Origin filter handlers
-    const handleOriginSelect = (value: string) => {
-        const newSet = new Set(originFilter);
-        if (newSet.has(value)) {
-            newSet.delete(value);
-        } else {
-            newSet.add(value);
-        }
-        setOriginFilter(newSet);
-    };
-
-    const handleOriginClear = () => {
-        setOriginFilter(new Set());
-    };
-
-    // Origin filter options
-    const originOptions = [
-        { label: "Sistema", value: "system", icon: Monitor },
-        { label: "Organizaciones", value: "organization", icon: Building2 },
-    ];
-
-    // Material delete modal state
-    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [materialToDelete, setMaterialToDelete] = useState<MaterialWithDetails | null>(null);
-
-    // Category delete modal state
-    const [categoryDeleteModalOpen, setCategoryDeleteModalOpen] = useState(false);
-    const [categoryToDelete, setCategoryToDelete] = useState<CategoryItem | null>(null);
-
-    // Optimistic updates for materials list
     const { optimisticItems, addItem, removeItem, updateItem } = useOptimisticList({
         items: sourceMaterials,
         getItemId: (m) => m.id,
     });
+
+    const filters = useTableFilters({
+        facets: isAdminMode ? [
+            {
+                key: "origin",
+                title: "Origen",
+                icon: Monitor,
+                options: [
+                    { label: "Sistema", value: "system" },
+                    { label: "Organizaciones", value: "organization" },
+                ],
+            }
+        ] : []
+    });
+
+    const originFilter = useMemo(() => {
+        const originValues = filters.facetValues["origin"];
+        if (!originValues || originValues.size === 0 || originValues.size === 2) return "all";
+        if (originValues.has("system")) return "system";
+        if (originValues.has("organization")) return "organization";
+        return "all";
+    }, [filters.facetValues]);
+
+    const filteredMaterials = useMemo(() => {
+        let filtered = optimisticItems;
+
+        if (originFilter === "system") filtered = filtered.filter(m => m.is_system);
+        else if (originFilter === "organization") filtered = filtered.filter(m => !m.is_system);
+
+        if (activeTab !== "all") {
+            filtered = filtered.filter(m => m.material_type === activeTab);
+        }
+
+        if (selectedCategoryId === "sin-categoria") {
+            filtered = filtered.filter(m => !m.category_id);
+        } else if (selectedCategoryId !== null) {
+            filtered = filtered.filter(m => m.category_id === selectedCategoryId);
+        }
+
+        if (filters.searchQuery.trim()) {
+            const query = filters.searchQuery.toLowerCase();
+            filtered = filtered.filter(material =>
+                material.name?.toLowerCase().includes(query) ||
+                material.category_name?.toLowerCase().includes(query) ||
+                material.unit_name?.toLowerCase().includes(query) ||
+                material.code?.toLowerCase().includes(query)
+            );
+        }
+
+        return filtered;
+    }, [optimisticItems, originFilter, activeTab, selectedCategoryId, filters.searchQuery]);
+
 
     // Convert categories for sidebar
     const sidebarCategories: MaterialCategoryType[] = useMemo(() =>
@@ -192,7 +182,6 @@ export function MaterialsCatalogView({
         return counts;
     }, [optimisticItems, activeTab]);
 
-    // Total for current type
     const totalForCurrentType = useMemo(() =>
         activeTab === 'all'
             ? optimisticItems.length
@@ -200,286 +189,89 @@ export function MaterialsCatalogView({
         [optimisticItems, activeTab]
     );
 
+    // ========================================================================
+    // actions 
+    // ========================================================================
+    const canEdit = useCallback((material: MaterialWithDetails) => {
+        if (isAdminMode) return material.is_system;
+        return !material.is_system; // Org can only edit their own materials
+    }, [isAdminMode]);
 
-    // Filter materials by type, search and category
-    const filteredMaterials = useMemo(() => {
-        let filtered = optimisticItems;
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [materialToDelete, setMaterialToDelete] = useState<MaterialWithDetails | null>(null);
 
-        // Filter by material type (tab) - 'all' shows everything
-        if (activeTab !== 'all') {
-            filtered = filtered.filter(m => m.material_type === activeTab);
-        }
-
-        // Filter by category
-        if (selectedCategoryId === "sin-categoria") {
-            filtered = filtered.filter(m => !m.category_id);
-        } else if (selectedCategoryId !== null) {
-            filtered = filtered.filter(m => m.category_id === selectedCategoryId);
-        }
-
-        // Filter by search
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(material =>
-                material.name?.toLowerCase().includes(query) ||
-                material.category_name?.toLowerCase().includes(query) ||
-                material.unit_name?.toLowerCase().includes(query)
-            );
-        }
-
-        return filtered;
-    }, [optimisticItems, searchQuery, selectedCategoryId, activeTab]);
-
-    // Multi-select for bulk actions (must be after filteredMaterials)
-    const multiSelect = useMultiSelect({
-        items: filteredMaterials,
-        getItemId: (m) => m.id,
-    });
-
-    // Bulk delete confirmation modal state
+    // Bulk Delete State
     const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+    const [materialsToBulkDelete, setMaterialsToBulkDelete] = useState<MaterialWithDetails[]>([]);
+    const [resetSelectionFn, setResetSelectionFn] = useState<(() => void) | null>(null);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
-    // Bulk action handlers
-    const handleBulkDelete = async () => {
-        const ids = Array.from(multiSelect.selectedIds);
-        const count = ids.length;
+    const handleDelete = useCallback((material: MaterialWithDetails) => {
+        if (!canEdit(material)) {
+            toast.error("No puedes eliminar materiales del sistema");
+            return;
+        }
+        setMaterialToDelete(material);
+        setDeleteModalOpen(true);
+    }, [canEdit]);
 
-        // Optimistically remove
-        ids.forEach(id => removeItem(id));
-        multiSelect.clearSelection();
-        setBulkDeleteModalOpen(false);
+    const handleBulkDelete = useCallback((materials: MaterialWithDetails[], resetSelection: () => void) => {
+        const editableMaterials = materials.filter(canEdit);
+        if (editableMaterials.length === 0) {
+            toast.error("Ninguno de los materiales seleccionados puede ser eliminado.");
+            resetSelection();
+            return;
+        }
+        if (editableMaterials.length < materials.length) {
+            toast.warning(`Se omitieron ${materials.length - editableMaterials.length} materiales del sistema que no pueden eliminarse.`);
+        }
+        setMaterialsToBulkDelete(editableMaterials);
+        setResetSelectionFn(() => resetSelection);
+        setBulkDeleteModalOpen(true);
+    }, [canEdit]);
 
+    const handleConfirmBulkDelete = async () => {
+        setIsBulkDeleting(true);
+        const ids = materialsToBulkDelete.map(m => m.id);
         try {
             const result = await deleteMaterialsBulk(ids, isAdminMode);
             if (result.error) {
                 toast.error(result.error);
             } else {
-                toast.success(`${count} material${count > 1 ? 'es' : ''} eliminado${count > 1 ? 's' : ''}`);
+                toast.success(`${materialsToBulkDelete.length} materiales eliminados`);
+                ids.forEach(id => removeItem(id));
+                resetSelectionFn?.();
+                router.refresh();
             }
         } catch (error) {
-            toast.error("Error al eliminar materiales");
+            toast.error("Error al eliminar los materiales masivamente");
+        } finally {
+            setIsBulkDeleting(false);
+            setBulkDeleteModalOpen(false);
+            setMaterialsToBulkDelete([]);
+            setResetSelectionFn(null);
         }
     };
 
-    // Bulk actions content for Toolbar
-    const bulkActionsContent = (
-        <Button variant="destructive" size="sm" onClick={() => setBulkDeleteModalOpen(true)} className="gap-2">
-            <Trash2 className="h-4 w-4" />
-            Eliminar
-        </Button>
-    );
-
-    // Filter by editability: in org mode, only show editable (org) materials in admin actions
-    const canEdit = (material: MaterialWithDetails) => {
-        if (isAdminMode) return material.is_system;
-        return !material.is_system; // Org can only edit their own materials
-    };
-
-    // ========================================================================
-    // Import Configuration
-    // ========================================================================
-
-    const materialsImportConfig: ImportConfig<any> = {
-        entityLabel: "Materiales",
-        entityId: "materials_catalog",
-        description: "Importá tu catálogo de materiales e insumos desde un archivo Excel o CSV. El sistema detectará automáticamente las columnas y te permitirá mapearlas a los campos correspondientes. Los materiales duplicados se identificarán por nombre para evitar registros repetidos.",
-        docsPath: "/es/docs/materiales/importar",
-        columns: [
-            {
-                id: "name",
-                label: "Nombre",
-                required: true,
-                description: "Nombre del material o insumo",
-                example: "Cemento Portland"
-            },
-            {
-                id: "code",
-                label: "Código",
-                required: false,
-                description: "Código interno o SKU de tu sistema",
-                example: "MAT-001"
-            },
-            {
-                id: "description",
-                label: "Descripción",
-                required: false,
-                description: "Detalle o especificación técnica",
-                example: "Cemento tipo I para construcción general"
-            },
-            {
-                id: "material_type",
-                label: "Tipo",
-                required: false,
-                example: "Material",
-                description: "Material o Consumible/Insumo"
-            },
-            {
-                id: "category_name",
-                label: "Categoría",
-                required: false,
-                example: "Materiales de Construcción",
-                foreignKey: {
-                    table: 'material_categories',
-                    labelField: 'name',
-                    valueField: 'id',
-                    fetchOptions: async () => categories.map(c => ({
-                        id: c.id,
-                        label: c.name
-                    })),
-                }
-            },
-            {
-                id: "unit_name",
-                label: "Unidad",
-                required: false,
-                example: "kg",
-                description: "Si no existe, se crea automáticamente",
-                foreignKey: {
-                    table: 'units',
-                    labelField: 'name',
-                    valueField: 'id',
-                    fetchOptions: async () => units.map(u => ({
-                        id: u.id,
-                        label: `${u.name} (${u.abbreviation})`
-                    })),
-                    allowCreate: true,
-                }
-            },
-            {
-                id: "provider_name",
-                label: "Proveedor",
-                required: false,
-                example: "Loma Negra",
-                description: "Si no existe, se crea automáticamente",
-                foreignKey: {
-                    table: 'contacts',
-                    labelField: 'full_name',
-                    valueField: 'id',
-                    fetchOptions: async () => providers.map(p => ({
-                        id: p.id,
-                        label: p.name || 'Sin nombre'
-                    })),
-                    allowCreate: true,
-                }
-            },
-            {
-                id: "unit_price",
-                label: "Precio Unitario",
-                required: false,
-                example: "150.00",
-                description: "Precio por unidad"
-            },
-            {
-                id: "currency_code",
-                label: "Moneda",
-                required: false,
-                example: "ARS",
-                description: "ARS, USD, etc. Por defecto: ARS",
-                foreignKey: {
-                    table: 'currencies',
-                    labelField: 'code',
-                    valueField: 'id',
-                    fetchOptions: async () => {
-                        // Get currencies from organization store (already filtered by org)
-                        const { useOrganizationStore } = await import("@/stores/organization-store");
-                        const currencies = useOrganizationStore.getState().currencies;
-                        return (currencies || []).map((c: any) => ({
-                            id: c.code, // Use code as ID so it matches the import value
-                            label: `${c.name} (${c.code})`
-                        }));
-                    }
-                }
-            },
-            {
-                id: "price_date",
-                label: "Fecha del Precio",
-                required: false,
-                example: "2024-01-15",
-                description: "Fecha del precio. Si no se indica, usa la fecha actual"
-            },
-            {
-                id: "sale_unit_name",
-                label: "Unidad de Venta",
-                required: false,
-                example: "Bolsa",
-                description: "Envase o presentación (Bolsa, Lata, Caja...)",
-                foreignKey: {
-                    table: 'units',
-                    labelField: 'name',
-                    valueField: 'id',
-                    fetchOptions: async () => units.map(u => ({
-                        id: u.id,
-                        label: `${u.name} (${u.abbreviation})`
-                    })),
-                    allowCreate: true,
-                }
-            },
-            {
-                id: "sale_unit_quantity",
-                label: "Cantidad por Unidad de Venta",
-                required: false,
-                example: "25",
-                description: "Cantidad de material por unidad de venta (ej: 25 kg por bolsa)"
-            },
-        ],
-        onImport: async (records) => {
-            try {
-                const batch = await createImportBatch(orgId, "materials_catalog", records.length);
-                const result = await importMaterialsCatalogBatch(orgId, records, batch.id);
-                router.refresh();
-                return {
-                    success: result.success,
-                    errors: result.errors,
-                    batchId: batch.id,
-                    created: result.created,
-                };
-            } catch (error: any) {
-                console.error("Import error:", error);
-                throw error;
+    const handleConfirmCustomDeleteMaterial = async (replacementId: string | null) => {
+        if (!materialToDelete) return;
+        removeItem(materialToDelete.id);
+        setDeleteModalOpen(false);
+        try {
+            const result = await deleteMaterial(materialToDelete.id, replacementId, isAdminMode);
+            if (result.error) {
+                toast.error(result.error);
+                router.refresh(); // rollback
+            } else {
+                toast.success(replacementId ? "Material reemplazado y eliminado" : "Material eliminado correctamente");
             }
-        },
-        onRevert: async (batchId) => {
-            await revertImportBatch(batchId, 'materials');
-            router.refresh();
+        } catch (error) {
+            toast.error("Error al eliminar el material");
+        } finally {
+            setMaterialToDelete(null);
         }
     };
 
-    const handleImport = () => {
-        openModal(
-            <BulkImportModal
-                config={materialsImportConfig}
-                organizationId={orgId}
-            />,
-            {
-                title: "Importar Materiales",
-                description: "Importa materiales desde un archivo Excel o CSV",
-                size: "xl"
-            }
-        );
-    };
-
-    const handleImportHistory = () => {
-        openModal(
-            <ImportHistoryModal
-                organizationId={orgId}
-                entityType="materials_catalog"
-                entityTable="materials"
-                onRevert={() => {
-                    // Refresh the page data after revert
-                    router.refresh();
-                }}
-            />,
-            {
-                title: "Historial de Importaciones",
-                description: "Últimas 20 importaciones de materiales",
-                size: "lg"
-            }
-        );
-    };
-
-    // ========================================================================
-    // Material Handlers
-    // ========================================================================
 
     const handleCreateMaterial = () => {
         openPanel(
@@ -493,20 +285,17 @@ export function MaterialsCatalogView({
                 isAdminMode,
                 onSuccess: (newMaterial: any) => {
                     closePanel();
-                    if (newMaterial) {
-                        addItem(newMaterial as MaterialWithDetails);
-                    }
+                    if (newMaterial) addItem(newMaterial as MaterialWithDetails);
                 },
             }
         );
     };
 
-    const handleEditMaterial = (material: MaterialWithDetails) => {
+    const handleEditMaterial = useCallback((material: MaterialWithDetails) => {
         if (!canEdit(material)) {
             toast.error("No puedes editar materiales del sistema");
             return;
         }
-
         openPanel(
             'material-form',
             {
@@ -519,162 +308,194 @@ export function MaterialsCatalogView({
                 isAdminMode,
                 onSuccess: (updatedMaterial: any) => {
                     closePanel();
-                    if (updatedMaterial) {
-                        updateItem(material.id, updatedMaterial);
-                    }
+                    if (updatedMaterial) updateItem(material.id, updatedMaterial);
                 },
             }
         );
-    };
+    }, [canEdit, isAdminMode, orgId, units, categories, providers, addItem, updateItem, openPanel]);
 
-    const handleDeleteMaterialClick = (material: MaterialWithDetails) => {
-        if (!canEdit(material)) {
-            toast.error("No puedes eliminar materiales del sistema");
-            return;
-        }
-        setMaterialToDelete(material);
-        setDeleteModalOpen(true);
-    };
 
-    const handleConfirmDeleteMaterial = async (replacementId: string | null) => {
-        if (!materialToDelete) return;
-
-        // Optimistic update - remove from list immediately
-        removeItem(materialToDelete.id);
-        setDeleteModalOpen(false);
-        setMaterialToDelete(null);
-
+    const handleInlineUpdate = useCallback(async (material: MaterialWithDetails, updates: Record<string, any>) => {
         try {
-            const result = await deleteMaterial(materialToDelete.id, replacementId, isAdminMode);
-            if (result.error) {
-                toast.error(result.error);
-                // Note: React will auto-revert optimistic update on next server render
-            } else {
-                toast.success(replacementId
-                    ? "Material reemplazado y eliminado"
-                    : "Material eliminado correctamente"
-                );
-            }
-        } catch (error) {
-            toast.error("Error al eliminar el material");
+            // Note: Currently inline updates are simple. updateItem is optimistic.
+            // Ideally we call server action here like `updateMaterialInline`
+            // But we can trigger the full form submission invisibly or build a specific action if we need to.
+            // For now we map it to updateMaterial? No, updateMaterial uses FormData.
+            // Since there's no updateMaterialInline in actions.ts, we skip it or show toast for now.
+            toast.error("Actualización en línea actualmente en desarrollo.");
+            // Revert state change
+            router.refresh();
+        } catch {
+            toast.error("Error inesperado al actualizar");
+            router.refresh();
         }
-    };
+    }, [isAdminMode, router]);
+
+
+    const columns = useMemo(() => getMaterialColumns({
+        categories,
+        units,
+        isAdminMode,
+        // Uncomment when inline updates are ready on server:
+        // onInlineUpdate: handleInlineUpdate,
+    }), [categories, units, isAdminMode]);
 
     // ========================================================================
     // Category Handlers (Admin only)
     // ========================================================================
 
-    const handleCreateCategory = (parentId: string | null = null) => {
-        openPanel(
-            'category-form',
-            {
-                parentId,
-                onSubmit: async (name: string, pId: string | null) => {
-                    const result = await createMaterialCategory(name, pId);
-                    if (!result.error) {
-                        toast.success("Categoría creada");
-                        router.refresh();
-                    }
-                    return result;
-                },
-                onSuccess: () => closePanel(),
-            }
-        );
-    };
-
-    const handleEditCategory = (category: CategoryItem) => {
-        openPanel(
-            'category-form',
-            {
-                initialData: category,
-                onSubmit: async (name: string, pId: string | null) => {
-                    const result = await updateMaterialCategory(category.id, name, pId);
-                    if (!result.error) {
-                        toast.success("Categoría actualizada");
-                        router.refresh();
-                    }
-                    return result;
-                },
-                onSuccess: () => closePanel(),
-            }
-        );
-    };
-
-    const handleDeleteCategoryClick = (category: CategoryItem) => {
-        setCategoryToDelete(category);
-        setCategoryDeleteModalOpen(true);
-    };
+    const [categoryDeleteModalOpen, setCategoryDeleteModalOpen] = useState(false);
+    const [categoryToDelete, setCategoryToDelete] = useState<CategoryItem | null>(null);
 
     const handleConfirmDeleteCategory = async (replacementId: string | null) => {
         if (!categoryToDelete) return;
-
         const deletedId = categoryToDelete.id;
-
-        // Close modal immediately for responsive UX
         setCategoryDeleteModalOpen(false);
         setCategoryToDelete(null);
-
         try {
             const result = await deleteMaterialCategory(deletedId);
-            if (result.error) {
-                toast.error(result.error);
-            } else {
-                toast.success("Categoría eliminada");
-                router.refresh();
-            }
+            if (result.error) toast.error(result.error);
+            else { toast.success("Categoría eliminada"); router.refresh(); }
         } catch (error) {
             toast.error("Error al eliminar la categoría");
         }
     };
 
-    // Replacement options
-    const materialReplacementOptions = materialToDelete
-        ? materials
-            .filter(m => m.id !== materialToDelete.id && canEdit(m))
-            .map(m => ({ id: m.id, name: m.name }))
-        : [];
 
-    const categoryReplacementOptions = categoryToDelete
-        ? categoryHierarchy
-            .filter(c => c.id !== categoryToDelete.id)
-            .map(c => ({ id: c.id, name: c.name || "Sin nombre" }))
-        : [];
+    // ========================================================================
+    // Import Configuration
+    // ========================================================================
 
-    // Convert hierarchy to CategoryItem for tree
-    const categoryItems: CategoryItem[] = categoryHierarchy.map(c => ({
-        id: c.id,
-        name: c.name,
-        parent_id: c.parent_id
-    }));
+    const materialsImportConfig: ImportConfig<any> = {
+        entityLabel: "Materiales",
+        entityId: "materials_catalog",
+        description: "Importá tu catálogo de materiales e insumos desde un archivo Excel o CSV.",
+        docsPath: "/docs/catalogo-tecnico/materiales",
+        columns: [
+            { id: "name", label: "Nombre", required: true, example: "Cemento Portland" },
+            { id: "code", label: "Código", required: false, example: "MAT-001" },
+            { id: "description", label: "Descripción", required: false, example: "Cemento tipo I" },
+            { id: "material_type", label: "Tipo", required: false, example: "Material" },
+            {
+                id: "category_name", label: "Categoría", required: false, example: "Materiales",
+                foreignKey: { table: 'material_categories', labelField: 'name', valueField: 'id', fetchOptions: async () => categories.map(c => ({ id: c.id, label: c.name })) }
+            },
+            {
+                id: "unit_name", label: "Unidad", required: false, example: "kg",
+                foreignKey: { table: 'units', labelField: 'name', valueField: 'id', fetchOptions: async () => units.map(u => ({ id: u.id, label: `${u.name} (${u.abbreviation})` })), allowCreate: true }
+            },
+            {
+                id: "provider_name", label: "Proveedor", required: false, example: "Loma Negra",
+                foreignKey: { table: 'contacts', labelField: 'full_name', valueField: 'id', fetchOptions: async () => providers.map(p => ({ id: p.id, label: p.name || 'Sin nombre' })), allowCreate: true }
+            },
+            { id: "unit_price", label: "Precio Unitario", required: false, example: "150.00" },
+            {
+                id: "currency_code", label: "Moneda", required: false, example: "ARS",
+                foreignKey: { table: 'currencies', labelField: 'code', valueField: 'id', fetchOptions: async () => { const { useOrganizationStore } = await import("@/stores/organization-store"); const currs = useOrganizationStore.getState().currencies; return (currs || []).map((c: any) => ({ id: c.code, label: `${c.name} (${c.code})` })); } }
+            },
+            { id: "price_date", label: "Fecha del Precio", required: false, example: "2024-01-15" },
+            {
+                id: "sale_unit_name", label: "Unidad de Venta", required: false, example: "Bolsa",
+                foreignKey: { table: 'units', labelField: 'name', valueField: 'id', fetchOptions: async () => units.map(u => ({ id: u.id, label: `${u.name} (${u.abbreviation})` })), allowCreate: true }
+            },
+            { id: "sale_unit_quantity", label: "Cantidad por Unidad de Venta", required: false, example: "25" },
+        ],
+        onImport: async (records) => {
+            const batch = await createImportBatch(orgId, "materials_catalog", records.length);
+            const result = await importMaterialsCatalogBatch(orgId, records, batch.id);
+            router.refresh();
+            return { success: result.success, errors: result.errors, batchId: batch.id, created: result.created };
+        },
+        onRevert: async (batchId) => {
+            await revertImportBatch(batchId, 'materials');
+            router.refresh();
+        }
+    };
+
+    const handleImport = () => {
+        openModal(<BulkImportModal config={materialsImportConfig} organizationId={orgId} />, { title: "Importar Materiales", size: "xl" });
+    };
+
+    const handleImportHistory = () => {
+        openModal(<ImportHistoryModal organizationId={orgId} entityType="materials_catalog" entityTable="materials" onRevert={() => router.refresh()} />, { title: "Historial de Importaciones", size: "lg" });
+    };
+
+    const materialReplacementOptions = materialToDelete ? materials.filter(m => m.id !== materialToDelete.id && canEdit(m)).map(m => ({ id: m.id, name: m.name })) : [];
+    const categoryReplacementOptions = categoryToDelete ? categoryHierarchy.filter(c => c.id !== categoryToDelete.id).map(c => ({ id: c.id, name: c.name || "Sin nombre" })) : [];
+
+    // Header actions
+    const headerAction = (
+        <PageHeaderActionPortal>
+            <div className="flex items-center">
+                <button
+                    onClick={handleCreateMaterial}
+                    className="flex items-center gap-1.5 h-8 px-3 rounded-l-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+                >
+                    <Plus className="h-4 w-4" />
+                    <span>Nuevo {activeTab === 'consumable' ? "Insumo" : "Material"}</span>
+                </button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="flex items-center justify-center h-8 w-8 rounded-r-lg border-l border-primary-foreground/20 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={handleImport}>
+                            <Upload className="h-4 w-4 mr-2" /> Importar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleImportHistory}>
+                            <History className="h-4 w-4 mr-2" /> Historial de Importaciones
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        </PageHeaderActionPortal>
+    );
+
+    const sidebarAction = !isAdminMode ? (
+        <Select value={sidebarOrigin} onValueChange={(v) => setSidebarOrigin(v as "system" | "own")}>
+            <SelectTrigger className="h-6 text-xs font-medium border-transparent bg-transparent shadow-none hover:bg-muted focus:ring-0 px-2 py-0 min-h-0 min-w-[80px]">
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+                <SelectItem value="system">Sistema</SelectItem>
+                <SelectItem value="own">Propios</SelectItem>
+            </SelectContent>
+        </Select>
+    ) : undefined;
 
     return (
         <>
-            {/* Categories Sidebar - always visible */}
-            <ContextSidebar title="Categorías">
+            {headerAction}
+
+            <ContextSidebar title="Categorías" action={sidebarAction}>
                 <CategoriesSidebar
                     categories={sidebarCategories}
                     materialCounts={materialCounts}
                     selectedCategoryId={selectedCategoryId}
                     onSelectCategory={setSelectedCategoryId}
                     totalMaterials={totalForCurrentType}
+                    // TODO: Implement category edit/delete UI in CategoriesSidebar or custom tree
                 />
             </ContextSidebar>
 
-            {/* Main content with proper padding */}
-            <ContentLayout variant="wide">
-                {/* Toolbar with portal to header - uses ToolbarTabs for type toggle */}
-                <Toolbar
-                    portalToHeader
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    searchPlaceholder={
-                        activeTab === 'all'
-                            ? "Buscar materiales e insumos por nombre, categoría o unidad..."
-                            : activeTab === 'material'
-                                ? "Buscar materiales por nombre, categoría o unidad..."
-                                : "Buscar insumos por nombre, categoría o unidad..."}
-                    leftActions={
-                        <div className="flex items-center gap-2">
+            {optimisticItems.length === 0 ? (
+                <ViewEmptyState
+                    mode="empty"
+                    icon={Package}
+                    viewName="Materiales e Insumos"
+                    featureDescription="Los materiales e insumos son los productos físicos y consumibles que utilizás en tus proyectos de construcción. Desde aquí podés gestionar el catálogo, definir precios, asociar proveedores y organizar por categorías."
+                    onAction={handleCreateMaterial}
+                    actionLabel="Nuevo Material"
+                    docsPath="/docs/catalogo-tecnico/materiales"
+                />
+            ) : (
+                <div className="flex flex-col gap-4 flex-1 overflow-hidden">
+                    <ToolbarCard
+                        filters={filters}
+                        searchPlaceholder="Buscar materiales..."
+                        left={
                             <ToolbarTabs
                                 value={activeTab}
                                 onValueChange={(v) => setActiveTab(v as 'all' | 'material' | 'consumable')}
@@ -684,128 +505,75 @@ export function MaterialsCatalogView({
                                     { label: "Insumos", value: "consumable", icon: Wrench },
                                 ]}
                             />
-                            {isAdminMode && allMaterials && (
-                                <FacetedFilter
-                                    title="Origen"
-                                    options={originOptions}
-                                    selectedValues={originFilter}
-                                    onSelect={handleOriginSelect}
-                                    onClear={handleOriginClear}
-                                    facets={originFacets}
-                                />
-                            )}
-                        </div>
-                    }
-                    actions={[
-                        {
-                            label: activeTab === 'consumable' ? "Nuevo Insumo" : "Nuevo Material",
-                            icon: Plus,
-                            onClick: handleCreateMaterial,
-                        },
-                        ...getStandardToolbarActions({
-                            onImport: handleImport,
-                            onImportHistory: handleImportHistory,
-                            onExportCSV: () => toast.info("Exportar CSV: próximamente"),
-                            onExportExcel: () => toast.info("Exportar Excel: próximamente"),
-                        }),
-                    ]}
-                    selectedCount={multiSelect.selectedCount}
-                    onClearSelection={multiSelect.clearSelection}
-                    onSelectAll={multiSelect.selectAll}
-                    totalCount={filteredMaterials.length}
-                    onBulkDelete={() => setBulkDeleteModalOpen(true)}
-                    bulkActions={bulkActionsContent}
-                />
+                        }
+                    />
 
-                {/* Materials/Consumables View */}
-                {filteredMaterials.length === 0 ? (
-                    <div className="h-full flex flex-col">
-                        {searchQuery || selectedCategoryId ? (
-                            <ViewEmptyState
-                                mode="no-results"
-                                icon={Package}
-                                viewName="materiales e insumos"
-                                filterContext={searchQuery ? 'con esa búsqueda' : 'en esta categoría'}
-                                onResetFilters={() => {
-                                    setSearchQuery("");
-                                    setSelectedCategoryId(null);
-                                }}
-                            />
-                        ) : (
-                            <ViewEmptyState
-                                mode="empty"
-                                icon={Package}
-                                viewName="Materiales e Insumos"
-                                featureDescription="Los materiales e insumos son los productos físicos y consumibles que utilizás en tus proyectos de construcción. Desde aquí podés gestionar el catálogo, definir precios, asociar proveedores y organizar por categorías."
-                                onAction={handleCreateMaterial}
-                                actionLabel="Nuevo Material"
-                                docsPath="/docs/materiales/introduccion"
-                            />
-                        )}
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        {filteredMaterials.map((material) => (
-                            <MaterialListItem
-                                key={material.id}
-                                material={material}
-                                canEdit={canEdit(material)}
-                                isAdminMode={isAdminMode}
-                                organizationId={orgId}
-                                selected={multiSelect.isSelected(material.id)}
-                                onToggleSelect={multiSelect.toggle}
-                                onEdit={handleEditMaterial}
-                                onDelete={handleDeleteMaterialClick}
-                            />
-                        ))}
-                    </div>
-                )}
-            </ContentLayout >
+                    {filters.hasActiveFilters && filteredMaterials.length === 0 ? (
+                        <ViewEmptyState
+                            mode="no-results"
+                            icon={Package}
+                            viewName="materiales e insumos"
+                            filterContext="con este criterio"
+                            onResetFilters={() => {
+                                filters.clearAll();
+                                setSelectedCategoryId(null);
+                                setActiveTab("all");
+                            }}
+                        />
+                    ) : (
+                        <DataTable
+                            columns={columns}
+                            data={filteredMaterials}
+                            enableContextMenu
+                            enableRowSelection
+                            onEdit={handleEditMaterial}
+                            onDelete={handleDelete}
+                            onBulkDelete={handleBulkDelete}
+                            globalFilter={filters.searchQuery}
+                            onGlobalFilterChange={filters.setSearchQuery}
+                        />
+                    )}
+                </div>
+            )}
 
-            {/* Material Delete Modal */}
-            < DeleteReplacementModal
+            <DeleteReplacementModal
                 isOpen={deleteModalOpen}
-                onClose={() => {
-                    setDeleteModalOpen(false);
-                    setMaterialToDelete(null);
-                }
-                }
-                onConfirm={handleConfirmDeleteMaterial}
+                onClose={() => { setDeleteModalOpen(false); setMaterialToDelete(null); }}
+                onConfirm={handleConfirmCustomDeleteMaterial}
                 itemToDelete={materialToDelete ? { id: materialToDelete.id, name: materialToDelete.name } : null}
                 replacementOptions={materialReplacementOptions}
                 entityLabel="material"
                 title={isAdminMode ? "Eliminar Material del Sistema" : "Eliminar Material"}
-                description={`Estás a punto de eliminar "${materialToDelete?.name}". Este material puede estar siendo usado en productos o presupuestos.`}
+                description={`Estás a punto de eliminar "${materialToDelete?.name}".`}
             />
 
-            {/* Category Delete Modal */}
             <DeleteReplacementModal
                 isOpen={categoryDeleteModalOpen}
-                onClose={() => {
-                    setCategoryDeleteModalOpen(false);
-                    setCategoryToDelete(null);
-                }}
+                onClose={() => { setCategoryDeleteModalOpen(false); setCategoryToDelete(null); }}
                 onConfirm={handleConfirmDeleteCategory}
                 itemToDelete={categoryToDelete ? { id: categoryToDelete.id, name: categoryToDelete.name || "Sin nombre" } : null}
                 replacementOptions={categoryReplacementOptions}
                 entityLabel="categoría"
                 title="Eliminar Categoría"
-                description={`Estás a punto de eliminar "${categoryToDelete?.name}". Los materiales de esta categoría quedarán sin categoría asignada.`}
+                description={`Estás a punto de eliminar "${categoryToDelete?.name}".`}
             />
 
-            {/* Bulk Delete Confirmation Modal */}
             <AlertDialog open={bulkDeleteModalOpen} onOpenChange={setBulkDeleteModalOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar {multiSelect.selectedCount} material{multiSelect.selectedCount > 1 ? 'es' : ''}?</AlertDialogTitle>
+                        <AlertDialogTitle>¿Eliminar {materialsToBulkDelete.length} ítems?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Los materiales seleccionados serán eliminados permanentemente.
+                            Esta acción no se puede deshacer. Los materiales seleccionados serán eliminados permanentemente (soft-delete). No habrá opción de reemplazar asociaciones para los ítems al hacerlo masivamente.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Eliminar
+                        <AlertDialogCancel disabled={isBulkDeleting}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={handleConfirmBulkDelete} 
+                            disabled={isBulkDeleting}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {isBulkDeleting ? "Eliminando..." : "Eliminar " + materialsToBulkDelete.length}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -813,4 +581,3 @@ export function MaterialsCatalogView({
         </>
     );
 }
-

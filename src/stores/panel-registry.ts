@@ -124,6 +124,14 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
     },
 
     // ========================================================================
+    // Technical Catalog
+    // ========================================================================
+    'unit-form': {
+        component: dynamic(() => import('@/features/units/forms/unit-form').then(mod => ({ default: mod.UnitForm }))),
+        defaultOptions: { size: 'sm' },
+    },
+
+    // ========================================================================
     // Economic Indices (Settings > Finance)
     // ========================================================================
     'index-type-form': {
@@ -310,6 +318,26 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
     },
     'forum-post-form': {
         component: dynamic(() => import('@/components/shared/forum/forum-post-form').then(mod => ({ default: mod.ForumPostForm }))),
+        defaultOptions: { size: 'md' },
+    },
+
+    // ========================================================================
+    // Tasks Feature (Catálogo Técnico)
+    // ========================================================================
+    'tasks-form': {
+        component: dynamic(() => import('@/features/tasks/forms/tasks-form').then(mod => ({ default: mod.TasksForm }))),
+        defaultOptions: { size: 'lg' },
+    },
+    'tasks-parametric-form': {
+        component: dynamic(() => import('@/features/tasks/forms/tasks-parametric-form').then(mod => ({ default: mod.TasksParametricForm }))),
+        defaultOptions: { size: 'lg' },
+    },
+    'tasks-bulk-edit-form': {
+        component: dynamic(() => import('@/features/tasks/forms/tasks-bulk-edit-form').then(mod => ({ default: mod.TasksBulkEditForm }))),
+        defaultOptions: { size: 'md' },
+    },
+    'tasks-division-form': {
+        component: dynamic(() => import('@/features/tasks/forms/tasks-division-form').then(mod => ({ default: mod.TasksDivisionForm }))),
         defaultOptions: { size: 'md' },
     },
 

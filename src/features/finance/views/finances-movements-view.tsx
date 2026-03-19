@@ -18,7 +18,7 @@ import { useTableActions } from "@/hooks/use-table-actions";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { FilterPopover, SearchButton, DisplayButton } from "@/components/shared/toolbar-controls";
+import { ToolbarFilter, ToolbarSearch, ToolbarDisplay } from "@/components/shared/toolbar-controls";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { exportToCSV, exportToExcel } from "@/lib/export";
 import { deleteFinanceMovement, updateMovementField } from "../actions";
@@ -280,7 +280,7 @@ export function FinancesMovementsView({
             <>
                 <Toolbar
                     portalToHeader
-                    leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar movimientos..." /></>}
+                    leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar movimientos..." /></>}
                     actions={toolbarActions}
                 />
                 <ViewEmptyState
@@ -298,7 +298,7 @@ export function FinancesMovementsView({
     // ─── Toolbar (embedded inside DataTable card) ───────
     const embeddedToolbar = (table: any) => (
         <Toolbar
-            leftActions={<><FilterPopover filters={filters} /><DisplayButton table={table} /><SearchButton filters={filters} placeholder="Buscar movimientos..." /></>}
+            leftActions={<><ToolbarFilter filters={filters} /><ToolbarDisplay table={table} /><ToolbarSearch filters={filters} placeholder="Buscar movimientos..." /></>}
             actions={toolbarActions}
         />
     );

@@ -32,8 +32,7 @@ import { useFileUpload, type UploadedFile } from "@/hooks/use-file-upload";
 import { useDropzone } from "react-dropzone";
 import Image from "next/image";
 import { toast } from "sonner";
-import { FormHeroField } from "@/components/shared/forms/fields/form-hero-field";
-import { FormNotesField } from "@/components/shared/forms/fields/form-notes-field";
+import { FormTextField } from "@/components/shared/forms/fields/form-text-field";
 import {
     ChipRow,
     DateTimeRangeChip,
@@ -437,7 +436,8 @@ export function CalendarEventForm({
             </ChipRow>
 
             {/* ── Hero: Title ─────────────────────────── */}
-            <FormHeroField
+            <FormTextField
+                variant="hero"
                 value={form.watch("title") || ""}
                 onChange={(val) => form.setValue("title", val)}
                 placeholder="Nombre de la actividad..."
@@ -445,7 +445,8 @@ export function CalendarEventForm({
             />
 
             {/* ── Notes (borderless, below hero) ──────── */}
-            <FormNotesField
+            <FormTextField
+                variant="body"
                 value={form.watch("description") || ""}
                 onChange={(val) => form.setValue("description", val)}
                 placeholder="Notas adicionales..."

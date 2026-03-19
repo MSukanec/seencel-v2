@@ -4,12 +4,13 @@ import { useState } from "react";
 import { CourseWithDetails } from "@/features/academy/types";
 import { CourseCard } from "./course-card";
 import { useTranslations } from "next-intl";
-import { BookOpen, Sparkles, ArrowRight, GraduationCap, Video, Search, X } from "lucide-react";
+import { BookOpen, Sparkles, ArrowRight, GraduationCap, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/routing";
 import { Card } from "@/components/ui/card";
 import { ToolbarCard } from "@/components/shared/toolbar-controls";
 import { ViewEmptyState } from "@/components/shared/empty-state";
+import { useTableFilters } from "@/hooks/use-table-filters";
 
 interface CoursesContentProps {
     courses: CourseWithDetails[];
@@ -22,7 +23,8 @@ interface CoursesContentProps {
 
 export function CoursesContent({ courses, isDashboard = false, detailRoute = '/academy/courses', enrolledCourseIds = [], startedCourseIds = [], isPurchaseEnabled = true }: CoursesContentProps) {
     const t = useTranslations('Learning');
-    const [searchQuery, setSearchQuery] = useState("");
+    const filters = useTableFilters();
+    const searchQuery = filters.searchQuery;
 
     // Filter courses based on search
     const filteredCourses = courses.filter(course =>
@@ -30,7 +32,7 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
         course.short_description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const hasActiveFilters = searchQuery.length > 0;
+    const hasActiveFilters = filters.hasActiveFilters;
 
     // ─── Dashboard mode: layout is handled by ContentLayout in page.tsx ───
     if (isDashboard) {
@@ -51,19 +53,14 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
             return (
                 <div className="flex flex-col gap-6">
                     <ToolbarCard
-                        left={
-                            <SimpleSearchInput
-                                value={searchQuery}
-                                onChange={setSearchQuery}
-                                placeholder="Buscar cursos..."
-                            />
-                        }
+                        filters={filters}
+                        searchPlaceholder="Buscar cursos..."
                     />
                     <ViewEmptyState
                         mode="no-results"
                         icon={Video}
                         viewName="cursos"
-                        onResetFilters={() => setSearchQuery("")}
+                        onResetFilters={() => filters.clearAll()}
                     />
                 </div>
             );
@@ -73,13 +70,8 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
         return (
             <div className="flex flex-col gap-6">
                 <ToolbarCard
-                    left={
-                        <SimpleSearchInput
-                            value={searchQuery}
-                            onChange={setSearchQuery}
-                            placeholder="Buscar cursos..."
-                        />
-                    }
+                    filters={filters}
+                    searchPlaceholder="Buscar cursos..."
                 />
                 <Card variant="inset">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -191,26 +183,3 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
     );
 }
 
-// ─── Simple inline search ───
-function SimpleSearchInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
-    return (
-        <div className="flex items-center gap-1.5 h-8 rounded-md px-2 bg-muted/50 border border-border/50">
-            <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <input
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder={placeholder}
-                className="bg-transparent text-sm outline-none placeholder:text-muted-foreground/60 w-[160px]"
-            />
-            {value && (
-                <button
-                    onClick={() => onChange("")}
-                    className="text-muted-foreground hover:text-foreground shrink-0"
-                >
-                    <X className="h-3 w-3" />
-                </button>
-            )}
-        </div>
-    );
-}

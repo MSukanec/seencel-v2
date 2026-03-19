@@ -1,40 +1,51 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "@/i18n/routing";
-import { Plus, Monitor, Building2, ClipboardList, Trash2, Pencil, Circle } from "lucide-react";
-
-import { TasksByDivision, Unit, TaskDivision, TaskAction, TaskElement } from "@/features/tasks/types";
-import { TaskCatalog } from "@/features/tasks/components/tasks-catalog";
-import { TasksForm, TasksTypeSelector, TaskCreationType, TasksParametricForm } from "@/features/tasks/forms";
-import { TasksBulkEditForm } from "@/features/tasks/forms/tasks-bulk-edit-form";
-import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { FacetedFilter } from "@/components/layout/dashboard/toolbar/toolbar-faceted-filter";
-import { ViewEmptyState } from "@/components/shared/empty-state";
-import { getStandardToolbarActions } from "@/lib/toolbar-actions";
-import { Button } from "@/components/ui/button";
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+    Plus, Monitor, ClipboardList, Circle, MoreHorizontal,
+    Upload, History, Download, LayoutGrid, Table2,
+    Building2, Archive,
+} from "lucide-react";
+
+import { TasksByDivision, Unit, TaskDivision, TaskAction, TaskElement, TaskView } from "@/features/tasks/types";
+import { TaskCatalog } from "@/features/tasks/components/tasks-catalog";
+import { DivisionsSidebar } from "@/features/tasks/components/divisions-sidebar";
+import { getTaskColumns, TASK_STATUS_CONFIG } from "@/features/tasks/tables/tasks-columns";
+
+import { PageHeaderActionPortal } from "@/components/layout";
+import { ToolbarCard } from "@/components/shared/toolbar-controls";
+import { ViewEmptyState } from "@/components/shared/empty-state";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { Card } from "@/components/ui/card";
+import { ContextSidebar } from "@/stores/sidebar-store";
+import { StatusDot } from "@/components/shared/popovers";
+import {
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+import { usePanel } from "@/stores/panel-store";
 import { useModal } from "@/stores/modal-store";
-import { useMultiSelect } from "@/hooks/use-multi-select";
-import { deleteTasksBulk } from "@/features/tasks/actions";
+import { useTableFilters } from "@/hooks/use-table-filters";
+import { deleteTask, updateTaskStatus, updateTaskInline } from "@/features/tasks/actions";
 import { ImportConfig, createImportBatch, importTasksCatalogBatch, importAITasksBatch, revertImportBatch } from "@/lib/import";
 import { analyzeExcelStructure } from "@/features/ai/actions";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { ImportHistoryModal } from "@/components/shared/import/import-history-modal";
 import { toast } from "sonner";
+import { useTableActions } from "@/hooks/use-table-actions";
 
-// Filter type for origin
-type OriginFilter = "all" | "system" | "organization";
+// ── View mode ────────────────────────────────────────────────
+type ViewMode = "table" | "cards";
 
+const VIEW_OPTIONS = [
+    { value: "table", icon: Table2, label: "Tabla" },
+    { value: "cards", icon: LayoutGrid, label: "Tarjetas" },
+];
+
+// ── Props ─────────────────────────────────────────────────────
 interface TasksCatalogViewProps {
     groupedTasks: TasksByDivision[];
     orgId: string;
@@ -52,222 +63,235 @@ export function TasksCatalogView({
     divisions,
     kinds = [],
     elements = [],
-    isAdminMode = false
+    isAdminMode = false,
 }: TasksCatalogViewProps) {
     const router = useRouter();
-    const { openModal, closeModal } = useModal();
-    const [searchQuery, setSearchQuery] = useState("");
-    const [originFilter, setOriginFilter] = useState<Set<string>>(new Set());
-    const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
+    const { openPanel } = usePanel();
+    const { openModal } = useModal();
 
-    // Flatten all tasks for filtering / counting
-    const serverTasks = useMemo(() => {
-        return groupedTasks.flatMap(g => g.tasks);
-    }, [groupedTasks]);
+    // ── Filter units applicable to tasks ───────────────────────
+    const taskUnits = useMemo(() => {
+        return units.filter(u => u.applicable_to?.includes("task"));
+    }, [units]);
 
-    // Optimistic deletes tracking
-    const [optimisticDeleteIds, setOptimisticDeleteIds] = useState<Set<string>>(new Set());
-    const allTasks = useMemo(() => {
-        if (optimisticDeleteIds.size === 0) return serverTasks;
-        return serverTasks.filter(t => !optimisticDeleteIds.has(t.id));
-    }, [serverTasks, optimisticDeleteIds]);
+    // ── View mode state ────────────────────────────────────────
+    const [viewMode, setViewMode] = useState<ViewMode>("table");
 
-    // Calculate facet counts for origin filter
-    const originFacets = useMemo(() => {
-        const facets = new Map<string, number>();
-        facets.set("system", allTasks.filter(t => t.is_system).length);
-        facets.set("organization", allTasks.filter(t => !t.is_system).length);
-        return facets;
-    }, [allTasks]);
+    // ── Division sidebar state (shared by both views) ──────────
+    const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
+    const [sidebarOrigin, setSidebarOrigin] = useState<"system" | "own">("system");
 
-    // Calculate facet counts for status filter
-    const statusFacets = useMemo(() => {
-        const facets = new Map<string, number>();
-        facets.set("active", allTasks.filter(t => (t.status ?? "active") === "active").length);
-        facets.set("draft", allTasks.filter(t => t.status === "draft").length);
-        facets.set("archived", allTasks.filter(t => t.status === "archived").length);
-        return facets;
-    }, [allTasks]);
+    // Filtered divisions for the sidebar
+    const filteredSidebarDivisions = useMemo(() => {
+        if (isAdminMode) return divisions;
+        if (sidebarOrigin === "system") return divisions.filter(d => d.is_system);
+        if (sidebarOrigin === "own") return divisions.filter(d => !d.is_system);
+        return divisions;
+    }, [divisions, sidebarOrigin, isAdminMode]);
 
-    // Convert Set filter to the legacy filter format for TaskCatalog
-    const computedOriginFilter: OriginFilter = useMemo(() => {
-        if (originFilter.size === 0) return "all";
-        if (originFilter.size === 2) return "all"; // Both selected = all
-        if (originFilter.has("system")) return "system";
-        if (originFilter.has("organization")) return "organization";
-        return "all";
-    }, [originFilter]);
+    // ── Flatten all tasks ──────────────────────────────────────
+    const allTasks = useMemo(() => groupedTasks.flatMap(g => g.tasks), [groupedTasks]);
 
-    // ========================================================================
-    // Filter handlers
-    // ========================================================================
-    const handleOriginSelect = (value: string) => {
-        const newSet = new Set(originFilter);
-        if (newSet.has(value)) {
-            newSet.delete(value);
-        } else {
-            newSet.add(value);
-        }
-        setOriginFilter(newSet);
-    };
-
-    const handleOriginClear = () => {
-        setOriginFilter(new Set());
-    };
-
-    const handleStatusSelect = (value: string) => {
-        const newSet = new Set(statusFilter);
-        if (newSet.has(value)) newSet.delete(value);
-        else newSet.add(value);
-        setStatusFilter(newSet);
-    };
-
-    const handleStatusClear = () => setStatusFilter(new Set());
-
-    // ========================================================================
-    // Multi-select for bulk actions
-    // ========================================================================
-    const multiSelect = useMultiSelect({
-        items: allTasks,
-        getItemId: (t) => t.id,
+    // ═══════════════════════════════════════════════════════
+    // Filters via useTableFilters
+    // ═══════════════════════════════════════════════════════
+    const filters = useTableFilters({
+        facets: [
+            {
+                key: "origin",
+                title: "Origen",
+                icon: Monitor,
+                options: [
+                    { label: "Sistema", value: "system" },
+                    { label: "Propios", value: "organization" },
+                ],
+            },
+            {
+                key: "status",
+                title: "Estado",
+                icon: Circle,
+                options: [
+                    { label: "Activa", value: "active" },
+                    { label: "Borrador", value: "draft" },
+                    { label: "Archivada", value: "archived" },
+                ],
+            },
+        ],
     });
 
-    const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+    // ── Computed filters ───────────────────────────────────────
+    const originFilter = useMemo(() => {
+        const originValues = filters.facetValues["origin"];
+        if (!originValues || originValues.size === 0 || originValues.size === 2) return "all";
+        if (originValues.has("system")) return "system";
+        if (originValues.has("organization")) return "organization";
+        return "all";
+    }, [filters.facetValues]);
 
-    const handleBulkDelete = async () => {
-        const ids = Array.from(multiSelect.selectedIds);
-        const count = ids.length;
+    const statusFilter = filters.facetValues["status"] || new Set<string>();
 
-        // Optimistic: remove immediately from UI
-        setOptimisticDeleteIds(prev => {
-            const next = new Set(prev);
-            ids.forEach(id => next.add(id));
-            return next;
-        });
-        multiSelect.clearSelection();
-        setBulkDeleteModalOpen(false);
+    // ── Filtered tasks (search + origin + status + division) ──
+    const filteredTasks = useMemo(() => {
+        let tasks = allTasks;
 
-        try {
-            const result = await deleteTasksBulk(ids, isAdminMode);
-            if (result.error) {
-                // Rollback
-                setOptimisticDeleteIds(prev => {
-                    const next = new Set(prev);
-                    ids.forEach(id => next.delete(id));
-                    return next;
-                });
-                toast.error(result.error);
-            } else {
-                toast.success(`${count} tarea${count > 1 ? 's' : ''} eliminada${count > 1 ? 's' : ''}`);
-            }
-        } catch (error) {
-            // Rollback
-            setOptimisticDeleteIds(prev => {
-                const next = new Set(prev);
-                ids.forEach(id => next.delete(id));
-                return next;
-            });
-            toast.error("Error al eliminar tareas");
+        // Origin
+        if (originFilter === "system") tasks = tasks.filter(t => t.is_system);
+        else if (originFilter === "organization") tasks = tasks.filter(t => !t.is_system);
+
+        // Division sidebar
+        if (selectedDivisionId === "sin-division") {
+            tasks = tasks.filter(t => !t.task_division_id);
+        } else if (selectedDivisionId !== null) {
+            tasks = tasks.filter(t => t.task_division_id === selectedDivisionId);
         }
-    };
 
-    const handleBulkEdit = () => {
-        const ids = Array.from(multiSelect.selectedIds);
-        openModal(
-            <TasksBulkEditForm
-                taskIds={ids}
-                units={units}
-                divisions={divisions}
-                isAdminMode={isAdminMode}
-            />,
-            {
-                title: `Editar ${ids.length} tarea${ids.length > 1 ? "s" : ""} en masa`,
-                description: "Solo los campos que modifiques se aplicarán a todas las tareas seleccionadas.",
-                size: "md"
+        // Search
+        if (filters.searchQuery.trim()) {
+            const q = filters.searchQuery.toLowerCase();
+            tasks = tasks.filter(t =>
+                t.name?.toLowerCase().includes(q) ||
+                t.custom_name?.toLowerCase().includes(q) ||
+                t.code?.toLowerCase().includes(q) ||
+                t.description?.toLowerCase().includes(q)
+            );
+        }
+
+        // Status facet
+        if (statusFilter.size > 0) {
+            tasks = tasks.filter(t => statusFilter.has(t.status ?? "active"));
+        }
+
+        return tasks;
+    }, [allTasks, originFilter, selectedDivisionId, filters.searchQuery, statusFilter]);
+
+    // ── Task counts for sidebar ────────────────────────────────
+    const taskCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        let tasksToCount = allTasks.filter(t => (t.status ?? "active") !== "archived");
+
+        if (originFilter === "system") tasksToCount = tasksToCount.filter(t => t.is_system);
+        else if (originFilter === "organization") tasksToCount = tasksToCount.filter(t => !t.is_system);
+
+        tasksToCount.forEach(t => {
+            const divId = t.task_division_id || "sin-division";
+            counts[divId] = (counts[divId] || 0) + 1;
+        });
+
+        return counts;
+    }, [allTasks, originFilter]);
+
+    // Active task count for the specified sidebar origin
+    const sidebarTaskCount = useMemo(() => {
+        let tasksToCount = allTasks.filter(t => (t.status ?? "active") !== "archived");
+        if (!isAdminMode) {
+            if (sidebarOrigin === "system") tasksToCount = tasksToCount.filter(t => t.is_system);
+            else if (sidebarOrigin === "own") tasksToCount = tasksToCount.filter(t => !t.is_system);
+        }
+        return tasksToCount.length;
+    }, [allTasks, sidebarOrigin, isAdminMode]);
+
+    // ═══════════════════════════════════════════════════════
+    // Delete via useTableActions
+    // ═══════════════════════════════════════════════════════
+    const { handleDelete, handleBulkDelete, DeleteConfirmDialog } = useTableActions<TaskView>({
+        onDelete: async (task) => {
+            const result = await deleteTask(task.id, isAdminMode);
+            return { success: !result.error };
+        },
+        entityName: "tarea",
+        entityNamePlural: "tareas",
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // Status change handler (optimistic + server)
+    // ═══════════════════════════════════════════════════════
+    const handleStatusChange = useCallback(async (task: TaskView, status: string) => {
+        const result = await updateTaskStatus(task.id, status as "draft" | "active" | "archived", isAdminMode);
+        if (result.error) {
+            toast.error(result.error);
+        } else {
+            const labels: Record<string, string> = { draft: "Borrador", active: "Activa", archived: "Archivada" };
+            toast.success(`Estado cambiado a: ${labels[status] || status}`);
+            router.refresh();
+        }
+    }, [isAdminMode, router]);
+
+    // ═══════════════════════════════════════════════════════
+    // Form Handlers
+    // ═══════════════════════════════════════════════════════
+    const handleCreateTask = useCallback(() => {
+        openPanel('tasks-form', {
+            organizationId: orgId,
+            units: taskUnits,
+            divisions,
+            isAdminMode,
+        });
+    }, [openPanel, orgId, taskUnits, divisions, isAdminMode]);
+
+    const handleEditTask = useCallback((task: TaskView) => {
+        openPanel('tasks-form', {
+            mode: "edit",
+            initialData: task,
+            organizationId: orgId,
+            units: taskUnits,
+            divisions,
+            isAdminMode,
+            directType: "own",
+        });
+    }, [openPanel, orgId, taskUnits, divisions, isAdminMode]);
+
+    const handleViewTask = useCallback((task: TaskView) => {
+        const pathname = isAdminMode
+            ? "/admin/catalog/task/[taskId]"
+            : "/organization/catalog/task/[taskId]";
+        router.push({ pathname, params: { taskId: task.id } } as any);
+    }, [isAdminMode, router]);
+
+    // ═══════════════════════════════════════════════════════
+    // Inline Update Handler (for DataTable)
+    // ═══════════════════════════════════════════════════════
+    const handleInlineUpdate = useCallback(async (task: TaskView, updates: Record<string, any>) => {
+        try {
+            const result = await updateTaskInline(task.id, updates, isAdminMode);
+            if (!result.success) {
+                toast.error(result.error || "Error al actualizar");
+            } else {
+                router.refresh();
             }
-        );
-    };
+        } catch {
+            toast.error("Error inesperado al actualizar");
+        }
+    }, [isAdminMode, router]);
 
-    const bulkActionsContent = (
-        <>
-            <Button variant="outline" size="sm" onClick={multiSelect.selectAll} className="gap-2">
-                Seleccionar todo ({allTasks.length})
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleBulkEdit} className="gap-2">
-                <Pencil className="h-4 w-4" />
-                Editar en Masa
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => setBulkDeleteModalOpen(true)} className="gap-2">
-                <Trash2 className="h-4 w-4" />
-                Eliminar
-            </Button>
-        </>
-    );
+    // ═══════════════════════════════════════════════════════
+    // DataTable columns
+    // ═══════════════════════════════════════════════════════
+    const columns = useMemo(() => getTaskColumns({
+        divisions,
+        units: taskUnits,
+        onStatusChange: handleStatusChange,
+        onInlineUpdate: handleInlineUpdate,
+    }), [divisions, taskUnits, handleStatusChange, handleInlineUpdate]);
 
-    // ========================================================================
-    // Import Configuration
-    // ========================================================================
-
-    const tasksImportConfig: ImportConfig<any> = {
+    // ═══════════════════════════════════════════════════════
+    // Import Handlers
+    // ═══════════════════════════════════════════════════════
+    const tasksImportConfig: ImportConfig<any> = useMemo(() => ({
         entityLabel: "Tareas",
         entityId: "tasks_catalog",
-        description: "Importá tu catálogo de tareas desde un archivo Excel o CSV. El sistema detectará automáticamente las columnas y te permitirá mapearlas a los campos correspondientes. Las tareas duplicadas se identificarán por nombre o código para evitar registros repetidos.",
-        docsPath: "/es/docs/tareas/importar",
+        description: "Importá tu catálogo de tareas desde un archivo Excel o CSV.",
+        docsPath: "/docs/catalogo-tecnico/tareas",
         columns: [
+            { id: "name", label: "Nombre", required: true, description: "Nombre de la tarea", example: "Construcción de muro de ladrillo hueco" },
+            { id: "code", label: "Código", required: false, description: "Código interno", example: "MUR-001" },
+            { id: "description", label: "Descripción", required: false, description: "Detalle técnico", example: "Muro de ladrillo hueco de 18cm" },
             {
-                id: "name",
-                label: "Nombre",
-                required: true,
-                description: "Nombre de la tarea de construcción",
-                example: "Construcción de muro de ladrillo hueco"
+                id: "unit_name", label: "Unidad de Medida", required: false, example: "m²",
+                foreignKey: { table: 'units', labelField: 'name', valueField: 'id', fetchOptions: async () => taskUnits.map(u => ({ id: u.id, label: `${u.name} (${u.symbol})` })), allowCreate: true }
             },
             {
-                id: "code",
-                label: "Código",
-                required: false,
-                description: "Código interno o identificador",
-                example: "MUR-001"
-            },
-            {
-                id: "description",
-                label: "Descripción",
-                required: false,
-                description: "Detalle o especificación técnica de la tarea",
-                example: "Muro de ladrillo hueco de 18cm con mezcla 1:3"
-            },
-            {
-                id: "unit_name",
-                label: "Unidad de Medida",
-                required: false,
-                description: "Unidad para medir esta tarea (m², ml, u, etc.)",
-                example: "m²",
-                foreignKey: {
-                    table: 'units',
-                    labelField: 'name',
-                    valueField: 'id',
-                    fetchOptions: async () => units.map(u => ({
-                        id: u.id,
-                        label: `${u.name} (${u.symbol})`
-                    })),
-                    allowCreate: true,
-                }
-            },
-            {
-                id: "division_name",
-                label: "Rubro",
-                required: false,
-                description: "Rubro o categoría de la tarea (Albañilería, Electricidad, etc.)",
-                example: "Albañilería",
-                foreignKey: {
-                    table: 'task_divisions',
-                    labelField: 'name',
-                    valueField: 'id',
-                    fetchOptions: async () => divisions.map(d => ({
-                        id: d.id,
-                        label: d.name
-                    })),
-                    allowCreate: true,
-                }
+                id: "division_name", label: "Rubro", required: false, example: "Albañilería",
+                foreignKey: { table: 'task_divisions', labelField: 'name', valueField: 'id', fetchOptions: async () => divisions.map(d => ({ id: d.id, label: d.name })), allowCreate: true }
             },
         ],
         aiAnalyzer: {
@@ -279,304 +303,194 @@ export function TasksCatalogView({
             },
         },
         onImport: async (records) => {
-            try {
-                const batch = await createImportBatch(orgId, "tasks_catalog", records.length);
-                const result = await importTasksCatalogBatch(orgId, records, batch.id);
-                router.refresh();
-                return {
-                    success: result.success,
-                    errors: result.errors,
-                    batchId: batch.id,
-                    created: result.created,
-                };
-            } catch (error: any) {
-                console.error("Import error:", error);
-                throw error;
-            }
+            const batch = await createImportBatch(orgId, "tasks_catalog", records.length);
+            const result = await importTasksCatalogBatch(orgId, records, batch.id);
+            router.refresh();
+            return { success: result.success, errors: result.errors, batchId: batch.id, created: result.created };
         },
         onRevert: async (batchId) => {
             await revertImportBatch(batchId, 'tasks');
             router.refresh();
         }
-    };
+    }), [taskUnits, divisions, orgId, router]);
 
-    // ========================================================================
-    // Import Handlers
-    // ========================================================================
-
-    const handleImport = () => {
+    const handleImport = useCallback(() => {
         openModal(
-            <BulkImportModal
-                config={tasksImportConfig}
-                organizationId={orgId}
-            />,
-            {
-                title: "Importar Tareas",
-                description: "Importa tareas desde un archivo Excel o CSV",
-                size: "xl"
-            }
+            <BulkImportModal config={tasksImportConfig} organizationId={orgId} />,
+            { title: "Importar Tareas", description: "Importá tareas desde un archivo Excel o CSV", size: "xl" }
         );
-    };
+    }, [openModal, tasksImportConfig, orgId]);
 
-    const handleImportHistory = () => {
+    const handleImportHistory = useCallback(() => {
         openModal(
-            <ImportHistoryModal
-                organizationId={orgId}
-                entityType="tasks_catalog"
-                entityTable="tasks"
-                onRevert={() => {
-                    router.refresh();
-                }}
-            />,
-            {
-                title: "Historial de Importaciones",
-                description: "Últimas 20 importaciones de tareas",
-                size: "lg"
-            }
+            <ImportHistoryModal organizationId={orgId} entityType="tasks_catalog" entityTable="tasks" onRevert={() => router.refresh()} />,
+            { title: "Historial de Importaciones", description: "Últimas 20 importaciones de tareas", size: "lg" }
         );
-    };
+    }, [openModal, orgId, router]);
 
-    // ========================================================================
-    // Modal Handlers
-    // ========================================================================
+    // ═══════════════════════════════════════════════════════
+    // State flags
+    // ═══════════════════════════════════════════════════════
+    const isEmpty = allTasks.length === 0;
 
-    const handleOpenTypeSelector = () => {
-        openModal(
-            <TasksTypeSelector
-                onSelect={handleTypeSelected}
-                onCancel={closeModal}
-                isAdmin={isAdminMode}
-            />,
-            {
-                title: "Crear Nueva Tarea",
-                description: "Elegí el tipo de tarea que querés crear",
-                size: "lg"
-            }
-        );
-    };
+    // ═══════════════════════════════════════════════════════
+    // Header action portal
+    // ═══════════════════════════════════════════════════════
+    const headerAction = (
+        <PageHeaderActionPortal>
+            <div className="flex items-center">
+                <button
+                    onClick={handleCreateTask}
+                    className="flex items-center gap-1.5 h-8 px-3 rounded-l-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+                >
+                    <Plus className="h-4 w-4" />
+                    <span>Nueva Tarea</span>
+                </button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            className="flex items-center justify-center h-8 w-8 rounded-r-lg border-l border-primary-foreground/20 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+                        >
+                            <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={handleImport}>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Importar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleImportHistory}>
+                            <History className="h-4 w-4 mr-2" />
+                            Historial de Importaciones
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => toast.info("Exportar CSV: próximamente")}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Exportar CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info("Exportar Excel: próximamente")}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Exportar Excel
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        </PageHeaderActionPortal>
+    );
 
-    const handleTypeSelected = (type: TaskCreationType) => {
-        closeModal();
+    // ═══════════════════════════════════════════════════════
+    // Render
+    // ═══════════════════════════════════════════════════════
 
-        if (type === "own") {
-            // Open regular task form
-            openModal(
-                <TasksForm
-                    mode="create"
-                    organizationId={orgId}
-                    units={units}
-                    divisions={divisions}
-                    isAdminMode={isAdminMode}
-                    onCancel={closeModal}
-                    onSuccess={() => {
-                        closeModal();
-                        router.refresh();
-                    }}
-                />,
-                {
-                    title: "Nueva Tarea Propia",
-                    description: "Crear una tarea personalizada para tu organización",
-                    size: "lg"
-                }
-            );
-        } else {
-            // Open parametric task wizard
-            openModal(
-                <TasksParametricForm
-                    units={units}
-                    isAdminMode={isAdminMode}
-                    onCancel={closeModal}
-                    onSuccess={() => {
-                        closeModal();
-                        router.refresh();
-                    }}
-                    onBack={handleOpenTypeSelector}
-                />,
-                {
-                    title: "Nueva Tarea Paramétrica",
-                    description: "Crear una tarea estandarizada para el catálogo global",
-                    size: "lg"
-                }
-            );
-        }
-    };
-
-    // For admin mode, go directly to parametric form (or show selector)
-    const handleCreateTask = () => {
-        if (isAdminMode && kinds.length > 0) {
-            // Admin mode with kinds available: show selector
-            handleOpenTypeSelector();
-        } else if (isAdminMode) {
-            // Admin mode but no kinds: use regular form
-            openModal(
-                <TasksForm
-                    mode="create"
-                    organizationId={orgId}
-                    units={units}
-                    divisions={divisions}
-                    isAdminMode={isAdminMode}
-                    onCancel={closeModal}
-                    onSuccess={() => {
-                        closeModal();
-                        router.refresh();
-                    }}
-                />,
-                {
-                    title: "Nueva Tarea de Sistema",
-                    description: "Crear una tarea del sistema disponible para todas las organizaciones",
-                    size: "lg"
-                }
-            );
-        } else {
-            // Organization mode: show type selector
-            handleOpenTypeSelector();
-        }
-    };
-
-    // Origin filter options
-    const originOptions = [
-        { label: "Sistema", value: "system", icon: Monitor },
-        { label: "Propios", value: "organization", icon: Building2 },
-    ];
-
-    // Status filter options
-    const statusOptions = [
-        { label: "Activa", value: "active", icon: Circle },
-        { label: "Borrador", value: "draft", icon: Circle },
-        { label: "Archivada", value: "archived", icon: Circle },
-    ];
-
-    // ========================================================================
-    // EmptyState: early return pattern (SKILL compliance)
-    // ========================================================================
-    if (allTasks.length === 0) {
-        return (
-            <>
-                <Toolbar
-                    portalToHeader={true}
-                    leftActions={
-                        <>
-                            <FacetedFilter
-                                title="Origen"
-                                options={originOptions}
-                                selectedValues={originFilter}
-                                onSelect={handleOriginSelect}
-                                onClear={handleOriginClear}
-                                facets={originFacets}
-                            />
-                            <FacetedFilter
-                                title="Estado"
-                                options={statusOptions}
-                                selectedValues={statusFilter}
-                                onSelect={handleStatusSelect}
-                                onClear={handleStatusClear}
-                                facets={statusFacets}
-                            />
-                        </>
-                    }
-                    actions={[
-                        {
-                            label: "Nueva Tarea",
-                            icon: Plus,
-                            onClick: handleCreateTask,
-                        },
-                        ...getStandardToolbarActions({
-                            onImport: handleImport,
-                            onImportHistory: handleImportHistory,
-                            onExportCSV: () => toast.info("Exportar CSV: próximamente"),
-                            onExportExcel: () => toast.info("Exportar Excel: próximamente"),
-                        }),
-                    ]}
-                />
-                <div className="h-full flex items-center justify-center">
-                    <ViewEmptyState
-                        mode="empty"
-                        icon={ClipboardList}
-                        viewName="Tareas"
-                        featureDescription="Las tareas son los trabajos unitarios que componen tus proyectos de construcción. Definí tareas como 'Construcción de muro de ladrillo', 'Instalación de cañería', etc. Cada tarea puede tener materiales, mano de obra y rendimientos asociados."
-                        onAction={handleCreateTask}
-                        actionLabel="Nueva Tarea"
-                        docsPath="/docs/tareas"
-                    />
-                </div>
-            </>
-        );
-    }
+    const sidebarAction = !isAdminMode ? (
+        <Select value={sidebarOrigin} onValueChange={(v) => setSidebarOrigin(v as "system" | "own")}>
+            <SelectTrigger className="h-6 text-xs font-medium border-transparent bg-transparent shadow-none hover:bg-muted focus:ring-0 px-2 py-0 min-h-0 min-w-[80px]">
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+                <SelectItem value="system">Sistema</SelectItem>
+                <SelectItem value="own">Propios</SelectItem>
+            </SelectContent>
+        </Select>
+    ) : undefined;
 
     return (
         <>
-            <Toolbar
-                portalToHeader={true}
-                searchPlaceholder="Buscar tareas por nombre, código o descripción..."
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                leftActions={
-                    <>
-                        <FacetedFilter
-                            title="Origen"
-                            options={originOptions}
-                            selectedValues={originFilter}
-                            onSelect={handleOriginSelect}
-                            onClear={handleOriginClear}
-                            facets={originFacets}
-                        />
-                        <FacetedFilter
-                            title="Estado"
-                            options={statusOptions}
-                            selectedValues={statusFilter}
-                            onSelect={handleStatusSelect}
-                            onClear={handleStatusClear}
-                            facets={statusFacets}
-                        />
-                    </>
-                }
-                actions={[
-                    {
-                        label: "Nueva Tarea",
-                        icon: Plus,
-                        onClick: handleCreateTask,
-                    },
-                    ...getStandardToolbarActions({
-                        onImport: handleImport,
-                        onImportHistory: handleImportHistory,
-                        onExportCSV: () => toast.info("Exportar CSV: próximamente"),
-                        onExportExcel: () => toast.info("Exportar Excel: próximamente"),
-                    }),
-                ]}
-                selectedCount={multiSelect.selectedCount}
-                onClearSelection={multiSelect.clearSelection}
-                bulkActions={bulkActionsContent}
-            />
-            <TaskCatalog
-                groupedTasks={groupedTasks}
-                orgId={orgId}
-                units={units}
-                divisions={divisions}
-                isAdminMode={isAdminMode}
-                searchQuery={searchQuery}
-                originFilter={computedOriginFilter}
-                statusFilter={statusFilter}
-                isSelected={multiSelect.isSelected}
-                onToggleSelect={multiSelect.toggle}
-            />
+            {headerAction}
 
-            {/* Bulk Delete Confirmation */}
-            <AlertDialog open={bulkDeleteModalOpen} onOpenChange={setBulkDeleteModalOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar {multiSelect.selectedCount} tarea{multiSelect.selectedCount > 1 ? 's' : ''}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Las tareas seleccionadas serán eliminadas permanentemente.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Eliminar
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* Context Sidebar — shared across both views */}
+            <ContextSidebar 
+                title={isAdminMode ? "Rubros del Sistema" : "Rubros"}
+                action={sidebarAction}
+            >
+                <DivisionsSidebar
+                    divisions={filteredSidebarDivisions}
+                    taskCounts={taskCounts}
+                    selectedDivisionId={selectedDivisionId}
+                    onSelectDivision={setSelectedDivisionId}
+                    totalTasks={sidebarTaskCount}
+                />
+            </ContextSidebar>
+
+            {/* Empty state */}
+            {isEmpty ? (
+                <ViewEmptyState
+                    mode="empty"
+                    icon={ClipboardList}
+                    viewName="Tareas"
+                    featureDescription="Las tareas son los trabajos unitarios que componen tus proyectos de construcción. Definí tareas como 'Construcción de muro de ladrillo', 'Instalación de cañería', etc."
+                    onAction={handleCreateTask}
+                    actionLabel="Nueva Tarea"
+                    docsPath="/docs/catalogo-tecnico/tareas"
+                />
+            ) : (
+                <div className="flex flex-col gap-4 flex-1 overflow-hidden">
+                    {/* Inline ToolbarCard */}
+                    <ToolbarCard
+                        filters={filters}
+                        searchPlaceholder="Buscar tareas..."
+                        display={{
+                            viewMode,
+                            onViewModeChange: (v) => setViewMode(v as ViewMode),
+                            viewModeOptions: VIEW_OPTIONS,
+                        }}
+                    />
+
+                    {/* No-results */}
+                    {filters.hasActiveFilters && filteredTasks.length === 0 ? (
+                        <ViewEmptyState
+                            mode="no-results"
+                            icon={ClipboardList}
+                            viewName="tareas"
+                            filterContext="con ese criterio de búsqueda"
+                            onResetFilters={filters.clearAll}
+                        />
+                    ) : viewMode === "table" ? (
+                        /* ── TABLE VIEW ───────────────── */
+                        <DataTable
+                            columns={columns}
+                            data={filteredTasks}
+                            enableContextMenu
+                            enableRowSelection
+                            onRowClick={handleViewTask}
+                            onView={handleViewTask}
+                            onEdit={handleEditTask}
+                            onDelete={handleDelete}
+                            onBulkDelete={handleBulkDelete}
+                            groupBy="division_name"
+                            getGroupValue={(row) => (row as TaskView).division_name || "Sin Rubro"}
+                            renderGroupHeader={(groupValue, groupRows) => (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-muted-foreground tracking-wider">
+                                        {groupValue}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">({groupRows.length})</span>
+                                </div>
+                            )}
+                            globalFilter={filters.searchQuery}
+                            onGlobalFilterChange={filters.setSearchQuery}
+                        />
+                    ) : (
+                        /* ── CARDS VIEW ────────────── */
+                        <Card variant="inset" className="overflow-auto">
+                            <TaskCatalog
+                                groupedTasks={groupedTasks}
+                                orgId={orgId}
+                                units={units}
+                                divisions={divisions}
+                                isAdminMode={isAdminMode}
+                                searchQuery={filters.searchQuery}
+                                originFilter={originFilter}
+                                statusFilter={statusFilter}
+                                selectedDivisionId={selectedDivisionId}
+                            />
+                        </Card>
+                    )}
+                </div>
+            )}
+
+            {/* Delete Confirmation Dialog (from useTableActions) */}
+            <DeleteConfirmDialog />
         </>
     );
 }

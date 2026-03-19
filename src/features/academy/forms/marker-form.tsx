@@ -8,7 +8,7 @@ import { createLessonMarker, updateLessonMarker } from "@/features/academy/stude
 import { LessonMarker } from "@/features/academy/types";
 import { usePanel } from "@/stores/panel-store";
 import { FormGroup } from "@/components/ui/form-group";
-import { FormNotesField } from "@/components/shared/forms/fields/form-notes-field";
+import { FormTextField } from "@/components/shared/forms/fields/form-text-field";
 import { Clock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -92,7 +92,8 @@ export function MarkerForm({ mode, lessonId, timeSec = 0, initialData, onSuccess
 
                 <FormGroup label="Comentario" required>
                     <div className="min-h-[100px] rounded-lg border border-border/50 bg-muted/30 px-3 py-2 focus-within:ring-1 focus-within:ring-ring focus-within:border-border transition-colors">
-                        <FormNotesField
+                        <FormTextField
+                            variant="body"
                             value={form.watch("body")}
                             onChange={(v) => form.setValue("body", v, { shouldValidate: true })}
                             placeholder="Ecribe un comentario para este marcador..."

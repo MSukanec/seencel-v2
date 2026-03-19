@@ -1,17 +1,20 @@
-export { FilterPopover } from "./filter-button"
-export type { FilterPopoverProps } from "./filter-button"
+export { ToolbarFilter } from "./toolbar-filter"
+export type { ToolbarFilterProps } from "./toolbar-filter"
 
-export { SearchButton } from "./search-button"
-export type { SearchButtonProps } from "./search-button"
+export { ToolbarSearch } from "./toolbar-search"
+export type { ToolbarSearchProps } from "./toolbar-search"
 
-export { DisplayButton } from "./display-button"
-export type { DisplayButtonProps, ViewModeOption } from "./display-button"
+export { ToolbarDisplay } from "./toolbar-display"
+export type { ToolbarDisplayProps, ViewModeOption } from "./toolbar-display"
 
 export { ToolbarCard } from "./toolbar-card"
-export type { ToolbarCardProps } from "./toolbar-card"
+export type { ToolbarCardProps, ToolbarCardDisplayConfig } from "./toolbar-card"
 
 export { ViewsTabs } from "./views-tabs"
 export type { ViewsTabsProps, SavedViewItem } from "./views-tabs"
+
+export { ToolbarToggle } from "./toolbar-toggle"
+export type { ToolbarToggleProps, ToolbarToggleOption } from "./toolbar-toggle"
 
 export { ActiveFiltersBar } from "./active-filters-bar"
 export type { ActiveFiltersBarProps } from "./active-filters-bar"

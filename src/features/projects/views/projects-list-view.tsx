@@ -31,7 +31,7 @@ import { EntityContextMenu, type EntityParameter, type EntityCustomAction } from
 
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { PageHeaderActionPortal } from "@/components/layout";
-import { SearchButton, FilterPopover, ToolbarCard, DisplayButton } from "@/components/shared/toolbar-controls";
+import { ToolbarCard } from "@/components/shared/toolbar-controls";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ProjectCard } from "@/features/projects/components/project-card";
@@ -297,7 +297,7 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
                         featureDescription="Un proyecto representa una obra o construcción que estás gestionando. Cada proyecto tiene su propio presupuesto, tareas, materiales y equipo asignado. Creá tu primer proyecto para empezar."
                         onAction={handleCreateProject}
                         actionLabel="Nuevo Proyecto"
-                        docsPath="/docs/proyectos/introduccion"
+                        docsPath="/docs/organizacion/proyectos"
                     />
                 </div>
             </>
@@ -311,17 +311,13 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
                 {headerAction}
                 <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
                     <ToolbarCard
-                        right={
-                            <>
-                                <SearchButton filters={filters} placeholder="Buscar proyectos..." />
-                                <FilterPopover filters={filters} />
-                                <DisplayButton
-                                    viewMode={viewMode}
-                                    onViewModeChange={(v) => setViewMode(v as ViewMode)}
-                                    viewModeOptions={VIEW_OPTIONS}
-                                />
-                            </>
-                        }
+                        filters={filters}
+                        searchPlaceholder="Buscar proyectos..."
+                        display={{
+                            viewMode,
+                            onViewModeChange: (v) => setViewMode(v as ViewMode),
+                            viewModeOptions: VIEW_OPTIONS,
+                        }}
                     />
                     <ViewEmptyState
                         mode="no-results"
@@ -343,17 +339,13 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
             <div className="flex flex-col gap-4 flex-1 overflow-hidden">
                 {/* Toolbar Card — search + view toggle */}
                 <ToolbarCard
-                    right={
-                        <>
-                            <SearchButton filters={filters} placeholder="Buscar proyectos..." />
-                            <FilterPopover filters={filters} />
-                            <DisplayButton
-                                viewMode={viewMode}
-                                onViewModeChange={(v) => setViewMode(v as ViewMode)}
-                                viewModeOptions={VIEW_OPTIONS}
-                            />
-                        </>
-                    }
+                    filters={filters}
+                    searchPlaceholder="Buscar proyectos..."
+                    display={{
+                        viewMode,
+                        onViewModeChange: (v) => setViewMode(v as ViewMode),
+                        viewModeOptions: VIEW_OPTIONS,
+                    }}
                 />
 
                 {/* Content */}

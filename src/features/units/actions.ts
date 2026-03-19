@@ -16,7 +16,6 @@ export async function createUnit(formData: FormData) {
     const symbol = formData.get("symbol") as string | null;
     const organizationId = formData.get("organization_id") as string;
     const applicableToRaw = formData.get("applicable_to") as string | null;
-    const unitCategoryId = formData.get("unit_category_id") as string | null;
 
     const applicableTo = applicableToRaw
         ? JSON.parse(applicableToRaw) as string[]
@@ -33,7 +32,6 @@ export async function createUnit(formData: FormData) {
             symbol: symbol?.trim() || null,
             organization_id: organizationId,
             applicable_to: applicableTo,
-            unit_category_id: unitCategoryId || null,
         })
         .select()
         .single();
@@ -46,7 +44,7 @@ export async function createUnit(formData: FormData) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
+    revalidatePath("/[locale]/(dashboard)/settings/units", "page");
     return { success: true, data };
 }
 
@@ -57,7 +55,6 @@ export async function updateUnit(formData: FormData) {
     const name = formData.get("name") as string;
     const symbol = formData.get("symbol") as string | null;
     const applicableToRaw = formData.get("applicable_to") as string | null;
-    const unitCategoryId = formData.get("unit_category_id") as string | null;
 
     const applicableTo = applicableToRaw
         ? JSON.parse(applicableToRaw) as string[]
@@ -76,10 +73,6 @@ export async function updateUnit(formData: FormData) {
         updateData.applicable_to = applicableTo;
     }
 
-    if (unitCategoryId) {
-        updateData.unit_category_id = unitCategoryId;
-    }
-
     const { data, error } = await supabase
         .schema('catalog').from('units')
         .update(updateData)
@@ -92,7 +85,7 @@ export async function updateUnit(formData: FormData) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
+    revalidatePath("/[locale]/(dashboard)/settings/units", "page");
     return { success: true, data };
 }
 
@@ -112,7 +105,7 @@ export async function deleteUnit(id: string) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
+    revalidatePath("/[locale]/(dashboard)/settings/units", "page");
     return { success: true };
 }
 
@@ -151,7 +144,7 @@ export async function createUnitPresentation(formData: FormData) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
+    revalidatePath("/[locale]/(dashboard)/settings/units", "page");
     return { success: true, data };
 }
 
@@ -183,7 +176,7 @@ export async function updateUnitPresentation(formData: FormData) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
+    revalidatePath("/[locale]/(dashboard)/settings/units", "page");
     return { success: true, data };
 }
 
@@ -200,6 +193,6 @@ export async function deleteUnitPresentation(id: string) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
+    revalidatePath("/[locale]/(dashboard)/settings/units", "page");
     return { success: true };
 }

@@ -739,6 +739,7 @@ export async function getSystemUnits(): Promise<SystemUnit[]> {
         .schema('catalog').from('units')
         .select('id, name, symbol, applicable_to, unit_category_id, organization_id')
         .is('organization_id', null)
+        .eq('is_deleted', false)
         .order('name', { ascending: true });
 
     if (error) {

@@ -43,7 +43,7 @@ export interface UseTableFiltersReturn {
     clearAll: () => void;
     /** Whether any filter is active */
     hasActiveFilters: boolean;
-    /** Original facet configs (for FilterPopover consumption) */
+    /** Original facet configs (for ToolbarFilter consumption) */
     facetConfigs: FacetedFilterConfig[];
     /** Whether date range is enabled */
     enableDateRange: boolean;

@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-16T12:23:01.346Z
+> Generated: 2026-03-19T17:08:39.512Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -8,37 +8,37 @@
 | Table | Trigger | Timing | Events | Action |
 |-------|---------|--------|--------|--------|
 | capital_adjustments | capital_adjustments_set_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
-| capital_adjustments | trg_update_balance_adjustment | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION finance.update_partner_balance_after_cap... |
+| capital_adjustments | trg_update_balance_adjustment | AFTER | UPDATE, DELETE, INSERT | EXECUTE FUNCTION finance.update_partner_balance_after_cap... |
 | client_commitments | client_commitments_set_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
-| client_commitments | on_client_commitment_audit | AFTER | UPDATE, INSERT, DELETE | EXECUTE FUNCTION audit.log_client_commitment_activity() |
-| client_commitments | set_audit_client_commitments | BEFORE | UPDATE, INSERT | EXECUTE FUNCTION handle_updated_by() |
+| client_commitments | on_client_commitment_audit | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION audit.log_client_commitment_activity() |
+| client_commitments | set_audit_client_commitments | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
 | client_payment_schedule | client_payment_schedule_set_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
-| client_payment_schedule | set_audit_client_schedule | BEFORE | UPDATE, INSERT | EXECUTE FUNCTION handle_updated_by() |
-| client_payments | on_client_payment_audit | AFTER | DELETE, UPDATE, INSERT | EXECUTE FUNCTION audit.log_client_payment_activity() |
+| client_payment_schedule | set_audit_client_schedule | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
+| client_payments | on_client_payment_audit | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION audit.log_client_payment_activity() |
 | client_payments | set_audit_client_payments | BEFORE | UPDATE, INSERT | EXECUTE FUNCTION handle_updated_by() |
 | client_payments | set_client_payments_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
-| financial_operation_movements | on_financial_movement_audit | AFTER | DELETE, UPDATE, INSERT | EXECUTE FUNCTION audit.log_financial_movement_activity() |
+| financial_operation_movements | on_financial_movement_audit | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION audit.log_financial_movement_activity() |
 | financial_operation_movements | set_updated_at_financial_operation_movements | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
-| financial_operation_movements | set_updated_by_financial_operation_movements | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
+| financial_operation_movements | set_updated_by_financial_operation_movements | BEFORE | UPDATE, INSERT | EXECUTE FUNCTION handle_updated_by() |
 | financial_operations | on_financial_operation_audit | AFTER | DELETE, INSERT, UPDATE | EXECUTE FUNCTION audit.log_financial_operation_activity() |
 | financial_operations | set_updated_at_financial_operations | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
 | financial_operations | set_updated_by_financial_operations | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
-| general_cost_categories | on_general_cost_categories_audit | AFTER | INSERT, DELETE, UPDATE | EXECUTE FUNCTION audit.log_general_cost_category_activity() |
+| general_cost_categories | on_general_cost_categories_audit | AFTER | UPDATE, INSERT, DELETE | EXECUTE FUNCTION audit.log_general_cost_category_activity() |
 | general_cost_categories | set_updated_by_general_cost_categories | BEFORE | UPDATE | EXECUTE FUNCTION handle_updated_by() |
 | general_cost_categories | trg_set_updated_at_general_cost_categories | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
-| general_costs | on_general_costs_audit | AFTER | UPDATE, DELETE, INSERT | EXECUTE FUNCTION audit.log_general_costs_activity() |
+| general_costs | on_general_costs_audit | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION audit.log_general_costs_activity() |
 | general_costs | set_updated_by_general_costs | BEFORE | UPDATE, INSERT | EXECUTE FUNCTION handle_updated_by() |
 | general_costs_payments | on_gc_payments_audit | AFTER | UPDATE, INSERT | EXECUTE FUNCTION audit.log_general_costs_payments_activity() |
 | general_costs_payments | set_updated_by_gc_payments | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
-| labor_payments | on_labor_payment_audit | AFTER | UPDATE, DELETE, INSERT | EXECUTE FUNCTION audit.log_labor_payment_activity() |
-| labor_payments | set_updated_by_labor_payments | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
-| material_payments | on_material_payment_audit | AFTER | INSERT, DELETE, UPDATE | EXECUTE FUNCTION audit.log_material_payment_activity() |
-| material_payments | set_audit_material_payments | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
+| labor_payments | on_labor_payment_audit | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION audit.log_labor_payment_activity() |
+| labor_payments | set_updated_by_labor_payments | BEFORE | UPDATE, INSERT | EXECUTE FUNCTION handle_updated_by() |
+| material_payments | on_material_payment_audit | AFTER | DELETE, INSERT, UPDATE | EXECUTE FUNCTION audit.log_material_payment_activity() |
+| material_payments | set_audit_material_payments | BEFORE | UPDATE, INSERT | EXECUTE FUNCTION handle_updated_by() |
 | material_payments | set_material_payments_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
-| material_purchase_order_items | trg_recalculate_po_totals | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION finance.recalculate_po_totals() |
+| material_purchase_order_items | trg_recalculate_po_totals | AFTER | UPDATE, DELETE, INSERT | EXECUTE FUNCTION finance.recalculate_po_totals() |
 | material_purchase_orders | trg_generate_po_number | BEFORE | INSERT | EXECUTE FUNCTION finance.generate_po_order_number() |
 | organization_wallets | organization_wallets_set_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
-| partner_contributions | trg_update_balance_contribution | AFTER | DELETE, UPDATE, INSERT | EXECUTE FUNCTION finance.update_partner_balance_after_cap... |
+| partner_contributions | trg_update_balance_contribution | AFTER | UPDATE, DELETE, INSERT | EXECUTE FUNCTION finance.update_partner_balance_after_cap... |
 | partner_withdrawals | trg_update_balance_withdrawal | AFTER | UPDATE, INSERT, DELETE | EXECUTE FUNCTION finance.update_partner_balance_after_cap... |
 | quote_items | on_quote_item_audit | AFTER | UPDATE, INSERT, DELETE | EXECUTE FUNCTION audit.log_quote_item_activity() |
 | quote_items | quote_items_set_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |

@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-16T12:23:01.346Z
+> Generated: 2026-03-19T17:08:39.512Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -33,7 +33,7 @@
 |--------|------|----------|---------|-------------|
 | id | uuid | ✗ | gen_random_uuid() | PK |
 | created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
 | code | text | ✓ |  |  |
 | unit_id | uuid | ✗ |  | FK → units.id |
 | organization_id | uuid | ✓ |  |  |
@@ -52,20 +52,10 @@
 | is_parametric | bool | ✗ | false |  |
 | parameter_values | jsonb | ✓ | '{}'::jsonb |  |
 | import_batch_id | uuid | ✓ |  |  |
-| status | task_catalog_status | ✗ | 'draft'::task_catalog_status |  |
+| status | task_catalog_status | ✗ | 'active'::task_catalog_status |  |
 | task_construction_system_id | uuid | ✓ |  | FK → task_construction_systems.id |
 | template_id | uuid | ✓ |  | FK → task_templates.id |
-
-### `catalog.unit_categories`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| code | text | ✗ |  | UNIQUE |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
+| system_division_id | uuid | ✓ |  | FK → task_divisions.id |
 
 ### `catalog.units`
 
@@ -78,7 +68,6 @@
 | symbol | text | ✓ |  |  |
 | applicable_to | _text | ✗ | ARRAY['task'::text, 'material'::text,... |  |
 | organization_id | uuid | ✓ |  |  |
-| unit_category_id | uuid | ✓ |  | FK → unit_categories.id |
 | is_system | bool | ✗ | false |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |

@@ -178,6 +178,37 @@ export function SidebarContent({
     // Get unified nav groups for accordion rendering
     const navGroups = getNavGroups("organization");
 
+    // Find the single active nav item across the entire active context by longest matching prefix
+    const deepestMatchHref = React.useMemo(() => {
+        let longest = "";
+        const groups = getNavGroups(
+            drillState === 'admin' ? 'admin' : drillState === 'settings' ? 'settings' : 'organization'
+        );
+        for (const g of groups) {
+            for (const item of g.items) {
+                if (pathname === item.href || pathname.startsWith(item.href + '/')) {
+                    if (item.href.length > longest.length) longest = item.href;
+                }
+                if (item.children) {
+                    for (const child of item.children) {
+                        if (pathname === child.href || pathname.startsWith(child.href + '/')) {
+                            if (child.href.length > longest.length) longest = child.href;
+                        }
+                    }
+                }
+            }
+        }
+        if (drillState === 'learnings' || drillState === 'founders' || drillState === 'community') {
+            const items = getNavItems(drillState);
+            for (const item of items) {
+                if (pathname === item.href || pathname.startsWith(item.href + '/')) {
+                    if (item.href.length > longest.length) longest = item.href;
+                }
+            }
+        }
+        return longest || pathname;
+    }, [pathname, drillState, getNavGroups, getNavItems]);
+
     // Handle drill into page sub-items
     const handlePageDrillIn = (item: NavItem) => {
         if (item.children && item.children.length > 0) {
@@ -244,10 +275,10 @@ export function SidebarContent({
             ? "hidden"
             : (status as SidebarRestriction) || null;
 
-        // Check if this item or any of its children is active
+        // Check if this item or any of its children is active based on the deepest matching prefix
         const isItemActive = hasChildren
-            ? (pathname === item.href || item.children.some((c: NavSubItem) => pathname === c.href) || pathname.startsWith(item.href + '/'))
-            : pathname === item.href;
+            ? (deepestMatchHref === item.href || item.children.some((c: NavSubItem) => deepestMatchHref === c.href))
+            : deepestMatchHref === item.href;
 
         const button = (
             <React.Fragment key={idx}>
@@ -346,7 +377,7 @@ export function SidebarContent({
                                     icon={LayoutDashboard}
                                     label="Visión General"
                                     href="/organization"
-                                    isActive={pathname === '/organization'}
+                                    isActive={deepestMatchHref === '/organization'}
                                     isExpanded={isExpanded}
                                     onClick={onLinkClick}
                                 />
@@ -356,7 +387,7 @@ export function SidebarContent({
                                     icon={CalendarDays}
                                     label="Planificador"
                                     href="/organization/planner"
-                                    isActive={pathname === '/organization/planner'}
+                                    isActive={deepestMatchHref === '/organization/planner'}
                                     isExpanded={isExpanded}
                                     onClick={onLinkClick}
                                 />
@@ -379,7 +410,7 @@ export function SidebarContent({
                                     groups={navGroups.filter(g => g.id !== 'principal' && g.id !== 'gestion')}
                                     renderItem={renderNavItem}
                                     isExpanded={isExpanded}
-                                    activePath={pathname}
+                                    activePath={deepestMatchHref}
                                 />
                             </nav>
                         )}
@@ -408,7 +439,7 @@ export function SidebarContent({
                                         icon={child.icon || pageSubItems.parentIcon}
                                         label={child.title}
                                         href={child.href as any}
-                                        isActive={pathname === child.href}
+                                        isActive={deepestMatchHref === child.href}
                                         isExpanded={isExpanded}
                                         onClick={onLinkClick}
                                     />
@@ -425,7 +456,7 @@ export function SidebarContent({
                                         icon={item.icon}
                                         label={item.title}
                                         href={item.href}
-                                        isActive={pathname === item.href}
+                                        isActive={deepestMatchHref === item.href}
                                         isExpanded={isExpanded}
                                         onClick={onLinkClick}
                                     />
@@ -442,7 +473,7 @@ export function SidebarContent({
                                         icon={item.icon}
                                         label={item.title}
                                         href={item.href}
-                                        isActive={pathname === item.href || pathname.startsWith(item.href + '/')}
+                                        isActive={deepestMatchHref === item.href}
                                         isExpanded={isExpanded}
                                         onClick={onLinkClick}
                                     />
@@ -466,7 +497,7 @@ export function SidebarContent({
                                     icon={LayoutDashboard}
                                     label="Visión General"
                                     href="/admin"
-                                    isActive={pathname === '/admin'}
+                                    isActive={deepestMatchHref === '/admin'}
                                     isExpanded={isExpanded}
                                     onClick={onLinkClick}
                                 />
@@ -476,7 +507,7 @@ export function SidebarContent({
                                     groups={getNavGroups('admin').filter(g => g.id !== 'principal')}
                                     renderItem={renderNavItem}
                                     isExpanded={isExpanded}
-                                    activePath={pathname}
+                                    activePath={deepestMatchHref}
                                     flat
                                 />
                             </nav>
@@ -504,7 +535,7 @@ export function SidebarContent({
                                         icon={child.icon || pageSubItems.parentIcon}
                                         label={child.title}
                                         href={child.href as any}
-                                        isActive={pathname === child.href}
+                                        isActive={deepestMatchHref === child.href}
                                         isExpanded={isExpanded}
                                         onClick={onLinkClick}
                                     />
@@ -522,7 +553,7 @@ export function SidebarContent({
                                     groups={getNavGroups('settings')}
                                     renderItem={renderNavItem}
                                     isExpanded={isExpanded}
-                                    activePath={pathname}
+                                    activePath={deepestMatchHref}
                                     flat
                                 />
                             </nav>

@@ -11,7 +11,7 @@ import { useState, useMemo, useEffect } from "react";
 import { OrganizationActivityLog } from "@/features/team/types";
 import { getActivityFeedItems } from "@/actions/widget-actions";
 import { useTableFilters } from "@/hooks/use-table-filters";
-import { ToolbarCard, FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
+import { ToolbarCard } from "@/components/shared/toolbar-controls";
 import { ActivityFeedList } from "@/components/shared/activity-feed";
 import { User, Activity, ListOrdered, ActivitySquare } from "lucide-react";
 import { ViewEmptyState } from "@/components/shared/empty-state";
@@ -132,12 +132,8 @@ export function TeamActivityView({ logs: initialLogs }: TeamActivityViewProps) {
         return (
             <div className="flex flex-col gap-0.5">
                 <ToolbarCard
-                    right={
-                        <>
-                            <SearchButton filters={filters} placeholder="Buscar en actividad..." />
-                            <FilterPopover filters={filters} />
-                        </>
-                    }
+                    filters={filters}
+                    searchPlaceholder="Buscar en actividad..."
                 />
                 <ViewEmptyState mode="no-results" viewName="Actividad" icon={ActivitySquare} onAction={filters.clearAll} />
             </div>
@@ -149,12 +145,8 @@ export function TeamActivityView({ logs: initialLogs }: TeamActivityViewProps) {
     return (
         <div className="flex flex-col gap-4 w-full">
             <ToolbarCard
-                right={
-                    <>
-                        <SearchButton filters={filters} placeholder="Buscar en actividad..." />
-                        <FilterPopover filters={filters} />
-                    </>
-                }
+                filters={filters}
+                searchPlaceholder="Buscar en actividad..."
             />
             <Card variant="inset">
                 <ActivityFeedList logs={filteredLogs} />

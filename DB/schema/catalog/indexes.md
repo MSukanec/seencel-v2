@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-16T12:23:01.346Z
+> Generated: 2026-03-19T17:08:39.512Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] Indexes (89, excluding PKs)
+## [CATALOG] Indexes (87, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -78,6 +78,7 @@
 | task_templates | idx_task_templates_unique_combination | `CREATE UNIQUE INDEX idx_task_templates_unique_combination ON catalog.task_tem...` |
 | tasks | idx_tasks_construction_system_id | `CREATE INDEX idx_tasks_construction_system_id ON catalog.tasks USING btree (t...` |
 | tasks | idx_tasks_import_batch_id | `CREATE INDEX idx_tasks_import_batch_id ON catalog.tasks USING btree (import_b...` |
+| tasks | idx_tasks_system_division_id | `CREATE INDEX idx_tasks_system_division_id ON catalog.tasks USING btree (syste...` |
 | tasks | idx_tasks_template_id | `CREATE INDEX idx_tasks_template_id ON catalog.tasks USING btree (template_id)...` |
 | tasks | idx_tasks_unique_system_code | `CREATE UNIQUE INDEX idx_tasks_unique_system_code ON catalog.tasks USING btree...` |
 | tasks | tasks_active_idx | `CREATE INDEX tasks_active_idx ON catalog.tasks USING btree (organization_id, ...` |
@@ -88,9 +89,6 @@
 | tasks | tasks_org_idx | `CREATE INDEX tasks_org_idx ON catalog.tasks USING btree (organization_id)` |
 | tasks | tasks_parametric_signature_uniq | `CREATE UNIQUE INDEX tasks_parametric_signature_uniq ON catalog.tasks USING bt...` |
 | tasks | tasks_unit_idx | `CREATE INDEX tasks_unit_idx ON catalog.tasks USING btree (unit_id)` |
-| unit_categories | idx_unit_categories_name | `CREATE INDEX idx_unit_categories_name ON catalog.unit_categories USING btree ...` |
-| unit_categories | unit_categories_code_unique | `CREATE UNIQUE INDEX unit_categories_code_unique ON catalog.unit_categories US...` |
-| units | idx_units_category | `CREATE INDEX idx_units_category ON catalog.units USING btree (unit_category_id)` |
 | units | idx_units_list | `CREATE INDEX idx_units_list ON catalog.units USING btree (is_system, organiza...` |
 | units | idx_units_organization | `CREATE INDEX idx_units_organization ON catalog.units USING btree (organizatio...` |
 | units | units_id_key1 | `CREATE UNIQUE INDEX units_id_key1 ON catalog.units USING btree (id)` |

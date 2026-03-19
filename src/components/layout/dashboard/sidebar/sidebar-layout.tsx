@@ -26,7 +26,7 @@ const MAX_WIDTH = 400; // Maximum sidebar width in pixels
 const DEFAULT_WIDTH = 224; // w-56 equivalent
 
 export function SidebarLayout({ children, user }: SidebarLayoutProps) {
-    const { content: contextContent, title: contextTitle, hasOverlay } = useContextSidebarContent();
+    const { content: contextContent, title: contextTitle, action: contextAction, hasOverlay } = useContextSidebarContent();
     const { popOverlay } = useContextSidebarOverlay();
     const hasContextSidebar = !!contextContent;
     const sidebarMode = useSidebarMode();
@@ -171,22 +171,25 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
                         {/* Sidebar Content */}
                         <aside className="flex flex-col h-full bg-sidebar overflow-hidden ml-2">
                             {contextTitle && (
-                                <div className="p-3 shrink-0 flex items-center justify-between">
+                                <div className="p-3 shrink-0 flex items-center justify-between gap-2">
                                     <h3 className={cn(
-                                        "text-sm font-medium text-muted-foreground",
+                                        "text-sm font-medium text-muted-foreground truncate flex-1",
                                         isCompact && "text-center"
                                     )}>
                                         {isCompact ? contextTitle.slice(0, 2).toUpperCase() : contextTitle}
                                     </h3>
-                                    {hasOverlay && !isCompact && (
-                                        <button
-                                            onClick={popOverlay}
-                                            className="flex items-center justify-center h-5 w-5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                            title="Cerrar"
-                                        >
-                                            <X className="h-3.5 w-3.5" />
-                                        </button>
-                                    )}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        {!isCompact && contextAction}
+                                        {hasOverlay && !isCompact && (
+                                            <button
+                                                onClick={popOverlay}
+                                                className="flex items-center justify-center h-5 w-5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                                title="Cerrar"
+                                            >
+                                                <X className="h-3.5 w-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                             <div className="flex-1 overflow-y-auto">

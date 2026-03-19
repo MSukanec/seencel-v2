@@ -18,7 +18,7 @@ import type { UseTableFiltersReturn } from "@/hooks/use-table-filters"
 // Usage:
 //   <ActiveFiltersBar
 //     filters={filters}
-//     addFilterSlot={<FilterPopover filters={filters} />}
+//     addFilterSlot={<ToolbarFilter filters={filters} />}
 //     onSaveView={() => handleCreateView("Vista 1")}
 //   />
 // ============================================================================
@@ -26,7 +26,7 @@ import type { UseTableFiltersReturn } from "@/hooks/use-table-filters"
 export interface ActiveFiltersBarProps {
     /** Direct return from useTableFilters hook */
     filters: UseTableFiltersReturn
-    /** Slot for the add-filter button (typically a FilterPopover) */
+    /** Slot for the add-filter button (typically a ToolbarFilter) */
     addFilterSlot?: React.ReactNode
     /** Callback to create a saved view from current filters */
     onSaveView?: () => void

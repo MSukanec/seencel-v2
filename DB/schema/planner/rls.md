@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-16T12:23:01.346Z
+> Generated: 2026-03-19T17:08:39.512Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -276,6 +276,10 @@ is_org_member(organization_id)
 ```sql
 is_org_member(organization_id)
 ```
+- **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
 
 #### MIEMBROS VEN ITEMS
 
@@ -283,7 +287,7 @@ is_org_member(organization_id)
 - **Roles**: {authenticated}
 - **USING**:
 ```sql
-((is_deleted = false) AND is_org_member(organization_id))
+is_org_member(organization_id)
 ```
 
 ### `labels` (3 policies)
@@ -312,7 +316,7 @@ is_org_member(organization_id)
 - **Roles**: {authenticated}
 - **USING**:
 ```sql
-is_org_member(organization_id)
+((is_deleted = false) AND is_org_member(organization_id))
 ```
 
 ### `lists` (3 policies)

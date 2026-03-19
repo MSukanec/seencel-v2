@@ -262,7 +262,7 @@ export function QuotesListView({
                     featureDescription="Gestioná las cotizaciones y contratos de tu organización. Convertí presupuestos en contratos, agregá órdenes de cambio y hacé seguimiento del estado de cada documento comercial."
                     onAction={handleCreateQuote}
                     actionLabel="Nuevo Presupuesto"
-                    docsPath="/docs/presupuestos/introduccion"
+                    docsPath="/docs/finanzas/presupuestos"
                 />
             </>
         );

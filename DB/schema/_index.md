@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-16T12:23:01.346Z
+> Generated: 2026-03-19T17:08:39.512Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -23,8 +23,8 @@
 - `can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(public/functions_1.md)*
-- `can_view_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
+- `can_view_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_project(p_project_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `cleanup_media_file_storage()` → trigger 🔐 *(public/functions_1.md)*
 - `current_user_id()` → uuid 🔐 *(public/functions_1.md)*
@@ -56,8 +56,8 @@
 - **`iam.external_actor_scopes`** (4 cols | FK: external_actor_id → organization_external_actors)
 - **`iam.feedback`** (5 cols | FK: user_id → users)
 - **`iam.linked_accounts`** (5 cols | FK: user_id → users)
-- **`iam.organization_clients`** (10 cols | FK: updated_by → organization_members, created_by → organization_members, organization_id → organizations, user_id → users)
-- **`iam.organization_data`** (24 cols | FK: created_by → organization_members, updated_by → organization_members, organization_id → organizations)
+- **`iam.organization_clients`** (10 cols | FK: organization_id → organizations, created_by → organization_members, updated_by → organization_members, user_id → users)
+- **`iam.organization_data`** (24 cols | FK: created_by → organization_members, organization_id → organizations, updated_by → organization_members)
 - **`iam.organization_external_actors`** (11 cols | FK: created_by → organization_members, organization_id → organizations, updated_by → organization_members, user_id → users)
 - **`iam.organization_invitations`** (16 cols | FK: role_id → roles, invited_by → organization_members, organization_id → organizations, user_id → users)
 - **`iam.organization_members`** (14 cols | FK: user_id → users, created_by → organization_members, invited_by → organization_members, organization_id → organizations, updated_by → organization_members, role_id → roles)
@@ -77,7 +77,7 @@
 - **`iam.user_view_history`** (9 cols | FK: organization_id → organizations, user_id → users)
 - **`iam.users`** (11 cols | FK: role_id → roles)
 
-### Functions (41)
+### Functions (40)
 
 - `iam.accept_client_invitation(p_token text, p_user_id uuid)` → jsonb 🔐 *(iam/functions_1.md)*
 - `iam.accept_external_invitation(p_token text, p_user_id uuid)` → jsonb 🔐 *(iam/functions_1.md)*
@@ -87,8 +87,8 @@
 - `iam.can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
-- `iam.can_view_org(p_organization_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
+- `iam.can_view_org(p_organization_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_project(p_project_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.current_user_id()` → uuid 🔐 *(iam/functions_1.md)*
 - `iam.dismiss_home_banner()` → boolean 🔐 *(iam/functions_1.md)*
@@ -100,7 +100,6 @@
 - `iam.get_user()` → json 🔐 *(iam/functions_1.md)*
 - `iam.handle_new_external_actor_contact()` → trigger 🔐 *(iam/functions_1.md)*
 - `iam.handle_new_org_member_contact()` → trigger 🔐 *(iam/functions_2.md)*
-- `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_2.md)*
 - `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text, p_default_currency_id uuid DEFAULT NULL::uuid)` → uuid 🔐 *(iam/functions_2.md)*
 - `iam.handle_new_user()` → trigger 🔐 *(iam/functions_2.md)*
 - `iam.handle_registered_invitation()` → trigger 🔐 *(iam/functions_2.md)*
@@ -119,7 +118,7 @@
 - `iam.sync_contact_on_user_update()` → trigger 🔐 *(iam/functions_2.md)*
 - `iam.sync_role_permission_org_id()` → trigger *(iam/functions_2.md)*
 - `iam.tick_home_checklist(p_key text, p_value boolean)` → boolean 🔐 *(iam/functions_2.md)*
-- `iam.users_normalize_email()` → trigger 🔐 *(iam/functions_3.md)*
+- `iam.users_normalize_email()` → trigger 🔐 *(iam/functions_2.md)*
 
 ### Views (6)
 
@@ -137,7 +136,7 @@
 ### Tables (10)
 
 - **`construction.construction_dependencies`** (10 cols | FK: predecessor_task_id → construction_tasks, successor_task_id → construction_tasks)
-- **`construction.construction_phase_tasks`** (6 cols | FK: construction_task_id → construction_tasks, project_phase_id → construction_project_phases)
+- **`construction.construction_phase_tasks`** (6 cols | FK: project_phase_id → construction_project_phases, construction_task_id → construction_tasks)
 - **`construction.construction_phases`** (7 cols)
 - **`construction.construction_project_phases`** (9 cols | FK: phase_id → construction_phases)
 - **`construction.construction_task_material_snapshots`** (11 cols | FK: construction_task_id → construction_tasks)
@@ -211,45 +210,45 @@
 - **`finance.capital_adjustments`** (17 cols | FK: partner_id → capital_participants, currency_id → currencies)
 - **`finance.capital_participants`** (11 cols)
 - **`finance.client_commitments`** (18 cols | FK: currency_id → currencies, quote_id → quotes)
-- **`finance.client_payment_schedule`** (16 cols | FK: currency_id → currencies, commitment_id → client_commitments)
-- **`finance.client_payments`** (21 cols | FK: currency_id → currencies, commitment_id → client_commitments, wallet_id → organization_wallets, schedule_id → client_payment_schedule)
+- **`finance.client_payment_schedule`** (16 cols | FK: commitment_id → client_commitments, currency_id → currencies)
+- **`finance.client_payments`** (21 cols | FK: schedule_id → client_payment_schedule, currency_id → currencies, commitment_id → client_commitments, wallet_id → organization_wallets)
 - **`finance.currencies`** (8 cols)
 - **`finance.economic_index_components`** (8 cols | FK: index_type_id → economic_index_types)
 - **`finance.economic_index_types`** (11 cols)
 - **`finance.economic_index_values`** (10 cols | FK: index_type_id → economic_index_types)
 - **`finance.exchange_rates`** (7 cols)
-- **`finance.financial_operation_movements`** (15 cols | FK: financial_operation_id → financial_operations, currency_id → currencies, wallet_id → organization_wallets)
+- **`finance.financial_operation_movements`** (15 cols | FK: financial_operation_id → financial_operations, wallet_id → organization_wallets, currency_id → currencies)
 - **`finance.financial_operations`** (12 cols)
 - **`finance.general_cost_categories`** (11 cols)
 - **`finance.general_cost_payment_allocations`** (5 cols | FK: payment_id → general_costs_payments)
-- **`finance.general_costs`** (16 cols | FK: expected_currency_id → currencies, category_id → general_cost_categories)
-- **`finance.general_costs_payments`** (19 cols | FK: general_cost_id → general_costs, currency_id → currencies, wallet_id → organization_wallets)
+- **`finance.general_costs`** (16 cols | FK: category_id → general_cost_categories, expected_currency_id → currencies)
+- **`finance.general_costs_payments`** (19 cols | FK: wallet_id → organization_wallets, currency_id → currencies, general_cost_id → general_costs)
 - **`finance.indirect_costs`** (7 cols)
-- **`finance.indirect_costs_payments`** (16 cols | FK: currency_id → currencies, wallet_id → organization_wallets, indirect_cost_id → indirect_costs)
+- **`finance.indirect_costs_payments`** (16 cols | FK: currency_id → currencies, indirect_cost_id → indirect_costs, wallet_id → organization_wallets)
 - **`finance.labor_payments`** (19 cols | FK: wallet_id → organization_wallets, currency_id → currencies)
 - **`finance.material_invoice_items`** (13 cols | FK: invoice_id → material_invoices)
 - **`finance.material_invoices`** (18 cols | FK: purchase_order_id → material_purchase_orders, currency_id → currencies)
-- **`finance.material_payments`** (20 cols | FK: wallet_id → organization_wallets, purchase_id → material_invoices, currency_id → currencies)
+- **`finance.material_payments`** (20 cols | FK: purchase_id → material_invoices, currency_id → currencies, wallet_id → organization_wallets)
 - **`finance.material_purchase_order_items`** (12 cols | FK: purchase_order_id → material_purchase_orders)
 - **`finance.material_purchase_orders`** (18 cols | FK: currency_id → currencies)
 - **`finance.movement_concepts`** (10 cols | FK: parent_id → movement_concepts)
 - **`finance.movement_indirects`** (4 cols | FK: movement_id → movements, indirect_id → indirect_costs)
-- **`finance.movements`** (22 cols | FK: wallet_id → organization_wallets, currency_id → currencies, type_id → movement_concepts, subcategory_id → movement_concepts, category_id → movement_concepts)
+- **`finance.movements`** (22 cols | FK: subcategory_id → movement_concepts, wallet_id → organization_wallets, category_id → movement_concepts, currency_id → currencies, type_id → movement_concepts)
 - **`finance.organization_currencies`** (9 cols | FK: currency_id → currencies)
 - **`finance.organization_wallets`** (10 cols | FK: wallet_id → wallets)
 - **`finance.partner_capital_balance`** (9 cols | FK: partner_id → capital_participants)
-- **`finance.partner_contributions`** (17 cols | FK: partner_id → capital_participants, wallet_id → organization_wallets, currency_id → currencies)
-- **`finance.partner_withdrawals`** (17 cols | FK: currency_id → currencies, partner_id → capital_participants, wallet_id → organization_wallets)
+- **`finance.partner_contributions`** (17 cols | FK: partner_id → capital_participants, currency_id → currencies, wallet_id → organization_wallets)
+- **`finance.partner_withdrawals`** (17 cols | FK: wallet_id → organization_wallets, currency_id → currencies, partner_id → capital_participants)
 - **`finance.pdf`** (7 cols)
 - **`finance.pdf_templates`** (29 cols)
 - **`finance.personnel_rates`** (15 cols | FK: currency_id → currencies)
-- **`finance.quote_items`** (23 cols | FK: currency_id → currencies, quote_id → quotes)
+- **`finance.quote_items`** (23 cols | FK: quote_id → quotes, currency_id → currencies)
 - **`finance.quotes`** (27 cols | FK: parent_quote_id → quotes, currency_id → currencies)
-- **`finance.subcontract_bid_tasks`** (10 cols | FK: subcontract_bid_id → subcontract_bids, subcontract_task_id → subcontract_tasks)
+- **`finance.subcontract_bid_tasks`** (10 cols | FK: subcontract_task_id → subcontract_tasks, subcontract_bid_id → subcontract_bids)
 - **`finance.subcontract_bids`** (12 cols | FK: subcontract_id → subcontracts, currency_id → currencies)
-- **`finance.subcontract_payments`** (18 cols | FK: subcontract_id → subcontracts, wallet_id → organization_wallets, currency_id → currencies)
+- **`finance.subcontract_payments`** (18 cols | FK: currency_id → currencies, subcontract_id → subcontracts, wallet_id → organization_wallets)
 - **`finance.subcontract_tasks`** (8 cols | FK: subcontract_id → subcontracts)
-- **`finance.subcontracts`** (22 cols | FK: currency_id → currencies, winner_bid_id → subcontract_bids, adjustment_index_type_id → economic_index_types)
+- **`finance.subcontracts`** (22 cols | FK: adjustment_index_type_id → economic_index_types, currency_id → currencies, winner_bid_id → subcontract_bids)
 - **`finance.tax_labels`** (5 cols)
 - **`finance.wallets`** (5 cols)
 
@@ -310,7 +309,7 @@
 
 ## Schema: `catalog`
 
-### Tables (34)
+### Tables (33)
 
 - **`catalog.external_service_prices`** (11 cols | FK: recipe_external_service_id → task_recipe_external_services)
 - **`catalog.indirect_cost_values`** (7 cols)
@@ -318,7 +317,7 @@
 - **`catalog.labor_levels`** (6 cols)
 - **`catalog.labor_prices`** (11 cols | FK: labor_type_id → labor_types)
 - **`catalog.labor_roles`** (10 cols)
-- **`catalog.labor_types`** (9 cols | FK: labor_role_id → labor_roles, unit_id → units, labor_category_id → labor_categories, labor_level_id → labor_levels)
+- **`catalog.labor_types`** (9 cols | FK: labor_category_id → labor_categories, labor_level_id → labor_levels, labor_role_id → labor_roles, unit_id → units)
 - **`catalog.material_categories`** (5 cols | FK: parent_id → material_categories)
 - **`catalog.material_prices`** (12 cols | FK: material_id → materials)
 - **`catalog.material_types`** (11 cols)
@@ -329,23 +328,22 @@
 - **`catalog.task_actions`** (8 cols | FK: action_category_id → task_action_categories)
 - **`catalog.task_construction_systems`** (11 cols)
 - **`catalog.task_divisions`** (15 cols | FK: parent_id → task_divisions)
-- **`catalog.task_element_actions`** (3 cols | FK: element_id → task_elements, action_id → task_actions)
-- **`catalog.task_element_systems`** (3 cols | FK: system_id → task_construction_systems, element_id → task_elements)
+- **`catalog.task_element_actions`** (3 cols | FK: action_id → task_actions, element_id → task_elements)
+- **`catalog.task_element_systems`** (3 cols | FK: element_id → task_elements, system_id → task_construction_systems)
 - **`catalog.task_elements`** (12 cols)
-- **`catalog.task_parameter_options`** (14 cols | FK: parameter_id → task_parameters, material_id → materials, unit_id → units)
+- **`catalog.task_parameter_options`** (14 cols | FK: unit_id → units, parameter_id → task_parameters, material_id → materials)
 - **`catalog.task_parameters`** (14 cols)
-- **`catalog.task_recipe_external_services`** (17 cols | FK: unit_id → units, recipe_id → task_recipes)
-- **`catalog.task_recipe_labor`** (14 cols | FK: unit_id → units, recipe_id → task_recipes, labor_type_id → labor_types)
-- **`catalog.task_recipe_materials`** (16 cols | FK: unit_id → units, material_id → materials, recipe_id → task_recipes)
+- **`catalog.task_recipe_external_services`** (17 cols | FK: recipe_id → task_recipes, unit_id → units)
+- **`catalog.task_recipe_labor`** (14 cols | FK: recipe_id → task_recipes, unit_id → units, labor_type_id → labor_types)
+- **`catalog.task_recipe_materials`** (16 cols | FK: recipe_id → task_recipes, unit_id → units, material_id → materials)
 - **`catalog.task_recipe_ratings`** (10 cols | FK: recipe_id → task_recipes)
 - **`catalog.task_recipes`** (18 cols | FK: task_id → tasks)
-- **`catalog.task_system_parameter_options`** (4 cols | FK: option_id → task_parameter_options, parameter_id → task_parameters, system_id → task_construction_systems)
-- **`catalog.task_system_parameters`** (7 cols | FK: parameter_id → task_parameters, system_id → task_construction_systems)
+- **`catalog.task_system_parameter_options`** (4 cols | FK: parameter_id → task_parameters, system_id → task_construction_systems, option_id → task_parameter_options)
+- **`catalog.task_system_parameters`** (7 cols | FK: system_id → task_construction_systems, parameter_id → task_parameters)
 - **`catalog.task_template_parameters`** (8 cols | FK: parameter_id → task_parameters, template_id → task_templates)
-- **`catalog.task_templates`** (17 cols | FK: task_construction_system_id → task_construction_systems, task_element_id → task_elements, task_action_id → task_actions, unit_id → units, task_division_id → task_divisions)
-- **`catalog.tasks`** (24 cols | FK: unit_id → units, task_action_id → task_actions, task_division_id → task_divisions, task_element_id → task_elements, template_id → task_templates, task_construction_system_id → task_construction_systems)
-- **`catalog.unit_categories`** (6 cols)
-- **`catalog.units`** (13 cols | FK: unit_category_id → unit_categories)
+- **`catalog.task_templates`** (17 cols | FK: task_construction_system_id → task_construction_systems, task_action_id → task_actions, task_division_id → task_divisions, unit_id → units, task_element_id → task_elements)
+- **`catalog.tasks`** (25 cols | FK: task_division_id → task_divisions, template_id → task_templates, task_element_id → task_elements, unit_id → units, task_construction_system_id → task_construction_systems, system_division_id → task_divisions, task_action_id → task_actions)
+- **`catalog.units`** (12 cols)
 
 ### Functions (8)
 
@@ -405,16 +403,16 @@
 
 ### Tables (16)
 
-- **`billing.bank_transfer_payments`** (22 cols | FK: plan_id → plans, payment_id → payments)
+- **`billing.bank_transfer_payments`** (22 cols | FK: payment_id → payments, plan_id → plans)
 - **`billing.billing_profiles`** (12 cols)
 - **`billing.coupon_courses`** (2 cols | FK: coupon_id → coupons)
-- **`billing.coupon_plans`** (2 cols | FK: plan_id → plans, coupon_id → coupons)
+- **`billing.coupon_plans`** (2 cols | FK: coupon_id → coupons, plan_id → plans)
 - **`billing.coupon_redemptions`** (10 cols | FK: subscription_id → organization_subscriptions, coupon_id → coupons, plan_id → plans)
 - **`billing.coupons`** (16 cols)
 - **`billing.mp_preferences`** (31 cols | FK: plan_id → plans, coupon_id → coupons)
-- **`billing.organization_billing_cycles`** (22 cols | FK: plan_id → plans, payment_uuid → payments, subscription_id → organization_subscriptions)
+- **`billing.organization_billing_cycles`** (22 cols | FK: subscription_id → organization_subscriptions, plan_id → plans, payment_uuid → payments)
 - **`billing.organization_member_events`** (11 cols | FK: subscription_id → organization_subscriptions)
-- **`billing.organization_subscriptions`** (18 cols | FK: plan_id → plans, scheduled_downgrade_plan_id → plans, payment_id → payments, coupon_id → coupons)
+- **`billing.organization_subscriptions`** (18 cols | FK: coupon_id → coupons, scheduled_downgrade_plan_id → plans, plan_id → plans, payment_id → payments)
 - **`billing.payment_events`** (16 cols)
 - **`billing.payment_plans`** (5 cols)
 - **`billing.payments`** (16 cols)
@@ -627,12 +625,12 @@
 ### Tables (9)
 
 - **`community.forum_categories`** (12 cols)
-- **`community.forum_posts`** (10 cols | FK: thread_id → forum_threads, parent_id → forum_posts)
+- **`community.forum_posts`** (10 cols | FK: parent_id → forum_posts, thread_id → forum_threads)
 - **`community.forum_reactions`** (6 cols)
 - **`community.forum_threads`** (15 cols | FK: category_id → forum_categories)
 - **`community.founder_event_registrations`** (6 cols | FK: event_id → founder_portal_events)
 - **`community.founder_portal_events`** (13 cols)
-- **`community.founder_vote_ballots`** (6 cols | FK: option_id → founder_vote_options, topic_id → founder_vote_topics)
+- **`community.founder_vote_ballots`** (6 cols | FK: topic_id → founder_vote_topics, option_id → founder_vote_options)
 - **`community.founder_vote_options`** (4 cols | FK: topic_id → founder_vote_topics)
 - **`community.founder_vote_topics`** (10 cols)
 

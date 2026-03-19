@@ -56,6 +56,7 @@ export async function getOrganizationTasks(organizationId: string) {
         description: t.description,
         unit_id: t.unit_id,
         task_division_id: t.task_division_id,
+        system_division_id: t.system_division_id,
         organization_id: t.organization_id,
         is_system: t.is_system,
         is_published: t.is_published ?? true,
@@ -154,6 +155,7 @@ export async function getUnits() {
     const { data, error } = await supabase
         .schema('catalog').from('units')
         .select('*')
+        .eq('is_deleted', false)
         .order('name', { ascending: true });
 
     if (error) {
@@ -180,6 +182,7 @@ export async function getTaskById(taskId: string): Promise<TaskView | null> {
         .schema('catalog').from('tasks_view')
         .select('*')
         .eq('id', taskId)
+        .eq('is_deleted', false)
         .single();
 
     if (error) {
@@ -199,6 +202,7 @@ export async function getTaskById(taskId: string): Promise<TaskView | null> {
         description: data.description,
         unit_id: data.unit_id,
         task_division_id: data.task_division_id,
+        system_division_id: data.system_division_id,
         organization_id: data.organization_id,
         is_system: data.is_system,
         is_published: data.is_published ?? true,

@@ -1,0 +1,18 @@
+{
+    "order": [
+        "tareas",
+        "recetas",
+        "materiales"
+    ],
+    "items": {
+        "tareas": {
+            "title": "Catálogo de Tareas"
+        },
+        "recetas": {
+            "title": "Catálogo de Recetas"
+        },
+        "materiales": {
+            "title": "Catálogo de Materiales"
+        }
+    }
+}

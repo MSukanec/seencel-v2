@@ -14,7 +14,7 @@ import { Ticket, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
+import { ToolbarFilter, ToolbarSearch } from "@/components/shared/toolbar-controls";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { useModal } from "@/stores/modal-store";
@@ -128,7 +128,7 @@ export function AdminFinanceCouponsView({ coupons }: AdminFinanceCouponsViewProp
             <>
                 <Toolbar
                     portalToHeader
-                    leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar cupones..." /></>}
+                    leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar cupones..." /></>}
                     actions={toolbarActions}
                 />
                 <ViewEmptyState
@@ -146,7 +146,7 @@ export function AdminFinanceCouponsView({ coupons }: AdminFinanceCouponsViewProp
     // ─── Embedded toolbar ────────────────────────────────
     const embeddedToolbar = (
         <Toolbar
-            leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar cupones..." /></>}
+            leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar cupones..." /></>}
             actions={toolbarActions}
         />
     );

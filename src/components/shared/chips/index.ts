@@ -12,6 +12,7 @@ export { ChipRow, type ChipRowProps } from "./chip-row";
 // Concrete chips
 export { StatusChip, type StatusChipProps, type StatusOption, type StatusVariant } from "./chips/status-chip";
 export { SelectChip, type SelectChipProps, type SelectChipOption } from "./chips/select-chip";
+export { UnitChip, type UnitChipProps } from "./chips/unit-chip";
 export { WalletChip, type WalletChipProps, type WalletChipOption } from "./chips/wallet-chip";
 export { CurrencyChip, type CurrencyChipProps, type CurrencyChipOption } from "./chips/currency-chip";
 export { CategoryChip, type CategoryChipProps } from "./chips/category-chip";

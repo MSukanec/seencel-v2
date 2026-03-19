@@ -1,66 +1,26 @@
 {
     "order": [
         "organizacion",
-        "planificador",
-        "documentacion",
-        "contactos",
-        "materiales",
-        "tareas",
-        "rubros",
-        "ejecucion-de-obra",
-        "equipo",
-        "gastos-generales",
-        "presupuestos",
-        "proyectos"
+        "catalogo-tecnico",
+        "construccion",
+        "finanzas"
     ],
     "items": {
         "organizacion": {
             "title": "Organización",
             "icon": "building-2"
         },
-        "planificador": {
-            "title": "Planificador",
-            "icon": "calendar"
-        },
-        "documentacion": {
-            "title": "Documentación",
-            "icon": "folder-open"
-        },
-        "materiales": {
-            "title": "Materiales",
-            "icon": "package"
-        },
-        "tareas": {
-            "title": "Tareas",
+        "catalogo-tecnico": {
+            "title": "Catálogo Técnico",
             "icon": "clipboard-list"
         },
-        "rubros": {
-            "title": "Rubros",
-            "icon": "folder-tree"
-        },
-        "ejecucion-de-obra": {
-            "title": "Ejecución de Obra",
+        "construccion": {
+            "title": "Construcción",
             "icon": "hard-hat"
         },
-        "equipo": {
-            "title": "Equipo",
-            "icon": "users"
-        },
-        "gastos-generales": {
-            "title": "Gastos Generales",
-            "icon": "receipt"
-        },
-        "contactos": {
-            "title": "Contactos",
-            "icon": "users"
-        },
-        "proyectos": {
-            "title": "Proyectos",
-            "icon": "building"
-        },
-        "presupuestos": {
-            "title": "Presupuestos",
-            "icon": "file-text"
+        "finanzas": {
+            "title": "Finanzas",
+            "icon": "banknote"
         }
     }
 }

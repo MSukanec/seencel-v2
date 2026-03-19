@@ -53,7 +53,7 @@ import {
 import { FileItem, SavedView, SavedViewFilters } from "../types";
 import { PageHeaderActionPortal } from "@/components/layout";
 import { EntityContextMenu } from "@/components/shared/entity-context-menu";
-import { ToolbarCard, FilterPopover, SearchButton, DisplayButton, ViewsTabs, ActiveFiltersBar, ViewEditorBar } from "@/components/shared/toolbar-controls";
+import { ToolbarCard, ViewsTabs, ActiveFiltersBar, ViewEditorBar, ToolbarFilter } from "@/components/shared/toolbar-controls";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { getFilesColumns, flattenFileItem, type FileTableRow } from "../tables/files-columns";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
@@ -934,17 +934,13 @@ export function FileGallery({ files, organizationId, maxFileSizeMb = 50, onRefre
                     onDeleteView={handleDeleteView}
                 />
             }
-            right={
-                <>
-                    <SearchButton filters={filters} placeholder="Buscar archivos..." />
-                    <FilterPopover filters={filters} />
-                    <DisplayButton
-                        viewMode={viewMode}
-                        onViewModeChange={(v) => setViewMode(v as ViewMode)}
-                        viewModeOptions={viewModeOptions}
-                    />
-                </>
-            }
+            filters={filters}
+            searchPlaceholder="Buscar archivos..."
+            display={{
+                viewMode,
+                onViewModeChange: (v) => setViewMode(v as ViewMode),
+                viewModeOptions: viewModeOptions,
+            }}
             bottom={
                 <>
                     {editingView && (
@@ -958,7 +954,7 @@ export function FileGallery({ files, organizationId, maxFileSizeMb = 50, onRefre
                     {!editingView && (
                         <ActiveFiltersBar
                             filters={filters}
-                            addFilterSlot={<FilterPopover filters={filters} variant="plus" />}
+                            addFilterSlot={<ToolbarFilter filters={filters} variant="plus" />}
                             onSaveView={handleStartCreate}
                         />
                     )}
@@ -981,7 +977,7 @@ export function FileGallery({ files, organizationId, maxFileSizeMb = 50, onRefre
                         onAction={handleUpload}
                         actionLabel="Subir Archivo"
                         actionIcon={Upload}
-                        docsPath="/docs/documentacion/introduccion"
+                        docsPath="/docs/organizacion/archivos"
                     />
                 </div>
             </>

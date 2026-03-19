@@ -34,7 +34,5 @@ export { PhoneField, type PhoneFieldProps } from "./phone-field";
 export { UnitField, type UnitFieldProps, type UnitOption } from "./unit-field";
 export { TaskField, type TaskFieldProps, type CatalogTaskOption } from "./task-field";
 export { PeriodField, type PeriodFieldProps, type PeriodGranularity } from "./period-field";
-export { FormHeroField, type FormHeroFieldProps } from "./form-hero-field";
-export { FormNotesField, type FormNotesFieldProps } from "./form-notes-field";
-export { FormReferenceField, type FormReferenceFieldProps } from "./form-reference-field";
+export { FormTextField, type FormTextFieldProps, type FormTextFieldVariant } from "./form-text-field";
 export { RichTextField, type RichTextFieldProps } from "./rich-text-field";

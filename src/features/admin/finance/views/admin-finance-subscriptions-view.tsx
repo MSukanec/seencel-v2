@@ -12,7 +12,7 @@ import { useMemo } from "react";
 import { Wallet } from "lucide-react";
 
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { FilterPopover, SearchButton } from "@/components/shared/toolbar-controls";
+import { ToolbarFilter, ToolbarSearch } from "@/components/shared/toolbar-controls";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useTableFilters } from "@/hooks/use-table-filters";
@@ -72,7 +72,7 @@ export function AdminFinanceSubscriptionsView({ subscriptions }: AdminFinanceSub
             <>
                 <Toolbar
                     portalToHeader
-                    leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar suscripciones..." /></>}
+                    leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar suscripciones..." /></>}
                 />
                 <ViewEmptyState
                     mode="no-results"
@@ -89,7 +89,7 @@ export function AdminFinanceSubscriptionsView({ subscriptions }: AdminFinanceSub
     // ─── Render ──────────────────────────────────────────
     const embeddedToolbar = (
         <Toolbar
-            leftActions={<><FilterPopover filters={filters} /><SearchButton filters={filters} placeholder="Buscar suscripciones..." /></>}
+            leftActions={<><ToolbarFilter filters={filters} /><ToolbarSearch filters={filters} placeholder="Buscar suscripciones..." /></>}
         />
     );
 

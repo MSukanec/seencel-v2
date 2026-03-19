@@ -14,7 +14,7 @@ import { useMemo, useCallback } from "react";
 import { Plus, FileText, FolderOpen, Layers, FolderPlus, MoreHorizontal, Pencil, Trash2, Repeat, CircleDot, Zap, Building2, Briefcase, Tag } from "lucide-react";
 import { ViewEmptyState, type QuickStartPack } from "@/components/shared/empty-state";
 import { PageHeaderActionPortal } from "@/components/layout";
-import { FilterPopover, SearchButton, ToolbarCard } from "@/components/shared/toolbar-controls";
+import { ToolbarCard } from "@/components/shared/toolbar-controls";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import {
     Accordion,
@@ -381,12 +381,8 @@ export function GeneralCostsConceptsView({ data, conceptStats, categories, organ
                 {headerActions}
                 <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
                     <ToolbarCard
-                        right={
-                            <>
-                                <SearchButton filters={filters} placeholder="Buscar conceptos..." />
-                                <FilterPopover filters={filters} />
-                            </>
-                        }
+                        filters={filters}
+                        searchPlaceholder="Buscar conceptos..."
                     />
                     <ViewEmptyState
                         mode="no-results"
@@ -407,12 +403,8 @@ export function GeneralCostsConceptsView({ data, conceptStats, categories, organ
             <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
                 {/* Toolbar card — inline */}
                 <ToolbarCard
-                    right={
-                        <>
-                            <SearchButton filters={filters} placeholder="Buscar conceptos..." />
-                            <FilterPopover filters={filters} />
-                        </>
-                    }
+                    filters={filters}
+                    searchPlaceholder="Buscar conceptos..."
                 />
 
             <Accordion

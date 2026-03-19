@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePanel } from "@/stores/panel-store";
-import { FormHeroField } from "@/components/shared/forms/fields";
+import { FormTextField } from "@/components/shared/forms/fields/form-text-field";
 import { toast } from "sonner";
 import { createContactCategory, updateContactCategory } from "@/actions/contacts";
 import { ContactCategory } from "@/types/contact";
@@ -63,7 +63,8 @@ export function ContactCategoryForm({ organizationId, initialData, onSuccess, fo
     // 🚨 OBLIGATORIO: <form id={formId}> — conecta con el footer del container
     return (
         <form id={formId} onSubmit={handleSubmit}>
-            <FormHeroField
+            <FormTextField
+                variant="hero"
                 value={name}
                 onChange={setName}
                 placeholder="Ej. Proveedor"

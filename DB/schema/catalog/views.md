@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-16T12:23:01.346Z
+> Generated: 2026-03-19T17:08:39.512Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -82,7 +82,7 @@ SELECT m.id,
   WHERE (m.is_deleted = false);
 ```
 
-### `catalog.organization_task_prices_view` (🔓 INVOKER)
+### `catalog.organization_task_prices_view` (🔐 DEFINER)
 
 ```sql
 SELECT p.id,
@@ -91,6 +91,7 @@ SELECT p.id,
     t.custom_name AS task_name,
     td.name AS division_name,
     td."order" AS division_order,
+    sd.name AS system_division_name,
     u.name AS unit,
     p.labor_unit_cost,
     p.material_unit_cost,
@@ -100,9 +101,10 @@ SELECT p.id,
     p.note,
     p.created_at,
     p.updated_at
-   FROM (((catalog.organization_task_prices p
+   FROM ((((catalog.organization_task_prices p
      LEFT JOIN catalog.tasks t ON ((t.id = p.task_id)))
      LEFT JOIN catalog.task_divisions td ON ((td.id = t.task_division_id)))
+     LEFT JOIN catalog.task_divisions sd ON ((sd.id = t.system_division_id)))
      LEFT JOIN catalog.units u ON ((u.id = t.unit_id)));
 ```
 
@@ -234,6 +236,7 @@ WITH recipe_material_costs AS (
     t.custom_name AS task_custom_name,
     COALESCE(t.custom_name, t.name) AS task_display_name,
     td.name AS division_name,
+    sd.name AS system_division_name,
     u.name AS unit_name,
     o.name AS org_name,
     (( SELECT count(*) AS count
@@ -245,9 +248,10 @@ WITH recipe_material_costs AS (
     (COALESCE(rlc.lab_cost, (0)::numeric))::numeric(14,2) AS lab_cost,
     (COALESCE(rec.ext_cost, (0)::numeric))::numeric(14,2) AS ext_cost,
     (((COALESCE(rmc.mat_cost, (0)::numeric) + COALESCE(rlc.lab_cost, (0)::numeric)) + COALESCE(rec.ext_cost, (0)::numeric)))::numeric(14,2) AS total_cost
-   FROM (((((((catalog.task_recipes tr
+   FROM ((((((((catalog.task_recipes tr
      LEFT JOIN catalog.tasks t ON ((t.id = tr.task_id)))
      LEFT JOIN catalog.task_divisions td ON ((td.id = t.task_division_id)))
+     LEFT JOIN catalog.task_divisions sd ON ((sd.id = t.system_division_id)))
      LEFT JOIN catalog.units u ON ((u.id = t.unit_id)))
      LEFT JOIN iam.organizations o ON ((o.id = tr.organization_id)))
      LEFT JOIN recipe_material_costs rmc ON ((rmc.recipe_id = tr.id)))
@@ -256,7 +260,7 @@ WITH recipe_material_costs AS (
   WHERE (tr.is_deleted = false);
 ```
 
-### `catalog.tasks_view` (🔓 INVOKER)
+### `catalog.tasks_view` (🔐 DEFINER)
 
 ```sql
 SELECT t.id,
@@ -271,6 +275,7 @@ SELECT t.id,
     t.organization_id,
     t.unit_id,
     t.task_division_id,
+    t.system_division_id,
     t.task_action_id,
     t.task_element_id,
     t.is_parametric,
@@ -283,12 +288,14 @@ SELECT t.id,
     u.name AS unit_name,
     u.symbol AS unit_symbol,
     d.name AS division_name,
+    sd.name AS system_division_name,
     ta.name AS action_name,
     ta.short_code AS action_short_code,
     te.name AS element_name
-   FROM ((((catalog.tasks t
+   FROM (((((catalog.tasks t
      LEFT JOIN catalog.units u ON ((u.id = t.unit_id)))
      LEFT JOIN catalog.task_divisions d ON ((d.id = t.task_division_id)))
+     LEFT JOIN catalog.task_divisions sd ON ((sd.id = t.system_division_id)))
      LEFT JOIN catalog.task_actions ta ON ((ta.id = t.task_action_id)))
      LEFT JOIN catalog.task_elements te ON ((te.id = t.task_element_id)));
 ```

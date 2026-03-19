@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Settings, Package } from "lucide-react";
+import { getAuthUser } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { Badge } from "@/components/ui/badge";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { BackButton } from "@/components/shared/back-button";
+import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
 import { TasksDetailGeneralView } from "@/features/tasks/views/detail/tasks-detail-general-view";
 import { TasksDetailRecipeView } from "@/features/tasks/views/detail/tasks-detail-recipe-view";
 import { getTaskById, getUnits, getTaskDivisions } from "@/features/tasks/queries";
@@ -51,6 +53,10 @@ interface TaskDetailPageProps {
 
 export default async function AdminTaskDetailPage({ params, searchParams }: TaskDetailPageProps) {
     try {
+        // Auth guard — verificar que hay usuario autenticado
+        const user = await getAuthUser();
+        if (!user) redirect("/");
+
         const { taskId } = await params;
         const { view = "general" } = await searchParams;
 
@@ -99,23 +105,24 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
                     backButton={
                         <BackButton fallbackHref="/admin/catalog" />
                     }
-
-                    tabs={
-                        <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
+                    parentLabel="Admin Catálogo"
+                >
+                    {/* Content Tabs — inside content, not header */}
+                    <DetailContentTabs>
+                        <TabsList>
                             <TabsTrigger value="general" className="gap-2">
-                                <Settings className="h-4 w-4" />
+                                <Settings className="h-3.5 w-3.5" />
                                 General
                             </TabsTrigger>
                             <TabsTrigger value="recipe" className="gap-2">
-                                <Package className="h-4 w-4" />
+                                <Package className="h-3.5 w-3.5" />
                                 Recetas
                                 <Badge variant="secondary" className="ml-1 text-xs">
                                     {recipeCount}
                                 </Badge>
                             </TabsTrigger>
                         </TabsList>
-                    }
-                >
+                    </DetailContentTabs>
                     {/* General Tab */}
                     <TabsContent value="general" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">

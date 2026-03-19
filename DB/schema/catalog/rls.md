@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-16T12:23:01.346Z
+> Generated: 2026-03-19T17:08:39.512Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] RLS Policies (82)
+## [CATALOG] RLS Policies (80)
 
 ### `external_service_prices` (3 policies)
 
@@ -398,7 +398,7 @@ true
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-(((is_system = true) AND is_admin()) OR ((is_system = false) AND can_mutate_org(organization_id, 'projects.manage'::text)))
+(((is_system = true) AND is_admin()) OR ((is_system = false) AND can_mutate_org(organization_id, 'construction.manage'::text)))
 ```
 
 #### MIEMBROS EDITAN TASK_DIVISIONS
@@ -407,7 +407,7 @@ true
 - **Roles**: {public}
 - **USING**:
 ```sql
-(((is_system = true) AND is_admin()) OR ((is_system = false) AND can_mutate_org(organization_id, 'projects.manage'::text)))
+(((is_system = true) AND is_admin()) OR ((is_system = false) AND can_mutate_org(organization_id, 'construction.manage'::text)))
 ```
 
 #### MIEMBROS VEN TASK_DIVISIONS
@@ -416,7 +416,7 @@ true
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_system = true) OR can_view_org(organization_id, 'projects.view'::text))
+((is_system = true) OR can_view_org(organization_id, 'construction.view'::text))
 ```
 
 ### `task_element_actions` (2 policies)
@@ -796,30 +796,6 @@ is_admin()
 - **USING**:
 ```sql
 (((is_system = true) AND (is_admin() OR ((status <> 'draft'::task_catalog_status) AND (is_deleted = false)))) OR ((is_system = false) AND can_view_org(organization_id, 'construction.view'::text)))
-```
-
-### `unit_categories` (2 policies)
-
-#### ADMINS GESTIONAN UNIT_CATEGORIES
-
-- **Command**: ALL | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-is_admin()
-```
-- **WITH CHECK**:
-```sql
-is_admin()
-```
-
-#### TODOS VEN UNIT_CATEGORIES
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-true
 ```
 
 ### `units` (3 policies)

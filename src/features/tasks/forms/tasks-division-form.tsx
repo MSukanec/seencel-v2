@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { toast } from "sonner";
-import { FormFooter } from "@/components/shared/forms/form-footer";
+import { FolderTree } from "lucide-react";
 import { FormGroup } from "@/components/ui/form-group";
 import { TextField, NotesField } from "@/components/shared/forms/fields";
 import { Combobox } from "@/components/ui/combobox";
@@ -25,10 +25,12 @@ interface TasksDivisionFormProps {
     onOptimisticCreate?: (item: TaskDivision) => void;
     /** Called immediately with updated data before server call */
     onOptimisticUpdate?: (item: TaskDivision) => void;
+    /** Panel form ID — passed automatically by PanelProvider */
+    formId?: string;
 }
 
 // ============================================================================
-// Component (Semi-Autónomo)
+// Component (Panel Self-Contained)
 // ============================================================================
 
 export function TasksDivisionForm({
@@ -38,10 +40,34 @@ export function TasksDivisionForm({
     defaultParentId = null,
     onOptimisticCreate,
     onOptimisticUpdate,
+    formId,
 }: TasksDivisionFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta } = usePanel();
     const isEditing = !!initialData?.id;
+
+    // 🚨 OBLIGATORIO: Self-describe panel meta
+    useEffect(() => {
+        const parentDivision = defaultParentId
+            ? divisions.find(d => d.id === defaultParentId)
+            : null;
+
+        setPanelMeta({
+            icon: FolderTree,
+            title: isEditing
+                ? "Editar Rubro"
+                : parentDivision
+                    ? `Crear Sub-rubro de "${parentDivision.name}"`
+                    : "Crear Rubro",
+            description: isEditing
+                ? `Modificando "${initialData?.name}"`
+                : "Completá los campos para crear un nuevo rubro.",
+            size: "md",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Crear Rubro",
+            },
+        });
+    }, [isEditing, setPanelMeta, initialData?.name, defaultParentId, divisions]);
 
     // Form state
     const [name, setName] = useState(initialData?.name ?? "");
@@ -60,11 +86,6 @@ export function TasksDivisionForm({
             })
             .map(d => ({ value: d.id, label: d.name })),
     ];
-
-    // Callbacks internos (patrón semi-autónomo)
-    const handleCancel = () => {
-        closeModal();
-    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -114,7 +135,7 @@ export function TasksDivisionForm({
             onOptimisticUpdate(updatedItem);
         }
 
-        closeModal();
+        closePanel();
         toast.success(isEditing ? "¡Rubro actualizado!" : "¡Rubro creado!");
 
         // 🔄 BACKGROUND: Submit to server
@@ -140,61 +161,53 @@ export function TasksDivisionForm({
     // ========================================================================
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        <form id={formId} onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
-                    {/* Nombre del Rubro: full width */}
-                    <TextField
-                        value={name}
-                        onChange={setName}
-                        label="Nombre del Rubro"
-                        placeholder="Ej: Mampostería"
-                        autoFocus
-                        className="md:col-span-12"
-                    />
+                {/* Nombre del Rubro: full width */}
+                <TextField
+                    value={name}
+                    onChange={setName}
+                    label="Nombre del Rubro"
+                    placeholder="Ej: Mampostería"
+                    autoFocus
+                    className="md:col-span-12"
+                />
 
-                    {/* Rubro Padre: 8 cols */}
-                    <div className="md:col-span-8">
-                        <FormGroup label="Rubro Padre (opcional)">
-                            <Combobox
-                                value={parentId}
-                                onValueChange={setParentId}
-                                options={parentComboboxOptions}
-                                placeholder="Sin padre (raíz)"
-                                searchPlaceholder="Buscar rubro..."
-                                emptyMessage="No se encontraron rubros."
-                            />
-                        </FormGroup>
-                    </div>
-
-                    {/* Código: 4 cols */}
-                    <TextField
-                        value={code}
-                        onChange={setCode}
-                        label="Código"
-                        placeholder="Ej: MAM"
-                        required={false}
-                        className="md:col-span-4"
-                    />
-
-                    {/* Descripción: full width */}
-                    <NotesField
-                        value={description}
-                        onChange={setDescription}
-                        label="Descripción"
-                        placeholder="Descripción del rubro..."
-                        className="md:col-span-12"
-                    />
-
+                {/* Rubro Padre: 8 cols */}
+                <div className="md:col-span-8">
+                    <FormGroup label="Rubro Padre (opcional)">
+                        <Combobox
+                            value={parentId}
+                            onValueChange={setParentId}
+                            options={parentComboboxOptions}
+                            placeholder="Sin padre (raíz)"
+                            searchPlaceholder="Buscar rubro..."
+                            emptyMessage="No se encontraron rubros."
+                        />
+                    </FormGroup>
                 </div>
-            </div>
 
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                submitLabel={isEditing ? "Guardar Cambios" : "Crear Rubro"}
-                onCancel={handleCancel}
-            />
+                {/* Código: 4 cols */}
+                <TextField
+                    value={code}
+                    onChange={setCode}
+                    label="Código"
+                    placeholder="Ej: MAM"
+                    required={false}
+                    className="md:col-span-4"
+                />
+
+                {/* Descripción: full width */}
+                <NotesField
+                    value={description}
+                    onChange={setDescription}
+                    label="Descripción"
+                    placeholder="Descripción del rubro..."
+                    className="md:col-span-12"
+                />
+
+            </div>
         </form>
     );
 }

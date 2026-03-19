@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { FormHeroField } from "@/components/shared/forms/fields";
+import { FormTextField } from "@/components/shared/forms/fields/form-text-field";
 import { usePanel } from "@/stores/panel-store";
 import { FolderCog } from "lucide-react";
 
@@ -54,7 +54,8 @@ export function ProjectsModalityForm({ organizationId, initialData, onSubmit, fo
 
     return (
         <form id={formId} onSubmit={handleSubmit}>
-            <FormHeroField
+            <FormTextField
+                variant="hero"
                 value={name}
                 onChange={setName}
                 placeholder={t("namePlaceholder") || "Ej: Obra Nueva"}

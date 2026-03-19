@@ -84,6 +84,10 @@ export const routing = defineRouting({
             en: '/settings/templates',
             es: '/configuracion/plantillas'
         },
+        '/settings/units': {
+            en: '/settings/units',
+            es: '/configuracion/unidades'
+        },
         '/settings/personal-billing': {
             en: '/settings/personal-billing',
             es: '/configuracion/facturacion-personal'
@@ -255,6 +259,14 @@ export const routing = defineRouting({
         '/organization/catalog/task/[taskId]': {
             en: '/organization/catalog/task/[taskId]',
             es: '/organizacion/catalogo/tarea/[taskId]'
+        },
+        '/organization/catalog/tasks': {
+            en: '/organization/catalog/tasks',
+            es: '/organizacion/catalogo/tareas'
+        },
+        '/organization/catalog/tasks/divisions': {
+            en: '/organization/catalog/tasks/divisions',
+            es: '/organizacion/catalogo/tareas/rubros'
         },
 
         // ===== Organization Planner =====

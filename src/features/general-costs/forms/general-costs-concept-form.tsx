@@ -28,8 +28,7 @@ import {
     SelectChip,
 } from "@/components/shared/chips";
 import { useFormData } from "@/stores/organization-store";
-import { FormHeroField } from "@/components/shared/forms/fields/form-hero-field";
-import { FormNotesField } from "@/components/shared/forms/fields/form-notes-field";
+import { FormTextField } from "@/components/shared/forms/fields/form-text-field";
 import { GeneralCost, GeneralCostCategory } from "@/features/general-costs/types";
 import { createGeneralCost, updateGeneralCost, createGeneralCostCategory } from "@/features/general-costs/actions";
 
@@ -230,7 +229,8 @@ export function GeneralCostsConceptForm({
             </ChipRow>
 
             {/* ── Hero: Name ────────────────────────────── */}
-            <FormHeroField
+            <FormTextField
+                variant="hero"
                 value={name}
                 onChange={setName}
                 placeholder="Nombre del concepto..."
@@ -240,7 +240,8 @@ export function GeneralCostsConceptForm({
             {/* ── Borderless fields ─────────────────────── */}
             <div className="flex-1 mt-4 space-y-1">
                 {/* Description */}
-                <FormNotesField
+                <FormTextField
+                    variant="body"
                     value={description}
                     onChange={setDescription}
                     placeholder="Agregar descripción o notas..."

@@ -442,7 +442,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                                     openPanel('team-add-external-form', { organizationId });
                                                 }}
                                                 actionLabel="Agregar Colaborador"
-                                                docsPath="/docs/equipo/colaboradores"
+                                                docsPath="/docs/organizacion/equipo"
                                             />
                                         ) : (
                                             <>

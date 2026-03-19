@@ -50,7 +50,7 @@ export function KanbanDashboard({
                     icon={LayoutDashboard}
                     viewName="Panel de Tareas"
                     featureDescription="El panel de tareas es tu espacio para organizar ideas, pendientes y cosas por hacer. Creá columnas que representen estados (por hacer, en progreso, listo) y arrastrá tarjetas entre ellas."
-                    docsPath="/docs/planificador/introduccion"
+                    docsPath="/docs/organizacion/planificador"
                 />
             </div>
         );

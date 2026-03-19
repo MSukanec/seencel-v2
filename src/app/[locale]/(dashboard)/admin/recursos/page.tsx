@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getSystemMaterials, getAllMaterialsAdmin, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy, getSystemLaborCategories, getSystemLaborLevels, getSystemLaborRoles, getSystemLaborTypes, getUnitsForLabor, getSystemUnits, getSystemUnitCategories } from "@/features/admin/queries";
 import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
 import { LaborCatalogView } from "@/features/labor/views/labor-catalog-view";
-import { UnitsCatalogView } from "@/features/units/views/units-catalog-view";
+import { UnitsSettingsView } from "@/features/units/views/units-settings-view";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { Shield, Package, HardHat, Ruler, Layers } from "lucide-react";
@@ -141,9 +141,8 @@ export default async function AdminRecursosPage() {
 
                     <TabsContent value="units" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
-                            <UnitsCatalogView
+                            <UnitsSettingsView
                                 units={systemUnits}
-                                categories={systemUnitCategories}
                                 orgId=""
                                 isAdminMode={true}
                             />

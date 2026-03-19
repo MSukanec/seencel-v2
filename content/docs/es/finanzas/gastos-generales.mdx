@@ -1,0 +1,207 @@
+---
+title: "Gastos Generales"
+description: "Guía completa sobre el módulo de Gastos Generales en SEENCEL"
+---
+
+# ¿Qué son los Gastos Generales?
+
+Los **Gastos Generales** en SEENCEL representan todos los egresos operativos de tu organización que no están directamente vinculados a un proyecto específico. Son los costos de funcionamiento del día a día: servicios, alquileres, seguros, licencias, etc.
+
+## ¿Para qué sirve este módulo?
+
+| Función | Descripción |
+|---------|-------------|
+| **Registro de pagos** | Cargá cada pago con fecha, monto, moneda y billetera |
+| **Conceptos organizados** | Agrupá gastos por categorías (Servicios, Inmueble, Administración) |
+| **Recurrencia** | Marcá conceptos como recurrentes (mensual, semanal, trimestral) |
+| **Dashboard analítico** | Visualizá KPIs, tendencias y distribución de gastos |
+| **Multi-moneda** | Registrá pagos en cualquier moneda con tipo de cambio |
+
+---
+
+## Estructura del Módulo
+
+El módulo de Gastos Generales tiene 4 secciones, accesibles desde el sidebar:
+
+### 1. Visión General
+
+Dashboard completo con:
+- **Gasto Total** histórico o filtrado por período
+- **Promedio Mensual** de egresos
+- **Costos Fijos** recurrentes
+- **Distribución por Categoría** visual
+- **Actividad Reciente** con los últimos pagos
+- **Obligaciones** recurrentes con su estado
+
+### 2. Pagos
+
+Lista completa de todos los pagos registrados. Desde acá podés:
+- Crear pagos individuales
+- Importar pagos masivamente desde Excel/CSV
+- Filtrar por concepto, categoría, fecha, estado
+- Editar inline (fecha, monto, billetera, moneda)
+- Exportar a CSV o Excel
+
+### 3. Conceptos
+
+Definí los tipos de gastos de tu organización. Cada concepto tiene:
+- **Nombre** y **Descripción**
+- **Categoría** para agruparlo
+- **Recurrencia** (mensual, semanal, trimestral, anual, o no recurrente)
+
+### 4. Ajustes
+
+Configuración específica del módulo de gastos generales.
+
+---
+
+## Flujo de Trabajo Típico
+
+1. **Crear Categorías** - Organizá tus gastos en grupos lógicos (Servicios, Inmueble, etc.)
+2. **Definir Conceptos** - Creá los tipos de gasto con su categoría y recurrencia
+3. **Registrar Pagos** - Cuando hagas un pago, registralo asociándolo a un concepto
+4. **Analizar** - Usá el dashboard para entender tus egresos y detectar tendencias
+
+<Callout type="tip" title="Quick Start Packs">
+Si estás empezando, en la pantalla de Conceptos vas a ver **packs de inicio rápido** que crean automáticamente categorías y conceptos típicos (Servicios, Inmobiliario, Administrativo) con un solo click.
+</Callout>
+
+---
+
+# Conceptos de Gasto
+
+Los **Conceptos** definen los tipos de gasto que maneja tu organización. Cada concepto representa un tipo de egreso recurrente o eventual.
+
+## Estructura de un Concepto
+
+| Campo | Descripción | Obligatorio |
+|-------|-------------|:-----------:|
+| **Nombre** | Identificador del concepto. Ej: "Luz", "Alquiler" | ✅ |
+| **Descripción** | Detalle adicional sobre el gasto | No |
+| **Categoría** | Grupo al que pertenece (Servicios, Inmueble, etc.) | No |
+| **Recurrencia** | Si es recurrente y con qué frecuencia | No |
+
+---
+
+## Categorías
+
+Las categorías te permiten agrupar conceptos relacionados:
+
+```
+📁 Servicios
+   ├── Luz
+   ├── Gas
+   ├── Internet
+   └── Teléfono
+📁 Inmueble
+   ├── Alquiler
+   ├── Expensas
+   └── Seguros
+📁 Administración
+   ├── Contabilidad
+   ├── Asesoría Legal
+   └── Licencias de Software
+```
+
+Podés crear categorías desde el formulario de concepto (inline, sin salir del form) o gestionarlas por separado.
+
+<Callout type="tip" title="Quick Start Packs">
+Si estás empezando de cero, la pantalla vacía te ofrece **packs de inicio rápido** que crean categorías y conceptos comunes con un solo click. Ideal para arrancar rápido sin cargar todo manualmente.
+</Callout>
+
+---
+
+## Recurrencia
+
+Marcá un concepto como recurrente para que aparezca en el panel de **Obligaciones** del dashboard:
+
+| Intervalo | Ejemplo |
+|-----------|---------|
+| **Mensual** | Alquiler, Luz, Gas |
+| **Semanal** | Limpieza |
+| **Trimestral** | Seguro |
+| **Anual** | Impuestos Inmobiliarios |
+
+Los conceptos no recurrentes son gastos eventuales que no tienen una periodicidad fija.
+
+---
+
+# Pagos de Gastos Generales
+
+Los **Pagos** son registros individuales de egresos asociados a un concepto de gasto. Cada pago tiene fecha, monto, moneda y billetera.
+
+## Estructura de un Pago
+
+| Campo | Descripción | Obligatorio |
+|-------|-------------|:-----------:|
+| **Monto** | Cantidad del pago | ✅ |
+| **Concepto** | A qué tipo de gasto corresponde | ✅ |
+| **Fecha** | Cuándo se realizó el pago | ✅ |
+| **Estado** | Pagado, Pendiente o Programado | ✅ |
+| **Billetera** | Desde qué cuenta/billetera salió | No |
+| **Moneda** | En qué moneda se realizó | No |
+| **Tipo de Cambio** | Conversión a moneda principal (si difiere) | No |
+| **Descripción** | Nota adicional sobre el pago | No |
+
+---
+
+## Crear un Pago
+
+Podés crear pagos de dos formas:
+
+### Manualmente
+
+1. Hacé click en **"+ Nuevo Pago"** en el header
+2. Completá el monto y seleccioná el concepto
+3. Opcionalmente ajustá fecha, billetera, moneda y estado
+4. Guardá
+
+### Importación Masiva
+
+1. Hacé click en el menú **"⋮"** junto al botón de nuevo pago
+2. Seleccioná **"Importar"**
+3. Subí tu archivo Excel o CSV
+4. Mapeá las columnas a los campos de Seencel
+5. Revisá y confirmá la importación
+
+<Callout type="info" title="Multi-Moneda">
+Si tu organización usa múltiples monedas, cada pago puede tener su propia moneda y tipo de cambio. El dashboard convierte todo a la moneda principal para los totales y análisis.
+</Callout>
+
+---
+
+## Edición Inline
+
+Podés editar pagos directamente desde la tabla sin abrir un formulario:
+
+- **Fecha**: Click en la celda → DatePicker
+- **Monto**: Click en la celda → Input numérico
+- **Estado**: Click en la celda → Selector
+- **Billetera**: Click en la celda → Selector
+- **Moneda**: Click en la celda → Selector
+- **Tipo de cambio**: Click en la celda → Input
+
+Los cambios se guardan automáticamente al confirmar.
+
+---
+
+## Filtros
+
+La barra de filtros permite encontrar pagos por:
+
+- **Búsqueda** de texto libre (concepto, descripción)
+- **Estado** (Pagado, Pendiente, Programado)
+- **Concepto** específico
+- **Categoría** del concepto
+- **Rango de fechas**
+
+---
+
+## Exportación
+
+Exportá los pagos para análisis externo:
+
+- **CSV** - Compatible con cualquier herramienta
+- **Excel** - Con formato y columnas tipadas
+
+La exportación respeta los filtros activos.
