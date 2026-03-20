@@ -3,7 +3,8 @@ import { requireAuthContext } from "@/lib/auth";
 import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy, getProvidersForProject } from "@/features/materials/queries";
 import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { ContentLayout } from "@/components/layout";
+import { ContentLayout, PageWrapper } from "@/components/layout";
+import { Wrench } from "lucide-react";
 
 export const metadata: Metadata = {
     title: "Materiales | Catálogo Técnico | Seencel",
@@ -30,17 +31,19 @@ export default async function CatalogMaterialsPage() {
         ]);
 
         return (
-            <ContentLayout variant="wide">
-                <MaterialsCatalogView
-                    materials={materials}
-                    units={materialUnits}
-                    categories={materialCategories}
-                    categoryHierarchy={categoryHierarchy}
-                    orgId={orgId}
-                    isAdminMode={false}
-                    providers={providers}
-                />
-            </ContentLayout>
+            <PageWrapper title="Catálogo Técnico" icon={<Wrench />}>
+                <ContentLayout variant="wide">
+                    <MaterialsCatalogView
+                        materials={materials}
+                        units={materialUnits}
+                        categories={materialCategories}
+                        categoryHierarchy={categoryHierarchy}
+                        orgId={orgId}
+                        isAdminMode={false}
+                        providers={providers}
+                    />
+                </ContentLayout>
+            </PageWrapper>
         );
     } catch (error) {
         return (

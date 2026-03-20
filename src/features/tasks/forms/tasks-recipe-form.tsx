@@ -1,17 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { toast } from "sonner";
 import { FormGroup } from "@/components/ui/form-group";
-import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createRecipe, updateRecipe, addRecipeMaterial, addRecipeLabor } from "@/features/tasks/actions";
 import { RecipeSuggestionPanel } from "@/features/ai/components/recipe-suggestion-panel";
 import type { AIRecipeSuggestedMaterial, AIRecipeSuggestedLabor } from "@/features/ai/types";
-import { Sparkles, ChevronDown, AlertTriangle } from "lucide-react";
+import { Sparkles, ChevronDown, AlertTriangle, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -53,6 +52,7 @@ interface TasksRecipeFormProps {
     taskId: string;
     editData?: EditRecipeData;
     taskContext?: TaskContext;
+    formId?: string;
 }
 
 // Items aceptados del panel de IA — tienen catalogId garantizado
@@ -71,13 +71,28 @@ interface PendingLabor {
 // Component
 // ============================================================================
 
-export function TasksRecipeForm({ taskId, editData, taskContext }: TasksRecipeFormProps) {
+export function TasksRecipeForm({ taskId, editData, taskContext, formId }: TasksRecipeFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta, setSubmitting } = usePanel();
     const [isLoading, setIsLoading] = useState(false);
 
     const isEditMode = !!editData;
     const hasAI = !isEditMode && !!taskContext;
+
+    // Self-describe panel meta
+    useEffect(() => {
+        setPanelMeta({
+            icon: Package,
+            title: isEditMode ? "Editar Receta" : "Nueva Receta",
+            description: isEditMode
+                ? "Modificá el nombre de la receta."
+                : "Definí un nombre o usá la IA para sugerir materiales.",
+            size: isEditMode ? "md" : "lg",
+            footer: {
+                submitLabel: isEditMode ? "Guardar Cambios" : "Crear Receta",
+            },
+        });
+    }, [isEditMode, setPanelMeta]);
 
     // Form fields
     const [name, setName] = useState(editData?.name || "");
@@ -144,12 +159,8 @@ export function TasksRecipeForm({ taskId, editData, taskContext }: TasksRecipeFo
     // ========================================================================
 
     const handleSuccess = () => {
-        closeModal();
+        closePanel();
         router.refresh();
-    };
-
-    const handleCancel = () => {
-        closeModal();
     };
 
     // ========================================================================
@@ -161,6 +172,7 @@ export function TasksRecipeForm({ taskId, editData, taskContext }: TasksRecipeFo
         if (!name.trim()) return;
 
         setIsLoading(true);
+        setSubmitting(true);
         try {
             if (isEditMode && editData) {
                 // ── Edit mode: solo actualiza el nombre ──
@@ -240,6 +252,7 @@ export function TasksRecipeForm({ taskId, editData, taskContext }: TasksRecipeFo
             toast.error("Error inesperado");
         } finally {
             setIsLoading(false);
+            setSubmitting(false);
         }
     };
 
@@ -249,9 +262,24 @@ export function TasksRecipeForm({ taskId, editData, taskContext }: TasksRecipeFo
 
     const pendingCount = pendingMaterials.length + pendingLabor.length;
 
+    // Update footer label dynamically based on pending count
+    useEffect(() => {
+        if (!isEditMode && pendingCount > 0) {
+            setPanelMeta({
+                icon: Package,
+                title: "Nueva Receta",
+                description: "Definí un nombre o usá la IA para sugerir materiales.",
+                size: "lg",
+                footer: {
+                    submitLabel: `Crear Receta con ${pendingCount} ítem${pendingCount > 1 ? "s" : ""}`,
+                },
+            });
+        }
+    }, [pendingCount, isEditMode, setPanelMeta]);
+
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            <div className="flex-1 overflow-y-auto space-y-4">
+        <form id={formId} onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-4">
 
                 {/* Nombre */}
                 <FormGroup label="Nombre de la receta" required>
@@ -342,19 +370,6 @@ export function TasksRecipeForm({ taskId, editData, taskContext }: TasksRecipeFo
                     </div>
                 )}
             </div>
-
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                submitLabel={
-                    isEditMode
-                        ? "Guardar Cambios"
-                        : pendingCount > 0
-                            ? `Crear Receta con ${pendingCount} ítem${pendingCount > 1 ? "s" : ""}`
-                            : "Crear Receta"
-                }
-                isLoading={isLoading}
-                onCancel={handleCancel}
-            />
         </form>
     );
 }

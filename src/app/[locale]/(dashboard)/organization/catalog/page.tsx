@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { ContentLayout } from "@/components/layout";
+import { ContentLayout, PageWrapper } from "@/components/layout";
+import { Wrench } from "lucide-react";
 
 export const metadata: Metadata = {
     title: "Catálogo Técnico | Seencel",
@@ -9,10 +10,12 @@ export const metadata: Metadata = {
 
 export default async function CatalogOverviewPage() {
     return (
-        <ContentLayout variant="wide">
-            <div className="h-full flex items-center justify-center text-muted-foreground">
-                <p>Visión General — Próximamente</p>
-            </div>
-        </ContentLayout>
+        <PageWrapper title="Catálogo Técnico" icon={<Wrench />}>
+            <ContentLayout variant="wide">
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                    <p>Visión General — Próximamente</p>
+                </div>
+            </ContentLayout>
+        </PageWrapper>
     );
 }

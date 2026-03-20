@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { toast } from "sonner";
 import { FormGroup } from "@/components/ui/form-group";
-import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { SelectField, type SelectOption } from "@/components/shared/forms/fields/select-field";
@@ -26,7 +25,7 @@ import {
     AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Package } from "lucide-react";
 import {
     addRecipeMaterial,
     addRecipeLabor,
@@ -117,6 +116,8 @@ interface TasksRecipeResourceFormProps {
     existingMaterialsCount?: number;
     /** Edit mode: pre-filled data with concept locked */
     editData?: EditResourceData;
+    /** Panel formId — passed by PanelProvider */
+    formId?: string;
 }
 
 // ============================================================================
@@ -158,9 +159,10 @@ export function TasksRecipeResourceForm({
     existingLaborCount = 0,
     existingMaterialsCount = 0,
     editData,
+    formId,
 }: TasksRecipeResourceFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
+    const { closePanel, setPanelMeta, setSubmitting } = usePanel();
     const [isLoading, setIsLoading] = useState(false);
 
     const isEditMode = !!editData;
@@ -281,12 +283,8 @@ export function TasksRecipeResourceForm({
     // ========================================================================
 
     const handleSuccess = () => {
-        closeModal();
+        closePanel();
         router.refresh();
-    };
-
-    const handleCancel = () => {
-        closeModal();
     };
 
     /**
@@ -298,6 +296,7 @@ export function TasksRecipeResourceForm({
         shouldRemoveMaterials: boolean,
     ) => {
         setIsLoading(true);
+        setSubmitting(true);
         try {
             // 1. Add the external service
             const result = await addRecipeExternalService({
@@ -346,6 +345,7 @@ export function TasksRecipeResourceForm({
             toast.error("Error inesperado");
         } finally {
             setIsLoading(false);
+            setSubmitting(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [recipeId, serviceName, unitPrice, currencyId, contactId, includesMaterials, notes]);
@@ -427,6 +427,7 @@ export function TasksRecipeResourceForm({
 
         // ── Material / Labor ──
         setIsLoading(true);
+        setSubmitting(true);
         try {
             if (resourceType === "material") {
                 if (isEditMode && editData) {
@@ -490,6 +491,7 @@ export function TasksRecipeResourceForm({
             toast.error("Error inesperado");
         } finally {
             setIsLoading(false);
+            setSubmitting(false);
         }
     };
 
@@ -537,11 +539,29 @@ export function TasksRecipeResourceForm({
 
     const l = labels[resourceType];
 
+    // Self-describe panel meta (updates when resourceType or editMode changes)
+    useEffect(() => {
+        const typeLabel = resourceType === "material" ? "Material"
+            : resourceType === "labor" ? "Mano de Obra"
+            : "Servicio Subcontratado";
+
+        setPanelMeta({
+            icon: Package,
+            title: isEditMode ? `Editar ${typeLabel}` : "Agregar Recurso",
+            description: isEditMode
+                ? `Modificá los datos del ${typeLabel.toLowerCase()}.`
+                : "Seleccióná el tipo de recurso y completá los datos.",
+            size: "md",
+            footer: {
+                submitLabel: isEditMode ? l.submitEdit : l.submit,
+            },
+        });
+    }, [resourceType, isEditMode, setPanelMeta, l.submit, l.submitEdit]);
+
     return (
         <>
-            <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-                <div className="flex-1 overflow-y-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form id={formId} onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Resource Type Selector */}
                         <SelectField
                             label="Tipo de Recurso"
@@ -660,15 +680,7 @@ export function TasksRecipeResourceForm({
                         />
 
 
-                    </div>
                 </div>
-
-                <FormFooter
-                    className="-mx-4 -mb-4 mt-6"
-                    isLoading={isLoading}
-                    submitLabel={isEditMode ? l.submitEdit : l.submit}
-                    onCancel={handleCancel}
-                />
             </form>
 
             {/* ── Conflict Resolution Dialog ── */}

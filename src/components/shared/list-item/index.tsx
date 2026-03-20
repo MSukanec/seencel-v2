@@ -8,5 +8,6 @@ export { LaborListItem } from './items/labor-list-item';
 export { MaterialListItem } from './items/material-list-item';
 export { MemberListItem } from './items/member-list-item';
 export { TaskListItem } from './items/task-list-item';
+export { RecipeListItem } from './items/recipe-list-item';
 export { GeneralCostListItem } from './items/general-cost-list-item';
 export type { ConceptPaymentStats } from './items/general-cost-list-item';

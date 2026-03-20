@@ -18,6 +18,8 @@ interface LayoutState {
     headerTitle: React.ReactNode | null;
     fontSize: FontSize;
     previousPath: string | null;
+    /** Optimistic pathname — set immediately on sidebar click, cleared when real pathname catches up */
+    pendingPathname: string | null;
 
     actions: {
         setLayoutMode: (mode: LayoutMode) => void;
@@ -28,6 +30,7 @@ interface LayoutState {
         setHeaderTitle: (title: React.ReactNode | null) => void;
         setFontSize: (size: FontSize) => void;
         setPreviousPath: (path: string | null) => void;
+        setPendingPathname: (path: string | null) => void;
     };
 }
 
@@ -42,6 +45,7 @@ export const useLayoutStore = create<LayoutState>()(
             headerTitle: null,
             fontSize: 'default',
             previousPath: null,
+            pendingPathname: null,
             actions: {
                 setLayoutMode: (mode) => set({ layoutMode: mode }),
                 setActiveContext: (context) => set({ activeContext: context }),
@@ -56,6 +60,7 @@ export const useLayoutStore = create<LayoutState>()(
                     }
                 },
                 setPreviousPath: (path) => set({ previousPath: path }),
+                setPendingPathname: (path) => set({ pendingPathname: path }),
             },
         }),
         {
@@ -98,3 +103,4 @@ export const useHeaderTitle = () => useLayoutStore((state) => state.headerTitle)
 export const useSidebarMode = () => useLayoutStore((state) => state.sidebarMode);
 export const useSidebarProjectAvatars = () => useLayoutStore((state) => state.sidebarProjectAvatars);
 export const useFontSize = () => useLayoutStore((state) => state.fontSize);
+export const usePendingPathname = () => useLayoutStore((state) => state.pendingPathname);

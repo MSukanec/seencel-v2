@@ -88,7 +88,7 @@ export function ChipBase({
                 )}
             >
                 {icon && <span className="shrink-0 [&>svg]:h-3.5 [&>svg]:w-3.5">{icon}</span>}
-                <span className="truncate max-w-[120px]">{label}</span>
+                <span>{label}</span>
             </div>
         );
     }
@@ -113,7 +113,7 @@ export function ChipBase({
                     onClick={(e) => e.stopPropagation()}
                 >
                     {icon && <span className="shrink-0 [&>svg]:h-3.5 [&>svg]:w-3.5">{icon}</span>}
-                    <span className="truncate max-w-[150px]">{label}</span>
+                    <span>{label}</span>
                 </button>
             </PopoverTrigger>
             <PopoverContent

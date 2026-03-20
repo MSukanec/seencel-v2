@@ -340,6 +340,14 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
         component: dynamic(() => import('@/features/tasks/forms/tasks-division-form').then(mod => ({ default: mod.TasksDivisionForm }))),
         defaultOptions: { size: 'md' },
     },
+    'tasks-recipe-form': {
+        component: dynamic(() => import('@/features/tasks/forms/tasks-recipe-form').then(mod => ({ default: mod.TasksRecipeForm }))),
+        defaultOptions: { size: 'lg' },
+    },
+    'tasks-recipe-resource-form': {
+        component: dynamic(() => import('@/features/tasks/forms/tasks-recipe-resource-form').then(mod => ({ default: mod.TasksRecipeResourceForm }))),
+        defaultOptions: { size: 'md' },
+    },
 
     // ========================================================================
     // Labor Feature (Catálogo Técnico)

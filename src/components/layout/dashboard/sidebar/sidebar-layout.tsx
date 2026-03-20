@@ -7,7 +7,7 @@ import { UserProfile } from "@/types/user";
 import { useContextSidebarContent, useContextSidebarOverlay } from "@/stores/sidebar-store";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
-import { useSidebarMode } from "@/stores/layout-store";
+import { useSidebarMode, usePendingPathname } from "@/stores/layout-store";
 import { SidebarToggleButton } from "./sidebar-toggle-button";
 import { usePathname } from "@/i18n/routing";
 
@@ -31,10 +31,12 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
     const hasContextSidebar = !!contextContent;
     const sidebarMode = useSidebarMode();
     const pathname = usePathname();
+    const pendingPathname = usePendingPathname();
+    const effectivePathname = pendingPathname ?? pathname;
 
     // Settings (and similar) always force sidebar expanded — detected via URL
     // to avoid deadlock: activeContext syncs inside SidebarContent which doesn't mount when collapsed
-    const forceExpanded = ALWAYS_EXPANDED_PATHS.some(p => pathname.includes(p));
+    const forceExpanded = ALWAYS_EXPANDED_PATHS.some(p => effectivePathname.includes(p));
 
     // Hover state for expand-on-hover mode + toggle button visibility
     const [isHovered, setIsHovered] = React.useState(false);

@@ -1,6 +1,4 @@
 import { requireAuthContext } from "@/lib/auth";
-import { PageWrapper } from "@/components/layout";
-import { Wrench } from "lucide-react";
 
 export default async function CatalogLayout({
     children,
@@ -9,12 +7,5 @@ export default async function CatalogLayout({
 }) {
     await requireAuthContext();
 
-    return (
-        <PageWrapper
-            title="Catálogo Técnico"
-            icon={<Wrench />}
-        >
-            {children}
-        </PageWrapper>
-    );
+    return <>{children}</>;
 }

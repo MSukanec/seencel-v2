@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import type { TaskRecipeView, RecipeResources } from "@/features/tasks/types";
 import { type PricePulseData } from "@/components/shared/price-pulse-popover";
 import { RecipeResourceListItem } from "@/components/shared/list-item/items/recipe-resource-list-item";
+import { Card } from "@/components/ui/card";
 
 // ============================================================================
 // Types (re-exported for compatibility)
@@ -134,7 +135,7 @@ export function RecipeCard({
     }, [resources, materialPriceMap, laborPriceMap, externalServicePriceMap]);
 
     return (
-        <div className={cn("space-y-3", className)}>
+        <Card variant="inset" className={cn("space-y-3", className)}>
 
             {/* MATERIALS LANE */}
             {resources.materials.length > 0 && (
@@ -266,7 +267,7 @@ export function RecipeCard({
             )}
 
             {/* EQUIPOS LANE (coming soon) */}
-        </div>
+        </Card>
     );
 }
 

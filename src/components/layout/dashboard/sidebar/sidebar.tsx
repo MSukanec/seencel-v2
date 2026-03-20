@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils";
-import { useLayoutStore } from "@/stores/layout-store";
+import { useLayoutStore, usePendingPathname } from "@/stores/layout-store";
 import { SidebarContent } from "./sidebar-content";
 import { UserProfile } from "@/types/user";
 import { usePathname } from "@/i18n/routing";
@@ -17,10 +17,12 @@ interface SidebarProps {
 export function Sidebar({ user }: SidebarProps) {
     const { activeContext } = useLayoutStore();
     const pathname = usePathname();
+    const pendingPathname = usePendingPathname();
+    const effectivePathname = pendingPathname ?? pathname;
 
     // Hub context: no detail panel needed (the page IS the hub)
     // BUT force visible for paths that always need sidebar (e.g., Settings)
-    const forceVisible = ALWAYS_VISIBLE_PATHS.some(p => pathname.includes(p));
+    const forceVisible = ALWAYS_VISIBLE_PATHS.some(p => effectivePathname.includes(p));
     const showPanel = forceVisible || activeContext !== 'home';
 
     return (

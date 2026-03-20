@@ -3,8 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { requireAuthContext } from "@/lib/auth";
 import { ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { TasksDetailGeneralView } from "@/features/tasks/views/detail/tasks-detail-general-view";
-import { getTaskById, getTaskDivisions, getUnits } from "@/features/tasks/queries";
+import { TasksDetailRecipeView } from "@/features/tasks/views/detail/tasks-detail-recipe-view";
+import { getTaskById } from "@/features/tasks/queries";
+import { getTaskRecipes } from "@/features/tasks/actions";
+import { getMaterialsForOrganization } from "@/features/materials/queries";
+import { getLaborTypesWithPrices } from "@/features/labor/actions";
 
 // ============================================================================
 // Metadata
@@ -20,41 +23,44 @@ export async function generateMetadata({
     const displayName = task?.name || task?.custom_name || "Tarea";
 
     return {
-        title: `${displayName} | Catálogo | Seencel`,
-        description: `Detalle de tarea: ${displayName}`,
+        title: `Recetas | ${displayName} | Catálogo | Seencel`,
+        description: `Recetas de la tarea: ${displayName}`,
         robots: "noindex, nofollow",
     };
 }
 
 // ============================================================================
-// Page Component — General Tab
+// Page Component — Recipe Tab (List)
 // ============================================================================
 
-interface TaskDetailPageProps {
+interface RecipePageProps {
     params: Promise<{ taskId: string }>;
 }
 
-export default async function TaskDetailGeneralPage({ params }: TaskDetailPageProps) {
+export default async function TaskDetailRecipePage({ params }: RecipePageProps) {
     try {
         const { taskId } = await params;
         const { orgId } = await requireAuthContext();
         if (!orgId) redirect("/");
 
-        const [task, { data: divisions }, { data: units }] = await Promise.all([
+        const [task, recipes, catalogMaterials, catalogLaborTypes] = await Promise.all([
             getTaskById(taskId),
-            getTaskDivisions(),
-            getUnits(),
+            getTaskRecipes(taskId),
+            getMaterialsForOrganization(orgId),
+            getLaborTypesWithPrices(orgId),
         ]);
 
         if (!task) notFound();
 
         return (
-            <ContentLayout variant="narrow">
-                <TasksDetailGeneralView
+            <ContentLayout variant="wide">
+                <TasksDetailRecipeView
                     task={task}
-                    divisions={divisions}
-                    units={units}
+                    recipes={recipes}
                     organizationId={orgId}
+                    isAdminMode={false}
+                    catalogMaterials={catalogMaterials}
+                    catalogLaborTypes={catalogLaborTypes}
                 />
             </ContentLayout>
         );
@@ -62,7 +68,7 @@ export default async function TaskDetailGeneralPage({ params }: TaskDetailPagePr
         return (
             <div className="h-full w-full flex items-center justify-center">
                 <ErrorDisplay
-                    title="Error al cargar la tarea"
+                    title="Error al cargar las recetas"
                     message={error instanceof Error ? error.message : "Error desconocido"}
                     retryLabel="Reintentar"
                 />

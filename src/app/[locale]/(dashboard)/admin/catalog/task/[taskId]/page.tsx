@@ -11,12 +11,10 @@ import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
 import { TasksDetailGeneralView } from "@/features/tasks/views/detail/tasks-detail-general-view";
 import { TasksDetailRecipeView } from "@/features/tasks/views/detail/tasks-detail-recipe-view";
 import { getTaskById, getUnits, getTaskDivisions } from "@/features/tasks/queries";
-import { getTaskRecipes, getRecipeResources } from "@/features/tasks/actions";
+import { getTaskRecipes } from "@/features/tasks/actions";
 import { getAdminOrganizations } from "@/features/admin/queries";
 import { getMaterialsForOrganization } from "@/features/materials/queries";
 import { getLaborTypesWithPrices } from "@/features/labor/actions";
-import { getCurrencies } from "@/features/billing/queries";
-import { getOrganizationContacts } from "@/features/clients/queries";
 
 // ============================================================================
 // Metadata
@@ -74,22 +72,11 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
 
         // Fetch all recipes for this task + catalog data
         const taskOrgId = task.organization_id || "";
-        const [recipes, catalogMaterials, catalogLaborTypes, currencies, { data: contacts }] = await Promise.all([
+        const [recipes, catalogMaterials, catalogLaborTypes] = await Promise.all([
             getTaskRecipes(taskId),
             taskOrgId ? getMaterialsForOrganization(taskOrgId) : Promise.resolve([]),
             taskOrgId ? getLaborTypesWithPrices(taskOrgId) : Promise.resolve([]),
-            getCurrencies(),
-            taskOrgId ? getOrganizationContacts(taskOrgId) : Promise.resolve({ data: [], error: null }),
         ]);
-
-        // Load resources for each recipe in parallel
-        const resourcesEntries = await Promise.all(
-            recipes.map(async (r) => {
-                const resources = await getRecipeResources(r.id);
-                return [r.id, resources] as const;
-            })
-        );
-        const recipeResourcesMap = Object.fromEntries(resourcesEntries);
 
         const displayName = task.name || task.custom_name || "Tarea";
         const truncatedName = displayName.length > 60
@@ -143,13 +130,10 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
                             <TasksDetailRecipeView
                                 task={task}
                                 recipes={recipes}
-                                recipeResourcesMap={recipeResourcesMap}
                                 organizationId={task.organization_id || ""}
                                 isAdminMode={true}
                                 catalogMaterials={catalogMaterials}
                                 catalogLaborTypes={catalogLaborTypes}
-                                currencies={currencies}
-                                contacts={contacts}
                             />
                         </ContentLayout>
                     </TabsContent>

@@ -260,6 +260,14 @@ export const routing = defineRouting({
             en: '/organization/catalog/task/[taskId]',
             es: '/organizacion/catalogo/tarea/[taskId]'
         },
+        '/organization/catalog/task/[taskId]/recipe': {
+            en: '/organization/catalog/task/[taskId]/recipe',
+            es: '/organizacion/catalogo/tarea/[taskId]/receta'
+        },
+        '/organization/catalog/task/[taskId]/recipe/[recipeId]': {
+            en: '/organization/catalog/task/[taskId]/recipe/[recipeId]',
+            es: '/organizacion/catalogo/tarea/[taskId]/receta/[recipeId]'
+        },
         '/organization/catalog/tasks': {
             en: '/organization/catalog/tasks',
             es: '/organizacion/catalogo/tareas'

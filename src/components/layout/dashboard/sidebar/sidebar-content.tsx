@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useLayoutStore, NavigationContext } from "@/stores/layout-store";
+import { useLayoutStore, NavigationContext, usePendingPathname } from "@/stores/layout-store";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { useRouter as useNextRouter } from "next/navigation";
 import { SidebarNavButton } from "./sidebar-button";
@@ -63,10 +63,21 @@ export function SidebarContent({
     user
 }: SidebarContentProps) {
     const pathname = usePathname();
+    const pendingPathname = usePendingPathname();
     const router = useRouter();
     const nativeRouter = useNextRouter();
     const { activeContext, actions, previousPath } = useLayoutStore();
     const { contexts, contextRoutes, getNavItems, getNavGroups } = useSidebarNavigation();
+
+    // Optimistic pathname: use pending (set immediately on click) until real pathname catches up
+    const effectivePathname = pendingPathname ?? pathname;
+
+    // Clear pendingPathname once real navigation completes
+    React.useEffect(() => {
+        if (pendingPathname && pathname === pendingPathname) {
+            actions.setPendingPathname(null);
+        }
+    }, [pathname, pendingPathname, actions]);
 
     // Access mode
     const isDualAccess = useIsDualAccess();
@@ -88,7 +99,7 @@ export function SidebarContent({
         children: NavSubItem[];
     } | null>(null);
 
-    // EFFECT: Auto-detect page sub-items from URL
+    // EFFECT: Auto-detect page sub-items from URL (uses effectivePathname for instant response)
     React.useEffect(() => {
         if (drillState !== 'organization' && drillState !== 'admin') return;
         const ctx = drillState === 'admin' ? 'admin' : 'organization';
@@ -96,9 +107,9 @@ export function SidebarContent({
         for (const group of groups) {
             for (const item of group.items) {
                 if (item.children && item.children.length > 0) {
-                    const isOnParent = pathname === item.href;
-                    const isOnChild = item.children.some(child => pathname === child.href);
-                    const isOnDynamicChild = pathname.startsWith(item.href + '/');
+                    const isOnParent = effectivePathname === item.href;
+                    const isOnChild = item.children.some(child => effectivePathname === child.href);
+                    const isOnDynamicChild = effectivePathname.startsWith(item.href + '/');
                     if (isOnParent || isOnChild || isOnDynamicChild) {
                         if (!pageSubItems || pageSubItems.parentHref !== item.href) {
                             setPageSubItems({
@@ -117,64 +128,64 @@ export function SidebarContent({
         if (pageSubItems) {
             setPageSubItems(null);
         }
-    }, [pathname, drillState]);
+    }, [effectivePathname, drillState]);
 
 
     // Animation direction
     const [slideDirection, setSlideDirection] = React.useState<"left" | "right">("right");
 
-    // 1. Sync Context based on URL (Navigation)
+    // 1. Sync Context based on URL (Navigation) — uses effectivePathname for instant response
     React.useEffect(() => {
         // Project Context → unified under organization
-        if (pathname.includes('/project/')) {
+        if (effectivePathname.includes('/project/')) {
             if (activeContext !== 'organization') actions.setActiveContext('organization');
             return;
         }
 
         // Admin Context — MUST be before academy to avoid /admin/academy matching /academy
-        if (pathname.includes('/admin')) {
+        if (effectivePathname.includes('/admin')) {
             if (activeContext !== 'admin') actions.setActiveContext('admin');
             return;
         }
 
         // Learnings Context
-        if (pathname.includes('/academy')) {
+        if (effectivePathname.includes('/academy')) {
             if (activeContext !== 'learnings') actions.setActiveContext('learnings');
             return;
         }
 
         // Founders Context
-        if (pathname.includes('/founders')) {
+        if (effectivePathname.includes('/founders')) {
             if (activeContext !== 'founders') actions.setActiveContext('founders');
             return;
         }
 
         // Community Context
-        if (pathname.includes('/community')) {
+        if (effectivePathname.includes('/community')) {
             if (activeContext !== 'community') actions.setActiveContext('community');
             return;
         }
 
         // Settings Context — MUST be before organization to avoid /settings/organization matching /organization
         // Only match top-level /settings, not nested /organization/*/settings sub-routes
-        if (pathname.includes('/settings') && !pathname.includes('/organization')) {
+        if (effectivePathname.includes('/settings') && !effectivePathname.includes('/organization')) {
             if (activeContext !== 'settings') actions.setActiveContext('settings');
             return;
         }
 
         // Organization Context (must be after project and profile checks)
-        if (pathname.includes('/organization')) {
+        if (effectivePathname.includes('/organization')) {
             if (activeContext !== 'organization') actions.setActiveContext('organization');
             return;
         }
 
         // Hub Context
-        if (pathname.includes('/hub')) {
+        if (effectivePathname.includes('/hub')) {
             if (activeContext !== 'home') actions.setActiveContext('home');
             return;
         }
 
-    }, [pathname, actions, activeContext]);
+    }, [effectivePathname, actions, activeContext]);
 
     // Get unified nav groups for accordion rendering
     const navGroups = getNavGroups("organization");
@@ -187,12 +198,12 @@ export function SidebarContent({
         );
         for (const g of groups) {
             for (const item of g.items) {
-                if (pathname === item.href || pathname.startsWith(item.href + '/')) {
+                if (effectivePathname === item.href || effectivePathname.startsWith(item.href + '/')) {
                     if (item.href.length > longest.length) longest = item.href;
                 }
                 if (item.children) {
                     for (const child of item.children) {
-                        if (pathname === child.href || pathname.startsWith(child.href + '/')) {
+                        if (effectivePathname === child.href || effectivePathname.startsWith(child.href + '/')) {
                             if (child.href.length > longest.length) longest = child.href;
                         }
                     }
@@ -202,15 +213,15 @@ export function SidebarContent({
         if (drillState === 'learnings' || drillState === 'founders' || drillState === 'community') {
             const items = getNavItems(drillState);
             for (const item of items) {
-                if (pathname === item.href || pathname.startsWith(item.href + '/')) {
+                if (effectivePathname === item.href || effectivePathname.startsWith(item.href + '/')) {
                     if (item.href.length > longest.length) longest = item.href;
                 }
             }
         }
-        return longest || pathname;
-    }, [pathname, drillState, getNavGroups, getNavItems]);
+        return longest || effectivePathname;
+    }, [effectivePathname, drillState, getNavGroups, getNavItems]);
 
-    // Handle drill into page sub-items
+    // Handle drill into page sub-items — set pendingPathname for instant sidebar response
     const handlePageDrillIn = (item: NavItem) => {
         if (item.children && item.children.length > 0) {
             setSlideDirection("right");
@@ -220,6 +231,7 @@ export function SidebarContent({
                 parentIcon: item.icon,
                 children: item.children,
             });
+            actions.setPendingPathname(item.href);
             router.push(item.href as any);
         }
     };
@@ -289,7 +301,10 @@ export function SidebarContent({
                     href={hasChildren ? undefined : item.href}
                     isActive={isItemActive}
                     isExpanded={isExpanded}
-                    onClick={hasChildren ? () => handlePageDrillIn(item) : onLinkClick}
+                    onClick={hasChildren ? () => handlePageDrillIn(item) : () => {
+                        if (item.href) actions.setPendingPathname(item.href);
+                        onLinkClick?.();
+                    }}
                     badge={badge}
                     disabled={isDisabled}
                     isLocked={!!status || isHidden}
@@ -380,7 +395,10 @@ export function SidebarContent({
                                     href="/organization"
                                     isActive={deepestMatchHref === '/organization'}
                                     isExpanded={isExpanded}
-                                    onClick={onLinkClick}
+                                    onClick={() => {
+                                        actions.setPendingPathname('/organization');
+                                        onLinkClick?.();
+                                    }}
                                 />
 
                                 {/* Planificador */}
@@ -390,7 +408,10 @@ export function SidebarContent({
                                     href="/organization/planner"
                                     isActive={deepestMatchHref === '/organization/planner'}
                                     isExpanded={isExpanded}
-                                    onClick={onLinkClick}
+                                    onClick={() => {
+                                        actions.setPendingPathname('/organization/planner');
+                                        onLinkClick?.();
+                                    }}
                                 />
 
                                 {/* Separator */}
@@ -442,7 +463,10 @@ export function SidebarContent({
                                         href={child.href as any}
                                         isActive={deepestMatchHref === child.href}
                                         isExpanded={isExpanded}
-                                        onClick={onLinkClick}
+                                        onClick={() => {
+                                            actions.setPendingPathname(child.href);
+                                            onLinkClick?.();
+                                        }}
                                     />
                                 ))}
                             </nav>
@@ -459,7 +483,10 @@ export function SidebarContent({
                                         href={item.href}
                                         isActive={deepestMatchHref === item.href}
                                         isExpanded={isExpanded}
-                                        onClick={onLinkClick}
+                                        onClick={() => {
+                                            actions.setPendingPathname(item.href);
+                                            onLinkClick?.();
+                                        }}
                                     />
                                 ))}
                             </nav>
@@ -476,7 +503,10 @@ export function SidebarContent({
                                         href={item.href}
                                         isActive={deepestMatchHref === item.href}
                                         isExpanded={isExpanded}
-                                        onClick={onLinkClick}
+                                        onClick={() => {
+                                            actions.setPendingPathname(item.href);
+                                            onLinkClick?.();
+                                        }}
                                     />
                                 ))}
                             </nav>
@@ -500,7 +530,10 @@ export function SidebarContent({
                                     href="/admin"
                                     isActive={deepestMatchHref === '/admin'}
                                     isExpanded={isExpanded}
-                                    onClick={onLinkClick}
+                                    onClick={() => {
+                                        actions.setPendingPathname('/admin');
+                                        onLinkClick?.();
+                                    }}
                                 />
 
                                 {/* Admin Nav Groups with Accordion */}
@@ -538,7 +571,10 @@ export function SidebarContent({
                                         href={child.href as any}
                                         isActive={deepestMatchHref === child.href}
                                         isExpanded={isExpanded}
-                                        onClick={onLinkClick}
+                                        onClick={() => {
+                                            actions.setPendingPathname(child.href);
+                                            onLinkClick?.();
+                                        }}
                                     />
                                 ))}
                             </nav>
