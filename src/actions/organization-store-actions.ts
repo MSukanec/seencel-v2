@@ -64,10 +64,10 @@ export async function fetchOrganizationStoreData(orgId: string) {
             .eq('organization_id', orgId)
             .eq('is_active', true),
 
-        // 5. Projects (id + name + avatar fields for dropdowns)
+        // 5. Projects (id + name + avatar + status for dropdowns)
         supabase
             .schema('projects').from('projects')
-            .select('id, name, image_url, color')
+            .select('id, name, image_url, color, status')
             .eq('organization_id', orgId)
             .eq('is_deleted', false)
             .order('name', { ascending: true }),
@@ -185,6 +185,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
         name: p.name,
         image_url: p.image_url || null,
         color: p.color || null,
+        status: p.status || null,
     }));
 
     // Format clients (minimal for dropdowns)

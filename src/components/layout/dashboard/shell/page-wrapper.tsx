@@ -124,7 +124,7 @@ export function PageWrapper({
         }
 
         // Sub-page detection: scan sidebar nav for items with children
-        const contextsToSearch: ('organization' | 'admin' | 'settings')[] = pathname.includes('/settings')
+        const contextsToSearch: ('organization' | 'admin' | 'settings')[] = (pathname.includes('/settings') && !pathname.includes('/organization'))
             ? ['settings']
             : pathname.includes('/admin')
             ? ['admin']

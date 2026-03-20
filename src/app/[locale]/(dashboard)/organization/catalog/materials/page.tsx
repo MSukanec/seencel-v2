@@ -3,6 +3,7 @@ import { requireAuthContext } from "@/lib/auth";
 import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy, getProvidersForProject } from "@/features/materials/queries";
 import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
+import { ContentLayout } from "@/components/layout";
 
 export const metadata: Metadata = {
     title: "Materiales | Catálogo Técnico | Seencel",
@@ -29,15 +30,17 @@ export default async function CatalogMaterialsPage() {
         ]);
 
         return (
-            <MaterialsCatalogView
-                materials={materials}
-                units={materialUnits}
-                categories={materialCategories}
-                categoryHierarchy={categoryHierarchy}
-                orgId={orgId}
-                isAdminMode={false}
-                providers={providers}
-            />
+            <ContentLayout variant="wide">
+                <MaterialsCatalogView
+                    materials={materials}
+                    units={materialUnits}
+                    categories={materialCategories}
+                    categoryHierarchy={categoryHierarchy}
+                    orgId={orgId}
+                    isAdminMode={false}
+                    providers={providers}
+                />
+            </ContentLayout>
         );
     } catch (error) {
         return (

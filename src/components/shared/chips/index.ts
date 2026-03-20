@@ -25,3 +25,7 @@ export { TimeChip, type TimeChipProps } from "./chips/time-chip";
 export { LocationChip, type LocationChipProps } from "./chips/location-chip";
 export { ProjectChip, type ProjectChipProps, type ProjectChipProject } from "./chips/project-chip";
 export { DateTimeRangeChip, type DateTimeRangeChipProps } from "./chips/date-time-range-chip";
+export { PriceChip, type PriceChipProps } from "./chips/price-chip";
+export { SeverityChip, type SeverityChipProps, type SeverityLevel } from "./chips/severity-chip";
+export { WeatherChip, type WeatherChipProps, type WeatherType } from "./chips/weather-chip";
+export { VisibilityChip, type VisibilityChipProps, type VisibilityLevel } from "./chips/visibility-chip";

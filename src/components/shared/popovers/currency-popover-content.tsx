@@ -11,6 +11,7 @@
 import * as React from "react";
 import { Check, CircleDollarSign, Settings } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
+import { usePanel } from "@/stores/panel-store";
 import {
     Command,
     CommandInput,
@@ -46,6 +47,7 @@ export function CurrencyPopoverContent({
     onOpenChange,
 }: CurrencyPopoverContentProps) {
     const router = useRouter();
+    const { closePanel } = usePanel();
 
     return (
         <Command>
@@ -76,6 +78,7 @@ export function CurrencyPopoverContent({
                         value="__manage_currencies__"
                         onSelect={() => {
                             onOpenChange?.(false);
+                            closePanel();
                             router.push("/settings/finance");
                         }}
                         className="flex items-center gap-2 text-xs text-muted-foreground"

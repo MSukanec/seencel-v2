@@ -342,10 +342,34 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
     },
 
     // ========================================================================
+    // Labor Feature (Catálogo Técnico)
+    // ========================================================================
+    'labor-price-form': {
+        component: dynamic(() => import('@/features/labor/forms/labor-price-form').then(mod => ({ default: mod.LaborPriceForm }))),
+        defaultOptions: { size: 'sm' },
+    },
+
+    // ========================================================================
     // Shared / System
     // ========================================================================
     'feedback-form': {
         component: dynamic(() => import('@/components/shared/forms/feedback-form').then(mod => ({ default: mod.FeedbackForm }))),
+        defaultOptions: { size: 'sm' },
+    },
+    // ========================================================================
+    // SiteLog Feature (Bitácora de Obra)
+    // ========================================================================
+    'sitelog-entry-form': {
+        component: dynamic(() => import('@/features/sitelog/forms/sitelog-entry-form').then(mod => ({ default: mod.SitelogEntryForm }))),
+        defaultOptions: { size: 'md' },
+        quickAction: {
+            label: "Nuevo Registro de Bitácora",
+            icon: FileText,
+            keywords: "crear registro bitácora obra sitelog diario",
+        },
+    },
+    'sitelog-type-form': {
+        component: dynamic(() => import('@/features/sitelog/forms/sitelog-type-form').then(mod => ({ default: mod.SiteLogTypeForm }))),
         defaultOptions: { size: 'sm' },
     },
 };

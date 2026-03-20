@@ -491,48 +491,52 @@ export function MaterialsCatalogView({
                     docsPath="/docs/catalogo-tecnico/materiales"
                 />
             ) : (
-                <div className="flex flex-col gap-4 flex-1 overflow-hidden">
-                    <ToolbarCard
-                        filters={filters}
-                        searchPlaceholder="Buscar materiales..."
-                        left={
-                            <ToolbarTabs
-                                value={activeTab}
-                                onValueChange={(v) => setActiveTab(v as 'all' | 'material' | 'consumable')}
-                                options={[
-                                    { label: "Todos", value: "all", icon: LayoutGrid },
-                                    { label: "Materiales", value: "material", icon: Package },
-                                    { label: "Insumos", value: "consumable", icon: Wrench },
-                                ]}
-                            />
-                        }
-                    />
+                <div className="h-full flex flex-col">
+                    <div className="mb-4">
+                        <ToolbarCard
+                            filters={filters}
+                            searchPlaceholder="Buscar materiales..."
+                            left={
+                                <ToolbarTabs
+                                    value={activeTab}
+                                    onValueChange={(v) => setActiveTab(v as 'all' | 'material' | 'consumable')}
+                                    options={[
+                                        { label: "Todos", value: "all", icon: LayoutGrid },
+                                        { label: "Materiales", value: "material", icon: Package },
+                                        { label: "Insumos", value: "consumable", icon: Wrench },
+                                    ]}
+                                />
+                            }
+                        />
+                    </div>
 
-                    {filters.hasActiveFilters && filteredMaterials.length === 0 ? (
-                        <ViewEmptyState
-                            mode="no-results"
-                            icon={Package}
-                            viewName="materiales e insumos"
-                            filterContext="con este criterio"
-                            onResetFilters={() => {
-                                filters.clearAll();
-                                setSelectedCategoryId(null);
-                                setActiveTab("all");
-                            }}
-                        />
-                    ) : (
-                        <DataTable
-                            columns={columns}
-                            data={filteredMaterials}
-                            enableContextMenu
-                            enableRowSelection
-                            onEdit={handleEditMaterial}
-                            onDelete={handleDelete}
-                            onBulkDelete={handleBulkDelete}
-                            globalFilter={filters.searchQuery}
-                            onGlobalFilterChange={filters.setSearchQuery}
-                        />
-                    )}
+                    <div className="flex-1 flex flex-col min-h-0">
+                        {filters.hasActiveFilters && filteredMaterials.length === 0 ? (
+                            <ViewEmptyState
+                                mode="no-results"
+                                icon={Package}
+                                viewName="materiales e insumos"
+                                filterContext="con este criterio"
+                                onResetFilters={() => {
+                                    filters.clearAll();
+                                    setSelectedCategoryId(null);
+                                    setActiveTab("all");
+                                }}
+                            />
+                        ) : (
+                            <DataTable
+                                columns={columns}
+                                data={filteredMaterials}
+                                enableContextMenu
+                                enableRowSelection
+                                onEdit={handleEditMaterial}
+                                onDelete={handleDelete}
+                                onBulkDelete={handleBulkDelete}
+                                globalFilter={filters.searchQuery}
+                                onGlobalFilterChange={filters.setSearchQuery}
+                            />
+                        )}
+                    </div>
                 </div>
             )}
 

@@ -67,6 +67,10 @@ export interface ToolbarDisplayProps<TData = unknown> {
     viewModeOptions?: ViewModeOption[]
     /** TanStack Table instance — enables column visibility toggles in table mode */
     table?: Table<TData>
+    /** Default to false. Show switch for archived items */
+    showArchived?: boolean
+    /** Callback when showArchived changes */
+    onShowArchivedChange?: (show: boolean) => void
     /** Custom label for the button */
     label?: string
     /** Additional className */
@@ -78,6 +82,8 @@ export function ToolbarDisplay<TData>({
     onViewModeChange,
     viewModeOptions = [],
     table,
+    showArchived = false,
+    onShowArchivedChange,
     label = "Display",
     className,
 }: ToolbarDisplayProps<TData>) {
@@ -90,9 +96,10 @@ export function ToolbarDisplay<TData>({
     const hasViewModes = viewModeOptions.length > 1
     const isTableMode = viewMode === "table" || viewMode === "list"
     const showColumnToggles = table && columns.length > 0 && isTableMode
+    const hasOptions = showColumnToggles || onShowArchivedChange !== undefined
 
     // Determine if button should show active indicator
-    const isActive = hiddenCount > 0
+    const isActive = hiddenCount > 0 || showArchived
 
     return (
         <Popover>
@@ -152,6 +159,18 @@ export function ToolbarDisplay<TData>({
                     </div>
                 )}
 
+                {/* Generic View Options */}
+                {onShowArchivedChange && (
+                    <div className="px-3 py-3 border-b border-border/50 flex items-center justify-between">
+                        <span className="text-sm">Mostrar archivados</span>
+                        <Switch
+                            checked={showArchived}
+                            onCheckedChange={onShowArchivedChange}
+                            className="scale-75 origin-right"
+                        />
+                    </div>
+                )}
+
                 {/* Column Toggles — shown when in table mode and table is provided */}
                 {showColumnToggles && (
                     <>
@@ -195,7 +214,7 @@ export function ToolbarDisplay<TData>({
                 )}
 
                 {/* Placeholder for future mode-specific options */}
-                {!showColumnToggles && (
+                {!hasOptions && (
                     <div className="px-3 py-4 text-center">
                         <p className="text-xs text-muted-foreground">
                             Sin opciones adicionales

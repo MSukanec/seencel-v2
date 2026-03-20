@@ -68,6 +68,10 @@ export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
     '/organization/contacts': { slug: 'organizacion/contactos' },
     '/organizacion/contactos': { slug: 'organizacion/contactos' },
 
+    // Sitelog (Bitácora de Obra)
+    '/organization/sitelog': { slug: 'construccion/bitacora-de-obra' },
+    '/organizacion/bitacora': { slug: 'construccion/bitacora-de-obra' },
+
     // Settings (Configuración) — Miembros
     '/organization/settings/members': { slug: 'organizacion/equipo' },
     '/organizacion/configuracion/miembros': { slug: 'organizacion/equipo' },

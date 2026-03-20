@@ -129,8 +129,17 @@ Los popovers de selección (billetera, moneda, etc.) usan **Shared Popover Conte
 - ⛔ Toolbar controls manuales → usar `FilterPopover`, `SearchButton`, `DisplayButton` de `@/components/shared/toolbar-controls`
 - ⛔ Colocar controles estándar manualmente en slots → pasar `filters`, `display` como props a `ToolbarCard`
 - ⛔ Duplicar contenido Command entre chip y column → usar Shared Popover Content
+- ⛔ **Crear componente separado para "vista cards/grid"** → usar `viewMode="grid"` + `renderGridItem` del DataTable
+- ⛔ **Reimplementar filtrado/agrupamiento en un componente de cards** → el DataTable ya lo hace
 
-📖 **Detalle COMPLETO (LEER SIEMPRE):** Skill [seencel-datatable-system](../skills/seencel-datatable-system/SKILL.md)
+### Grid/Cards View — Headless Unificado (Marzo 2026):
+- El `DataTable` es el **único componente** para renderizar datos, tanto en tabla como en tarjetas
+- Modo table/cards se controla con `viewMode="table" | "grid"` + `renderGridItem={(row) => <MiTarjeta />}`
+- El agrupamiento (`groupBy`) funciona **idéntico** en ambos modos: mismos headers, mismos acordeones
+- ⛔ **NUNCA** crear un componente monolítico tipo `XxxCatalog` que reimplemente filtros, sorts y groups
+- ✅ Referencia: `tasks-catalog-view.tsx` + `TaskListItem`
+
+📖 **Detalle COMPLETO (LEER SIEMPRE):** Skill [seencel-datatable-system](../skills/seencel-datatable-system/SKILL.md) sección 9
 📖 **Referencia estándar:** Finanzas > Movimientos (`finance/views/finances-movements-view.tsx` + `finance/tables/movements-columns.tsx`)
 
 ---

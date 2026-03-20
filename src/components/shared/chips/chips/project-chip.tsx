@@ -22,9 +22,10 @@
 "use client";
 
 import * as React from "react";
-import { Building2, Check, Search, X } from "lucide-react";
+import { Building2, Check, Search, X, Settings } from "lucide-react";
 import { ChipBase } from "../chip-base";
 import { useFormData } from "@/stores/organization-store";
+import { useRouter } from "@/i18n/routing";
 import {
     Command,
     CommandEmpty,
@@ -117,16 +118,18 @@ function ProjectPopoverContent({
     onSelect,
     allowNone,
     noneLabel,
+    onManage,
 }: {
     projects: ProjectChipProject[];
     currentValue: string | null;
     onSelect: (value: string | null) => void;
     allowNone: boolean;
     noneLabel: string;
+    onManage?: () => void;
 }) {
     return (
         <Command>
-            <CommandInput placeholder="Buscar proyecto..." />
+            <CommandInput placeholder="Buscar proyecto activo..." />
             <CommandList>
                 <CommandEmpty>No se encontraron proyectos.</CommandEmpty>
                 <CommandGroup>
@@ -161,6 +164,19 @@ function ProjectPopoverContent({
                     ))}
                 </CommandGroup>
             </CommandList>
+            {/* Footer: Gestionar proyectos */}
+            {onManage && (
+                <div className="border-t border-border/50 p-1">
+                    <button
+                        type="button"
+                        className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-sm transition-colors"
+                        onClick={onManage}
+                    >
+                        <Settings className="h-3.5 w-3.5" />
+                        <span>Gestionar proyectos</span>
+                    </button>
+                </div>
+            )}
         </Command>
     );
 }
@@ -180,6 +196,7 @@ export function ProjectChip({
     className,
 }: ProjectChipProps) {
     const [open, setOpen] = React.useState(false);
+    const router = useRouter();
 
     // Self-populating from store
     const storeData = useFormData();
@@ -236,6 +253,10 @@ export function ProjectChip({
                 }}
                 allowNone={allowNone}
                 noneLabel={noneLabel}
+                onManage={() => {
+                    setOpen(false);
+                    router.push('/organization/projects');
+                }}
             />
         </ChipBase>
     );

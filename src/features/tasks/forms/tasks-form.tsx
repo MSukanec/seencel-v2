@@ -330,25 +330,27 @@ function OwnTaskForm({
 
             {/* Chips arriba */}
             <ChipRow>
-                {ownDivisionOptions.length > 0 && (
-                    <SelectChip
-                        value={divisionId}
-                        onChange={setDivisionId}
-                        options={ownDivisionOptions}
-                        icon={<FolderTree className="h-3.5 w-3.5 text-muted-foreground" />}
-                        emptyLabel="Mi Rubro"
-                        searchPlaceholder="Buscar rubro propio..."
-                        emptySearchText="No se encontraron rubros propios"
-                    />
-                )}
                 <SelectChip
                     value={systemDivisionId}
                     onChange={setSystemDivisionId}
                     options={systemDivisionOptions}
                     icon={<FolderTree className="h-3.5 w-3.5 text-muted-foreground" />}
-                    emptyLabel="Rubro Estándar"
-                    searchPlaceholder="Buscar rubro estándar..."
+                    emptyLabel="Rubro de Sistema"
+                    searchPlaceholder="Buscar rubro de sistema..."
                     emptySearchText="No se encontraron rubros del sistema"
+                    manageLabel="Gestionar rubros..."
+                    manageRoute={{ pathname: isAdminMode ? "/admin/catalog/tasks/divisions" : "/organization/catalog/tasks/divisions" }}
+                />
+                <SelectChip
+                    value={divisionId}
+                    onChange={setDivisionId}
+                    options={ownDivisionOptions}
+                    icon={<FolderTree className="h-3.5 w-3.5 text-muted-foreground" />}
+                    emptyLabel="Rubro Propio"
+                    searchPlaceholder="Buscar rubro propio..."
+                    emptySearchText="No se encontraron rubros propios"
+                    manageLabel="Gestionar rubros..."
+                    manageRoute={{ pathname: isAdminMode ? "/admin/catalog/tasks/divisions" : "/organization/catalog/tasks/divisions" }}
                 />
                 <UnitChip
                     value={unitId}

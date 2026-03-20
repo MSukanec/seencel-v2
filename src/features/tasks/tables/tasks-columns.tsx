@@ -10,7 +10,7 @@ import {
 import { EDITABLE_CELL_CLASS } from "@/components/shared/data-table/columns/column-styles";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
 import { type TaskView, type TaskDivision, type Unit } from "@/features/tasks/types";
-import { Monitor, Building2, Ruler } from "lucide-react";
+import { Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Status Config ──────────────────────────────────────
@@ -24,11 +24,7 @@ export const TASK_STATUS_OPTIONS = TASK_STATUS_CONFIG.map(
     ({ value, label }) => ({ label, value })
 );
 
-// ─── Origin Labels ──────────────────────────────────────
-const ORIGIN_LABELS: Record<string, string> = {
-    system: "Sistema",
-    organization: "Propio",
-};
+
 
 // ─── Task Name Cell (inline editable) ───────────────────
 
@@ -106,6 +102,7 @@ function TaskNameCell({
 
 interface TaskColumnsOptions {
     divisions?: TaskDivision[];
+    activeDivisionKey?: "division_name" | "system_division_name";
     units?: Unit[];
     onStatusChange?: (task: TaskView, status: string) => void;
     onInlineUpdate?: (task: TaskView, updates: Record<string, any>) => Promise<void> | void;
@@ -114,7 +111,7 @@ interface TaskColumnsOptions {
 export function getTaskColumns(
     options: TaskColumnsOptions = {}
 ): ColumnDef<TaskView>[] {
-    const { divisions = [], units = [], onStatusChange, onInlineUpdate } = options;
+    const { divisions = [], activeDivisionKey = "division_name", units = [], onStatusChange, onInlineUpdate } = options;
 
     // Build division options for entity column
     const divisionOptions = divisions
@@ -162,7 +159,7 @@ export function getTaskColumns(
 
         // 2. Rubro — entity column, editable inline
         createEntityColumn<TaskView>({
-            accessorKey: "division_name",
+            accessorKey: activeDivisionKey,
             title: "Rubro",
             emptyValue: "Sin rubro",
             entityOptions: divisionOptions,
@@ -171,7 +168,7 @@ export function getTaskColumns(
             editSearchPlaceholder: "Buscar rubro...",
             emptySearchMessage: "No hay rubros creados.",
             onUpdate: onInlineUpdate
-                ? (row, newValue) => onInlineUpdate(row, { division_name: newValue })
+                ? (row, newValue) => onInlineUpdate(row, { [activeDivisionKey]: newValue })
                 : undefined,
         }),
 
@@ -194,31 +191,7 @@ export function getTaskColumns(
                 : undefined,
         }),
 
-        // 4. Origen
-        {
-            accessorKey: "is_system",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Origen" />,
-            size: 100,
-            enableSorting: true,
-            cell: ({ row }) => {
-                const isSystem = row.original.is_system;
-                const Icon = isSystem ? Monitor : Building2;
-                const label = isSystem ? "Sistema" : "Propio";
-                return (
-                    <div className="flex items-center gap-1.5">
-                        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">{label}</span>
-                    </div>
-                );
-            },
-            filterFn: (row, _columnId, filterValue) => {
-                if (!filterValue) return true;
-                const isSystem = row.original.is_system;
-                if (filterValue === "system") return isSystem;
-                if (filterValue === "organization") return !isSystem;
-                return true;
-            },
-        },
+
 
         // 5. Precio (si disponible)
         {

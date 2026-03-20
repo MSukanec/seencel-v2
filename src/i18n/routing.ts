@@ -343,6 +343,10 @@ export const routing = defineRouting({
             en: '/organization/sitelog',
             es: '/organizacion/bitacora'
         },
+        '/organization/sitelog/settings': {
+            en: '/organization/sitelog/settings',
+            es: '/organizacion/bitacora/ajustes'
+        },
 
         // ===== External Actor Routes =====
         '/organization/external/client': {

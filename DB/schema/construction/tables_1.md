@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-19T17:08:39.512Z
+> Generated: 2026-03-19T23:49:30.234Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -151,9 +151,9 @@
 | name | text | ✗ |  |  |
 | description | text | ✓ |  |  |
 | is_system | bool | ✗ | false |  |
-| created_at | timestamptz | ✓ | now() |  |
+| created_at | timestamptz | ✗ | now() |  |
 | organization_id | uuid | ✓ |  |  |
-| updated_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
 | created_by | uuid | ✓ |  |  |
@@ -173,10 +173,10 @@
 | status | site_log_status | ✓ | 'approved'::site_log_status |  |
 | updated_at | timestamptz | ✗ | now() |  |
 | is_favorite | bool | ✓ | false |  |
-| weather | weather_enum | ✓ | 'none'::weather_enum |  |
+| weather | weather_enum | ✓ |  |  |
 | organization_id | uuid | ✗ |  |  |
 | entry_type_id | uuid | ✓ |  | FK → site_log_types.id |
-| severity | site_log_severity | ✓ | 'low'::site_log_severity |  |
+| severity | site_log_severity | ✓ |  |  |
 | ai_summary | text | ✓ |  |  |
 | ai_tags | _text | ✓ |  |  |
 | ai_analyzed | bool | ✗ | false |  |

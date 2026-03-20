@@ -43,6 +43,10 @@ export interface ToolbarCardDisplayConfig<TData = unknown> {
     viewModeOptions: ViewModeOption[]
     /** TanStack Table instance — enables column visibility toggles in table mode */
     table?: Table<TData>
+    /** Default to false. Show switch for archived items */
+    showArchived?: boolean
+    /** Callback when showArchived changes */
+    onShowArchivedChange?: (show: boolean) => void
 }
 
 export interface ToolbarCardToggleConfig {
@@ -104,6 +108,8 @@ export function ToolbarCard<TData = unknown>({
                     onViewModeChange={display.onViewModeChange}
                     viewModeOptions={display.viewModeOptions}
                     table={display.table}
+                    showArchived={display.showArchived}
+                    onShowArchivedChange={display.onShowArchivedChange}
                 />
             )}
         </>

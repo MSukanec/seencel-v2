@@ -156,7 +156,8 @@ export function SidebarContent({
         }
 
         // Settings Context — MUST be before organization to avoid /settings/organization matching /organization
-        if (pathname.includes('/settings')) {
+        // Only match top-level /settings, not nested /organization/*/settings sub-routes
+        if (pathname.includes('/settings') && !pathname.includes('/organization')) {
             if (activeContext !== 'settings') actions.setActiveContext('settings');
             return;
         }

@@ -9,12 +9,13 @@ import {
 } from "lucide-react";
 
 import { TasksByDivision, Unit, TaskDivision, TaskAction, TaskElement, TaskView } from "@/features/tasks/types";
-import { TaskCatalog } from "@/features/tasks/components/tasks-catalog";
 import { DivisionsSidebar } from "@/features/tasks/components/divisions-sidebar";
+import { TaskListItem } from "@/components/shared/list-item";
 import { getTaskColumns, TASK_STATUS_CONFIG } from "@/features/tasks/tables/tasks-columns";
 
 import { PageHeaderActionPortal } from "@/components/layout";
 import { ToolbarCard } from "@/components/shared/toolbar-controls";
+import { ToolbarTabs } from "@/components/layout/dashboard/toolbar/toolbar-tabs";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { Card } from "@/components/ui/card";
@@ -76,6 +77,7 @@ export function TasksCatalogView({
 
     // ── View mode state ────────────────────────────────────────
     const [viewMode, setViewMode] = useState<ViewMode>("table");
+    const [showArchived, setShowArchived] = useState(false);
 
     // ── Division sidebar state (shared by both views) ──────────
     const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
@@ -138,11 +140,24 @@ export function TasksCatalogView({
         if (originFilter === "system") tasks = tasks.filter(t => t.is_system);
         else if (originFilter === "organization") tasks = tasks.filter(t => !t.is_system);
 
+        // Filter out archived tasks by default, unless the user toggled showArchived or specifically checked the "Archivada" filter
+        if (!showArchived && !statusFilter.has("archived")) {
+            tasks = tasks.filter(t => t.status !== "archived");
+        }
+
         // Division sidebar
         if (selectedDivisionId === "sin-division") {
-            tasks = tasks.filter(t => !t.task_division_id);
+            if (sidebarOrigin === "system") {
+                tasks = tasks.filter(t => !t.system_division_id);
+            } else {
+                tasks = tasks.filter(t => !t.task_division_id);
+            }
         } else if (selectedDivisionId !== null) {
-            tasks = tasks.filter(t => t.task_division_id === selectedDivisionId);
+            if (sidebarOrigin === "system") {
+                tasks = tasks.filter(t => t.system_division_id === selectedDivisionId);
+            } else {
+                tasks = tasks.filter(t => t.task_division_id === selectedDivisionId);
+            }
         }
 
         // Search
@@ -162,33 +177,43 @@ export function TasksCatalogView({
         }
 
         return tasks;
-    }, [allTasks, originFilter, selectedDivisionId, filters.searchQuery, statusFilter]);
+    }, [allTasks, originFilter, selectedDivisionId, sidebarOrigin, filters.searchQuery, statusFilter, showArchived]);
 
-    // ── Task counts for sidebar ────────────────────────────────
     const taskCounts = useMemo(() => {
         const counts: Record<string, number> = {};
-        let tasksToCount = allTasks.filter(t => (t.status ?? "active") !== "archived");
+        let tasksToCount = allTasks;
+        
+        // Match the same logic for archived
+        if (!showArchived && !statusFilter.has("archived")) {
+            tasksToCount = tasksToCount.filter(t => t.status !== "archived");
+        }
 
         if (originFilter === "system") tasksToCount = tasksToCount.filter(t => t.is_system);
         else if (originFilter === "organization") tasksToCount = tasksToCount.filter(t => !t.is_system);
 
         tasksToCount.forEach(t => {
-            const divId = t.task_division_id || "sin-division";
+            const divId = (sidebarOrigin === "system" ? t.system_division_id : t.task_division_id) || "sin-division";
             counts[divId] = (counts[divId] || 0) + 1;
         });
 
         return counts;
-    }, [allTasks, originFilter]);
+    }, [allTasks, originFilter, sidebarOrigin, statusFilter, showArchived]);
 
     // Active task count for the specified sidebar origin
     const sidebarTaskCount = useMemo(() => {
-        let tasksToCount = allTasks.filter(t => (t.status ?? "active") !== "archived");
+        let tasksToCount = allTasks;
+        
+        // Match the same logic for archived
+        if (!showArchived && !statusFilter.has("archived")) {
+            tasksToCount = tasksToCount.filter(t => t.status !== "archived");
+        }
+        
         if (!isAdminMode) {
             if (sidebarOrigin === "system") tasksToCount = tasksToCount.filter(t => t.is_system);
             else if (sidebarOrigin === "own") tasksToCount = tasksToCount.filter(t => !t.is_system);
         }
         return tasksToCount.length;
-    }, [allTasks, sidebarOrigin, isAdminMode]);
+    }, [allTasks, sidebarOrigin, isAdminMode, statusFilter, showArchived]);
 
     // ═══════════════════════════════════════════════════════
     // Delete via useTableActions
@@ -251,8 +276,34 @@ export function TasksCatalogView({
     // Inline Update Handler (for DataTable)
     // ═══════════════════════════════════════════════════════
     const handleInlineUpdate = useCallback(async (task: TaskView, updates: Record<string, any>) => {
+        const payload = { ...updates };
+
+        // Mapear division_name a task_division_id
+        if ('division_name' in payload) {
+            const divName = payload.division_name;
+            const div = divisions.find(d => d.name === divName && !d.is_system);
+            if (div) {
+                payload.task_division_id = div.id;
+            } else if (!divName) {
+                payload.task_division_id = null;
+            }
+            delete payload.division_name;
+        }
+
+        // Mapear system_division_name a system_division_id
+        if ('system_division_name' in payload) {
+            const divName = payload.system_division_name;
+            const div = divisions.find(d => d.name === divName && d.is_system);
+            if (div) {
+                payload.system_division_id = div.id;
+            } else if (!divName) {
+                payload.system_division_id = null;
+            }
+            delete payload.system_division_name;
+        }
+
         try {
-            const result = await updateTaskInline(task.id, updates, isAdminMode);
+            const result = await updateTaskInline(task.id, payload, isAdminMode);
             if (!result.success) {
                 toast.error(result.error || "Error al actualizar");
             } else {
@@ -261,17 +312,18 @@ export function TasksCatalogView({
         } catch {
             toast.error("Error inesperado al actualizar");
         }
-    }, [isAdminMode, router]);
+    }, [isAdminMode, router, divisions]);
 
     // ═══════════════════════════════════════════════════════
     // DataTable columns
     // ═══════════════════════════════════════════════════════
     const columns = useMemo(() => getTaskColumns({
-        divisions,
+        divisions: filteredSidebarDivisions,
+        activeDivisionKey: sidebarOrigin === "system" ? "system_division_name" : "division_name",
         units: taskUnits,
         onStatusChange: handleStatusChange,
         onInlineUpdate: handleInlineUpdate,
-    }), [divisions, taskUnits, handleStatusChange, handleInlineUpdate]);
+    }), [filteredSidebarDivisions, taskUnits, handleStatusChange, handleInlineUpdate, sidebarOrigin]);
 
     // ═══════════════════════════════════════════════════════
     // Import Handlers
@@ -382,17 +434,7 @@ export function TasksCatalogView({
     // Render
     // ═══════════════════════════════════════════════════════
 
-    const sidebarAction = !isAdminMode ? (
-        <Select value={sidebarOrigin} onValueChange={(v) => setSidebarOrigin(v as "system" | "own")}>
-            <SelectTrigger className="h-6 text-xs font-medium border-transparent bg-transparent shadow-none hover:bg-muted focus:ring-0 px-2 py-0 min-h-0 min-w-[80px]">
-                <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="end">
-                <SelectItem value="system">Sistema</SelectItem>
-                <SelectItem value="own">Propios</SelectItem>
-            </SelectContent>
-        </Select>
-    ) : undefined;
+    // sidebarAction removed in favor of ToolbarTabs
 
     return (
         <>
@@ -401,7 +443,6 @@ export function TasksCatalogView({
             {/* Context Sidebar — shared across both views */}
             <ContextSidebar 
                 title={isAdminMode ? "Rubros del Sistema" : "Rubros"}
-                action={sidebarAction}
             >
                 <DivisionsSidebar
                     divisions={filteredSidebarDivisions}
@@ -424,30 +465,46 @@ export function TasksCatalogView({
                     docsPath="/docs/catalogo-tecnico/tareas"
                 />
             ) : (
-                <div className="flex flex-col gap-4 flex-1 overflow-hidden">
-                    {/* Inline ToolbarCard */}
-                    <ToolbarCard
-                        filters={filters}
-                        searchPlaceholder="Buscar tareas..."
-                        display={{
-                            viewMode,
-                            onViewModeChange: (v) => setViewMode(v as ViewMode),
-                            viewModeOptions: VIEW_OPTIONS,
-                        }}
-                    />
-
-                    {/* No-results */}
-                    {filters.hasActiveFilters && filteredTasks.length === 0 ? (
-                        <ViewEmptyState
-                            mode="no-results"
-                            icon={ClipboardList}
-                            viewName="tareas"
-                            filterContext="con ese criterio de búsqueda"
-                            onResetFilters={filters.clearAll}
+                <div className="h-full flex flex-col">
+                    <div className="mb-4">
+                        <ToolbarCard
+                            filters={filters}
+                            searchPlaceholder="Buscar tareas..."
+                            left={
+                                <ToolbarTabs
+                                    value={sidebarOrigin}
+                                    onValueChange={(v: string) => setSidebarOrigin(v as 'system' | 'own')}
+                                    options={[
+                                        { label: "Sistema", value: "system", icon: Monitor },
+                                        { label: "Propios", value: "own", icon: Building2 },
+                                    ]}
+                                />
+                            }
+                            display={{
+                                viewMode,
+                                onViewModeChange: (v) => setViewMode(v as ViewMode),
+                                viewModeOptions: VIEW_OPTIONS,
+                                showArchived,
+                                onShowArchivedChange: setShowArchived
+                            }}
                         />
-                    ) : viewMode === "table" ? (
-                        /* ── TABLE VIEW ───────────────── */
+                    </div>
+
+                    <div className="flex-1 flex flex-col min-h-0">
+                        {/* No-results */}
+                        {filters.hasActiveFilters && filteredTasks.length === 0 ? (
+                            <ViewEmptyState
+                                mode="no-results"
+                                icon={ClipboardList}
+                                viewName="tareas"
+                                filterContext="con ese criterio de búsqueda"
+                                onResetFilters={filters.clearAll}
+                            />
+                    ) : (
+                        /* ── TABLE / CARDS VIEW ───────────────── */
                         <DataTable
+                            viewMode={viewMode === "cards" ? "grid" : "table"}
+                            gridClassName="flex flex-col gap-2 pb-8"
                             columns={columns}
                             data={filteredTasks}
                             enableContextMenu
@@ -457,8 +514,26 @@ export function TasksCatalogView({
                             onEdit={handleEditTask}
                             onDelete={handleDelete}
                             onBulkDelete={handleBulkDelete}
-                            groupBy="division_name"
-                            getGroupValue={(row) => (row as TaskView).division_name || "Sin Rubro"}
+                            parameters={[
+                                {
+                                    label: "Estado",
+                                    icon: Circle,
+                                    currentValueKey: "status",
+                                    options: [
+                                        { value: "draft", label: "Borrador", icon: <Circle className="h-3 w-3 fill-amber-500 text-amber-500" /> },
+                                        { value: "active", label: "Activa", icon: <Circle className="h-3 w-3 fill-emerald-500 text-emerald-500" /> },
+                                        { value: "archived", label: "Archivada", icon: <Circle className="h-3 w-3 fill-muted-foreground text-muted-foreground" /> },
+                                    ],
+                                    onSelect: (data: any, value: string) => handleStatusChange(data, value),
+                                    visible: (data: any) => isAdminMode || !data.is_system,
+                                },
+                            ]}
+                            groupBy={sidebarOrigin === "system" ? "system_division_name" : "division_name"}
+                            getGroupValue={(row) => {
+                                const r = row as TaskView;
+                                if (sidebarOrigin === "system") return r.system_division_name || "Sin Rubro Estándar";
+                                return r.division_name || "Sin Rubro";
+                            }}
                             renderGroupHeader={(groupValue, groupRows) => (
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs font-semibold text-muted-foreground tracking-wider">
@@ -469,23 +544,17 @@ export function TasksCatalogView({
                             )}
                             globalFilter={filters.searchQuery}
                             onGlobalFilterChange={filters.setSearchQuery}
+                            renderGridItem={(row) => (
+                                <TaskListItem
+                                    task={row}
+                                    isAdminMode={isAdminMode}
+                                    hideDivisionBadge={true}
+                                    onClick={handleViewTask}
+                                />
+                            )}
                         />
-                    ) : (
-                        /* ── CARDS VIEW ────────────── */
-                        <Card variant="inset" className="overflow-auto">
-                            <TaskCatalog
-                                groupedTasks={groupedTasks}
-                                orgId={orgId}
-                                units={units}
-                                divisions={divisions}
-                                isAdminMode={isAdminMode}
-                                searchQuery={filters.searchQuery}
-                                originFilter={originFilter}
-                                statusFilter={statusFilter}
-                                selectedDivisionId={selectedDivisionId}
-                            />
-                        </Card>
                     )}
+                    </div>
                 </div>
             )}
 

@@ -1,10 +1,14 @@
 "use client";
 
-import { memo, useCallback, useMemo } from "react";
-import { ListItem, type ListItemContextMenuAction } from "../list-item-base";
+import { memo, useCallback, useState } from "react";
+import { ListItem } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, DollarSign, HardHat } from "lucide-react";
-import { ResourcePriceDisplay, type PricePulseData } from "@/components/shared/price-pulse-popover";
+import { Pencil, DollarSign } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+    FreshnessDot,
+    PricePopoverContent,
+} from "@/components/shared/popovers/price-popover-content";
 
 // ============================================================================
 // Types
@@ -36,10 +40,10 @@ export interface LaborListItemProps {
     selected?: boolean;
     /** Callback when selection is toggled */
     onToggleSelect?: (id: string) => void;
-    /** Callback when edit price is clicked */
+    /** Callback when edit price is clicked (context menu) */
     onEditPrice?: (laborType: any) => void;
-    /** Callback when price is updated via popover */
-    onPriceUpdated?: (materialId: string, newPrice: number) => void;
+    /** Callback when price is saved from inline popover */
+    onPriceSave?: (laborType: any, newPrice: number) => Promise<void>;
 }
 
 // ============================================================================
@@ -51,23 +55,31 @@ export const LaborListItem = memo(function LaborListItem({
     selected = false,
     onToggleSelect,
     onEditPrice,
-    onPriceUpdated,
+    onPriceSave,
 }: LaborListItemProps) {
     const unitDisplay = laborType.unit_symbol || laborType.unit_name || null;
+    const [priceOpen, setPriceOpen] = useState(false);
 
     const handleToggle = useCallback(() => {
         onToggleSelect?.(laborType.id);
     }, [onToggleSelect, laborType.id]);
 
-    // Build PricePulse data — for now labor doesn't have the same upsert action,
-    // so we only display the semaphore visually without editable popover
-    // TODO: When labor has its own upsertLaborPrice action, wire pricePulseData here
+    const handlePriceSave = useCallback(async (newPrice: number) => {
+        if (onPriceSave) {
+            await onPriceSave(laborType, newPrice);
+        }
+    }, [onPriceSave, laborType]);
+
+    const hasPrice = laborType.current_price != null && laborType.current_price > 0;
+    const formattedPrice = hasPrice
+        ? new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(laborType.current_price!)
+        : null;
 
     return (
         <ListItem variant="card" selected={selected} contextMenuActions={
             onEditPrice ? [{
-                label: laborType.current_price != null ? "Editar precio" : "Establecer precio",
-                icon: laborType.current_price != null
+                label: hasPrice ? "Editar precio" : "Establecer precio",
+                icon: hasPrice
                     ? <Pencil className="h-3.5 w-3.5" />
                     : <DollarSign className="h-3.5 w-3.5" />,
                 onClick: () => onEditPrice(laborType),
@@ -81,11 +93,11 @@ export const LaborListItem = memo(function LaborListItem({
                 />
             )}
 
-            {/* Color indicator: system = amber-ish, org = indigo */}
+            {/* Color indicator */}
             <ListItem.ColorStrip color={laborType.is_system ? "system" : "indigo"} />
 
             <ListItem.Content>
-                {/* Line 1: Name + (unit symbol) */}
+                {/* Line 1: Name + (unit) */}
                 <ListItem.Title className="text-base">
                     {laborType.name}
                     {unitDisplay && (
@@ -94,13 +106,8 @@ export const LaborListItem = memo(function LaborListItem({
                         </span>
                     )}
                 </ListItem.Title>
-                {/* Line 2: Badges */}
+                {/* Line 2: Chips (Nivel + Rol) — sin Oficio: ya lo muestra el groupBy/sidebar */}
                 <ListItem.Badges>
-                    {laborType.category_name && (
-                        <Badge variant="secondary" className="text-xs">
-                            {laborType.category_name}
-                        </Badge>
-                    )}
                     {laborType.level_name && (
                         <Badge variant="secondary" className="text-xs">
                             {laborType.level_name}
@@ -114,15 +121,48 @@ export const LaborListItem = memo(function LaborListItem({
                 </ListItem.Badges>
             </ListItem.Content>
 
-            {/* Right side: Price + Unit below */}
+            {/* Right side: Price with inline editing */}
             <div className="flex flex-col items-end mr-2 min-w-[100px]" onClick={(e) => e.stopPropagation()}>
-                {/* Price with semaphore */}
-                <ResourcePriceDisplay
-                    price={laborType.current_price}
-                    currencySymbol={laborType.currency_symbol || "$"}
-                    priceValidFrom={laborType.price_valid_from}
-                    onClick={onEditPrice ? () => onEditPrice(laborType) : undefined}
-                />
+                {onPriceSave ? (
+                    <Popover open={priceOpen} onOpenChange={setPriceOpen}>
+                        <PopoverTrigger asChild>
+                            <button
+                                type="button"
+                                className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity text-left"
+                            >
+                                <FreshnessDot validFrom={laborType.price_valid_from} />
+                                <span className="font-medium text-lg">
+                                    {hasPrice
+                                        ? `${laborType.currency_symbol || "$"}${formattedPrice}`
+                                        : <span className="text-xs text-muted-foreground">Sin precio</span>
+                                    }
+                                </span>
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-0" align="end" sideOffset={8}>
+                            <PricePopoverContent
+                                currentPrice={laborType.current_price || 0}
+                                currencySymbol={laborType.currency_symbol || "$"}
+                                unitSymbol={unitDisplay}
+                                priceValidFrom={laborType.price_valid_from}
+                                resourceName={laborType.name}
+                                onSave={handlePriceSave}
+                                onOpenChange={setPriceOpen}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                ) : (
+                    /* Read-only price display */
+                    <span className="flex items-center gap-1.5">
+                        <FreshnessDot validFrom={laborType.price_valid_from} />
+                        <span className="font-medium text-lg">
+                            {hasPrice
+                                ? `${laborType.currency_symbol || "$"}${formattedPrice}`
+                                : <span className="text-xs text-muted-foreground">Sin precio</span>
+                            }
+                        </span>
+                    </span>
+                )}
                 {/* Unit below */}
                 {unitDisplay && (
                     <span className="text-xs text-muted-foreground">

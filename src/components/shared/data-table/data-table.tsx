@@ -32,6 +32,7 @@ import { DataTableSkeleton } from "./data-table-skeleton";
 import { cn } from "@/lib/utils";
 // DataTableRowActions removed — all actions go through EntityContextMenu now
 import { DataTableContextMenuWrapper } from "./data-table-context-menu";
+import { EntityContextMenu } from "@/components/shared/entity-context-menu";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ interface DataTableProps<TData, TValue> {
     enableAttachmentIndicator?: boolean;
     /** Enable right-click context menu on rows (Linear-style). Also activated by enableRowActions. */
     enableContextMenu?: boolean;
+    getRowClassName?: (row: TData) => string;
     onView?: (row: TData) => void;
     onEdit?: (row: TData) => void;
     onDuplicate?: (row: TData) => void;
@@ -362,21 +364,100 @@ export function DataTable<TData, TValue>({
                 </div>
             ) : (
                 viewMode === "grid" && renderGridItem ? (
-                    <div className={gridClassName}>
-                        {table.getRowModel().rows.map((row) => (
-                            <div key={row.id}>
-                                {renderGridItem(row.original)}
+                    <Card variant="inset" className="seencel-table-inset overflow-hidden">
+                    <div className="flex flex-col w-full">
+                        {groupBy && groupedData ? (
+                            Object.entries(groupedData).map(([groupValue, groupRows]) => {
+                                const isExpanded = expandedGroups[groupValue] ?? defaultGroupsExpanded;
+                                return (
+                                    <React.Fragment key={groupValue}>
+                                        {/* Group Header — identical to table group header */}
+                                        <div
+                                            className="hover:bg-muted/50 cursor-pointer border-b flex items-center gap-2 px-4 py-3"
+                                            onClick={() => toggleGroup(groupValue)}
+                                        >
+                                            <ChevronRight className={cn(
+                                                "h-3.5 w-3.5 text-muted-foreground transition-transform",
+                                                isExpanded && "rotate-90"
+                                            )} />
+                                            {renderGroupHeader
+                                                ? renderGroupHeader(groupValue, groupRows, isExpanded)
+                                                : (
+                                                    <>
+                                                        <span className="text-sm font-medium text-foreground">{groupValue}</span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            ({groupRows.length})
+                                                        </span>
+                                                    </>
+                                                )
+                                            }
+                                        </div>
+                                        {/* Group Items */}
+                                        {isExpanded && (
+                                            <div className={gridClassName}>
+                                                {table.getRowModel().rows
+                                                    .filter(row => {
+                                                        const rowGroupValue = getGroupValue
+                                                            ? getGroupValue(row.original)
+                                                            : String((row.original as any)[groupBy] ?? "Sin categoría");
+                                                        return rowGroupValue === groupValue;
+                                                    })
+                                                    .map((row) => (
+                                                        <div key={row.id}>
+                                                            {enableContextMenu ? (
+                                                                <EntityContextMenu
+                                                                    data={row.original}
+                                                                    onView={onView}
+                                                                    onEdit={onEdit}
+                                                                    onDuplicate={onDuplicate}
+                                                                    onDelete={onDelete}
+                                                                    parameters={parameters}
+                                                                    customActions={customActions}
+                                                                >
+                                                                    <div>{renderGridItem(row.original)}</div>
+                                                                </EntityContextMenu>
+                                                            ) : (
+                                                                renderGridItem(row.original)
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                            </div>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })
+                        ) : (
+                            <div className={gridClassName}>
+                                {table.getRowModel().rows.map((row) => (
+                                    <div key={row.id}>
+                                        {enableContextMenu ? (
+                                            <EntityContextMenu
+                                                data={row.original}
+                                                onView={onView}
+                                                onEdit={onEdit}
+                                                onDuplicate={onDuplicate}
+                                                onDelete={onDelete}
+                                                parameters={parameters}
+                                                customActions={customActions}
+                                            >
+                                                <div>{renderGridItem(row.original)}</div>
+                                            </EntityContextMenu>
+                                        ) : (
+                                            renderGridItem(row.original)
+                                        )}
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        )}
+                        
                         {table.getRowModel().rows.length === 0 && (
-                            <div className="col-span-full">
-                                <Card className="flex flex-col items-center justify-center py-12 text-muted-foreground p-8">
-                                    <p className="font-medium">No se encontraron resultados</p>
-                                    <p className="text-sm mt-1">Intenta ajustar los filtros o la búsqueda</p>
-                                </Card>
+                            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground p-8">
+                                <p className="font-medium">No se encontraron resultados</p>
+                                <p className="text-sm mt-1">Intenta ajustar los filtros o la búsqueda</p>
                             </div>
                         )}
                     </div>
+                    </Card>
                 ) : (
                     <Card variant="inset" className="seencel-table-inset overflow-hidden">
                         {/* Embedded Toolbar — integrated header */}

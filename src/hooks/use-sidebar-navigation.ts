@@ -401,7 +401,15 @@ export function useSidebarNavigation() {
                     getItemStatus('sidebar_materials', { title: 'Materiales', href: '/organization/materials', icon: Package }),
                     getItemStatus('sidebar_labor', { title: 'Mano de Obra', href: '/organization/labor', icon: HardHat }),
                     getItemStatus('sidebar_subcontracts', { title: 'Subcontratos', href: '/organization/subcontracts', icon: Handshake }),
-                    getItemStatus('sidebar_sitelog', { title: tSidebar('items.sitelog'), href: '/organization/sitelog', icon: FileText }),
+                    getItemStatus('sidebar_sitelog', {
+                        title: tSidebar('items.sitelog'),
+                        href: '/organization/sitelog',
+                        icon: FileText,
+                        children: [
+                            { title: 'Entradas', href: '/organization/sitelog', icon: FileText },
+                            { title: 'Ajustes', href: '/organization/sitelog/settings', icon: Settings },
+                        ],
+                    }),
                     getItemStatus('sidebar_health', { title: 'Salud', href: '/organization/health', icon: HeartPulse }),
                 ].filter((i): i is NavItem => i !== null),
             },

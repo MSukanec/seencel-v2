@@ -36,7 +36,7 @@ import { useRouter } from "@/i18n/routing";
 interface FinancesMovementsViewProps {
     movements: any[];
     wallets?: any[];
-    projects?: { id: string; name: string; image_url?: string | null; color?: string | null }[];
+    projects?: { id: string; name: string; image_url?: string | null; color?: string | null; status?: string | null }[];
     showProjectColumn?: boolean;
     organizationId?: string;
     currencies?: { id: string; name: string; code: string; symbol: string }[];
@@ -143,6 +143,7 @@ export function FinancesMovementsView({
         label: p.name,
         color: p.color,
         imageUrl: p.image_url,
+        status: p.status || null,
     }));
 
     // ─── Export handlers ─────────────────────────────────

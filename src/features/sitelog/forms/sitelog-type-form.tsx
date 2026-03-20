@@ -1,60 +1,94 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useTransition, useState } from "react";
+import { usePanel } from "@/stores/panel-store";
+import { Tags } from "lucide-react";
 import { toast } from "sonner";
-import { useModal } from "@/stores/modal-store";
 import { useRouter } from "@/i18n/routing";
-import { TextField } from "@/components/shared/forms/fields";
-import { FormFooter } from "@/components/shared/forms/form-footer";
+import { TextField, NotesField } from "@/components/shared/forms/fields";
 import { createSiteLogType, updateSiteLogType } from "../actions";
 import { SiteLogType } from "../types";
+
+// ─── Types ───────────────────────────────────────────────
 
 interface SiteLogTypeFormProps {
     organizationId: string;
     initialData?: SiteLogType;
+    onSuccess?: () => void;
+    formId?: string;
 }
 
-export function SiteLogTypeForm({ organizationId, initialData }: SiteLogTypeFormProps) {
+// ─── Component ───────────────────────────────────────────
+
+export function SiteLogTypeForm({
+    organizationId,
+    initialData,
+    onSuccess,
+    formId,
+}: SiteLogTypeFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
-    const [name, setName] = useState(initialData?.name || "");
-    const [description, setDescription] = useState(initialData?.description || "");
+    const { closePanel, setPanelMeta, completePanel } = usePanel();
+    const [isPending, startTransition] = useTransition();
     const isEditing = !!initialData;
 
-    // Semi-autonomous callbacks
-    const handleSuccess = () => {
-        closeModal();
-        router.refresh();
-    };
+    // Form state
+    const [name, setName] = useState(initialData?.name || "");
+    const [description, setDescription] = useState(initialData?.description || "");
 
-    const handleCancel = () => {
-        closeModal();
-    };
+    // ─── Panel Meta ──────────────────────────────────────
+    useEffect(() => {
+        setPanelMeta({
+            icon: Tags,
+            title: isEditing ? "Editar Tipo" : "Nuevo Tipo de Bitácora",
+            description: isEditing
+                ? "Modifica el nombre de este tipo de bitácora."
+                : "Define un nuevo tipo para clasificar tus registros.",
+            size: "sm",
+            footer: {
+                submitLabel: isEditing ? "Guardar" : "Crear Tipo",
+            },
+        });
+    }, [isEditing, setPanelMeta]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    // ─── Submit ──────────────────────────────────────────
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Optimistic: Close and show success immediately
-        closeModal();
-        toast.success(isEditing ? "Tipo actualizado correctamente" : "Tipo creado correctamente");
-
-        // Background: Submit to server
-        try {
-            if (isEditing && initialData) {
-                await updateSiteLogType(initialData.id, name, description);
-            } else {
-                await createSiteLogType(organizationId, name, description);
-            }
-        } catch (error) {
-            console.error("Error saving site log type:", error);
-            toast.error("Error al guardar tipo");
-            router.refresh(); // Rollback
+        if (!name.trim()) {
+            toast.error("El nombre es obligatorio");
+            return;
         }
+
+        startTransition(async () => {
+            try {
+                if (isEditing && initialData) {
+                    await updateSiteLogType(organizationId, initialData.id, name, description);
+                    toast.success("Tipo actualizado correctamente");
+                } else {
+                    await createSiteLogType(organizationId, name, description);
+                    toast.success("Tipo creado correctamente");
+                }
+                onSuccess?.();
+                router.refresh();
+
+                if (isEditing) {
+                    closePanel();
+                } else {
+                    completePanel(() => {
+                        setName("");
+                        setDescription("");
+                    });
+                }
+            } catch {
+                toast.error("Error al guardar tipo");
+            }
+        });
     };
 
+    // ─── Render ──────────────────────────────────────────
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
+        <form id={formId} onSubmit={handleSubmit}>
+            <div className="space-y-4">
                 <TextField
                     value={name}
                     onChange={setName}
@@ -63,19 +97,14 @@ export function SiteLogTypeForm({ organizationId, initialData }: SiteLogTypeForm
                     placeholder="Ej. Incidente"
                     autoFocus
                 />
-                <TextField
+                <NotesField
                     value={description}
                     onChange={setDescription}
                     label="Descripción"
-                    required={false}
                     placeholder="Descripción breve..."
+                    rows={3}
                 />
             </div>
-            <FormFooter
-                onCancel={handleCancel}
-                submitLabel={isEditing ? "Guardar" : "Crear"}
-                className="-mx-4 -mb-4 mt-6"
-            />
         </form>
     );
 }

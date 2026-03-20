@@ -26,6 +26,7 @@ interface Project {
     name: string;
     image_url?: string | null;
     color?: string | null;
+    status?: string | null;
 }
 
 interface Client {

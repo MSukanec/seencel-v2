@@ -37,6 +37,10 @@ export interface DateColumnOptions<TData> {
     avatarUrlKey?: keyof TData | string;
     /** Key for avatar fallback name (default: "creator_full_name") */
     avatarFallbackKey?: keyof TData | string;
+    /** Function to extract avatar URL from row (for nested data). Overrides avatarUrlKey. */
+    avatarUrlAccessor?: (row: TData) => string | null | undefined;
+    /** Function to extract fallback name from row (for nested data). Overrides avatarFallbackKey. */
+    avatarFallbackAccessor?: (row: TData) => string | null | undefined;
     /** Enable sorting (default: true) */
     enableSorting?: boolean;
     /** Custom filter function (for date range filtering) */
@@ -154,6 +158,8 @@ export function createDateColumn<TData>(
         showAvatar = false,
         avatarUrlKey = "creator_avatar_url",
         avatarFallbackKey = "creator_full_name",
+        avatarUrlAccessor,
+        avatarFallbackAccessor,
         enableSorting = true,
         filterFn,
         size = 140,
@@ -176,10 +182,13 @@ export function createDateColumn<TData>(
             const relativeText = getRelativeDate(dateToFormat, relativeMode);
             const dateText = relativeText || formatStandardDate(dateToFormat);
 
-            const avatarUrl = showAvatar ? (row.original as any)[avatarUrlKey as string] : null;
-            const avatarFallback = showAvatar
-                ? ((row.original as any)[avatarFallbackKey as string]?.[0] || "?").toUpperCase()
+            const avatarUrl = showAvatar
+                ? (avatarUrlAccessor ? avatarUrlAccessor(row.original) : (row.original as any)[avatarUrlKey as string]) || null
                 : null;
+            const rawFallback = showAvatar
+                ? (avatarFallbackAccessor ? avatarFallbackAccessor(row.original) : (row.original as any)[avatarFallbackKey as string])
+                : null;
+            const avatarFallback = rawFallback ? rawFallback[0].toUpperCase() : "?";
 
             if (editable && onUpdate) {
                 return (

@@ -6,18 +6,47 @@ import { revalidatePath } from "next/cache";
 
 import { SiteLog, SiteLogType } from "./types";
 
+// ── Helper: resolve member_id from auth user ──────────────────
+async function resolveAuthMember(supabase: any, organizationId: string) {
+    const user = await getAuthUser();
+    if (!user) return null;
+
+    const { data: userData } = await supabase
+        .schema('iam').from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+    if (!userData) return null;
+
+    const { data: memberData } = await supabase
+        .schema('iam').from('organization_members')
+        .select('id')
+        .eq('user_id', userData.id)
+        .eq('organization_id', organizationId)
+        .single();
+    if (!memberData) return null;
+
+    return { authId: user.id, userId: userData.id, memberId: memberData.id };
+}
+
+// ── SITE LOG SELECT FIELDS ────────────────────────────────────
+const SITE_LOG_SELECT = `
+    id, project_id, organization_id, log_date, comments,
+    created_at, updated_at, is_public, status, is_favorite,
+    weather, severity, entry_type_id, created_by, updated_by,
+    ai_summary, ai_tags, ai_analyzed, is_deleted, deleted_at,
+    entry_type:site_log_types(id, name, description, is_system)
+`;
+
 // --- SITE LOGS (ENTRIES) ---
 
-export async function getSiteLogs(projectId: string): Promise<SiteLog[]> {
+export async function getSiteLogs(organizationId: string, projectId: string): Promise<SiteLog[]> {
     const supabase = await createClient();
 
-    // 1. Fetch site_logs + same-schema join (site_log_types)
     const { data, error } = await supabase
         .schema('construction').from('site_logs')
-        .select(`
-            *,
-            entry_type:site_log_types(*)
-        `)
+        .select(SITE_LOG_SELECT)
+        .eq('organization_id', organizationId)
         .eq('project_id', projectId)
         .eq('is_deleted', false)
         .order('log_date', { ascending: false })
@@ -38,17 +67,14 @@ export async function getSiteLogs(projectId: string): Promise<SiteLog[]> {
 export async function getSiteLogsForOrganization(organizationId: string): Promise<SiteLog[]> {
     const supabase = await createClient();
 
-    // 1. Fetch site_logs + same-schema join (site_log_types)
     const { data, error } = await supabase
         .schema('construction').from('site_logs')
-        .select(`
-            *,
-            entry_type:site_log_types(*)
-        `)
+        .select(SITE_LOG_SELECT)
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
         .order('log_date', { ascending: false })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500);
 
     if (error) {
         console.error("Error fetching org site logs:", error);
@@ -95,7 +121,7 @@ async function enrichSiteLogs(
     if (projectIds.length) {
         const { data: projects } = await supabase
             .schema('projects').from('projects')
-            .select('id, name')
+            .select('id, name, color, image_url')
             .in('id', projectIds);
         if (projects) {
             for (const p of projects) projectsMap[p.id] = p;
@@ -175,7 +201,7 @@ export async function getSiteLogTypes(organizationId: string): Promise<SiteLogTy
 
     const { data, error } = await supabase
         .schema('construction').from('site_log_types')
-        .select('*')
+        .select('id, name, description, is_system, organization_id, created_at, updated_at, is_deleted, deleted_at')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
         .order('name');
@@ -191,19 +217,8 @@ export async function getSiteLogTypes(organizationId: string): Promise<SiteLogTy
 export async function createSiteLogType(organizationId: string, name: string, description?: string) {
     const supabase = await createClient();
 
-    // 1. Get Auth User
-    const user = await getAuthUser();
-    if (!user) {
-        throw new Error("Authentication failed");
-    }
-
-    // 2. Get Public User/Member data
-    const { data: userData } = await supabase.schema('iam').from('users').select('id').eq('auth_id', user.id).single();
-    if (!userData) throw new Error("User profile not found");
-
-    const { data: memberData } = await supabase.schema('iam').from('organization_members')
-        .select('id').eq('user_id', userData.id).eq('organization_id', organizationId).single();
-    if (!memberData) throw new Error("Not a member");
+    const auth = await resolveAuthMember(supabase, organizationId);
+    if (!auth) throw new Error("Authentication failed or not a member");
 
     const { data, error } = await supabase
         .schema('construction').from('site_log_types')
@@ -212,8 +227,8 @@ export async function createSiteLogType(organizationId: string, name: string, de
             name,
             description,
             is_system: false,
-            created_by: memberData.id,
-            updated_by: memberData.id
+            created_by: auth.memberId,
+            updated_by: auth.memberId
         })
         .select()
         .single();
@@ -227,17 +242,21 @@ export async function createSiteLogType(organizationId: string, name: string, de
     return data;
 }
 
-export async function updateSiteLogType(id: string, name: string, description?: string) {
+export async function updateSiteLogType(organizationId: string, id: string, name: string, description?: string) {
     const supabase = await createClient();
+
+    const auth = await resolveAuthMember(supabase, organizationId);
+    if (!auth) throw new Error("Authentication failed or not a member");
 
     const { error } = await supabase
         .schema('construction').from('site_log_types')
         .update({
             name,
             description,
-            updated_by: (await getAuthUser())?.id
+            updated_by: auth.memberId
         })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('organization_id', organizationId);
 
     if (error) {
         console.error("Error updating site log type:", error);
@@ -247,10 +266,13 @@ export async function updateSiteLogType(id: string, name: string, description?: 
     revalidatePath(`/organization/sitelog`, 'page');
 }
 
-export async function deleteSiteLogType(id: string, replacementId?: string) {
+export async function deleteSiteLogType(organizationId: string, id: string, replacementId?: string) {
     const supabase = await createClient();
 
-    // 1. Reassign
+    const auth = await resolveAuthMember(supabase, organizationId);
+    if (!auth) throw new Error("Authentication failed or not a member");
+
+    // 1. Reassign logs to replacement type
     if (replacementId) {
         const { error: moveError } = await supabase
             .schema('construction').from('site_logs')
@@ -268,9 +290,10 @@ export async function deleteSiteLogType(id: string, replacementId?: string) {
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
-            updated_by: (await getAuthUser())?.id
+            updated_by: auth.memberId
         })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('organization_id', organizationId);
 
     if (error) {
         console.error("Error deleting site log type:", error);
@@ -282,40 +305,49 @@ export async function deleteSiteLogType(id: string, replacementId?: string) {
 
 // --- CREATE / UPDATE SITE LOG ---
 
-export async function createSiteLog(formData: FormData) {
+interface CreateSiteLogInput {
+    id?: string;
+    projectId: string;
+    organizationId: string;
+    comments: string;
+    logDate: string;
+    entryTypeId?: string | null;
+    weather?: string | null;
+    severity: string | null;
+    isPublic: boolean;
+    media?: Array<{
+        id?: string;
+        name: string;
+        type: string;
+        url?: string;
+        path?: string;
+        bucket?: string;
+    }>;
+}
+
+export async function createSiteLog(input: CreateSiteLogInput) {
     const supabase = await createClient();
 
-    const id = formData.get('id') as string | null;
-    const projectId = formData.get('project_id') as string;
-    const organizationId = formData.get('organization_id') as string;
-    const comments = formData.get('comments') as string;
-    const logDate = formData.get('log_date') as string;
-    const entryTypeId = formData.get('entry_type_id') as string | null;
-    const weather = formData.get('weather') as string | null;
-    const severity = formData.get('severity') as string;
-    const isPublic = formData.get('is_public') === 'true';
+    const auth = await resolveAuthMember(supabase, input.organizationId);
+    if (!auth) return { error: "No autorizado" };
 
-    // Get current user for created_by
-    const user = await getAuthUser();
+    let currentLogId = input.id;
 
-    if (!user) return { error: "No autorizado" };
-
-    let currentLogId = id;
-
-    if (id) {
+    if (input.id) {
         // UPDATE Existing Log
         const { error } = await supabase
             .schema('construction').from('site_logs')
             .update({
-                comments: comments,
-                log_date: logDate,
-                entry_type_id: entryTypeId,
-                weather: weather,
-                severity: severity,
-                is_public: isPublic,
-                updated_by: user.id
+                comments: input.comments,
+                log_date: input.logDate,
+                entry_type_id: input.entryTypeId,
+                weather: input.weather,
+                severity: input.severity === "none" ? null : (input.severity || null),
+                is_public: input.isPublic,
+                updated_by: auth.memberId
             })
-            .eq('id', id);
+            .eq('id', input.id)
+            .eq('organization_id', input.organizationId);
 
         if (error) {
             console.error("Update log error:", error);
@@ -326,18 +358,18 @@ export async function createSiteLog(formData: FormData) {
         const { data: logData, error } = await supabase
             .schema('construction').from('site_logs')
             .insert({
-                project_id: projectId,
-                organization_id: organizationId,
-                comments: comments,
-                log_date: logDate,
-                entry_type_id: entryTypeId,
-                weather: weather,
-                severity: severity,
-                is_public: isPublic,
-                created_by: user.id,
-                updated_by: user.id
+                project_id: input.projectId,
+                organization_id: input.organizationId,
+                comments: input.comments,
+                log_date: input.logDate,
+                entry_type_id: input.entryTypeId,
+                weather: input.weather,
+                severity: input.severity === "none" ? null : (input.severity || null),
+                is_public: input.isPublic,
+                created_by: auth.memberId,
+                updated_by: auth.memberId
             })
-            .select()
+            .select('id')
             .single();
 
         if (error) {
@@ -350,25 +382,22 @@ export async function createSiteLog(formData: FormData) {
     if (!currentLogId) return { error: "Error de ID de registro" };
 
     // Process Media
-    const mediaJson = formData.get('media') as string | null;
-    if (mediaJson) {
+    if (input.media && input.media.length > 0) {
         try {
-            const mediaItems = JSON.parse(mediaJson);
-            if (Array.isArray(mediaItems)) {
+            // 1. Identify valid media files to be linked
+            const validMediaFileIds: string[] = [];
 
-                // 1. Identify valid media files to be linked
-                const validMediaFileIds: string[] = [];
+            for (const item of input.media) {
+                let fileId = item.id;
 
-                for (const item of mediaItems) {
-                    let fileId = item.id;
+                // Map MIME type to DB Enum
+                let dbFileType = 'other';
+                if (item.type && item.type.startsWith('image/')) dbFileType = 'image';
+                else if (item.type && item.type.startsWith('video/')) dbFileType = 'video';
+                else if (item.type === 'application/pdf') dbFileType = 'pdf';
 
-                    // Map MIME type to DB Enum
-                    let dbFileType = 'other';
-                    if (item.type && item.type.startsWith('image/')) dbFileType = 'image';
-                    else if (item.type && item.type.startsWith('video/')) dbFileType = 'video';
-                    else if (item.type === 'application/pdf') dbFileType = 'pdf';
-
-                    // Check if this file already exists in DB (by ID)
+                // Check if this file already exists in DB (by ID)
+                if (fileId) {
                     const { data: existingFile } = await supabase
                         .from('media_files')
                         .select('id')
@@ -377,58 +406,57 @@ export async function createSiteLog(formData: FormData) {
 
                     if (existingFile) {
                         validMediaFileIds.push(existingFile.id);
-                    } else {
-                        // File does not exist, create it
-                        console.log("Creating new media_file", item.name);
-                        const { data: fileData, error: fileError } = await supabase
-                            .from('media_files')
-                            .insert({
-                                organization_id: organizationId,
-                                bucket: item.bucket || 'sitelogs',
-                                file_path: item.path || item.url,
-                                file_name: item.name,
-                                file_type: dbFileType,
-                                created_by: user.id
-                            })
-                            .select()
-                            .single();
-
-                        if (fileError) {
-                            console.error("Error creating media file record:", fileError);
-                            continue;
-                        }
-                        validMediaFileIds.push(fileData.id);
+                        continue;
                     }
                 }
 
-                // 2. Sync Links (Delete old, Insert new)
+                // File does not exist, create it
+                const { data: fileData, error: fileError } = await supabase
+                    .from('media_files')
+                    .insert({
+                        organization_id: input.organizationId,
+                        bucket: item.bucket || 'sitelogs',
+                        file_path: item.path || item.url,
+                        file_name: item.name,
+                        file_type: dbFileType,
+                        created_by: auth.memberId
+                    })
+                    .select('id')
+                    .single();
 
-                // First delete existing links for this log
-                await supabase
+                if (fileError) {
+                    console.error("Error creating media file record:", fileError);
+                    continue;
+                }
+                validMediaFileIds.push(fileData.id);
+            }
+
+            // 2. Sync Links — Soft delete old, Insert new
+            // Soft delete existing links for this log
+            await supabase
+                .from('media_links')
+                .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+                .eq('site_log_id', currentLogId);
+
+            // Insert new links
+            if (validMediaFileIds.length > 0) {
+                const linksToInsert = validMediaFileIds.map(fileId => ({
+                    site_log_id: currentLogId,
+                    media_file_id: fileId,
+                    organization_id: input.organizationId,
+                    project_id: input.projectId
+                }));
+
+                const { error: linkError } = await supabase
                     .from('media_links')
-                    .delete()
-                    .eq('site_log_id', currentLogId);
+                    .insert(linksToInsert);
 
-                // Then insert new links
-                if (validMediaFileIds.length > 0) {
-                    const linksToInsert = validMediaFileIds.map(fileId => ({
-                        site_log_id: currentLogId,
-                        media_file_id: fileId,
-                        organization_id: organizationId,
-                        project_id: projectId
-                    }));
-
-                    const { error: linkError } = await supabase
-                        .from('media_links')
-                        .insert(linksToInsert);
-
-                    if (linkError) {
-                        console.error("Error linking media:", linkError);
-                    }
+                if (linkError) {
+                    console.error("Error linking media:", linkError);
                 }
             }
         } catch (e) {
-            console.error("Error parsing media JSON:", e);
+            console.error("Error processing media:", e);
         }
     }
 
@@ -436,26 +464,58 @@ export async function createSiteLog(formData: FormData) {
     return { success: true };
 }
 
-export async function deleteSiteLog(logId: string, projectId: string) {
+export async function deleteSiteLog(organizationId: string, logId: string) {
     const supabase = await createClient();
 
-    // 1. Get Auth User
-    const user = await getAuthUser();
-    if (!user) return { error: "No autorizado" };
+    const auth = await resolveAuthMember(supabase, organizationId);
+    if (!auth) return { error: "No autorizado" };
 
-    // 2. Soft Delete
+    // Soft Delete
     const { error } = await supabase
         .schema('construction').from('site_logs')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
-            updated_by: user.id
+            updated_by: auth.memberId
         })
-        .eq('id', logId);
+        .eq('id', logId)
+        .eq('organization_id', organizationId);
 
     if (error) {
         console.error("Error deleting log:", error);
         return { error: "Error al eliminar el registro" };
+    }
+
+    revalidatePath(`/organization/sitelog`, 'page');
+    return { success: true };
+}
+
+// --- INLINE UPDATE (single field) ---
+
+type SiteLogUpdatableField = 'comments' | 'severity' | 'weather' | 'is_public' | 'is_favorite' | 'entry_type_id' | 'log_date';
+
+export async function updateSiteLogField(
+    organizationId: string,
+    logId: string,
+    field: SiteLogUpdatableField,
+    value: string | boolean | null
+) {
+    const supabase = await createClient();
+    const auth = await resolveAuthMember(supabase, organizationId);
+    if (!auth) return { error: "No autorizado" };
+
+    const { error } = await supabase
+        .schema('construction').from('site_logs')
+        .update({
+            [field]: value,
+            updated_by: auth.memberId,
+        })
+        .eq('id', logId)
+        .eq('organization_id', organizationId);
+
+    if (error) {
+        console.error(`Error updating site log field ${field}:`, error);
+        return { error: error.message };
     }
 
     revalidatePath(`/organization/sitelog`, 'page');

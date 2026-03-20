@@ -16,6 +16,7 @@
 import * as React from "react";
 import { Check, Tag, Settings, Plus, Loader2 } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
+import { usePanel } from "@/stores/panel-store";
 import {
     Command,
     CommandInput,
@@ -80,6 +81,7 @@ export function SelectPopoverContent({
     createLabel = "Crear",
 }: SelectPopoverContentProps) {
     const router = useRouter();
+    const { closePanel } = usePanel();
     const fallbackIcon = defaultIcon || <Tag className="h-3.5 w-3.5 text-muted-foreground" />;
     const [searchQuery, setSearchQuery] = React.useState("");
     const [isCreating, setIsCreating] = React.useState(false);
@@ -171,6 +173,7 @@ export function SelectPopoverContent({
                                 value={`__manage_${manageLabel}__`}
                                 onSelect={() => {
                                     onOpenChange?.(false);
+                                    closePanel();
                                     router.push(manageRoute as any);
                                 }}
                                 className="flex items-center gap-2 text-xs text-muted-foreground"

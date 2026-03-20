@@ -12,8 +12,9 @@
 
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Check } from "lucide-react";
+import { Check, Settings } from "lucide-react";
 import { DataTableColumnHeader } from "../data-table-column-header";
+import { useRouter } from "@/i18n/routing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -38,6 +39,8 @@ export interface ProjectOption {
     color?: string | null;
     /** Project image URL */
     imageUrl?: string | null;
+    /** Project status (active, planning, completed, inactive) */
+    status?: string | null;
 }
 
 export interface ProjectColumnOptions<TData> {
@@ -87,8 +90,16 @@ function EditableProjectCell<TData>({
     emptyValue: string;
 }) {
     const [open, setOpen] = React.useState(false);
+    const router = useRouter();
     const currentId = getProjectId(row);
     const initials = name ? name.substring(0, 2).toUpperCase() : "?";
+
+    // Filter to only active/planning projects for selection
+    const ACTIVE_STATUSES = ["active", "planning"];
+    const selectableOptions = React.useMemo(() => 
+        projectOptions.filter(p => !p.status || ACTIVE_STATUSES.includes(p.status)),
+        [projectOptions]
+    );
 
     const handleSelect = (projectId: string) => {
         setOpen(false);
@@ -127,9 +138,9 @@ function EditableProjectCell<TData>({
                     )}
                 </button>
             </PopoverTrigger>
-            <PopoverContent className="w-52 p-0" align="start" onClick={(e) => e.stopPropagation()}>
+            <PopoverContent className="w-60 p-0" align="start" onClick={(e) => e.stopPropagation()}>
                 <Command>
-                    <CommandInput placeholder="Buscar proyecto..." className="h-8 text-xs" />
+                    <CommandInput placeholder="Buscar proyecto activo..." className="h-8 text-xs" />
                     <CommandList>
                         <CommandEmpty className="text-xs text-center py-3">No encontrado</CommandEmpty>
                         <CommandGroup>
@@ -138,29 +149,58 @@ function EditableProjectCell<TData>({
                                 onSelect={() => handleSelect("__none__")}
                                 className="flex items-center gap-2 text-xs"
                             >
-                                <span className="h-2 w-2 rounded-full bg-muted-foreground/30" />
+                                <div className="h-5 w-5 rounded-full shrink-0 flex items-center justify-center bg-muted border border-border/40">
+                                    <span className="text-muted-foreground text-[9px] font-bold">✕</span>
+                                </div>
                                 <span className="flex-1 text-muted-foreground">{emptyValue}</span>
-                                {!currentId && <Check className="h-3.5 w-3.5 text-muted-foreground" />}
+                                {!currentId && <Check className="h-3.5 w-3.5 text-primary" />}
                             </CommandItem>
-                            {projectOptions.map((project) => (
-                                <CommandItem
-                                    key={project.value}
-                                    value={project.value}
-                                    onSelect={() => handleSelect(project.value)}
-                                    className="flex items-center gap-2 text-xs"
-                                >
-                                    <span
-                                        className="h-2 w-2 rounded-full"
-                                        style={{ backgroundColor: project.color || "hsl(var(--primary))" }}
-                                    />
-                                    <span className="flex-1">{project.label}</span>
-                                    {currentId === project.value && (
-                                        <Check className="h-3.5 w-3.5 text-muted-foreground" />
-                                    )}
-                                </CommandItem>
-                            ))}
+                            {selectableOptions.map((project) => {
+                                const pInitials = project.label ? project.label.substring(0, 2).toUpperCase() : "?";
+                                return (
+                                    <CommandItem
+                                        key={project.value}
+                                        value={project.label}
+                                        onSelect={() => handleSelect(project.value)}
+                                        className="flex items-center gap-2 text-xs"
+                                    >
+                                        {project.imageUrl ? (
+                                            <img
+                                                src={project.imageUrl}
+                                                alt={project.label}
+                                                className="h-5 w-5 rounded-full object-cover shrink-0"
+                                            />
+                                        ) : (
+                                            <div
+                                                className="h-5 w-5 rounded-full shrink-0 flex items-center justify-center font-bold text-white text-[8px]"
+                                                style={{ backgroundColor: project.color || "hsl(var(--primary))" }}
+                                            >
+                                                {pInitials}
+                                            </div>
+                                        )}
+                                        <span className="flex-1 truncate">{project.label}</span>
+                                        {currentId === project.value && (
+                                            <Check className="h-3.5 w-3.5 text-primary" />
+                                        )}
+                                    </CommandItem>
+                                );
+                            })}
                         </CommandGroup>
                     </CommandList>
+                    {/* Footer: Gestionar proyectos */}
+                    <div className="border-t border-border/50 p-1">
+                        <button
+                            type="button"
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-sm transition-colors"
+                            onClick={() => {
+                                setOpen(false);
+                                router.push('/organization/projects');
+                            }}
+                        >
+                            <Settings className="h-3.5 w-3.5" />
+                            <span>Gestionar proyectos</span>
+                        </button>
+                    </div>
                 </Command>
             </PopoverContent>
         </Popover>

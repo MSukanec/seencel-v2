@@ -610,18 +610,98 @@ export function ListView({ data, ...props }: Props) {
 
 ---
 
-## 9. DataTable Props — Referencia Rápida
+## 9. Grid/Cards View — Patrón Headless Unificado (Marzo 2026)
+
+> **Decisión arquitectónica**: El `DataTable` es el **único componente** para renderizar datos, tanto en modo tabla como en modo tarjetas/cards. Ambos modos comparten el mismo "cerebro" (TanStack React Table) para filtrado, ordenamiento, agrupamiento y paginación.
+
+### 9.1 Concepto
+
+Antes de Marzo 2026, las vistas con modo cards usaban un componente monolítico separado (ej: `TaskCatalog`) que reimplementaba toda la lógica de filtrado y agrupamiento. Esto generaba:
+- Código duplicado (~400 líneas por entidad)
+- Filtros desincronizados entre table y cards
+- Mantenimiento doble
+
+**Ahora**: Un solo `<DataTable>` con `viewMode` y `renderGridItem`.
+
+### 9.2 Props de Grid View
+
+| Prop | Tipo | Default | Descripción |
+|------|------|---------|-------------|
+| `viewMode` | `"table" \| "grid"` | `"table"` | Modo de renderizado |
+| `renderGridItem` | `(row: TData) => ReactNode` | — | Componente visual de cada tarjeta |
+| `gridClassName` | `string` | `"grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"` | Clases CSS del grid container |
+
+### 9.3 Uso en la Vista Orquestadora
+
+```tsx
+import { TaskListItem } from "@/components/shared/list-item";
+
+// viewMode viene de un estado local (toggle en Toolbar)
+const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+
+<DataTable
+    viewMode={viewMode === "cards" ? "grid" : "table"}
+    gridClassName="flex flex-col gap-2 pb-8"
+    columns={columns}
+    data={filteredTasks}
+    enableContextMenu
+    enableRowSelection
+    onRowClick={handleView}
+    onEdit={handleEdit}
+    onDelete={handleDelete}
+    groupBy="division_name"
+    getGroupValue={(row) => row.division_name || "Sin Rubro"}
+    globalFilter={filters.searchQuery}
+    onGlobalFilterChange={filters.setSearchQuery}
+    renderGridItem={(row) => (
+        <TaskListItem
+            task={row}
+            onClick={handleView}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+        />
+    )}
+/>
+```
+
+### 9.4 Grouping en Grid View
+
+Cuando `groupBy` está presente, el modo grid **automáticamente** renderiza:
+- Headers de grupo idénticos visualmente a los de la tabla (mismo chevron, hover, border-b)
+- Acordeón colapsable por grupo
+- Misma Card `variant="inset"` envolviendo todo
+
+⛔ **NUNCA** crear un componente separado para "vista cards" que reimplemente filtrado/agrupamiento.
+
+### 9.5 Inversion of Control (IoC)
+
+El `DataTable` **no sabe** cómo se ve cada tarjeta. Solo sabe iterar por filas. La vista (`*-view.tsx`) es quien:
+1. Importa el componente visual específico (`TaskListItem`, `MaterialCard`, etc.)
+2. Lo inyecta vía `renderGridItem`
+3. Le pasa los handlers correspondientes
+
+Esto permite tarjetas radicalmente distintas por entidad, todas usando el mismo motor.
+
+---
+
+## 10. DataTable Props — Referencia Rápida
 
 | Prop | Tipo | Descripción |
 |------|------|-------------|
 | `columns` | `ColumnDef[]` | Desde Column Factory |
 | `data` | `TData[]` | Datos filtrados |
+| `viewMode` | `"table" \| "grid"` | Modo de renderizado (tabla o tarjetas) |
+| `renderGridItem` | `(row) => ReactNode` | Componente visual de cada tarjeta en modo grid |
+| `gridClassName` | `string` | Clases CSS del grid container |
 | `enableRowSelection` | `boolean` | Checkboxes para selección |
-| `enableRowActions` | `boolean` | Menú ⋯ por fila |
+| `enableContextMenu` | `boolean` | Context menu (right-click) |
 | `onRowClick` | `(row) => void` | Click en fila (abre detail panel) |
 | `onEdit` | `(row) => void` | Acción Editar del menú ⋯ |
 | `onDelete` | `(row) => void` | Acción Eliminar (de `useTableActions`) |
 | `onBulkDelete` | `(items, resetSelection) => void` | Bulk delete |
+| `groupBy` | `string` | Columna para agrupar (funciona en table Y grid) |
+| `getGroupValue` | `(row) => string` | Accessor de grupo |
+| `renderGroupHeader` | `(value, rows, expanded) => ReactNode` | Header de grupo custom |
 | `initialSorting` | `SortingState` | Orden inicial |
 | `globalFilter` | `string` | Búsqueda global (de `useTableFilters`) |
 | `onGlobalFilterChange` | `(value) => void` | Setter búsqueda |
@@ -634,7 +714,7 @@ export function ListView({ data, ...props }: Props) {
 
 ---
 
-## 10. Prohibiciones y Anti-Patrones
+## 11. Prohibiciones y Anti-Patrones
 
 | ⛔ Prohibido | ✅ Correcto |
 |-------------|-------------|
@@ -650,10 +730,12 @@ export function ListView({ data, ...props }: Props) {
 | Export legacy (`DataTableExport`) | `exportToCSV` / `exportToExcel` de `@/lib/export` |
 | Duplicar Command content entre chip y column | Usar Shared Popover Content de `@/components/shared/popovers/` |
 | Pasar `footerAction` como prop de la vista | Footer action vive dentro del Shared Popover Content |
+| **Crear componente separado para "vista cards"** | **Usar `viewMode="grid"` + `renderGridItem` del DataTable** |
+| **Reimplementar filtrado/agrupamiento en cards** | **El DataTable ya lo hace — misma data, distinto render** |
 
 ---
 
-## 11. Checklist para Nuevas Vistas con DataTable
+## 12. Checklist para Nuevas Vistas con DataTable
 
 - [ ] Crear `tables/[entity]-columns.tsx` con constantes, factory y export columns
 - [ ] Usar TODAS las Column Factories correspondientes (nunca columnas manuales)
@@ -668,3 +750,6 @@ export function ListView({ data, ...props }: Props) {
 - [ ] `DeleteConfirmDialog` renderizado al final del JSX
 - [ ] Popovers de wallet/currency usan Shared Popover Content (NO duplicar Command)
 - [ ] Vista ≤ 250 líneas
+- [ ] Si hay toggle table/cards: usar `viewMode` + `renderGridItem` (NO componente separado)
+- [ ] Grid view usa el mismo `groupBy`, `getGroupValue` y `renderGroupHeader` que la tabla
+- [ ] Referencia de Grid: `tasks-catalog-view.tsx` + `TaskListItem`

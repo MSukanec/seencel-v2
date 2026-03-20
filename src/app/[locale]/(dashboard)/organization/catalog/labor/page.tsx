@@ -4,6 +4,7 @@ import { getLaborTypesWithPrices } from "@/features/labor/actions";
 import { getCurrencies } from "@/features/billing/queries";
 import { LaborTypesView } from "@/features/labor/views/labor-types-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
+import { ContentLayout } from "@/components/layout";
 
 export const metadata: Metadata = {
     title: "Mano de Obra | Catálogo Técnico | Seencel",
@@ -23,12 +24,14 @@ export default async function CatalogLaborPage() {
         const defaultCurrencyId = currencies[0]?.id || '';
 
         return (
-            <LaborTypesView
-                laborTypes={laborTypesWithPrices}
-                currencies={currencies}
-                orgId={orgId}
-                defaultCurrencyId={defaultCurrencyId}
-            />
+            <ContentLayout variant="wide">
+                <LaborTypesView
+                    laborTypes={laborTypesWithPrices}
+                    currencies={currencies}
+                    orgId={orgId}
+                    defaultCurrencyId={defaultCurrencyId}
+                />
+            </ContentLayout>
         );
     } catch (error) {
         return (

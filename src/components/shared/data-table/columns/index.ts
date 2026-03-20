@@ -23,5 +23,10 @@ export { createAttachmentColumn, type AttachmentColumnOptions } from "./attachme
 export { createCreatorColumn, type CreatorColumnOptions } from "./creator-column";
 export { createAddressColumn, type AddressColumnOptions } from "./address-column";
 export { createUnitColumn, type UnitColumnOptions } from "./unit-column";
+export { createPriceColumn, type PriceColumnOptions } from "./price-column";
 export { createColumns } from "./column-builder";
+export { createSeverityColumn, type SeverityColumnOptions } from "./severity-column";
+export { createWeatherColumn, type WeatherColumnOptions } from "./weather-column";
+export { createVisibilityColumn, type VisibilityColumnOptions } from "./visibility-column";
+export { createFavoriteColumn, type FavoriteColumnOptions } from "./favorite-column";
 export { CELL_VALUE_CLASS, CELL_EMPTY_CLASS, EDITABLE_CELL_CLASS, EDITABLE_CELL_LOADING_CLASS } from "./column-styles";

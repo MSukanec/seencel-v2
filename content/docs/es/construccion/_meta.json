@@ -1,10 +1,14 @@
 {
     "order": [
-        "ejecucion-de-tareas"
+        "ejecucion-de-tareas",
+        "bitacora-de-obra"
     ],
     "items": {
         "ejecucion-de-tareas": {
             "title": "Ejecución de Tareas"
+        },
+        "bitacora-de-obra": {
+            "title": "Bitácora de Obra"
         }
     }
 }

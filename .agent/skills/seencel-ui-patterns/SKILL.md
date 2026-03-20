@@ -204,7 +204,26 @@ const columns = [
 ### Cuándo Usar
 
 - ✅ Listas de entidades, > 20 items, sortable/filterable
+- ✅ Vistas con toggle table/cards → usar `viewMode` + `renderGridItem`
 - ❌ Tablas < 5 filas, dentro de modales
+
+### Grid/Cards View (Marzo 2026)
+
+El `DataTable` es el **único componente** para renderizar datos en tabla Y en tarjetas:
+
+```tsx
+<DataTable
+    viewMode={viewMode === "cards" ? "grid" : "table"}
+    renderGridItem={(row) => <TaskListItem task={row} />}
+    gridClassName="flex flex-col gap-2 pb-8"
+    groupBy="division_name"
+    // ...mismos props de siempre
+/>
+```
+
+- ⛔ **NUNCA** crear un componente separado para "vista cards" (ej: `XxxCatalog`)
+- El agrupamiento funciona idéntico en ambos modos
+- 📖 Detalle completo: Skill [seencel-datatable-system](../seencel-datatable-system/SKILL.md) sección 9
 
 ---
 

@@ -11,6 +11,7 @@
 import * as React from "react";
 import { Check, Wallet, Settings } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
+import { usePanel } from "@/stores/panel-store";
 import {
     Command,
     CommandInput,
@@ -45,6 +46,7 @@ export function WalletPopoverContent({
     onOpenChange,
 }: WalletPopoverContentProps) {
     const router = useRouter();
+    const { closePanel } = usePanel();
 
     return (
         <Command>
@@ -73,6 +75,7 @@ export function WalletPopoverContent({
                         value="__manage_wallets__"
                         onSelect={() => {
                             onOpenChange?.(false);
+                            closePanel();
                             router.push("/settings/finance");
                         }}
                         className="flex items-center gap-2 text-xs text-muted-foreground"

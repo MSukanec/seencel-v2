@@ -47,6 +47,10 @@ export interface TextColumnOptions<TData> {
     secondary?: boolean;
     /** Whether this column should fill remaining space (default: true) */
     fillWidth?: boolean;
+    /** Show full text wrapping across multiple lines (default: false). Mutually exclusive with truncate. */
+    multiline?: boolean;
+    /** Max number of visible lines when multiline (uses CSS line-clamp). Omit for unlimited. */
+    maxLines?: number;
 }
 
 // ─── Editable Text Cell ──────────────────────────────────
@@ -60,6 +64,7 @@ function EditableTextCell<TData>({
     emptyValue,
     onUpdate,
     placeholder,
+    multiline,
 }: {
     row: TData;
     accessorKey: string;
@@ -69,16 +74,22 @@ function EditableTextCell<TData>({
     emptyValue: string;
     onUpdate: (row: TData, newValue: string) => Promise<void> | void;
     placeholder?: string;
+    multiline?: boolean;
 }) {
     const [isEditing, setIsEditing] = React.useState(false);
     const [editValue, setEditValue] = React.useState(value || "");
     const inputRef = React.useRef<HTMLInputElement>(null);
+    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
     const handleStartEditing = (e: React.MouseEvent) => {
         e.stopPropagation();
         setEditValue(value || "");
         setIsEditing(true);
-        setTimeout(() => inputRef.current?.select(), 10);
+        if (multiline) {
+            setTimeout(() => textareaRef.current?.focus(), 10);
+        } else {
+            setTimeout(() => inputRef.current?.select(), 10);
+        }
     };
 
     const handleSave = () => {
@@ -89,16 +100,41 @@ function EditableTextCell<TData>({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter") {
+        if (e.key === "Escape") {
+            setIsEditing(false);
+        }
+        // Single-line: Enter saves
+        if (!multiline && e.key === "Enter") {
             e.preventDefault();
             handleSave();
         }
-        if (e.key === "Escape") {
-            setIsEditing(false);
+        // Multiline: Ctrl/Cmd+Enter saves
+        if (multiline && e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            handleSave();
         }
     };
 
     if (isEditing) {
+        if (multiline) {
+            return (
+                <div onClick={(e) => e.stopPropagation()}>
+                    <textarea
+                        ref={textareaRef}
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onBlur={handleSave}
+                        placeholder={placeholder || "Escribir..."}
+                        rows={3}
+                        className={cn(
+                            "w-full px-2 py-1.5 text-xs bg-background border border-border rounded-md resize-y",
+                            "focus:outline-none focus:ring-1 focus:ring-ring",
+                        )}
+                    />
+                </div>
+            );
+        }
         return (
             <div onClick={(e) => e.stopPropagation()}>
                 <input
@@ -118,14 +154,18 @@ function EditableTextCell<TData>({
         );
     }
 
+    // Display mode
+    const textStyle = secondary
+        ? "text-xs font-[450] text-muted-foreground"
+        : muted ? "text-muted-foreground" : "font-medium";
+
     return (
         <button
             className={cn(
-                "text-left cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition-all truncate block max-w-full",
+                "text-left cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition-all max-w-full",
                 "border border-transparent hover:border-dashed hover:border-border hover:bg-[#2a2b2d]",
-                secondary
-                    ? "text-xs font-[450] text-muted-foreground"
-                    : muted ? "text-muted-foreground" : "font-medium",
+                multiline ? "whitespace-pre-wrap break-words" : "truncate block",
+                textStyle,
                 !value && "text-muted-foreground italic"
             )}
             onClick={handleStartEditing}
@@ -156,6 +196,8 @@ export function createTextColumn<TData>(
         editPlaceholder,
         secondary = false,
         fillWidth: shouldFill = true,
+        multiline = false,
+        maxLines,
     } = options;
 
     // Resolved text classes
@@ -194,6 +236,7 @@ export function createTextColumn<TData>(
                         emptyValue={emptyValue}
                         onUpdate={onUpdate}
                         placeholder={editPlaceholder}
+                        multiline={multiline}
                     />
                 );
             }
@@ -204,6 +247,33 @@ export function createTextColumn<TData>(
                     <span className="text-muted-foreground italic">
                         {emptyValue}
                     </span>
+                );
+            }
+
+            // Multiline mode: wrap text naturally across rows
+            if (multiline) {
+                const lineClampStyle = maxLines ? {
+                    display: '-webkit-box' as const,
+                    WebkitLineClamp: maxLines,
+                    WebkitBoxOrient: 'vertical' as const,
+                    overflow: 'hidden',
+                } : undefined;
+
+                return (
+                    <div className="flex flex-col overflow-hidden">
+                        <span
+                            className={cn("whitespace-pre-wrap break-words", plainTextClass)}
+                            style={lineClampStyle}
+                            title={maxLines && shouldShowTooltip ? displayValue : undefined}
+                        >
+                            {displayValue}
+                        </span>
+                        {subtitleValue && (
+                            <span className="text-xs text-muted-foreground font-[450] mt-0.5">
+                                {subtitleValue}
+                            </span>
+                        )}
+                    </div>
                 );
             }
 

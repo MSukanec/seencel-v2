@@ -11,6 +11,7 @@
 import * as React from "react";
 import { Check, Ruler, Settings } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
+import { usePanel } from "@/stores/panel-store";
 import {
     Command,
     CommandInput,
@@ -46,6 +47,7 @@ export function UnitPopoverContent({
     onOpenChange,
 }: UnitPopoverContentProps) {
     const router = useRouter();
+    const { closePanel } = usePanel();
 
     return (
         <Command>
@@ -80,6 +82,7 @@ export function UnitPopoverContent({
                         value="__manage_units__"
                         onSelect={() => {
                             onOpenChange?.(false);
+                            closePanel();
                             router.push("/settings/units");
                         }}
                         className="flex items-center gap-2 text-xs text-muted-foreground"

@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, Tags } from "lucide-react";
 import { SettingsSection } from "@/components/shared/settings-section";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
+import { useRouter } from "@/i18n/routing";
 import { deleteSiteLogType } from "../actions";
 import { SiteLogType } from "../types";
-import { SiteLogTypeForm } from "../forms/sitelog-type-form";
 import { SiteLogTypeListItem } from "@/components/shared/list-item/items/sitelog-type-list-item";
 
 interface SitelogSettingsViewProps {
@@ -17,7 +17,8 @@ interface SitelogSettingsViewProps {
 }
 
 export function SitelogSettingsView({ organizationId, initialTypes }: SitelogSettingsViewProps) {
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
+    const router = useRouter();
 
     const [types, setTypes] = useState<SiteLogType[]>(initialTypes);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -29,32 +30,20 @@ export function SitelogSettingsView({ organizationId, initialTypes }: SitelogSet
         setTypes(initialTypes);
     }, [initialTypes]);
 
-    const handleOpenCreate = () => {
-        openModal(
-            <SiteLogTypeForm
-                organizationId={organizationId}
-            />,
-            {
-                title: "Crear Tipo",
-                description: "Define un nuevo tipo para clasificar tus registros.",
-                size: 'md'
-            }
-        );
-    };
+    const handleOpenCreate = useCallback(() => {
+        openPanel('sitelog-type-form', {
+            organizationId,
+            onSuccess: () => router.refresh(),
+        });
+    }, [organizationId, openPanel, router]);
 
-    const handleOpenEdit = (type: SiteLogType) => {
-        openModal(
-            <SiteLogTypeForm
-                organizationId={organizationId}
-                initialData={type}
-            />,
-            {
-                title: "Editar Tipo",
-                description: "Modifica el nombre de este tipo de bitácora.",
-                size: 'md'
-            }
-        );
-    };
+    const handleOpenEdit = useCallback((type: SiteLogType) => {
+        openPanel('sitelog-type-form', {
+            organizationId,
+            initialData: type,
+            onSuccess: () => router.refresh(),
+        });
+    }, [organizationId, openPanel, router]);
 
     const handleOpenDelete = (type: SiteLogType) => {
         setDeletingType(type);
@@ -66,7 +55,7 @@ export function SitelogSettingsView({ organizationId, initialTypes }: SitelogSet
         setIsDeleting(true);
 
         try {
-            await deleteSiteLogType(deletingType.id, replacementId || undefined);
+            await deleteSiteLogType(organizationId, deletingType.id, replacementId || undefined);
             setTypes(prev => prev.filter(t => t.id !== deletingType.id));
         } finally {
             setIsDeleting(false);
@@ -82,6 +71,7 @@ export function SitelogSettingsView({ organizationId, initialTypes }: SitelogSet
                     icon={Tags}
                     title="Tipos de Bitácora"
                     description="Gestiona las categorías para clasificar tus registros de bitácora. Los tipos de sistema no se pueden modificar."
+                    contentVariant="inset"
                     actions={[
                         {
                             label: "Agregar tipo",
@@ -99,6 +89,7 @@ export function SitelogSettingsView({ organizationId, initialTypes }: SitelogSet
                                 featureDescription="Los tipos de bitácora te permiten clasificar tus registros de obra por categoría. Puedes crear tipos como 'Incidente', 'Avance' o 'Inspección'."
                                 onAction={handleOpenCreate}
                                 actionLabel="Agregar tipo"
+                                totalCount={types.length}
                             />
                         ) : (
                             types.map((type) => (
