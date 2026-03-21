@@ -1,9 +1,31 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-19T23:49:30.234Z
+> Generated: 2026-03-20T17:04:16.493Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 2: unaccent — unaccent_lexize)
+## [PUBLIC] Functions (chunk 2: set_timestamp — unaccent_lexize)
+
+### `set_timestamp()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_timestamp()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$function$
+```
+</details>
 
 ### `unaccent(regdictionary, text)`
 

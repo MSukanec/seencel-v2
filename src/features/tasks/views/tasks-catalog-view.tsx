@@ -339,11 +339,11 @@ export function TasksCatalogView({
             { id: "description", label: "Descripción", required: false, description: "Detalle técnico", example: "Muro de ladrillo hueco de 18cm" },
             {
                 id: "unit_name", label: "Unidad de Medida", required: false, example: "m²",
-                foreignKey: { table: 'units', labelField: 'name', valueField: 'id', fetchOptions: async () => taskUnits.map(u => ({ id: u.id, label: `${u.name} (${u.symbol})` })), allowCreate: true }
+                foreignKey: { table: 'units', labelField: 'name', valueField: 'id', fetchOptions: async () => taskUnits.map(u => ({ id: u.id, label: `${u.name ?? ""} (${u.symbol})` })), allowCreate: true }
             },
             {
                 id: "division_name", label: "Rubro", required: false, example: "Albañilería",
-                foreignKey: { table: 'task_divisions', labelField: 'name', valueField: 'id', fetchOptions: async () => divisions.map(d => ({ id: d.id, label: d.name })), allowCreate: true }
+                foreignKey: { table: 'task_divisions', labelField: 'name', valueField: 'id', fetchOptions: async () => divisions.map(d => ({ id: d.id, label: d.name ?? "" })), allowCreate: true }
             },
         ],
         aiAnalyzer: {

@@ -35,6 +35,7 @@ import {
 // Legacy actions — still needed by PricePulsePopover wrapper
 import { upsertMaterialPrice } from "@/features/materials/actions";
 import { upsertLaborPrice } from "@/features/labor/actions";
+import { upsertExternalServicePrice } from "@/features/tasks/actions";
 
 // ============================================================================
 // Types (unchanged — kept for backwards compat)
@@ -79,6 +80,13 @@ export function PricePulsePopover({
         if (data.resourceType === "labor") {
             await upsertLaborPrice({
                 labor_type_id: data.resourceId,
+                organization_id: data.organizationId,
+                currency_id: data.currencyId,
+                unit_price: newPrice,
+            });
+        } else if (data.resourceType === "external_service" || data.resourceType === "subcontract") {
+            await upsertExternalServicePrice({
+                service_id: data.resourceId,
                 organization_id: data.organizationId,
                 currency_id: data.currencyId,
                 unit_price: newPrice,

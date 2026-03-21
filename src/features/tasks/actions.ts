@@ -1281,7 +1281,7 @@ export async function createRecipe(data: TaskRecipeFormData) {
         .insert({
             task_id: data.task_id,
             organization_id: activeOrgId,
-            name: data.name,
+            name: data.name || null,
             is_public: data.is_public,
             region: data.region || null,
         })
@@ -1293,7 +1293,8 @@ export async function createRecipe(data: TaskRecipeFormData) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true, data: result };
 }
 
@@ -1320,7 +1321,8 @@ export async function updateRecipe(
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1343,7 +1345,8 @@ export async function updateRecipeVisibility(
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1390,7 +1393,8 @@ export async function deleteRecipe(recipeId: string) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1408,7 +1412,7 @@ export async function getRecipeMaterials(recipeId: string): Promise<TaskRecipeMa
         .schema('catalog').from("task_recipe_materials")
         .select(`
             *,
-            materials!inner(name, code),
+            materials!inner(name, code, unit_id),
             units(name, symbol)
         `)
         .eq("recipe_id", recipeId)
@@ -1419,15 +1423,39 @@ export async function getRecipeMaterials(recipeId: string): Promise<TaskRecipeMa
         return [];
     }
 
-    return (data || []).map((row: any) => ({
-        ...row,
-        material_name: row.materials?.name,
-        material_code: row.materials?.code,
-        unit_name: row.units?.name,
-        unit_symbol: row.units?.symbol,
-        materials: undefined,
-        units: undefined,
-    })).sort((a: any, b: any) => (a.material_name || "").localeCompare(b.material_name || "")) as TaskRecipeMaterial[];
+    const rows = data || [];
+
+    // Batch-fetch units for materials whose recipe-level unit_id is null
+    const missingUnitIds = [...new Set(
+        rows.filter((r: any) => !r.unit_id && r.materials?.unit_id)
+            .map((r: any) => r.materials.unit_id)
+    )];
+
+    const unitMap = new Map<string, { name: string; symbol: string }>();
+    if (missingUnitIds.length > 0) {
+        const { data: unitData } = await supabase
+            .schema('catalog').from("units")
+            .select("id, name, symbol")
+            .in("id", missingUnitIds);
+        for (const u of (unitData || []) as any[]) {
+            unitMap.set(u.id, { name: u.name, symbol: u.symbol });
+        }
+    }
+
+    return rows.map((row: any) => {
+        const recipeUnit = row.units;
+        const catalogUnit = row.materials?.unit_id ? unitMap.get(row.materials.unit_id) : null;
+        const effectiveUnit = recipeUnit || catalogUnit;
+        return {
+            ...row,
+            material_name: row.materials?.name,
+            material_code: row.materials?.code,
+            unit_name: effectiveUnit?.name || null,
+            unit_symbol: effectiveUnit?.symbol || null,
+            materials: undefined,
+            units: undefined,
+        };
+    }).sort((a: any, b: any) => (a.material_name || "").localeCompare(b.material_name || "")) as TaskRecipeMaterial[];
 }
 
 /**
@@ -1457,7 +1485,8 @@ export async function addRecipeMaterial(data: TaskRecipeMaterialFormData) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true, data: result };
 }
 
@@ -1487,7 +1516,8 @@ export async function updateRecipeMaterial(
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1510,7 +1540,8 @@ export async function deleteRecipeMaterial(itemId: string) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1528,7 +1559,7 @@ export async function getRecipeLabor(recipeId: string): Promise<TaskRecipeLabor[
         .schema('catalog').from("task_recipe_labor")
         .select(`
             *,
-            labor_types!inner(name),
+            labor_types!inner(name, unit_id),
             units(name, symbol)
         `)
         .eq("recipe_id", recipeId)
@@ -1539,14 +1570,38 @@ export async function getRecipeLabor(recipeId: string): Promise<TaskRecipeLabor[
         return [];
     }
 
-    return (data || []).map((row: any) => ({
-        ...row,
-        labor_name: row.labor_types?.name,
-        unit_name: row.units?.name,
-        unit_symbol: row.units?.symbol,
-        labor_types: undefined,
-        units: undefined,
-    })).sort((a: any, b: any) => (a.labor_name || "").localeCompare(b.labor_name || "")) as TaskRecipeLabor[];
+    const rows = data || [];
+
+    // Batch-fetch units for labor types whose recipe-level unit_id is null
+    const missingUnitIds = [...new Set(
+        rows.filter((r: any) => !r.unit_id && r.labor_types?.unit_id)
+            .map((r: any) => r.labor_types.unit_id)
+    )];
+
+    const unitMap = new Map<string, { name: string; symbol: string }>();
+    if (missingUnitIds.length > 0) {
+        const { data: unitData } = await supabase
+            .schema('catalog').from("units")
+            .select("id, name, symbol")
+            .in("id", missingUnitIds);
+        for (const u of (unitData || []) as any[]) {
+            unitMap.set(u.id, { name: u.name, symbol: u.symbol });
+        }
+    }
+
+    return rows.map((row: any) => {
+        const recipeUnit = row.units;
+        const catalogUnit = row.labor_types?.unit_id ? unitMap.get(row.labor_types.unit_id) : null;
+        const effectiveUnit = recipeUnit || catalogUnit;
+        return {
+            ...row,
+            labor_name: row.labor_types?.name,
+            unit_name: effectiveUnit?.name || null,
+            unit_symbol: effectiveUnit?.symbol || null,
+            labor_types: undefined,
+            units: undefined,
+        };
+    }).sort((a: any, b: any) => (a.labor_name || "").localeCompare(b.labor_name || "")) as TaskRecipeLabor[];
 }
 
 /**
@@ -1575,7 +1630,8 @@ export async function addRecipeLabor(data: TaskRecipeLaborFormData) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true, data: result };
 }
 
@@ -1604,7 +1660,8 @@ export async function updateRecipeLabor(
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1627,7 +1684,8 @@ export async function deleteRecipeLabor(itemId: string) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1726,7 +1784,7 @@ export async function addRecipeExternalService(
         .schema('catalog').from("task_recipe_external_services")
         .insert({
             recipe_id: data.recipe_id,
-            name: data.name,
+            name: data.name || null,
             unit_id: data.unit_id || null,
             unit_price: data.unit_price,
             currency_id: data.currency_id,
@@ -1761,7 +1819,8 @@ export async function addRecipeExternalService(
         }
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true, data: result };
 }
 
@@ -1777,7 +1836,7 @@ export async function updateRecipeExternalService(
     const { error } = await supabase
         .schema('catalog').from("task_recipe_external_services")
         .update({
-            name: data.name,
+            name: data.name || null,
             unit_id: data.unit_id,
             unit_price: data.unit_price,
             currency_id: data.currency_id,
@@ -1832,7 +1891,8 @@ export async function updateRecipeExternalService(
         }
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1855,7 +1915,54 @@ export async function deleteRecipeExternalService(itemId: string) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
+    return { success: true };
+}
+
+/**
+ * Upsert an external service price (inline edit from recipe detail)
+ * Creates a new historical price record + updates the service's unit_price
+ */
+export async function upsertExternalServicePrice(input: {
+    service_id: string;
+    organization_id: string;
+    currency_id: string;
+    unit_price: number;
+}) {
+    const supabase = await createClient();
+
+    // 1. Close any existing open price (set valid_to to today)
+    await supabase
+        .schema('catalog').from('external_service_prices')
+        .update({ valid_to: new Date().toISOString().split('T')[0] })
+        .eq('recipe_external_service_id', input.service_id)
+        .is('valid_to', null);
+
+    // 2. Insert new price record
+    const { error: priceError } = await supabase
+        .schema('catalog').from('external_service_prices')
+        .insert({
+            recipe_external_service_id: input.service_id,
+            organization_id: input.organization_id,
+            currency_id: input.currency_id,
+            unit_price: input.unit_price,
+            // valid_from defaults to CURRENT_DATE in DB
+        });
+
+    if (priceError) {
+        console.error("Error upserting external service price:", priceError);
+        throw new Error("Error al guardar el precio: " + sanitizeError(priceError));
+    }
+
+    // 3. Also update the unit_price on the service record itself
+    await supabase
+        .schema('catalog').from('task_recipe_external_services')
+        .update({ unit_price: input.unit_price })
+        .eq('id', input.service_id);
+
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1880,7 +1987,8 @@ export async function removeAllRecipeMaterials(recipeId: string) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1905,7 +2013,8 @@ export async function removeAllRecipeLabor(recipeId: string) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -1975,7 +2084,8 @@ export async function rateRecipe(data: TaskRecipeRatingFormData) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 
@@ -2010,7 +2120,8 @@ export async function adoptRecipe(taskId: string, recipeId: string) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog", "layout");
+    revalidatePath("/admin/catalog", "layout");
     return { success: true };
 }
 

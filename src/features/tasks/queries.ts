@@ -342,7 +342,7 @@ export async function getCompatibleElements(actionId: string) {
         expression_template: row.task_elements.expression_template ?? null,
     })) as TaskElement[];
 
-    elements.sort((a, b) => a.name.localeCompare(b.name));
+    elements.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
 
     return { data: elements, error: null };
 }
@@ -381,7 +381,7 @@ export async function getCompatibleActionsForElement(elementId: string) {
     })) as TaskAction[];
 
     // Sort by name
-    actions.sort((a, b) => a.name.localeCompare(b.name));
+    actions.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
 
     return { data: actions, error: null };
 }

@@ -118,8 +118,8 @@ export function getTaskColumns(
         .filter(d => !d.parent_id)
         .sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
         .map(d => ({
-            value: d.name,
-            label: d.order != null ? `${d.order}. ${d.name}` : d.name,
+            value: d.name ?? "",
+            label: d.order != null ? `${d.order}. ${d.name ?? ""}` : (d.name ?? ""),
         }));
 
     return [
@@ -180,7 +180,7 @@ export function getTaskColumns(
             editable: !!onInlineUpdate,
             unitOptions: units.map(u => ({
                 value: u.id,
-                label: u.name,
+                label: u.name ?? "",
                 symbol: u.symbol || undefined,
             })),
             onUpdate: onInlineUpdate

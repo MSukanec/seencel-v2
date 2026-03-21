@@ -361,12 +361,12 @@ export function TasksTemplatesView({
         return templates
             .filter((t) =>
                 !q ||
-                t.name.toLowerCase().includes(q) ||
+                (t.name ?? "").toLowerCase().includes(q) ||
                 (t.action_name ?? "").toLowerCase().includes(q) ||
                 (t.element_name ?? "").toLowerCase().includes(q) ||
                 (t.system_name ?? "").toLowerCase().includes(q)
             )
-            .sort((a, b) => a.name.localeCompare(b.name));
+            .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
     }, [templates, searchQuery]);
 
     const toggleExpand = (id: string) => {

@@ -17,3 +17,4 @@ export { SidebarLayout } from "./dashboard/sidebar/sidebar-layout";
 
 // Shared dashboard components
 export { PageHeaderActionPortal } from "./dashboard/header/page-header";
+export { PageIntro } from "./dashboard/shell/page-intro";

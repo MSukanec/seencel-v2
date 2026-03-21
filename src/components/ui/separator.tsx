@@ -14,10 +14,15 @@ const Separator = React.forwardRef<
         decorative={decorative}
         orientation={orientation}
         className={cn(
-            "shrink-0 bg-border",
-            orientation === "horizontal" ? "h-[1px] w-full" : "h-full w-[1px]",
+            "shrink-0 border-none bg-transparent",
+            orientation === "horizontal" ? "h-px w-full" : "w-px h-full",
             className
         )}
+        style={{
+            boxShadow: orientation === "horizontal"
+                ? "0 -1px 0 0 rgba(0,0,0,0.15), 0 1px 0 0 rgba(255,255,255,0.04)"
+                : "-1px 0 0 0 rgba(0,0,0,0.15), 1px 0 0 0 rgba(255,255,255,0.04)",
+        }}
         {...props}
     />
 ))

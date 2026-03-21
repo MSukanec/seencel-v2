@@ -62,7 +62,7 @@ export function TasksSistemasView({
         if (!searchQuery.trim()) return systems;
         const q = searchQuery.toLowerCase();
         return systems.filter(s =>
-            s.name.toLowerCase().includes(q) ||
+            (s.name ?? "").toLowerCase().includes(q) ||
             (s.code && s.code.toLowerCase().includes(q)) ||
             (s.description && s.description.toLowerCase().includes(q)) ||
             (s.category && s.category.toLowerCase().includes(q))
@@ -70,7 +70,7 @@ export function TasksSistemasView({
     }, [systems, searchQuery]);
 
     const sortedSystems = useMemo(() =>
-        [...filteredSystems].sort((a, b) => a.name.localeCompare(b.name)),
+        [...filteredSystems].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")),
         [filteredSystems]
     );
 

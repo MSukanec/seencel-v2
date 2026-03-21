@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getUserOrganizations } from "@/features/organization/queries";
+import { getAuthContext } from "@/lib/auth";
 import { ConstructionTaskView } from "./types";
 
 /**
@@ -8,15 +8,16 @@ import { ConstructionTaskView } from "./types";
  */
 export async function getOrganizationConstructionTasks(): Promise<ConstructionTaskView[]> {
     const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    const ctx = await getAuthContext();
 
-    if (!activeOrgId) return [];
+    if (!ctx?.orgId) return [];
 
     const { data, error } = await supabase
         .schema('construction').from("construction_tasks_view")
         .select("*")
-        .eq("organization_id", activeOrgId)
-        .order("created_at", { ascending: false });
+        .eq("organization_id", ctx.orgId)
+        .order("created_at", { ascending: false })
+        .limit(500);
 
     if (error) {
         console.error("Error fetching org construction tasks:", error);
@@ -32,9 +33,9 @@ export async function getOrganizationConstructionTasks(): Promise<ConstructionTa
  */
 export async function getOrganizationConstructionDependencies(): Promise<ConstructionDependencyRow[]> {
     const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    const ctx = await getAuthContext();
 
-    if (!activeOrgId) return [];
+    if (!ctx?.orgId) return [];
 
     const { data, error } = await supabase
         .schema('construction').from("construction_dependencies")
@@ -46,7 +47,7 @@ export async function getOrganizationConstructionDependencies(): Promise<Constru
             lag_days,
             predecessor:construction_tasks!construction_dependencies_predecessor_task_id_fkey(organization_id)
         `)
-        .eq("predecessor.organization_id", activeOrgId);
+        .eq("predecessor.organization_id", ctx.orgId);
 
     if (error) {
         console.error("Error fetching org construction dependencies:", error);
@@ -73,7 +74,8 @@ export async function getProjectConstructionTasks(projectId: string): Promise<Co
         .schema('construction').from("construction_tasks_view")
         .select("*")
         .eq("project_id", projectId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
     if (error) {
         console.error("Error fetching construction tasks:", error);

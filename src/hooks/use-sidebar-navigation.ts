@@ -267,6 +267,7 @@ export function useSidebarNavigation() {
                         { title: 'Proyectos', href: '/settings/projects', icon: Building },
                         { title: 'Contactos', href: '/settings/contacts', icon: BookUser },
                         { title: 'Archivos', href: '/settings/files', icon: FolderOpen },
+                        { title: 'IA', href: '/settings/ai', icon: Sparkles },
                         { title: 'Finanzas', href: '/settings/finance', icon: DollarSign },
                         { title: 'Unidades', href: '/settings/units', icon: Ruler },
                         { title: 'Plantillas', href: '/settings/templates', icon: FileType, status: 'maintenance' as const, disabled: !canBypassRestrictions },
@@ -397,10 +398,16 @@ export function useSidebarNavigation() {
                 id: 'construccion',
                 label: 'Construcción',
                 items: [
-                    getItemStatus('sidebar_tasks', { title: 'Tareas', href: '/organization/construction-tasks', icon: ClipboardList }),
-                    getItemStatus('sidebar_materials', { title: 'Materiales', href: '/organization/materials', icon: Package }),
-                    getItemStatus('sidebar_labor', { title: 'Mano de Obra', href: '/organization/labor', icon: HardHat }),
-                    getItemStatus('sidebar_subcontracts', { title: 'Subcontratos', href: '/organization/subcontracts', icon: Handshake }),
+                    getItemStatus('sidebar_tasks', {
+                        title: 'Tareas',
+                        href: '/organization/construction-tasks',
+                        icon: ClipboardList,
+                        children: [
+                            { title: 'Tareas', href: '/organization/construction-tasks', icon: ClipboardList },
+                            { title: 'Catálogo', href: '/organization/construction-tasks/catalog', icon: Wrench },
+                            { title: 'Ajustes', href: '/organization/construction-tasks/settings', icon: Settings },
+                        ],
+                    }),
                     getItemStatus('sidebar_sitelog', {
                         title: tSidebar('items.sitelog'),
                         href: '/organization/sitelog',
@@ -410,6 +417,9 @@ export function useSidebarNavigation() {
                             { title: 'Ajustes', href: '/organization/sitelog/settings', icon: Settings },
                         ],
                     }),
+                    getItemStatus('sidebar_materials', { title: 'Materiales', href: '/organization/materials', icon: Package }),
+                    getItemStatus('sidebar_labor', { title: 'Mano de Obra', href: '/organization/labor', icon: HardHat }),
+                    getItemStatus('sidebar_subcontracts', { title: 'Subcontratos', href: '/organization/subcontracts', icon: Handshake }),
                     getItemStatus('sidebar_health', { title: 'Salud', href: '/organization/health', icon: HeartPulse }),
                 ].filter((i): i is NavItem => i !== null),
             },

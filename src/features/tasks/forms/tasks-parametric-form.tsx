@@ -436,7 +436,7 @@ export function TasksParametricForm({
         const filtered = templates.filter(
             (t) =>
                 !templateSearch ||
-                t.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
+                (t.name ?? "").toLowerCase().includes(templateSearch.toLowerCase()) ||
                 (t.action_name ?? "").toLowerCase().includes(templateSearch.toLowerCase()) ||
                 (t.element_name ?? "").toLowerCase().includes(templateSearch.toLowerCase())
         );

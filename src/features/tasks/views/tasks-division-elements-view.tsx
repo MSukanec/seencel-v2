@@ -42,7 +42,7 @@ export function TasksDivisionElementsView({
         if (!searchQuery.trim()) return allElements;
         const query = searchQuery.toLowerCase();
         return allElements.filter(e =>
-            e.name.toLowerCase().includes(query) ||
+            (e.name ?? "").toLowerCase().includes(query) ||
             e.code?.toLowerCase().includes(query) ||
             e.description?.toLowerCase().includes(query)
         );
@@ -95,7 +95,7 @@ export function TasksDivisionElementsView({
                     <CheckboxGrid
                         items={filteredElements.map(e => ({
                             id: e.id,
-                            name: e.name,
+                            name: e.name ?? "",
                             code: e.code,
                             description: e.description
                         }))}

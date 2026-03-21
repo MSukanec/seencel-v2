@@ -114,6 +114,19 @@ interface ViewEmptyStateProps {
     actionIcon?: LucideIcon;
 
     /**
+     * Only for mode="empty": Optional secondary action button.
+     * Renders next to the primary action button in its own row,
+     * with docs moved to a separate row below.
+     */
+    secondaryAction?: {
+        label: string;
+        onClick: () => void;
+        icon?: LucideIcon;
+        /** Custom className for the button (e.g. violet AI styling) */
+        className?: string;
+    };
+
+    /**
      * Only for mode="empty": Path to documentation page.
      */
     docsPath?: string;
@@ -318,6 +331,7 @@ export function ViewEmptyState({
     onAction,
     actionLabel,
     actionIcon: ActionIcon = Plus,
+    secondaryAction,
     docsPath,
     onResetFilters,
     filterContext,
@@ -467,43 +481,48 @@ export function ViewEmptyState({
             )}
 
             {/* Action Buttons */}
-            <div className={cn(
-                "relative z-10 flex items-center gap-3",
-                (hasPacks || hasSteps) ? "mt-5" : "mt-6",
-                "animate-in slide-in-from-bottom-2 fade-in duration-500 delay-150"
-            )}>
-                {isEmptyMode ? (
-                    <>
+            {(isEmptyMode || isContextEmpty) && (
+                <div className={cn(
+                    "relative z-10 flex flex-col items-center gap-3",
+                    (hasPacks || hasSteps) ? "mt-5" : "mt-6",
+                    "animate-in slide-in-from-bottom-2 fade-in duration-500 delay-150"
+                )}>
+                    {/* Row 1: Primary + Secondary action buttons */}
+                    <div className="flex items-center gap-2">
                         {onAction && actionLabel && (
                             <Button onClick={onAction} size="sm">
                                 <ActionIcon className="mr-2 h-4 w-4" />
                                 {actionLabel}
                             </Button>
                         )}
-                        {docsPath && hasDocsForPath(docsPath) && (
-                            <DocsButton docsPath={docsPath} />
-                        )}
-                    </>
-                ) : isContextEmpty ? (
-                    <>
-                        {onAction && actionLabel && (
-                            <Button onClick={onAction} size="sm">
-                                <ActionIcon className="mr-2 h-4 w-4" />
-                                {actionLabel}
-                            </Button>
-                        )}
-                        {docsPath && hasDocsForPath(docsPath) && (
-                            <DocsButton docsPath={docsPath} />
-                        )}
-                        {onSwitchToOrg && (
+                        {isEmptyMode && secondaryAction && (() => {
+                            const SecIcon = secondaryAction.icon;
+                            return (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={secondaryAction.onClick}
+                                    className={secondaryAction.className}
+                                >
+                                    {SecIcon && <SecIcon className="mr-2 h-4 w-4" />}
+                                    {secondaryAction.label}
+                                </Button>
+                            );
+                        })()}
+                        {isContextEmpty && onSwitchToOrg && (
                             <Button variant="outline" size="sm" onClick={onSwitchToOrg}>
                                 <ArrowRight className="mr-2 h-4 w-4" />
                                 Ver todos
                             </Button>
                         )}
-                    </>
-                ) : null}
-            </div>
+                    </div>
+
+                    {/* Row 2: Documentation button */}
+                    {docsPath && hasDocsForPath(docsPath) && (
+                        <DocsButton docsPath={docsPath} />
+                    )}
+                </div>
+            )}
         </div>
     );
 }

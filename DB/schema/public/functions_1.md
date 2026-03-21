@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-19T23:49:30.234Z
+> Generated: 2026-03-20T17:04:16.493Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 1: can_mutate_org — set_timestamp)
+## [PUBLIC] Functions (chunk 1: can_mutate_org — log_ai_org_limit_activity)
 
 ### `can_mutate_org(p_organization_id uuid, p_permission_key text)` 🔐
 
@@ -62,25 +62,6 @@ $function$
 ```
 </details>
 
-### `can_view_org(p_organization_id uuid, p_permission_key text)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid, p_permission_key text)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$
-  SELECT iam.can_view_org(p_organization_id, p_permission_key);
-$function$
-```
-</details>
-
 ### `can_view_org(p_organization_id uuid)` 🔐
 
 - **Returns**: boolean
@@ -96,6 +77,25 @@ CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid)
  SET search_path TO 'public', 'iam'
 AS $function$
   SELECT iam.can_view_org(p_organization_id);
+$function$
+```
+</details>
+
+### `can_view_org(p_organization_id uuid, p_permission_key text)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid, p_permission_key text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.can_view_org(p_organization_id, p_permission_key);
 $function$
 ```
 </details>
@@ -419,7 +419,7 @@ $function$
 ```
 </details>
 
-### `set_timestamp()` 🔐
+### `log_ai_org_limit_activity()` 🔐
 
 - **Returns**: trigger
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -427,16 +427,47 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION public.set_timestamp()
+CREATE OR REPLACE FUNCTION public.log_ai_org_limit_activity()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
 AS $function$
-begin
-  new.updated_at := now();
-  return new;
-end;
+DECLARE
+    resolved_member_id uuid;
+    audit_action text;
+    audit_metadata jsonb;
+    target_record RECORD;
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        target_record := OLD; audit_action := 'delete_ai_org_limit';
+        resolved_member_id := OLD.updated_by;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        target_record := NEW;
+        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
+            audit_action := 'delete_ai_org_limit';
+        ELSE
+            audit_action := 'update_ai_org_limit';
+        END IF;
+        resolved_member_id := NEW.updated_by;
+    ELSIF (TG_OP = 'INSERT') THEN
+        target_record := NEW; audit_action := 'create_ai_org_limit';
+        resolved_member_id := NEW.created_by;
+    END IF;
+
+    audit_metadata := jsonb_build_object('plan', target_record.plan);
+
+    BEGIN
+        INSERT INTO audit.organization_activity_logs (
+            organization_id, member_id, action, target_id, target_table, metadata
+        ) VALUES (
+            target_record.organization_id, resolved_member_id,
+            audit_action, target_record.organization_id, 'ai_organization_usage_limits', audit_metadata
+        );
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+
+    RETURN NULL;
+END;
 $function$
 ```
 </details>

@@ -58,7 +58,7 @@ export interface TaskView extends Task {
 
 export interface TaskDivision {
     id: string;
-    name: string;
+    name: string | null;
     code?: string | null;
     color?: string;
     description?: string;
@@ -73,7 +73,7 @@ export interface TaskDivision {
 
 export interface Unit {
     id: string;
-    name: string;
+    name: string | null;
     symbol: string;
     applicable_to?: string[];
 }
@@ -124,7 +124,7 @@ export interface TaskParameterOption {
 // Task Action (Action type: Ejecución, Demolición, Limpieza, etc.)
 export interface TaskAction {
     id: string;
-    name: string;
+    name: string | null;
     short_code: string | null;
     description: string | null;
     action_type: string | null;
@@ -135,7 +135,7 @@ export interface TaskAction {
 // Task Element (Object: Contrapiso, Muro, etc.)
 export interface TaskElement {
     id: string;
-    name: string;
+    name: string | null;
     slug: string;
     code: string | null; // Short code like MUR, CTR, VIG
     description: string | null;
@@ -148,7 +148,7 @@ export interface TaskElement {
 // Task Construction System (Sistema Constructivo: Estructura, Mampostería, etc.)
 export interface TaskConstructionSystem {
     id: string;
-    name: string;
+    name: string | null;
     slug: string;
     code: string | null; // Short code like EST, MAM, REV
     description: string | null;
@@ -163,7 +163,7 @@ export interface TaskConstructionSystem {
 // Task Template (admin-defined shape: action + element + system + which params)
 export interface TaskTemplate {
     id: string;
-    name: string;
+    name: string | null;
     code: string | null;
     description: string | null;
     task_action_id: string;
@@ -302,7 +302,7 @@ export interface TaskRecipeExternalService {
     id: string;
     recipe_id: string;
     organization_id: string;
-    name: string;
+    name: string | null;
     unit_id: string | null;
     unit_price: number;
     currency_id: string;
@@ -383,7 +383,7 @@ export type TaskRecipeLaborFormData = z.infer<typeof taskRecipeLaborSchema>;
 
 export const taskRecipeExternalServiceSchema = z.object({
     recipe_id: z.string().uuid(),
-    name: z.string().min(1, "El nombre del servicio es obligatorio"),
+    name: z.string().nullable().optional(),
     unit_id: z.string().uuid().nullable().optional(),
     unit_price: z.coerce.number().min(0, "El precio no puede ser negativo").default(0),
     currency_id: z.string().uuid("Seleccioná una moneda"),

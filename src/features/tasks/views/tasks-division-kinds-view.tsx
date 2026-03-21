@@ -36,7 +36,7 @@ export function TasksDivisionActionsView({
         if (!searchQuery.trim()) return allActions;
         const query = searchQuery.toLowerCase();
         return allActions.filter(k =>
-            k.name.toLowerCase().includes(query) ||
+            (k.name ?? "").toLowerCase().includes(query) ||
             k.short_code?.toLowerCase().includes(query) ||
             k.description?.toLowerCase().includes(query)
         );
@@ -76,7 +76,7 @@ export function TasksDivisionActionsView({
                     <CheckboxGrid
                         items={filteredActions.map(k => ({
                             id: k.id,
-                            name: k.name,
+                            name: k.name ?? "",
                             code: k.short_code,
                             description: k.description
                         }))}

@@ -8,6 +8,7 @@ import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { SelectField, type SelectOption } from "@/components/shared/forms/fields/select-field";
+import { SegmentedField, type SegmentedOption } from "@/components/shared/forms/fields/segmented-field";
 import {
     AmountField,
     CurrencyField,
@@ -25,7 +26,7 @@ import {
     AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Package } from "lucide-react";
+import { AlertTriangle, Package, HardHat, Handshake } from "lucide-react";
 import {
     addRecipeMaterial,
     addRecipeLabor,
@@ -124,16 +125,16 @@ interface TasksRecipeResourceFormProps {
 // Resource Type Options
 // ============================================================================
 
-const RESOURCE_TYPE_OPTIONS: SelectOption[] = [
-    { value: "material", label: "Material" },
-    { value: "labor", label: "Mano de Obra" },
-    { value: "external_service", label: "Servicio Subcontratado" },
+const RESOURCE_TYPE_OPTIONS: SegmentedOption<ResourceType>[] = [
+    { value: "material", label: "Material", icon: Package },
+    { value: "labor", label: "Mano de Obra", icon: HardHat },
+    { value: "external_service", label: "Servicio Subcontratado", icon: Handshake },
 ];
 
 const RESOURCE_TYPE_DESCRIPTIONS: Record<string, string> = {
     material: "Productos físicos e insumos del catálogo",
     labor: "Trabajo humano por oficio o especialidad",
-    external_service: "Trabajo tercerizado con precio propio",
+    external_service: "Precio referencial estimado para trabajo tercerizado",
 };
 
 // ============================================================================
@@ -178,7 +179,7 @@ export function TasksRecipeResourceForm({
     const [notes, setNotes] = useState(editData?.notes || "");
 
     // State — external service specific
-    const [serviceName, setServiceName] = useState(editData?.serviceName || "");
+    
     const [unitPrice, setUnitPrice] = useState<string>(
         editData?.unitPrice != null ? String(editData.unitPrice) : ""
     );
@@ -200,7 +201,7 @@ export function TasksRecipeResourceForm({
         if (isEditMode) return; // Blocked in edit mode
         setResourceType(value);
         setSelectedId("");
-        setServiceName("");
+        
         setUnitPrice("");
         setContactId("");
         setIncludesMaterials(false);
@@ -301,7 +302,7 @@ export function TasksRecipeResourceForm({
             // 1. Add the external service
             const result = await addRecipeExternalService({
                 recipe_id: recipeId,
-                name: serviceName.trim(),
+                name: null,
                 unit_price: parseFloat(unitPrice) || 0,
                 currency_id: currencyId,
                 contact_id: contactId || null,
@@ -348,7 +349,7 @@ export function TasksRecipeResourceForm({
             setSubmitting(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [recipeId, serviceName, unitPrice, currencyId, contactId, includesMaterials, notes]);
+    }, [recipeId, unitPrice, currencyId, contactId, includesMaterials, notes]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -365,12 +366,12 @@ export function TasksRecipeResourceForm({
             return;
         }
         if (resourceType === "external_service") {
-            if (!serviceName.trim()) {
-                toast.error("El nombre del servicio es obligatorio");
-                return;
-            }
             if (!currencyId) {
                 toast.error("Seleccioná una moneda");
+                return;
+            }
+            if (unitPrice === "" || unitPrice === undefined) {
+                toast.error("Ingresá el precio unitario");
                 return;
             }
         }
@@ -385,7 +386,7 @@ export function TasksRecipeResourceForm({
             setIsLoading(true);
             try {
                 const result = await updateRecipeExternalService(editData.itemId, {
-                    name: serviceName.trim(),
+                    name: null,
                     unit_price: parseFloat(unitPrice) || 0,
                     currency_id: currencyId,
                     contact_id: contactId || null,
@@ -545,12 +546,18 @@ export function TasksRecipeResourceForm({
             : resourceType === "labor" ? "Mano de Obra"
             : "Servicio Subcontratado";
 
+        const externalServiceDesc = isEditMode
+            ? "Ajustá el precio referencial de este servicio."
+            : "Estimá el costo esperado de un servicio tercerizado para esta tarea.";
+
         setPanelMeta({
             icon: Package,
             title: isEditMode ? `Editar ${typeLabel}` : "Agregar Recurso",
-            description: isEditMode
-                ? `Modificá los datos del ${typeLabel.toLowerCase()}.`
-                : "Seleccióná el tipo de recurso y completá los datos.",
+            description: resourceType === "external_service"
+                ? externalServiceDesc
+                : isEditMode
+                    ? `Modificá los datos del ${typeLabel.toLowerCase()}.`
+                    : "Seleccioná el tipo de recurso y completá los datos.",
             size: "md",
             footer: {
                 submitLabel: isEditMode ? l.submitEdit : l.submit,
@@ -563,24 +570,18 @@ export function TasksRecipeResourceForm({
             <form id={formId} onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Resource Type Selector */}
-                        <SelectField
-                            label="Tipo de Recurso"
-                            required
-                            className="md:col-span-2"
-                            value={resourceType}
-                            onChange={(v) => handleResourceTypeChange(v as ResourceType)}
-                            placeholder="Seleccionar tipo..."
-                            options={RESOURCE_TYPE_OPTIONS}
-                            disabled={isEditMode}
-                            renderOption={(option) => (
-                                <div className="flex flex-col items-start text-left">
-                                    <span className="font-medium">{option.label}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {RESOURCE_TYPE_DESCRIPTIONS[option.value]}
-                                    </span>
-                                </div>
-                            )}
-                        />
+                        <FormGroup label="Tipo de Recurso" required className="md:col-span-2">
+                            <SegmentedField
+                                value={resourceType}
+                                onChange={(v) => handleResourceTypeChange(v as ResourceType)}
+                                options={RESOURCE_TYPE_OPTIONS}
+                                disabled={isEditMode}
+                                className="h-10 p-1"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1.5 ml-1">
+                                {RESOURCE_TYPE_DESCRIPTIONS[resourceType]}
+                            </p>
+                        </FormGroup>
 
                         {/* ── Material / Labor: Catalog Combobox ── */}
                         {resourceType !== "external_service" && (
@@ -605,22 +606,16 @@ export function TasksRecipeResourceForm({
                         {/* ── Servicio Subcontratado: Inline fields ── */}
                         {resourceType === "external_service" && (
                             <>
-                                <FormGroup label="Nombre del Servicio" required className="md:col-span-2">
-                                    <Input
-                                        value={serviceName}
-                                        onChange={(e) => setServiceName(e.target.value)}
-                                        placeholder="Ej: Instalación eléctrica, Pintura exterior..."
-                                        autoFocus
-                                    />
-                                </FormGroup>
+
 
                                 {contacts.length > 0 && (
                                     <ContactField
                                         value={contactId}
                                         onChange={setContactId}
                                         contacts={contactFieldData}
-                                        label="Proveedor"
-                                        placeholder="Seleccionar proveedor (opcional)"
+                                        label="Contacto de referencia"
+                                        placeholder="Asociar contacto (opcional)"
+                                        noneLabel="Sin contacto de referencia"
                                     />
                                 )}
 

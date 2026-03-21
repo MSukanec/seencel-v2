@@ -20,7 +20,7 @@ import {
     updateRecipeStatus,
     updateRecipe,
 } from "@/features/tasks/actions";
-import type { EditRecipeData, TaskContext } from "@/features/tasks/forms/tasks-recipe-form";
+import type { EditRecipeData } from "@/features/tasks/forms/tasks-recipe-form";
 import type { TaskView, TaskRecipeView } from "@/features/tasks/types";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { ToolbarCard } from "@/components/shared/toolbar-controls";
@@ -132,40 +132,10 @@ export function TasksDetailRecipeView({
     // ========================================================================
 
     const handleCreateRecipe = useCallback(() => {
-        const taskContext: TaskContext = {
-            name: task.name ?? task.code ?? "Tarea sin nombre",
-            unit: task.unit_symbol ?? task.unit_name ?? null,
-            division: task.division_name ?? null,
-            organizationId: organizationId,
-            action: task.action_name ?? null,
-            element: task.element_name ?? null,
-            parameterValues: task.parameter_values ?? undefined,
-            catalogMaterials: catalogMaterials?.map((m) => {
-                const saleQty = m.default_sale_unit_quantity ?? 1;
-                const effectiveUnitPrice = m.org_unit_price != null && m.org_unit_price > 0
-                    ? m.org_unit_price / (saleQty > 0 ? saleQty : 1)
-                    : null;
-                return {
-                    id: m.id,
-                    name: m.name,
-                    unit_symbol: m.unit_symbol ?? null,
-                    unit_price: effectiveUnitPrice,
-                    currency_symbol: null,
-                };
-            }),
-            catalogLaborTypes: catalogLaborTypes?.map((l) => ({
-                id: l.id,
-                name: l.name,
-                unit_symbol: l.unit_symbol ?? null,
-                unit_price: l.current_price ?? null,
-                currency_symbol: l.currency_symbol ?? null,
-            })),
-        };
         openPanel('tasks-recipe-form', {
             taskId: task.id,
-            taskContext,
         });
-    }, [task, catalogMaterials, catalogLaborTypes, openPanel]);
+    }, [task.id, openPanel]);
 
     // ========================================================================
     // Edit Recipe

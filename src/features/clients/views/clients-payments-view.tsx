@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Banknote, Plus, FilterX } from "lucide-react";
+import { Banknote, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { exportToCSV, exportToExcel, ExportColumn } from "@/lib/export";
 import { parseDateFromDB } from "@/lib/timezone-data";
@@ -31,10 +31,7 @@ import { ClientPaymentView, OrganizationFinancialData } from "../types";
 import { deletePaymentAction } from "../actions";
 import { ImportConfig } from "@/lib/import";
 import { createImportBatch, importPaymentsBatch, revertImportBatch } from "@/lib/import";
-import { HealthMonitorBanner } from "@/features/health/components/health-monitor-banner";
-import { analyzePaymentsHealth } from "@/features/health/modules/payments";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+
 
 // NOTE: columns are now built dynamically inside the component
 // via useMemo to conditionally show the project column.
@@ -152,20 +149,7 @@ export function ClientsPaymentsView({
     const [searchQuery, setSearchQuery] = useState("");
     const [dateRange, setDateRange] = useState<DateRangeFilterValue | undefined>(undefined);
 
-    // === Health Filter (absorbed from page orchestrator) ===
-    const [healthFilterActive, setHealthFilterActive] = useState(false);
-    const healthReport = useMemo(() => analyzePaymentsHealth(data), [data]);
-    const affectedPaymentIds = useMemo(() => {
-        return new Set(healthReport.issues.map(issue => issue.paymentId));
-    }, [healthReport.issues]);
 
-    const handleShowAffected = useCallback(() => {
-        setHealthFilterActive(true);
-    }, []);
-
-    const handleClearFilter = useCallback(() => {
-        setHealthFilterActive(false);
-    }, []);
 
     // 🚀 OPTIMISTIC UI: Instant visual updates for list operations
     const {
@@ -431,9 +415,7 @@ export function ClientsPaymentsView({
         if (activeProjectId && payment.project_id !== activeProjectId) {
             return false;
         }
-        if (healthFilterActive && !affectedPaymentIds.has(payment.id)) {
-            return false;
-        }
+
         if (statusFilter.size > 0 && !statusFilter.has(payment.status)) {
             return false;
         }
@@ -552,35 +534,7 @@ export function ClientsPaymentsView({
                 ]}
             />
 
-            {/* Health Monitor Banner */}
-            <HealthMonitorBanner
-                report={healthReport}
-                moduleName="pagos"
-                storageKey={`clients-health-${orgId}`}
-                onShowAffected={handleShowAffected}
-                isFilterActive={healthFilterActive}
-                onClearFilter={handleClearFilter}
-            />
 
-            {/* Health Filter Indicator */}
-            {healthFilterActive && (
-                <Alert className="mb-4 bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400">
-                    <FilterX className="h-4 w-4 !text-orange-500" />
-                    <AlertDescription className="flex items-center justify-between w-full">
-                        <span>
-                            Mostrando solo los <strong>{filteredData.length}</strong> pagos con problemas de datos.
-                        </span>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-current hover:bg-orange-500/20"
-                            onClick={handleClearFilter}
-                        >
-                            Mostrar todos
-                        </Button>
-                    </AlertDescription>
-                </Alert>
-            )}
 
             <ContentLayout variant="wide">
                 <DataTable

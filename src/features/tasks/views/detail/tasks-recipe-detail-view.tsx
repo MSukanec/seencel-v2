@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "@/i18n/routing";
 import { usePanel } from "@/stores/panel-store";
 import { PageHeaderActionPortal } from "@/components/layout";
@@ -14,6 +14,7 @@ import {
     Handshake,
     DollarSign,
     Layers,
+    Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -27,8 +28,10 @@ import type { EditResourceData } from "@/features/tasks/forms/tasks-recipe-resou
 import type { TaskView, TaskRecipeView, RecipeResources } from "@/features/tasks/types";
 import { RecipeCard } from "@/features/tasks/components/recipe-card";
 import type { RecipeCardData, MaterialPriceInfo, LaborPriceInfo, ExternalServicePriceInfo } from "@/features/tasks/components/recipe-card";
+import type { TaskContext } from "@/features/tasks/forms/tasks-recipe-ai-form";
 import { cn } from "@/lib/utils";
 import { ContentCard } from "@/components/cards";
+import { useTableActions } from "@/hooks/use-table-actions";
 
 // ============================================================================
 // Types
@@ -88,6 +91,11 @@ export function TasksRecipeDetailView({
 
     // Local state — synced with server props
     const [resources, setResources] = useState(serverResources);
+
+    // Sync when server props change (e.g., after standard revalidations from panels)
+    useEffect(() => {
+        setResources(serverResources);
+    }, [serverResources]);
 
     const isOwn = recipe.organization_id === organizationId;
 
@@ -175,7 +183,7 @@ export function TasksRecipeDetailView({
             resourceType: "external_service",
             quantity: 1,
             notes: foundItem.notes,
-            serviceName: foundItem.name,
+            serviceName: foundItem.name ?? undefined,
             unitPrice: foundItem.unit_price,
             currencyId: foundItem.currency_id,
             contactId: foundItem.contact_id,
@@ -191,6 +199,46 @@ export function TasksRecipeDetailView({
             editData,
         });
     }, [recipe.id, catalogMaterials, catalogLaborTypes, currencies, contacts, openPanel, resources]);
+
+    // ========================================================================
+    // Open AI Panel
+    // ========================================================================
+
+    const handleOpenAI = useCallback(() => {
+        const taskContext: TaskContext = {
+            name: task.name ?? task.code ?? "Tarea sin nombre",
+            unit: task.unit_symbol ?? task.unit_name ?? null,
+            division: task.division_name ?? null,
+            organizationId,
+            action: task.action_name ?? null,
+            element: task.element_name ?? null,
+            parameterValues: task.parameter_values ?? undefined,
+            catalogMaterials: catalogMaterials?.map((m) => {
+                const saleQty = m.default_sale_unit_quantity ?? 1;
+                const effectiveUnitPrice = m.org_unit_price != null && m.org_unit_price > 0
+                    ? m.org_unit_price / (saleQty > 0 ? saleQty : 1)
+                    : null;
+                return {
+                    id: m.id,
+                    name: m.name,
+                    unit_symbol: m.unit_symbol ?? null,
+                    unit_price: effectiveUnitPrice,
+                    currency_symbol: null,
+                };
+            }),
+            catalogLaborTypes: catalogLaborTypes?.map((l) => ({
+                id: l.id,
+                name: l.name,
+                unit_symbol: l.unit_symbol ?? null,
+                unit_price: l.current_price ?? null,
+                currency_symbol: l.currency_symbol ?? null,
+            })),
+        };
+        openPanel('tasks-recipe-ai-form', {
+            recipeId: recipe.id,
+            taskContext,
+        });
+    }, [task, recipe.id, organizationId, catalogMaterials, catalogLaborTypes, openPanel]);
 
     // ========================================================================
     // Material Handlers
@@ -234,21 +282,25 @@ export function TasksRecipeDetailView({
         }
     }, [serverResources]);
 
-    const handleRemoveMaterial = useCallback(async (itemId: string) => {
-        const previousResources = { ...resources };
-        setResources(prev => ({
-            ...prev,
-            materials: prev.materials.filter(m => m.id !== itemId),
-        }));
+    const { handleDelete: handleRemoveMaterial, DeleteConfirmDialog: MaterialConfirmDialog } = useTableActions<{ id: string }>({
+        onDelete: async ({ id }) => {
+            const previousResources = { ...resources };
+            setResources(prev => ({
+                ...prev,
+                materials: prev.materials.filter(m => m.id !== id),
+            }));
 
-        const result = await deleteRecipeMaterial(itemId);
-        if (!result.success) {
-            toast.error("Error al eliminar material");
-            setResources(previousResources);
-        } else {
-            toast.success("Material eliminado");
-        }
-    }, [resources]);
+            const result = await deleteRecipeMaterial(id);
+            if (!result.success) {
+                setResources(previousResources);
+                return { success: false };
+            }
+            return { success: true };
+        },
+        entityName: "material",
+        entityNamePlural: "materiales",
+        refreshAfterDelete: false,
+    });
 
     // ========================================================================
     // Labor Handlers
@@ -269,41 +321,56 @@ export function TasksRecipeDetailView({
         }
     }, [serverResources]);
 
-    const handleRemoveLabor = useCallback(async (itemId: string) => {
-        const previousResources = { ...resources };
-        setResources(prev => ({
-            ...prev,
-            labor: prev.labor.filter(l => l.id !== itemId),
-        }));
+    const { handleDelete: handleRemoveLabor, DeleteConfirmDialog: LaborConfirmDialog } = useTableActions<{ id: string }>({
+        onDelete: async ({ id }) => {
+            const previousResources = { ...resources };
+            setResources(prev => ({
+                ...prev,
+                labor: prev.labor.filter(l => l.id !== id),
+            }));
 
-        const result = await deleteRecipeLabor(itemId);
-        if (!result.success) {
-            toast.error("Error al eliminar mano de obra");
-            setResources(previousResources);
-        } else {
-            toast.success("Mano de obra eliminada");
-        }
-    }, [resources]);
+            const result = await deleteRecipeLabor(id);
+            if (!result.success) {
+                setResources(previousResources);
+                return { success: false };
+            }
+            return { success: true };
+        },
+        entityName: "mano de obra",
+        entityNamePlural: "manos de obra",
+        refreshAfterDelete: false,
+    });
 
     // ========================================================================
     // External Service Handlers
     // ========================================================================
 
-    const handleRemoveExternalService = useCallback(async (itemId: string) => {
-        const previousResources = { ...resources };
-        setResources(prev => ({
-            ...prev,
-            externalServices: (prev.externalServices || []).filter(es => es.id !== itemId),
-        }));
+    const { handleDelete: handleRemoveExternalService, DeleteConfirmDialog: ExternalServiceConfirmDialog } = useTableActions<{ id: string }>({
+        onDelete: async ({ id }) => {
+            const previousResources = { ...resources };
+            setResources(prev => ({
+                ...prev,
+                externalServices: (prev.externalServices || []).filter(es => es.id !== id),
+            }));
 
-        const result = await deleteRecipeExternalService(itemId);
-        if (!result.success) {
-            toast.error("Error al eliminar servicio externo");
-            setResources(previousResources);
-        } else {
-            toast.success("Servicio externo eliminado");
-        }
-    }, [resources]);
+            try {
+                const result = await deleteRecipeExternalService(id);
+                console.log("[DEBUG] deleteRecipeExternalService result:", JSON.stringify(result));
+                if (!result.success) {
+                    setResources(previousResources);
+                    return { success: false };
+                }
+                return { success: true };
+            } catch (err) {
+                console.error("[DEBUG] deleteRecipeExternalService THREW:", err);
+                setResources(previousResources);
+                return { success: false };
+            }
+        },
+        entityName: "servicio externo",
+        entityNamePlural: "servicios externos",
+        refreshAfterDelete: false,
+    });
 
     // ========================================================================
     // Price Maps
@@ -354,7 +421,7 @@ export function TasksRecipeDetailView({
                 map.set(es.id, {
                     unitPrice: es.unit_price,
                     currencyId: es.currency_id ?? null,
-                    serviceName: es.name,
+                    serviceName: es.name ?? "",
                     serviceId: es.id,
                     organizationId,
                     unitSymbol: es.unit_symbol,
@@ -409,10 +476,20 @@ export function TasksRecipeDetailView({
     return (
         <div className="h-full flex flex-col">
             <PageHeaderActionPortal>
-                <Button onClick={handleAddResource} size="sm">
-                    <Plus className="h-4 w-4 mr-1.5" />
-                    Agregar Recurso
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button onClick={handleAddResource} size="sm">
+                        <Plus className="h-4 w-4 mr-1.5" />
+                        Agregar Recurso
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleOpenAI}
+                        className="px-2.5 border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:text-violet-300 hover:border-violet-500/40"
+                    >
+                        <Sparkles className="h-4 w-4" />
+                    </Button>
+                </div>
             </PageHeaderActionPortal>
 
             {/* ── Empty state: no resources yet ── */}
@@ -425,6 +502,13 @@ export function TasksRecipeDetailView({
                         featureDescription="Agregá materiales, mano de obra o servicios subcontratados para componer el costo de esta receta."
                         onAction={handleAddResource}
                         actionLabel="Agregar Recurso"
+                        secondaryAction={{
+                            label: "Crear con IA",
+                            onClick: handleOpenAI,
+                            icon: Sparkles,
+                            className: "border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:text-violet-300 hover:border-violet-500/40",
+                        }}
+                        docsPath="/docs/catalogo-tecnico/recetas"
                     />
                 </div>
             ) : (
@@ -605,16 +689,20 @@ export function TasksRecipeDetailView({
                         onEditMaterial={handleEditMaterial}
                         onUpdateMaterialQuantity={handleUpdateMaterialQuantity}
                         onUpdateMaterialWaste={handleUpdateMaterialWaste}
-                        onRemoveMaterial={handleRemoveMaterial}
+                        onRemoveMaterial={(id) => handleRemoveMaterial({ id })}
                         onEditLabor={handleEditLabor}
                         onUpdateLaborQuantity={handleUpdateLaborQuantity}
-                        onRemoveLabor={handleRemoveLabor}
+                        onRemoveLabor={(id) => handleRemoveLabor({ id })}
                         onEditExternalService={handleEditExternalService}
-                        onRemoveExternalService={handleRemoveExternalService}
+                        onRemoveExternalService={(id) => handleRemoveExternalService({ id })}
                         onPriceUpdated={handlePriceUpdated}
                     />
                 </>
             )}
+
+            <MaterialConfirmDialog />
+            <LaborConfirmDialog />
+            <ExternalServiceConfirmDialog />
         </div>
     );
 }

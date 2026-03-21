@@ -84,7 +84,7 @@ export function TasksDivisionForm({
                 if (d.id === initialData.id) return false;
                 return d.parent_id !== initialData.id;
             })
-            .map(d => ({ value: d.id, label: d.name })),
+            .map(d => ({ value: d.id, label: d.name || '' })),
     ];
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

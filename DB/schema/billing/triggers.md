@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-19T23:49:30.234Z
+> Generated: 2026-03-20T17:04:16.493Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -12,6 +12,6 @@
 | coupons | trg_coupons_set_updated | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
 | organization_subscriptions | trg_notify_subscription_activated | AFTER | INSERT | EXECUTE FUNCTION notifications.notify_subscription_activa... |
 | payments | notify_payment | AFTER | INSERT, UPDATE | EXECUTE FUNCTION notifications.notify_admin_on_payment() |
-| payments | notify_user_payment_completed | AFTER | INSERT, UPDATE | EXECUTE FUNCTION notifications.notify_user_payment_comple... |
+| payments | notify_user_payment_completed | AFTER | UPDATE, INSERT | EXECUTE FUNCTION notifications.notify_user_payment_comple... |
 | payments | trg_log_payment_activity | AFTER | INSERT | EXECUTE FUNCTION audit.log_payment_activity() |
 | payments | trg_queue_purchase_email | AFTER | INSERT | EXECUTE FUNCTION notifications.queue_purchase_email() |

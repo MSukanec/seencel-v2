@@ -96,7 +96,7 @@ export function DivisionsSidebar({
         if (!searchQuery.trim()) return flatList;
         const query = searchQuery.toLowerCase();
         return flatList.filter(({ node }) =>
-            node.name.toLowerCase().includes(query) ||
+            (node.name || '').toLowerCase().includes(query) ||
             node.number.includes(query)
         );
     }, [flatList, searchQuery]);
@@ -142,7 +142,7 @@ export function DivisionsSidebar({
                 {filteredList.map(({ node, depth }) => (
                     <DivisionItem
                         key={node.id}
-                        name={node.name}
+                        name={node.name || ''}
                         code={node.code}
                         number={node.number}
                         count={taskCounts[node.id] || 0}

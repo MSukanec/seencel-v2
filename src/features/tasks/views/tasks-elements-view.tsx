@@ -67,7 +67,7 @@ export function TasksElementsView({
         if (!searchQuery.trim()) return elements;
         const query = searchQuery.toLowerCase();
         return elements.filter(e =>
-            e.name.toLowerCase().includes(query) ||
+            (e.name ?? "").toLowerCase().includes(query) ||
             (e.code && e.code.toLowerCase().includes(query)) ||
             (e.description && e.description.toLowerCase().includes(query))
         );
@@ -75,12 +75,12 @@ export function TasksElementsView({
 
     // Sort alphabetically by name
     const sortedElements = useMemo(() => {
-        return [...filteredElements].sort((a, b) => a.name.localeCompare(b.name));
+        return [...filteredElements].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
     }, [filteredElements]);
 
     // Sort systems alphabetically
     const sortedSystemsList = useMemo(() => {
-        return [...systems].sort((a, b) => a.name.localeCompare(b.name));
+        return [...systems].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
     }, [systems]);
 
     // ========================================================================

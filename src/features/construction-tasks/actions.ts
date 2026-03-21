@@ -1,6 +1,6 @@
 "use server";
 
-
+import { getAuthUser } from '@/lib/auth';
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -15,6 +15,9 @@ export async function createConstructionTask(
     organizationId: string,
     data: ConstructionTaskFormData
 ) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: "No autenticado" };
+
     const supabase = await createClient();
 
     const { data: result, error } = await supabase
@@ -59,6 +62,9 @@ export async function updateConstructionTask(
     projectId: string,
     data: Partial<ConstructionTaskFormData>
 ) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: "No autenticado" };
+
     const supabase = await createClient();
 
     const { data: result, error } = await supabase
@@ -101,6 +107,9 @@ export async function updateConstructionTaskStatus(
     status: ConstructionTaskStatus,
     progressPercent?: number
 ) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: "No autenticado" };
+
     const supabase = await createClient();
 
     const updateData: { status: ConstructionTaskStatus; progress_percent?: number } = { status };
@@ -130,6 +139,9 @@ export async function updateConstructionTaskStatus(
  * Soft delete a construction task
  */
 export async function deleteConstructionTask(taskId: string, projectId: string) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: "No autenticado" };
+
     const supabase = await createClient();
 
     const { error } = await supabase
@@ -162,6 +174,9 @@ export async function createConstructionDependency(
     successorTaskId: string,
     type: "FS" | "FF" | "SS" | "SF" = "FS"
 ) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: "No autenticado" };
+
     const supabase = await createClient();
 
     const { data, error } = await supabase
@@ -187,6 +202,9 @@ export async function createConstructionDependency(
  * Delete a construction dependency
  */
 export async function deleteConstructionDependency(dependencyId: string) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: "No autenticado" };
+
     const supabase = await createClient();
 
     const { error } = await supabase
@@ -214,6 +232,9 @@ export async function upsertProjectSettings(
     organizationId: string,
     workDays: number[],
 ) {
+    const user = await getAuthUser();
+    if (!user) return { success: false, error: "No autenticado" };
+
     const supabase = await createClient();
 
     const { error } = await supabase
@@ -242,6 +263,9 @@ export async function upsertProjectSettings(
 export async function fetchProjectSettingsAction(
     projectId: string
 ): Promise<{ work_days: number[] }> {
+    const user = await getAuthUser();
+    if (!user) return { work_days: [1, 2, 3, 4, 5] };
+
     const supabase = await createClient();
 
     const { data, error } = await supabase

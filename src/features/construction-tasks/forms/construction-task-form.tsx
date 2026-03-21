@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
+import { ClipboardList } from "lucide-react";
 import { ConstructionTaskView, CostScope } from "../types";
 import { createConstructionTask, updateConstructionTask, getRecipesForTask } from "../actions";
 import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
-import { FormFooter } from "@/components/shared/forms/form-footer";
 import {
     AmountField,
     DateField,
@@ -29,6 +29,8 @@ interface ConstructionTaskFormProps {
     catalogTasks: CatalogTaskOption[];
     units: UnitOption[];
     initialData?: ConstructionTaskView | null;
+    onSuccess?: () => void;
+    formId?: string;
 }
 
 // ============================================================================
@@ -51,21 +53,27 @@ export function ConstructionTaskForm({
     catalogTasks,
     units,
     initialData,
+    onSuccess,
+    formId,
 }: ConstructionTaskFormProps) {
     const router = useRouter();
-    const { closeModal } = useModal();
-    const [isLoading, setIsLoading] = useState(false);
+    const { closePanel, setPanelMeta, setSubmitting } = usePanel();
     const isEditing = !!initialData;
 
-    // Internal lifecycle callbacks (semi-autonomous pattern)
-    const handleSuccess = () => {
-        closeModal();
-        router.refresh();
-    };
-
-    const handleCancel = () => {
-        closeModal();
-    };
+    // 🚨 OBLIGATORIO: Self-describe
+    useEffect(() => {
+        setPanelMeta({
+            icon: ClipboardList,
+            title: isEditing ? "Editar Tarea" : "Agregar Tarea",
+            description: isEditing
+                ? "Modifica los detalles de la tarea de construcción."
+                : "Seleccioná una tarea del catálogo o creá una personalizada.",
+            size: "md",
+            footer: {
+                submitLabel: isEditing ? "Guardar Cambios" : "Agregar Tarea",
+            },
+        });
+    }, [isEditing, setPanelMeta]);
 
     // --- Task + Recipe Selection (via TaskField) ---
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialData?.task_id || null);
@@ -116,13 +124,12 @@ export function ConstructionTaskForm({
 
     // --- Handlers ---
 
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!validate()) return;
 
-        setIsLoading(true);
+        setSubmitting(true);
 
         try {
             const payload = {
@@ -143,7 +150,9 @@ export function ConstructionTaskForm({
 
             if (result.success) {
                 toast.success(isEditing ? "Tarea actualizada" : "Tarea creada");
-                handleSuccess();
+                onSuccess?.();
+                closePanel();
+                router.refresh();
             } else {
                 toast.error(result.error || "Error al guardar la tarea");
             }
@@ -151,99 +160,88 @@ export function ConstructionTaskForm({
             toast.error("Error inesperado");
             console.error(error);
         } finally {
-            setIsLoading(false);
+            setSubmitting(false);
         }
     };
 
     // --- Render ---
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            {/* Contenido scrolleable */}
-            <div className="flex-1 overflow-y-auto">
-                <div className="space-y-4">
+        <form id={formId} onSubmit={handleSubmit}>
+            <div className="space-y-4">
 
-                    {/* =================================== */}
-                    {/* SECCIÓN 1: Selección de Tarea       */}
-                    {/* =================================== */}
+                {/* =================================== */}
+                {/* SECCIÓN 1: Selección de Tarea       */}
+                {/* =================================== */}
 
-                    <TaskField
-                        taskValue={selectedTaskId}
-                        onTaskChange={(id) => {
-                            setSelectedTaskId(id);
-                            setErrors(prev => ({ ...prev, task: "" }));
-                        }}
-                        recipeValue={selectedRecipeId}
-                        onRecipeChange={setSelectedRecipeId}
-                        catalogTasks={catalogTasks}
-                        fetchRecipes={handleFetchRecipes}
-                        taskRequired
-                        disabled={isEditing}
-                        taskError={errors.task}
+                <TaskField
+                    taskValue={selectedTaskId}
+                    onTaskChange={(id) => {
+                        setSelectedTaskId(id);
+                        setErrors(prev => ({ ...prev, task: "" }));
+                    }}
+                    recipeValue={selectedRecipeId}
+                    onRecipeChange={setSelectedRecipeId}
+                    catalogTasks={catalogTasks}
+                    fetchRecipes={handleFetchRecipes}
+                    taskRequired
+                    disabled={isEditing}
+                    taskError={errors.task}
+                />
+
+                {/* =================================== */}
+                {/* SECCIÓN 2: Datos de Ejecución       */}
+                {/* =================================== */}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
+                    {/* Cantidad */}
+                    <AmountField
+                        value={quantity}
+                        onChange={setQuantity}
+                        label="Cantidad"
+                        placeholder="100"
+                        min={0}
+                        step={0.01}
+                        suffix={selectedUnitSymbol}
                     />
 
-                    {/* =================================== */}
-                    {/* SECCIÓN 2: Datos de Ejecución       */}
-                    {/* =================================== */}
+                    {/* Alcance de Costos */}
+                    <SelectField
+                        value={costScope}
+                        onChange={(v) => setCostScope(v as CostScope)}
+                        options={COST_SCOPE_OPTIONS}
+                        label="Alcance de Costos"
+                        required={false}
+                    />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
-                        {/* Cantidad */}
-                        <AmountField
-                            value={quantity}
-                            onChange={setQuantity}
-                            label="Cantidad"
-                            placeholder="100"
-                            min={0}
-                            step={0.01}
-                            suffix={selectedUnitSymbol}
-                        />
+                    {/* Fecha inicio planificada */}
+                    <DateField
+                        value={plannedStartDate}
+                        onChange={setPlannedStartDate}
+                        label="Inicio planificado"
+                        required={false}
+                    />
 
-                        {/* Alcance de Costos */}
-                        <SelectField
-                            value={costScope}
-                            onChange={(v) => setCostScope(v as CostScope)}
-                            options={COST_SCOPE_OPTIONS}
-                            label="Alcance de Costos"
-                            required={false}
-                        />
-
-                        {/* Fecha inicio planificada */}
-                        <DateField
-                            value={plannedStartDate}
-                            onChange={setPlannedStartDate}
-                            label="Inicio planificado"
-                            required={false}
-                        />
-
-                        {/* Fecha fin planificada */}
-                        <DateField
-                            value={plannedEndDate}
-                            onChange={setPlannedEndDate}
-                            label="Fin planificado"
-                            required={false}
-                        />
-                    </div>
-
-                    {/* =================================== */}
-                    {/* SECCIÓN 3: Notas                    */}
-                    {/* =================================== */}
-
-                    <NotesField
-                        value={notes}
-                        onChange={setNotes}
-                        label="Observaciones"
-                        placeholder="Notas adicionales sobre la tarea..."
+                    {/* Fecha fin planificada */}
+                    <DateField
+                        value={plannedEndDate}
+                        onChange={setPlannedEndDate}
+                        label="Fin planificado"
+                        required={false}
                     />
                 </div>
-            </div>
 
-            {/* Footer sticky */}
-            <FormFooter
-                className="-mx-4 -mb-4 mt-6"
-                isLoading={isLoading}
-                submitLabel={isEditing ? "Guardar Cambios" : "Agregar Tarea"}
-                onCancel={handleCancel}
-            />
+                {/* =================================== */}
+                {/* SECCIÓN 3: Notas                    */}
+                {/* =================================== */}
+
+                <NotesField
+                    value={notes}
+                    onChange={setNotes}
+                    label="Observaciones"
+                    placeholder="Notas adicionales sobre la tarea..."
+                />
+            </div>
         </form>
     );
 }

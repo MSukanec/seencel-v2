@@ -77,7 +77,7 @@ export function TasksAccionesView({
 
     // Sort elements alphabetically
     const sortedElementsList = useMemo(() => {
-        return [...elements].sort((a, b) => a.name.localeCompare(b.name));
+        return [...elements].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
     }, [elements]);
 
     // ========================================================================

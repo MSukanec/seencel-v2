@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { HeartPulse } from "lucide-react";
-import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { ProjectHealthView } from "@/features/project-health/views/project-health-view";
 import { getTranslations } from "next-intl/server";
@@ -21,10 +19,8 @@ export async function generateMetadata({
 
 export default async function HealthPage() {
     return (
-        <PageWrapper title="Salud" icon={<HeartPulse />}>
-            <ContentLayout variant="wide">
-                <ProjectHealthView />
-            </ContentLayout>
-        </PageWrapper>
+        <ContentLayout variant="wide">
+            <ProjectHealthView />
+        </ContentLayout>
     );
 }

@@ -1,27 +1,18 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
-import { ClipboardList } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageWrapper, ContentLayout } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
 
 import { ConstructionTasksView } from "@/features/construction-tasks/views/construction-tasks-view";
-import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
-import { ConstructionTasksSettingsView } from "@/features/construction-tasks/views/construction-tasks-settings-view";
 import { getOrganizationConstructionTasks, getOrganizationConstructionDependencies } from "@/features/construction-tasks/queries";
 import { requireAuthContext } from "@/lib/auth";
-import { getOrganizationTasks, getTasksGroupedByDivision, getTaskDivisions, getUnits, getTaskActions, getTaskElements } from "@/features/tasks/queries";
+import { getOrganizationTasks, getUnits } from "@/features/tasks/queries";
 
 // ============================================================================
 // Metadata
 // ============================================================================
 
-export async function generateMetadata({
-    params,
-}: {
-    params: Promise<{ locale: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata(): Promise<Metadata> {
     return {
         title: `Tareas de Construcción | SEENCEL`,
         description: "Gestión de tareas de construcción",
@@ -30,49 +21,25 @@ export async function generateMetadata({
 }
 
 // ============================================================================
-// Types
-// ============================================================================
-
-interface PageProps {
-    params: Promise<{
-        locale: string;
-    }>;
-    searchParams: Promise<{ view?: string }>;
-}
-
-// ============================================================================
 // Page Component
 // ============================================================================
 
-export default async function OrganizationConstructionTasksPage({ params, searchParams }: PageProps) {
+interface PageProps {
+    params: Promise<{ locale: string }>;
+}
+
+export default async function ConstructionTasksPage({ params }: PageProps) {
     const { locale } = await params;
     setRequestLocale(locale);
 
     try {
-        const resolvedSearchParams = await searchParams;
-        const defaultTab = resolvedSearchParams.view || "tasks";
-
         const { orgId } = await requireAuthContext();
 
-        // Fetch ALL org construction tasks and catalog data in parallel
-        const [
-            tasks,
-            initialDependencies,
-            catalogResult,
-            catalogGroupedTasks,
-            divisionsResult,
-            unitsResult,
-            actionsResult,
-            elementsResult
-        ] = await Promise.all([
+        const [tasks, initialDependencies, catalogResult, unitsResult] = await Promise.all([
             getOrganizationConstructionTasks(),
             getOrganizationConstructionDependencies(),
             getOrganizationTasks(orgId),
-            getTasksGroupedByDivision(orgId),
-            getTaskDivisions(),
             getUnits(),
-            getTaskActions(),
-            getTaskElements()
         ]);
 
         // Flatten catalog tasks for the form selector
@@ -87,59 +54,16 @@ export default async function OrganizationConstructionTasksPage({ params, search
             status: t.status,
         }));
 
-        // Check if catalog data is available
-        const hasCatalogData = catalogGroupedTasks.length > 0 || divisionsResult.data.length > 0;
-
         return (
-            <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
-                <PageWrapper
-                    title="Tareas de Construcción"
-                    icon={<ClipboardList />}
-                    tabs={
-                        <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
-                            <TabsTrigger value="tasks">Tareas</TabsTrigger>
-                            {hasCatalogData && (
-                                <TabsTrigger value="catalog">Catálogo</TabsTrigger>
-                            )}
-                            <TabsTrigger value="settings">Ajustes</TabsTrigger>
-                        </TabsList>
-                    }
-                >
-                    <TabsContent value="tasks" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ContentLayout variant="wide">
-                            <ConstructionTasksView
-                                organizationId={orgId}
-                                tasks={tasks}
-                                initialDependencies={initialDependencies}
-                                catalogTasks={catalogTasks}
-                                units={unitsResult.data}
-                            />
-                        </ContentLayout>
-                    </TabsContent>
-
-                    {hasCatalogData && (
-                        <TabsContent value="catalog" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                            <ContentLayout variant="wide">
-                                <TasksCatalogView
-                                    groupedTasks={catalogGroupedTasks}
-                                    orgId={orgId}
-                                    units={unitsResult.data}
-                                    divisions={divisionsResult.data}
-                                    kinds={actionsResult.data}
-                                    elements={elementsResult.data}
-                                    isAdminMode={false}
-                                />
-                            </ContentLayout>
-                        </TabsContent>
-                    )}
-
-                    <TabsContent value="settings" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ConstructionTasksSettingsView
-                            organizationId={orgId}
-                        />
-                    </TabsContent>
-                </PageWrapper>
-            </Tabs>
+            <ContentLayout variant="wide">
+                <ConstructionTasksView
+                    organizationId={orgId}
+                    tasks={tasks}
+                    initialDependencies={initialDependencies}
+                    catalogTasks={catalogTasks}
+                    units={unitsResult.data as any}
+                />
+            </ContentLayout>
         );
     } catch (error) {
         return (

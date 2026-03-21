@@ -4,24 +4,26 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ConstructionTaskView, ConstructionTaskStatus, STATUS_CONFIG } from "../types";
 import { createTextColumn } from "@/components/shared/data-table/columns/text-column";
 import { createDateColumn } from "@/components/shared/data-table/columns/date-column";
+import { createStatusColumn } from "@/components/shared/data-table/columns/status-column";
+import { createPercentColumn } from "@/components/shared/data-table/columns/percent-column";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const STATUS_OPTIONS = (Object.keys(STATUS_CONFIG) as ConstructionTaskStatus[]).map((status) => ({
+    value: status,
+    label: STATUS_CONFIG[status].label,
+}));
+
+const STATUS_FILTER_OPTIONS = STATUS_OPTIONS;
 
 // ============================================================================
 // Column definitions for Construction Tasks DataTable
 // ============================================================================
 
-interface ColumnCallbacks {
-    onEdit: (task: ConstructionTaskView) => void;
-    onDelete: (task: ConstructionTaskView) => void;
-    onStatusChange: (task: ConstructionTaskView, status: string) => void;
-}
-
-export function getConstructionTaskColumns(
-    callbacks: ColumnCallbacks
-): ColumnDef<ConstructionTaskView, any>[] {
+export function getConstructionTaskColumns(): ColumnDef<ConstructionTaskView, any>[] {
     return [
         // --- Tarea ---
         createTextColumn<ConstructionTaskView>({
@@ -46,48 +48,24 @@ export function getConstructionTaskColumns(
         }),
 
         // --- Estado ---
-        {
+        createStatusColumn<ConstructionTaskView>({
             accessorKey: "status",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
-            cell: ({ row }) => {
-                const status = row.getValue("status") as ConstructionTaskStatus;
-                const config = STATUS_CONFIG[status];
-                return (
-                    <Badge
-                        variant="outline"
-                        className={cn(
-                            "text-xs font-medium whitespace-nowrap",
-                            config?.color,
-                            config?.bgColor
-                        )}
-                    >
-                        {config?.label || status}
-                    </Badge>
-                );
-            },
-            enableSorting: true,
-            filterFn: (row, id, value) => {
-                return value.includes(row.getValue(id));
-            },
-        },
+            title: "Estado",
+            options: STATUS_OPTIONS.map(opt => ({
+                value: opt.value,
+                label: opt.label,
+                variant: opt.value === "completed" ? "positive"
+                    : opt.value === "in_progress" ? "info"
+                    : opt.value === "paused" ? "warning"
+                    : "neutral" as any,
+            })),
+        }),
 
         // --- Avance ---
-        {
+        createPercentColumn<ConstructionTaskView>({
             accessorKey: "progress_percent",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Avance" />,
-            cell: ({ row }) => {
-                const progress = (row.getValue("progress_percent") as number) || 0;
-                return (
-                    <div className="flex items-center gap-2 min-w-[100px]">
-                        <Progress value={progress} className="h-2 flex-1" />
-                        <span className="text-xs text-muted-foreground w-8 text-right">
-                            {progress}%
-                        </span>
-                    </div>
-                );
-            },
-            enableSorting: true,
-        },
+            title: "Avance",
+        }),
 
         // --- Fecha inicio ---
         createDateColumn<ConstructionTaskView>({
@@ -146,8 +124,7 @@ export function getConstructionTaskColumns(
             },
             enableSorting: true,
         },
-
-        // Actions are handled by DataTable's context menu (enableRowActions/enableContextMenu)
     ];
 }
 
+export { STATUS_FILTER_OPTIONS };

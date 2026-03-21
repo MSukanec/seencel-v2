@@ -25,6 +25,8 @@ export interface PanelFooterConfig {
     submitLabel?: string;
     /** Cancel button label. Defaults to "Cancelar". */
     cancelLabel?: string;
+    /** Hide the "Crear otro" toggle in modal footer. */
+    hideCreateAnother?: boolean;
     /** Multi-button override (e.g., "Borrador | Guardar | Publicar"). */
     actions?: PanelFooterAction[];
     /** Full custom footer override. */

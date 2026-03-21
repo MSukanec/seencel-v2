@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { createMaterial, updateMaterial, upsertMaterialPrice } from "@/features/materials/actions";
 import { usePanel } from "@/stores/panel-store";
-import { Package } from "lucide-react";
+import { Package, Wrench, FolderTree } from "lucide-react";
 import { useFormData } from "@/stores/organization-store";
 import {
     TextField,
@@ -14,8 +14,13 @@ import {
     CurrencyField,
     AmountField,
     ContactField,
+    SegmentedField,
     type SelectOption,
 } from "@/components/shared/forms/fields";
+import { FormTextField } from "@/components/shared/forms/fields/form-text-field";
+import { FormGroup } from "@/components/ui/form-group";
+import { ChipRow, SelectChip } from "@/components/shared/chips";
+import { UnitChip } from "@/components/shared/chips/chips/unit-chip";
 
 // ============================================================================
 // Types
@@ -127,10 +132,10 @@ export function MaterialForm({
         [categories]
     );
 
-    // Material type options
-    const materialTypeOptions: SelectOption[] = [
-        { value: "material", label: "Material" },
-        { value: "consumable", label: "Consumible / Insumo" },
+    // Material type toggle options
+    const materialTypeOptions = [
+        { value: "material", label: "Material", icon: Package },
+        { value: "consumable", label: "Insumo", icon: Wrench },
     ];
 
     // Get currencies from organization store (already hydrated in layout)
@@ -261,89 +266,110 @@ export function MaterialForm({
 
     const showPriceSection = !isAdminMode;
 
+    // Chip options
+    const categoryChipOptions = useMemo(() =>
+        categories.map(c => ({
+            value: c.id,
+            label: c.name,
+            icon: <FolderTree className="h-3.5 w-3.5 text-muted-foreground" />,
+        })),
+        [categories]
+    );
+
+    const unitChipOptions = useMemo(() =>
+        units.filter(u => u.applicable_to?.includes('material'))
+            .map(u => ({
+                value: u.id,
+                label: u.name,
+                symbol: u.symbol || u.abbreviation || undefined,
+            })),
+        [units]
+    );
+
     return (
         <form id={formId} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                    {/* Row 1: Tipo + Código */}
-                    <SelectField
-                        label="Tipo"
-                        value={materialType}
-                        onChange={setMaterialType}
-                        options={materialTypeOptions}
-                        required
-                    />
-
-                    <TextField
-                        label="Código"
-                        value={code}
-                        onChange={setCode}
-                        placeholder="Ej: MAT-001"
-                    />
-
-                    {/* Row 2: Nombre (full width) */}
-                    <div className="md:col-span-2">
-                        <TextField
-                            label="Nombre del Material"
-                            value={materialName}
-                            onChange={setMaterialName}
-                            placeholder="Ej: Cemento Portland"
-                            required
+                {/* ── Toggle: Material / Insumo ─────────────── */}
+                <div className="pb-3">
+                    <FormGroup label="Tipo" required>
+                        <SegmentedField
+                            value={materialType}
+                            onChange={setMaterialType}
+                            options={materialTypeOptions}
+                            className="h-10 p-1"
                         />
-                    </div>
+                    </FormGroup>
+                </div>
 
-                    {/* Row 3: Categoría + Unidad */}
-                    <SelectField
-                        label="Categoría"
+                {/* ── Chips: Category + Unit ─────────────────── */}
+                <ChipRow>
+                    <SelectChip
                         value={categoryId}
                         onChange={setCategoryId}
-                        options={categoryOptions}
-                        placeholder="Sin categoría"
-                        clearable
+                        options={categoryChipOptions}
+                        icon={<FolderTree className="h-3.5 w-3.5 text-muted-foreground" />}
+                        emptyLabel="Categoría"
+                        searchPlaceholder="Buscar categoría..."
+                        popoverWidth={220}
                     />
-
-                    <SelectField
-                        label="Unidad de Medida"
+                    <UnitChip
                         value={unitId}
                         onChange={setUnitId}
-                        options={materialUnitOptions}
-                        placeholder="Seleccionar unidad..."
+                        options={unitChipOptions}
+                        emptyLabel="Unidad"
                     />
+                </ChipRow>
 
-                    {/* Row 4: Descripción (full width) */}
-                    <div className="md:col-span-2">
-                        <NotesField
-                            label="Descripción"
-                            value={description}
-                            onChange={setDescription}
-                            placeholder="Descripción detallada del material (opcional)"
+                {/* ── Hero: Name ─────────────────────────────── */}
+                <FormTextField
+                    variant="hero"
+                    value={materialName}
+                    onChange={setMaterialName}
+                    placeholder={materialType === "consumable" ? "Nombre del insumo" : "Nombre del material"}
+                    autoFocus
+                />
+
+                {/* ── Caption: Code ──────────────────────────── */}
+                <FormTextField
+                    variant="caption"
+                    value={code}
+                    onChange={setCode}
+                    placeholder="Código (ej: MAT-001)"
+                    prefix="#"
+                />
+
+                {/* ── Separator ──────────────────────────────── */}
+                <Separator className="my-4" />
+
+                {/* ── Body: Description ──────────────────────── */}
+                <NotesField
+                    label="Descripción"
+                    value={description}
+                    onChange={setDescription}
+                    placeholder="Descripción detallada del material (opcional)"
+                />
+
+                {/* ── Supplier & Price Section (org mode only) ─ */}
+                {showPriceSection && (
+                    <>
+                        <Separator className="my-4" />
+
+                        {/* Proveedor (full width) */}
+                        <ContactField
+                            value={providerId}
+                            onChange={setProviderId}
+                            contacts={providers}
+                            label="Proveedor por defecto"
+                            tooltip="Proveedor habitual de este material."
+                            placeholder="Seleccionar proveedor (opcional)"
+                            noneLabel="Sin proveedor asignado"
+                            searchPlaceholder="Buscar proveedor..."
+                            emptyMessage="No se encontraron proveedores."
                         />
-                    </div>
 
-                    {/* Supplier & Price Section - Only for org materials */}
-                    {showPriceSection && (
-                        <>
-                            <div className="md:col-span-2 pt-2">
-                                <Separator className="mb-4" />
-                            </div>
-
-                            {/* Row 5: Proveedor (full width) */}
-                            <div className="md:col-span-2">
-                                <ContactField
-                                    value={providerId}
-                                    onChange={setProviderId}
-                                    contacts={providers}
-                                    label="Proveedor por defecto"
-                                    tooltip="Proveedor habitual de este material."
-                                    placeholder="Seleccionar proveedor (opcional)"
-                                    noneLabel="Sin proveedor asignado"
-                                    searchPlaceholder="Buscar proveedor..."
-                                    emptyMessage="No se encontraron proveedores."
-                                />
-                            </div>
-
-                            {/* Row 6: Unidad de Venta + Cantidad por Unidad */}
+                        {/* Unidad de Venta + Cantidad */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                             <SelectField
                                 label="Unidad de Venta"
                                 value={saleUnitId}
@@ -360,8 +386,7 @@ export function MaterialForm({
                                 placeholder="Ej: 25"
                             />
 
-
-                            {/* Row 7: Moneda + Precio */}
+                            {/* Moneda + Precio */}
                             <CurrencyField
                                 value={currencyId}
                                 onChange={setCurrencyId}
@@ -376,11 +401,12 @@ export function MaterialForm({
                                 required={false}
                                 placeholder="0.00"
                             />
-                        </>
-                    )}
+                        </div>
+                    </>
+                )}
 
-                </div>
             </div>
         </form>
     );
 }
+

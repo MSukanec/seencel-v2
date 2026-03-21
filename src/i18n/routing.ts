@@ -76,6 +76,10 @@ export const routing = defineRouting({
             en: '/settings/files',
             es: '/configuracion/archivos'
         },
+        '/settings/ai': {
+            en: '/settings/ai',
+            es: '/configuracion/ia'
+        },
         '/settings/finance': {
             en: '/settings/finance',
             es: '/configuracion/finanzas'
@@ -325,6 +329,14 @@ export const routing = defineRouting({
         '/organization/construction-tasks': {
             en: '/organization/construction-tasks',
             es: '/organizacion/tareas-obra'
+        },
+        '/organization/construction-tasks/catalog': {
+            en: '/organization/construction-tasks/catalog',
+            es: '/organizacion/tareas-obra/catalogo'
+        },
+        '/organization/construction-tasks/settings': {
+            en: '/organization/construction-tasks/settings',
+            es: '/organizacion/tareas-obra/ajustes'
         },
         '/organization/materials': {
             en: '/organization/materials',

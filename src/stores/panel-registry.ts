@@ -15,6 +15,7 @@ import {
     Mail,
     Upload,
     CalendarDays,
+    ClipboardList,
 } from 'lucide-react';
 
 export interface PanelQuickAction {
@@ -342,6 +343,10 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
     },
     'tasks-recipe-form': {
         component: dynamic(() => import('@/features/tasks/forms/tasks-recipe-form').then(mod => ({ default: mod.TasksRecipeForm }))),
+        defaultOptions: { size: 'sm' },
+    },
+    'tasks-recipe-ai-form': {
+        component: dynamic(() => import('@/features/tasks/forms/tasks-recipe-ai-form').then(mod => ({ default: mod.TasksRecipeAiForm }))),
         defaultOptions: { size: 'lg' },
     },
     'tasks-recipe-resource-form': {
@@ -379,6 +384,20 @@ export const PANEL_REGISTRY: Record<string, PanelRegistryItem> = {
     'sitelog-type-form': {
         component: dynamic(() => import('@/features/sitelog/forms/sitelog-type-form').then(mod => ({ default: mod.SiteLogTypeForm }))),
         defaultOptions: { size: 'sm' },
+    },
+
+    // ========================================================================
+    // Construction Tasks Feature
+    // ========================================================================
+    'construction-task-form': {
+        component: dynamic(() => import('@/features/construction-tasks/forms/construction-task-form').then(mod => ({ default: mod.ConstructionTaskForm }))),
+        defaultOptions: { size: 'md' },
+        quickAction: {
+            label: "Nueva Tarea de Construcción",
+            icon: ClipboardList,
+            keywords: "crear tarea construcción obra ejecución gantt",
+            defaultProps: { mode: 'create' },
+        },
     },
 };
 

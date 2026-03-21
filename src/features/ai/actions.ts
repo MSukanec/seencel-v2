@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getAuthUser } from '@/lib/auth';
+import { getAuthContext } from '@/lib/auth';
 import { chatCompletion } from "./ai-client";
 import { logAIUsage, incrementAIUsage, checkAIUsageLimit } from "./ai-services";
 import { IMPORT_ANALYZER_SYSTEM_PROMPT, RECIPE_SUGGESTER_SYSTEM_PROMPT } from "./prompts";
@@ -33,9 +33,9 @@ export async function analyzeExcelStructure(
             return { success: false, error: "No hay datos para analizar" };
         }
 
-        // Obtener usuario actual para logs
+        // Obtener contexto de organizacion actual para logs
         const supabase = await createClient();
-        const user = await getAuthUser();
+        const authContext = await getAuthContext();
 
         // Build context: header row + data rows (limited to maxRows for cost control)
         const headerRow = rows[headerRowIndex] || [];
@@ -63,16 +63,17 @@ export async function analyzeExcelStructure(
         analysis.tokensUsed = result.tokensUsed;
 
         // Loguear uso en DB (fire-and-forget — no bloquea el flujo)
-        if (user) {
+        if (authContext?.userId) {
             void logAIUsage({
-                userId: user.id,
+                userId: authContext.userId,
+                organizationId: authContext.orgId,
                 model: result.model,
                 inputTokens: result.tokensUsed.input,
                 outputTokens: result.tokensUsed.output,
                 totalTokens: result.tokensUsed.total,
                 contextType: "import_analyzer",
             });
-            void incrementAIUsage(user.id);
+            void incrementAIUsage(authContext.orgId);
         }
 
         return { success: true, data: analysis };
@@ -167,20 +168,20 @@ export async function suggestRecipe({
     }[];
 }): Promise<AIActionResult<AIRecipeSuggestion>> {
     try {
-        // Obtener usuario actual
+        // Obtener contexto actual
         const supabase = await createClient();
-        const user = await getAuthUser();
+        const authContext = await getAuthContext();
 
-        if (!user) {
+        if (!authContext?.userId) {
             return { success: false, error: "Usuario no autenticado" };
         }
 
-        // Verificar límite de uso diario
-        const usageLimit = await checkAIUsageLimit(user.id);
+        // Verificar límite de uso diario de la organización
+        const usageLimit = await checkAIUsageLimit(authContext.orgId);
         if (!usageLimit.allowed) {
             return {
                 success: false,
-                error: `Alcanzaste el límite de ${usageLimit.dailyLimit} sugerencias diarias. Volvé mañana o actualizá tu plan.`,
+                error: `Alcanzaron el límite de ${usageLimit.dailyLimit} sugerencias diarias. Volvé mañana o actualizá el plan de la organización.`,
             };
         }
 
@@ -190,7 +191,7 @@ export async function suggestRecipe({
             const { data: userData } = await supabase
                 .schema('iam').from("user_data")
                 .select("country")
-                .eq("user_id", user.id)
+                .eq("user_id", authContext.userId)
                 .maybeSingle();
             if (userData?.country) {
                 const { data: countryData } = await supabase
@@ -277,11 +278,11 @@ export async function suggestRecipe({
 
         const userPrompt = parts.join("\n");
 
-        // Llamar a OpenAI — usamos gpt-4o para mayor precisión técnica en cantidades
+        // Llamar a OpenAI — gpt-4o-mini resuelve bien tareas estructuradas y cuesta 16x menos
         const result = await chatCompletion<AIRecipeSuggestion>({
             systemPrompt: RECIPE_SUGGESTER_SYSTEM_PROMPT,
             userPrompt,
-            model: "gpt-4o",
+            model: "gpt-4o-mini",
             maxTokens: 3500, // Más espacio para el chain-of-thought con más contexto
             temperature: 0.1, // Mínima aleatoriedad — queremos consistencia técnica
             responseFormat: "json",
@@ -309,14 +310,15 @@ export async function suggestRecipe({
 
         // Log en DB (fire-and-forget)
         void logAIUsage({
-            userId: user.id,
+            userId: authContext.userId,
+            organizationId: authContext.orgId,
             model: result.model,
             inputTokens: result.tokensUsed.input,
             outputTokens: result.tokensUsed.output,
             totalTokens: result.tokensUsed.total,
             contextType: "recipe_suggester",
         });
-        void incrementAIUsage(user.id);
+        void incrementAIUsage(authContext.orgId);
 
         return { success: true, data: suggestion };
     } catch (error) {

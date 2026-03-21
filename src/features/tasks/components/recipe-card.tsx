@@ -171,6 +171,7 @@ export function RecipeCard({
                                 unitSymbol={item.unit_symbol || item.unit_name}
                                 unitName={item.unit_name}
                                 isOwn={isOwn}
+                                notes={item.notes}
                                 quantity={item.quantity}
                                 onUpdateQuantity={(id, val) => onUpdateMaterialQuantity?.(id, val)}
                                 wastePercentage={item.waste_percentage}
@@ -221,6 +222,7 @@ export function RecipeCard({
                                 unitSymbol={item.unit_symbol || item.unit_name}
                                 unitName={item.unit_name}
                                 isOwn={isOwn}
+                                notes={item.notes}
                                 quantity={item.quantity}
                                 onUpdateQuantity={(id, val) => onUpdateLaborQuantity?.(id, val)}
                                 unitPrice={priceInfo?.unitPrice}
@@ -246,17 +248,34 @@ export function RecipeCard({
                     accentColor="text-[#C4B590]"
                 >
                     {resources.externalServices.map((item) => {
+                        const priceInfo = externalServicePriceMap?.get(item.id);
+                        const pricePulseData: PricePulseData | null = priceInfo ? {
+                            resourceType: "external_service",
+                            resourceId: priceInfo.serviceId,
+                            resourceName: priceInfo.serviceName,
+                            organizationId: priceInfo.organizationId,
+                            currencyId: priceInfo.currencyId,
+                            effectiveUnitPrice: priceInfo.unitPrice,
+                            priceValidFrom: priceInfo.priceValidFrom,
+                            unitSymbol: priceInfo.unitSymbol,
+                            icon: Handshake,
+                        } : null;
+
                         return (
                             <RecipeResourceListItem
                                 key={item.id}
                                 variant="subcontract"
                                 id={item.id}
-                                name={item.name || "Servicio Externo"}
+                                name={item.contact_name ? `Costo referencial · ${item.contact_name}` : "Costo referencial"}
                                 unitSymbol={item.unit_symbol || item.unit_name}
                                 unitName={item.unit_name}
                                 isOwn={isOwn}
+                                notes={item.notes}
                                 quantity={1}
-                                unitPrice={item.unit_price}
+                                unitPrice={priceInfo?.unitPrice ?? item.unit_price}
+                                priceValidFrom={priceInfo?.priceValidFrom}
+                                pricePulseData={pricePulseData}
+                                onPriceUpdated={onPriceUpdated}
                                 onEdit={(id) => onEditExternalService?.(id)}
                                 onRemove={(id) => onRemoveExternalService?.(id)}
                                 resourceId={item.id}

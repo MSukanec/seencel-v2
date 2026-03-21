@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-19T23:49:30.234Z
+> Generated: 2026-03-20T17:04:16.493Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -18,13 +18,13 @@
 - **`media_links`** (30 cols | FK: media_file_id → media_files)
 - **`saved_views`** (16 cols | FK: import_batch_id → import_batches)
 
-### Functions (24)
+### Functions (25)
 
 - `can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(public/functions_1.md)*
-- `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
+- `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_project(p_project_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `cleanup_media_file_storage()` → trigger 🔐 *(public/functions_1.md)*
 - `current_user_id()` → uuid 🔐 *(public/functions_1.md)*
@@ -39,7 +39,8 @@
 - `is_org_member(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `is_self(p_user_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `is_system_row(p_is_system boolean)` → boolean 🔐 *(public/functions_1.md)*
-- `set_timestamp()` → trigger 🔐 *(public/functions_1.md)*
+- `log_ai_org_limit_activity()` → trigger 🔐 *(public/functions_1.md)*
+- `set_timestamp()` → trigger 🔐 *(public/functions_2.md)*
 - `unaccent(regdictionary, text)` → text *(public/functions_2.md)*
 - `unaccent(text)` → text *(public/functions_2.md)*
 - `unaccent_init(internal)` → internal *(public/functions_2.md)*
@@ -87,8 +88,8 @@
 - `iam.can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
-- `iam.can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_org(p_organization_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
+- `iam.can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_project(p_project_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.current_user_id()` → uuid 🔐 *(iam/functions_1.md)*
 - `iam.dismiss_home_banner()` → boolean 🔐 *(iam/functions_1.md)*
@@ -294,16 +295,12 @@
 
 ## Schema: `ai`
 
-### Tables (8)
+### Tables (4)
 
-- **`ai.ai_context_snapshots`** (6 cols)
 - **`ai.ai_import_mapping_patterns`** (8 cols)
 - **`ai.ai_import_value_patterns`** (9 cols)
-- **`ai.ai_messages`** (6 cols)
-- **`ai.ai_usage_logs`** (10 cols)
-- **`ai.ai_user_greetings`** (5 cols)
-- **`ai.ai_user_preferences`** (6 cols)
-- **`ai.ai_user_usage_limits`** (6 cols)
+- **`ai.ai_organization_usage_limits`** (15 cols)
+- **`ai.ai_usage_logs`** (17 cols)
 
 ---
 

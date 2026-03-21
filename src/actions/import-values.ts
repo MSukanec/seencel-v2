@@ -19,7 +19,8 @@ export async function getValuePatterns(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("ia_import_value_patterns")
+        .schema("ai")
+        .from("ai_import_value_patterns")
         .select("source_value, target_id")
         .eq("organization_id", organizationId)
         .eq("entity", entity)
@@ -53,7 +54,8 @@ export async function getAllValuePatternsForEntity(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("ia_import_value_patterns")
+        .schema("ai")
+        .from("ai_import_value_patterns")
         .select("comp_field, source_value, target_id")
         .eq("organization_id", organizationId)
         .eq("entity", entity)
@@ -100,19 +102,20 @@ export async function updateValuePatterns(
             updates.push((async () => {
                 // Check existance
                 const { data: existing } = await supabase
-                    .from("ia_import_value_patterns")
+                    .schema("ai")
+                    .from("ai_import_value_patterns")
                     .select("id, usage_count")
                     .eq("organization_id", organizationId)
                     .eq("entity", entity)
                     .eq("comp_field", field)
                     .eq("source_value", sourceValue)
-                    .single();
+                    .maybeSingle();
 
                 if (existing) {
                     // Update usage if target creates a reinforcement (same target) or override?
                     // If target is different, we might want to update the target to the new preference.
                     // For now, let's assume we update to the LATEST choice.
-                    await supabase.from("ia_import_value_patterns")
+                    await supabase.schema("ai").from("ai_import_value_patterns")
                         .update({
                             target_id: targetId, // Update target to latest choice
                             usage_count: existing.usage_count + 1,
@@ -121,7 +124,7 @@ export async function updateValuePatterns(
                         .eq("id", existing.id);
                 } else {
                     // Insert new
-                    await supabase.from("ia_import_value_patterns")
+                    await supabase.schema("ai").from("ai_import_value_patterns")
                         .insert({
                             organization_id: organizationId,
                             entity: entity,

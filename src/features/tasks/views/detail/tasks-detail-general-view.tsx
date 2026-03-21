@@ -236,20 +236,21 @@ export function TasksDetailGeneralView({
         return source
             .sort((a, b) => {
                 const getSortKey = (d: TaskDivision) => {
-                    if (!d.parent_id) return `${String(d.order ?? 999).padStart(3, '0')}-${d.name}`;
+                    if (!d.parent_id) return `${String(d.order ?? 999).padStart(3, '0')}-${d.name ?? ""}`;
                     const parent = source.find(p => p.id === d.parent_id);
-                    const parentKey = parent ? `${String(parent.order ?? 999).padStart(3, '0')}-${parent.name}` : '999-Z';
-                    return `${parentKey}-${String(d.order ?? 999).padStart(3, '0')}-${d.name}`;
+                    const parentKey = parent ? `${String(parent.order ?? 999).padStart(3, '0')}-${parent.name ?? ""}` : '999-Z';
+                    return `${parentKey}-${String(d.order ?? 999).padStart(3, '0')}-${d.name ?? ""}`;
                 };
                 return getSortKey(a).localeCompare(getSortKey(b));
             })
             .map(d => {
-                let label = d.order != null ? `${d.order}. ${d.name}` : d.name;
+                const name = d.name ?? "";
+                let label = d.order != null ? `${d.order}. ${name}` : name;
                 if (d.parent_id) {
                     const parent = source.find(p => p.id === d.parent_id);
                     if (parent) {
-                        const parentName = parent.order != null ? `${parent.order}. ${parent.name}` : parent.name;
-                        label = `${parentName} › ${d.name}`;
+                        const parentName = parent.order != null ? `${parent.order}. ${parent.name ?? ""}` : (parent.name ?? "");
+                        label = `${parentName} › ${name}`;
                     }
                 }
                 return { value: d.id, label };
@@ -271,7 +272,7 @@ export function TasksDetailGeneralView({
             .filter(u => u.applicable_to?.includes("task"))
             .map(u => ({
                 value: u.id,
-                label: u.name,
+                label: u.name ?? "",
                 symbol: u.symbol || undefined,
             }));
     }, [units]);

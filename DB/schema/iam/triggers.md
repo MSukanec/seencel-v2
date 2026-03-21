@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-03-19T23:49:30.234Z
+> Generated: 2026-03-20T17:04:16.493Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -8,7 +8,7 @@
 | Table | Trigger | Timing | Events | Action |
 |-------|---------|--------|--------|--------|
 | feedback | notify_new_feedback | AFTER | INSERT | EXECUTE FUNCTION notifications.notify_new_feedback() |
-| organization_data | on_organization_data_audit | AFTER | DELETE, INSERT, UPDATE | EXECUTE FUNCTION audit.log_organization_data_activity() |
+| organization_data | on_organization_data_audit | AFTER | UPDATE, INSERT, DELETE | EXECUTE FUNCTION audit.log_organization_data_activity() |
 | organization_data | set_timestamp_organization_data | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
 | organization_data | set_updated_by_organization_data | BEFORE | UPDATE | EXECUTE FUNCTION handle_updated_by() |
 | organization_external_actors | oea_set_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |

@@ -91,7 +91,8 @@ export interface RecipeResourceListItemProps {
     /** Whether this resource belongs to the current org (enables editing) */
     isOwn: boolean;
 
-
+    /** Optional notes */
+    notes?: string | null;
 
     // ── Quantity ──
 
@@ -161,6 +162,7 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
     unitSymbol,
     unitName,
     isOwn,
+    notes,
 
     quantity,
     onUpdateQuantity,
@@ -255,8 +257,10 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
                 <ListItem.Content className="space-y-0.5">
                     <div className="flex items-center gap-1.5">
                         <ListItem.Title className="text-sm">{name}</ListItem.Title>
-
                     </div>
+                    {notes && (
+                        <p className="text-[11px] text-muted-foreground/70 truncate max-w-xs">{notes}</p>
+                    )}
                     <div className="flex items-center gap-2">
                         {unitDisplay && (
                             <span className="text-[11px] text-muted-foreground">

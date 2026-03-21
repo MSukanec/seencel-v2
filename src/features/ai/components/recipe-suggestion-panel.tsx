@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, forwardRef, useImperativeHandle } from "react";
 import {
     Wand2,
     Loader2,
@@ -66,6 +66,8 @@ interface RecipeSuggestionPanelProps {
     onAcceptLabor?: (labor: AIRecipeSuggestedLabor) => void;
     /** Callback cuando el usuario acepta TODA la sugerencia */
     onAcceptAll?: (suggestion: AIRecipeSuggestion) => void;
+    /** Callback when suggestion state changes (allows parent to react) */
+    onSuggestionChange?: (suggestion: AIRecipeSuggestion | null) => void;
     /**
      * Callback cuando se creó un material nuevo desde el panel.
      * Recibe el ID y nombre del material recién creado.
@@ -87,7 +89,12 @@ const CONFIDENCE_CONFIG = {
 // Main Component
 // ============================================================================
 
-export function RecipeSuggestionPanel({
+export interface RecipeSuggestionPanelRef {
+    suggest: () => void;
+    isPending: boolean;
+}
+
+export const RecipeSuggestionPanel = forwardRef<RecipeSuggestionPanelRef, RecipeSuggestionPanelProps>(function RecipeSuggestionPanel({
     taskName,
     taskUnit,
     taskDivision,
@@ -103,7 +110,8 @@ export function RecipeSuggestionPanel({
     onAcceptAll,
     onMaterialCreated,
     onLaborCreated,
-}: RecipeSuggestionPanelProps) {
+    onSuggestionChange,
+}, ref) {
     const [isPending, startTransition] = useTransition();
     const [suggestion, setSuggestion] = useState<AIRecipeSuggestion | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -133,11 +141,19 @@ export function RecipeSuggestionPanel({
 
             if (result.success) {
                 setSuggestion(result.data);
+                onSuggestionChange?.(result.data);
             } else {
                 setError(result.error);
+                onSuggestionChange?.(null);
             }
         });
     };
+
+    // Expose suggest + isPending to parent via ref
+    useImperativeHandle(ref, () => ({
+        suggest: handleSuggest,
+        isPending,
+    }), [isPending]);
 
     const handleAcceptMaterial = (material: AIRecipeSuggestedMaterial, index: number) => {
         setAcceptedMaterials((prev) => new Set([...prev, index]));
@@ -181,75 +197,61 @@ export function RecipeSuggestionPanel({
     // Render
     // ========================================================================
 
-    return (
-        <div className="mt-4 rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)] overflow-hidden">
-            {/* Header */}
-            <div
-                className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none"
-                onClick={() => suggestion && setIsExpanded((p) => !p)}
-            >
-                <div className="flex items-center gap-2 flex-1">
-                    <Sparkles className="h-4 w-4 text-violet-400 shrink-0" />
-                    <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                        Sugerencia IA
-                    </span>
-                    {confidenceConfig && (
-                        <Badge
-                            variant="outline"
-                            className={cn("text-[10px] h-5 px-1.5 border", confidenceConfig.className)}
-                        >
-                            {confidenceConfig.label}
-                        </Badge>
-                    )}
-                </div>
+    // Don't render anything if no suggestion and not loading — footer triggers AI
+    if (!suggestion && !isPending && !error) return null;
 
-                <div className="flex items-center gap-2">
-                    {!suggestion && !isPending && (
+    return (
+        <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)] overflow-hidden">
+            {/* Loading state */}
+            {isPending && (
+                <div className="flex items-center justify-center gap-2 px-4 py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
+                    <span className="text-sm text-violet-400">Calculando cantidades...</span>
+                </div>
+            )}
+
+            {/* Results header — compact with badge + controls */}
+            {suggestion && !isPending && (
+                <div
+                    className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none"
+                    onClick={() => setIsExpanded((p) => !p)}
+                >
+                    <div className="flex items-center gap-2 flex-1">
+                        <Sparkles className="h-4 w-4 text-violet-400 shrink-0" />
+                        <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                            Sugerencia IA
+                        </span>
+                        {confidenceConfig && (
+                            <Badge
+                                variant="outline"
+                                className={cn("text-[10px] h-5 px-1.5 border", confidenceConfig.className)}
+                            >
+                                {confidenceConfig.label}
+                            </Badge>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
                         <Button
                             type="button"
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleSuggest();
                             }}
-                            className="h-7 text-xs gap-1.5 border-violet-500/30 text-violet-400 hover:bg-violet-500/10 hover:border-violet-500/50"
+                            className="h-7 text-xs text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
                         >
-                            <Wand2 className="h-3 w-3" />
-                            Sugerir receta
+                            Regenerar
                         </Button>
-                    )}
-
-                    {isPending && (
-                        <div className="flex items-center gap-1.5 text-xs text-violet-400">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            <span>Calculando cantidades...</span>
-                        </div>
-                    )}
-
-                    {suggestion && !isPending && (
-                        <>
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSuggest();
-                                }}
-                                className="h-7 text-xs text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-                            >
-                                Regenerar
-                            </Button>
-                            {isExpanded ? (
-                                <ChevronUp className="h-4 w-4 text-[var(--color-text-tertiary)]" />
-                            ) : (
-                                <ChevronDown className="h-4 w-4 text-[var(--color-text-tertiary)]" />
-                            )}
-                        </>
-                    )}
+                        {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 text-[var(--color-text-tertiary)]" />
+                        ) : (
+                            <ChevronDown className="h-4 w-4 text-[var(--color-text-tertiary)]" />
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Error */}
             {error && (
@@ -340,7 +342,7 @@ export function RecipeSuggestionPanel({
             )}
         </div>
     );
-}
+});
 
 // ============================================================================
 // MaterialSuggestionItem
@@ -363,9 +365,6 @@ function MaterialSuggestionItem({
 }: MaterialSuggestionItemProps) {
     const isMatched = !!material.catalogId;
     const [isCreating, setIsCreating] = useState(false);
-    const [showCreateForm, setShowCreateForm] = useState(false);
-    const [nameOverride, setNameOverride] = useState(material.catalogName ?? material.name);
-
     const handleCreate = async () => {
         if (!organizationId) {
             toast.error("No se puede crear sin organización");
@@ -373,18 +372,17 @@ function MaterialSuggestionItem({
         }
         setIsCreating(true);
         try {
-            // Intentar encontrar la unidad por símbolo
             const unitId = await findUnitBySymbol(material.unit);
+            const createName = material.catalogName ?? material.name;
 
             const result = await quickCreateMaterial({
-                name: nameOverride.trim(),
+                name: createName.trim(),
                 organizationId,
                 unitId,
             });
 
             if (result.success && result.id && result.name) {
                 toast.success(`Material "${result.name}" creado en el catálogo`);
-                setShowCreateForm(false);
                 onCreated(result.id, result.name);
             } else {
                 toast.error(result.error ?? "Error al crear el material");
@@ -402,83 +400,43 @@ function MaterialSuggestionItem({
                 <Check className="h-3 w-3 text-emerald-400 shrink-0" />
                 <span className="flex-1 truncate text-emerald-400">{displayName}</span>
                 <span className="text-emerald-400/60 shrink-0 tabular-nums">
-                    {material.quantity} {material.unit}
+                    {material.quantity} {material.unit?.toUpperCase()}
                 </span>
             </div>
         );
     }
 
     return (
-        <div className="rounded-md border border-[var(--color-border)] overflow-hidden">
-            {/* Main row */}
-            <div className="flex items-center gap-2 px-3 py-2 text-xs bg-[var(--color-bg-elevated)] hover:border-[var(--color-border-stronger)]">
-                <div
-                    className={cn("h-1.5 w-1.5 rounded-full shrink-0", isMatched ? "bg-emerald-400" : "bg-amber-400")}
-                />
-                <span className="flex-1 truncate text-[var(--color-text-primary)]">{displayName}</span>
-                {material.wastePercentage > 0 && (
-                    <span className="text-[var(--color-text-tertiary)] shrink-0">
-                        +{material.wastePercentage}% desp.
-                    </span>
-                )}
-                <span className="text-[var(--color-text-secondary)] shrink-0 font-medium tabular-nums">
-                    {material.quantity} {material.unit}
+        <div className="flex items-center gap-2 rounded-md border border-[var(--color-border)] px-3 py-2 text-xs bg-[var(--color-bg-elevated)]">
+            <div
+                className={cn("h-1.5 w-1.5 rounded-full shrink-0", isMatched ? "bg-emerald-400" : "bg-amber-400")}
+            />
+            <span className="flex-1 truncate text-[var(--color-text-primary)]">{displayName}</span>
+            <span className="text-[var(--color-text-secondary)] shrink-0 font-medium tabular-nums">
+                {material.quantity} {material.unit?.toUpperCase()}
+            </span>
+            {material.wastePercentage > 0 && (
+                <span className="text-[var(--color-text-tertiary)] shrink-0">
+                    +{material.wastePercentage}% desp.
                 </span>
+            )}
 
-                {isMatched ? (
-                    <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-5 w-5 shrink-0 rounded text-[var(--color-text-tertiary)] hover:text-violet-400 hover:bg-violet-500/10"
-                        onClick={onAccept}
-                    >
+            {!isMatched && (
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 text-xs px-2 gap-1 shrink-0 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                    onClick={handleCreate}
+                    disabled={isCreating}
+                >
+                    {isCreating ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
                         <Plus className="h-3 w-3" />
-                    </Button>
-                ) : (
-                    <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className={cn(
-                            "h-5 w-5 shrink-0 rounded",
-                            showCreateForm
-                                ? "text-amber-400 bg-amber-500/10"
-                                : "text-[var(--color-text-tertiary)] hover:text-amber-400 hover:bg-amber-500/10"
-                        )}
-                        onClick={() => setShowCreateForm((p) => !p)}
-                        title="Crear en catálogo"
-                    >
-                        <CirclePlus className="h-3 w-3" />
-                    </Button>
-                )}
-            </div>
-
-            {/* Inline create form for unmatched items */}
-            {!isMatched && showCreateForm && (
-                <div className="px-3 py-2.5 bg-amber-500/5 border-t border-amber-500/15 flex items-center gap-2">
-                    <Input
-                        value={nameOverride}
-                        onChange={(e) => setNameOverride(e.target.value)}
-                        placeholder="Nombre en el catálogo..."
-                        className="h-7 text-xs flex-1 border-amber-500/20 focus-visible:ring-amber-500/30"
-                    />
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs px-3 gap-1 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 shrink-0"
-                        onClick={handleCreate}
-                        disabled={isCreating || !nameOverride.trim()}
-                    >
-                        {isCreating ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                            <Plus className="h-3 w-3" />
-                        )}
-                        Crear
-                    </Button>
-                </div>
+                    )}
+                    Crear Material
+                </Button>
             )}
         </div>
     );
@@ -505,9 +463,6 @@ function LaborSuggestionItem({
 }: LaborSuggestionItemProps) {
     const isMatched = !!labor.catalogId;
     const [isCreating, setIsCreating] = useState(false);
-    const [showCreateForm, setShowCreateForm] = useState(false);
-    const [nameOverride, setNameOverride] = useState(labor.catalogName ?? labor.name);
-
     const handleCreate = async () => {
         if (!organizationId) {
             toast.error("No se puede crear sin organización");
@@ -516,16 +471,16 @@ function LaborSuggestionItem({
         setIsCreating(true);
         try {
             const unitId = await findUnitBySymbol(labor.unit);
+            const createName = labor.catalogName ?? labor.name;
 
             const result = await quickCreateLaborType({
-                name: nameOverride.trim(),
+                name: createName.trim(),
                 organizationId,
                 unitId,
             });
 
             if (result.success && result.id && result.name) {
                 toast.success(`Tipo de MO "${result.name}" creado en el catálogo`);
-                setShowCreateForm(false);
                 onCreated(result.id, result.name);
             } else {
                 toast.error(result.error ?? "Error al crear el tipo de MO");
@@ -543,76 +498,38 @@ function LaborSuggestionItem({
                 <Check className="h-3 w-3 text-emerald-400 shrink-0" />
                 <span className="flex-1 truncate text-emerald-400">{displayName}</span>
                 <span className="text-emerald-400/60 shrink-0 tabular-nums">
-                    {labor.quantity} {labor.unit}
+                    {labor.quantity} {labor.unit?.toUpperCase()}
                 </span>
             </div>
         );
     }
 
     return (
-        <div className="rounded-md border border-[var(--color-border)] overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 text-xs bg-[var(--color-bg-elevated)]">
-                <div
-                    className={cn("h-1.5 w-1.5 rounded-full shrink-0", isMatched ? "bg-emerald-400" : "bg-amber-400")}
-                />
-                <span className="flex-1 truncate text-[var(--color-text-primary)]">{displayName}</span>
-                <span className="text-[var(--color-text-secondary)] shrink-0 font-medium tabular-nums">
-                    {labor.quantity} {labor.unit}
-                </span>
+        <div className="flex items-center gap-2 rounded-md border border-[var(--color-border)] px-3 py-2 text-xs bg-[var(--color-bg-elevated)]">
+            <div
+                className={cn("h-1.5 w-1.5 rounded-full shrink-0", isMatched ? "bg-emerald-400" : "bg-amber-400")}
+            />
+            <span className="flex-1 truncate text-[var(--color-text-primary)]">{displayName}</span>
+            <span className="text-[var(--color-text-secondary)] shrink-0 font-medium tabular-nums">
+                {labor.quantity} {labor.unit?.toUpperCase()}
+            </span>
 
-                {isMatched ? (
-                    <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-5 w-5 shrink-0 rounded text-[var(--color-text-tertiary)] hover:text-violet-400 hover:bg-violet-500/10"
-                        onClick={onAccept}
-                    >
+            {!isMatched && (
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 text-xs px-2 gap-1 shrink-0 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                    onClick={handleCreate}
+                    disabled={isCreating}
+                >
+                    {isCreating ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
                         <Plus className="h-3 w-3" />
-                    </Button>
-                ) : (
-                    <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className={cn(
-                            "h-5 w-5 shrink-0 rounded",
-                            showCreateForm
-                                ? "text-amber-400 bg-amber-500/10"
-                                : "text-[var(--color-text-tertiary)] hover:text-amber-400 hover:bg-amber-500/10"
-                        )}
-                        onClick={() => setShowCreateForm((p) => !p)}
-                        title="Crear en catálogo"
-                    >
-                        <CirclePlus className="h-3 w-3" />
-                    </Button>
-                )}
-            </div>
-
-            {!isMatched && showCreateForm && (
-                <div className="px-3 py-2.5 bg-amber-500/5 border-t border-amber-500/15 flex items-center gap-2">
-                    <Input
-                        value={nameOverride}
-                        onChange={(e) => setNameOverride(e.target.value)}
-                        placeholder="Nombre en el catálogo..."
-                        className="h-7 text-xs flex-1 border-amber-500/20 focus-visible:ring-amber-500/30"
-                    />
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs px-3 gap-1 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 shrink-0"
-                        onClick={handleCreate}
-                        disabled={isCreating || !nameOverride.trim()}
-                    >
-                        {isCreating ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                            <Plus className="h-3 w-3" />
-                        )}
-                        Crear
-                    </Button>
-                </div>
+                    )}
+                    Crear MO
+                </Button>
             )}
         </div>
     );

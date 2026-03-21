@@ -69,7 +69,7 @@ export function TasksBulkEditForm({
     const unitOptions: SelectOption[] = useMemo(() =>
         units.map(u => ({
             value: u.id,
-            label: u.symbol ? `${u.name} (${u.symbol})` : u.name,
+            label: u.symbol ? `${u.name || ''} (${u.symbol})` : (u.name || ''),
         })),
         [units]
     );
@@ -86,12 +86,12 @@ export function TasksBulkEditForm({
         const result: SelectOption[] = [];
 
         parents.forEach(parent => {
-            result.push({ value: parent.id, label: parent.name });
+            result.push({ value: parent.id, label: parent.name || '' });
             const children = filtered
                 .filter(d => d.parent_id === parent.id)
                 .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
             children.forEach(child => {
-                result.push({ value: child.id, label: `  └ ${child.name}` });
+                result.push({ value: child.id, label: `  └ ${child.name || ''}` });
             });
         });
 

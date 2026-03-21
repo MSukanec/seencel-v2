@@ -11,7 +11,8 @@ export async function getMappingPatterns(organizationId: string, entity: string)
     // 2. Global Popularity (usage_count)
 
     const { data, error } = await supabase
-        .from("ia_import_mapping_patterns")
+        .schema("ai")
+        .from("ai_import_mapping_patterns")
         .select("organization_id, source_header, target_field, usage_count")
         .eq("entity", entity)
         .order("usage_count", { ascending: false });
@@ -58,17 +59,18 @@ export async function updateMappingPatterns(
 
         // Check if exists pattern for this org+entity+header+target
         const { data: existing } = await supabase
-            .from("ia_import_mapping_patterns")
+            .schema("ai")
+            .from("ai_import_mapping_patterns")
             .select("id, usage_count")
             .eq("organization_id", organizationId)
             .eq("entity", entity)
             .eq("source_header", sourceHeader)
             .eq("target_field", targetField)
-            .single();
+            .maybeSingle();
 
         if (existing) {
             // Increment usage
-            await supabase.from("ia_import_mapping_patterns")
+            await supabase.schema("ai").from("ai_import_mapping_patterns")
                 .update({
                     usage_count: existing.usage_count + 1,
                     last_used_at: new Date().toISOString()
@@ -76,7 +78,7 @@ export async function updateMappingPatterns(
                 .eq("id", existing.id);
         } else {
             // Create new
-            await supabase.from("ia_import_mapping_patterns")
+            await supabase.schema("ai").from("ai_import_mapping_patterns")
                 .insert({
                     organization_id: organizationId,
                     entity: entity,

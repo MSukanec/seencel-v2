@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseDateFromDB } from "@/lib/timezone-data";
 
 interface ConstructionTaskCardProps {
     task: ConstructionTaskView;
@@ -105,13 +106,13 @@ export function ConstructionTaskCard({
                                 <Calendar className="h-3 w-3" />
                                 {task.planned_start_date && (
                                     <span>
-                                        {format(new Date(task.planned_start_date), "dd MMM", { locale: es })}
+                                        {format(parseDateFromDB(task.planned_start_date)!, "dd MMM", { locale: es })}
                                     </span>
                                 )}
                                 {task.planned_start_date && task.planned_end_date && <span>→</span>}
                                 {task.planned_end_date && (
                                     <span>
-                                        {format(new Date(task.planned_end_date), "dd MMM yyyy", { locale: es })}
+                                        {format(parseDateFromDB(task.planned_end_date)!, "dd MMM yyyy", { locale: es })}
                                     </span>
                                 )}
                             </div>

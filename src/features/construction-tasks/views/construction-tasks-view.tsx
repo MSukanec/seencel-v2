@@ -1,108 +1,55 @@
 "use client";
 
-import { useState, useTransition, useMemo, useCallback, useEffect } from "react";
-import { addDays, differenceInCalendarDays } from "date-fns";
-import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
+import { useMemo } from "react";
+import dynamic from "next/dynamic";
 import { ConstructionTaskView, ConstructionTaskStatus, STATUS_CONFIG } from "../types";
 import { ConstructionTaskCard } from "../components/construction-task-card";
-import { ConstructionTaskForm } from "../forms/construction-task-form";
-import type { UnitOption } from "@/components/shared/forms/fields";
-import { deleteConstructionTask, updateConstructionTask, updateConstructionTaskStatus, createConstructionDependency, deleteConstructionDependency } from "../actions";
+import type { UnitOption, CatalogTaskOption } from "@/components/shared/forms/fields";
+import { deleteConstructionTask } from "../actions";
 import { ConstructionDependencyRow } from "../queries";
-import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { ToolbarTabs } from "@/components/layout/dashboard/toolbar/toolbar-tabs";
-import { FacetedFilter } from "@/components/layout/dashboard/toolbar/toolbar-faceted-filter";
+import { ToolbarCard } from "@/components/shared/toolbar-controls/toolbar-card";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { GanttChart, GanttItem, GanttDependency, GanttGroup } from "@/components/shared/gantt";
-import { GanttChart as ExperimentalGanttChart } from "@/components/shared/gantt/experimental";
 import { DataTable } from "@/components/shared/data-table/data-table";
-import { getConstructionTaskColumns } from "../components/construction-tasks-columns";
+import { getConstructionTaskColumns, STATUS_FILTER_OPTIONS } from "../tables/construction-tasks-columns";
+import { useConstructionGantt } from "../hooks/use-construction-gantt";
+import { PageHeaderActionPortal } from "@/components/layout/dashboard/header/page-header";
 
-import { useModal } from "@/stores/modal-store";
+import { usePanel } from "@/stores/panel-store";
 import { useActiveProjectId } from "@/stores/layout-store";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { ClipboardList, Plus, GanttChartSquare, LayoutGrid, List, Timer } from "lucide-react";
+import { useTableActions } from "@/hooks/use-table-actions";
+import { useTableFilters } from "@/hooks/use-table-filters";
+import { ClipboardList, Plus, GanttChartSquare, LayoutGrid, Table2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useState } from "react";
+
+// Lazy load Gantt (heavy component)
+const GanttChart = dynamic(
+    () => import("@/components/shared/gantt").then(m => ({ default: m.GanttChart })),
+    { ssr: false }
+);
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type ViewMode = "timeline" | "gantt" | "cards" | "table";
+type ViewMode = "gantt" | "table" | "cards";
+
+const VIEW_OPTIONS = [
+    { value: "gantt", icon: GanttChartSquare, label: "Gantt" },
+    { value: "table", icon: Table2, label: "Tabla" },
+    { value: "cards", icon: LayoutGrid, label: "Tarjetas" },
+];
 
 interface ConstructionTasksViewProps {
     projectId?: string;
     organizationId: string;
     tasks: ConstructionTaskView[];
     initialDependencies: ConstructionDependencyRow[];
-    catalogTasks: {
-        id: string;
-        name: string | null;
-        custom_name: string | null;
-        unit_name?: string;
-        division_name?: string;
-        code: string | null;
-    }[];
+    catalogTasks: CatalogTaskOption[];
     units: UnitOption[];
     workDays?: number[];
 }
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-// Colores por estado para el dot indicador del Gantt
-const STATUS_DOT_COLORS: Record<ConstructionTaskStatus, string> = {
-    pending: "var(--muted-foreground)",
-    in_progress: "var(--semantic-info)",
-    completed: "var(--semantic-positive)",
-    paused: "var(--semantic-warning)",
-};
-
-function taskToGanttItem(task: ConstructionTaskView): GanttItem | null {
-    // Sin fechas no puede renderizarse en el Gantt
-    if (!task.planned_start_date && !task.planned_end_date) return null;
-
-    const startDate = parseDateFromDB(task.planned_start_date)
-        || parseDateFromDB(task.planned_end_date)!;
-    const endDate = parseDateFromDB(task.planned_end_date)
-        || parseDateFromDB(task.planned_start_date)!;
-
-    const actualStart = parseDateFromDB(task.actual_start_date) ?? undefined;
-    const actualEnd = parseDateFromDB(task.actual_end_date) ?? undefined;
-
-    return {
-        id: task.id,
-        label: [
-            task.task_name || task.custom_name || "Sin nombre",
-            task.recipe_name,
-        ].filter(Boolean).join(" — "),
-        subtitle: task.division_name || undefined,
-        startDate,
-        endDate: endDate >= startDate ? endDate : startDate,
-        actualStartDate: actualStart,
-        actualEndDate: actualEnd,
-        progress: task.progress_percent || 0,
-        statusColor: STATUS_DOT_COLORS[task.status] || STATUS_DOT_COLORS.pending,
-        group: task.phase_name || undefined,
-        groupId: task.division_name || "__ungrouped__",
-    };
-}
-
-// Opciones para el FacetedFilter de estado
-const STATUS_FILTER_OPTIONS = (Object.keys(STATUS_CONFIG) as ConstructionTaskStatus[]).map((status) => ({
-    label: STATUS_CONFIG[status].label,
-    value: status,
-}));
 
 // ============================================================================
 // Component
@@ -117,520 +64,87 @@ export function ConstructionTasksView({
     units,
     workDays = [1, 2, 3, 4, 5],
 }: ConstructionTasksViewProps) {
-    const { openModal } = useModal();
+    const { openPanel } = usePanel();
     const storeProjectId = useActiveProjectId();
-    // Use store filter first, then prop fallback
     const activeProjectId = storeProjectId ?? propProjectId ?? null;
-
-    // Compute non-work days (inverse of workDays) for the Gantt
-    const nonWorkDays = useMemo(() => {
-        const allDays = [0, 1, 2, 3, 4, 5, 6];
-        return allDays.filter(d => !workDays.includes(d));
-    }, [workDays]);
-    const [tasks, setTasks] = useState(initialTasks);
     const [viewMode, setViewMode] = useState<ViewMode>("gantt");
-    const [searchQuery, setSearchQuery] = useState("");
-    const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set());
-    const [deletingTask, setDeletingTask] = useState<ConstructionTaskView | null>(null);
-    const [isPending, startTransition] = useTransition();
 
-    // Sync local state when server props change (e.g., after router.refresh())
-    useEffect(() => {
-        setTasks(initialTasks);
-    }, [initialTasks]);
+    // --- Filters (standard hook) ---
+    const filters = useTableFilters({
+        facets: [{
+            key: "status",
+            title: "Estado",
+            options: STATUS_FILTER_OPTIONS,
+        }],
+    });
 
-    // Dependencies state
-    const [dependencies, setDependencies] = useState<ConstructionDependencyRow[]>(initialDependencies);
-
-    // ========================================================================
-    // Filtered tasks
-    // ========================================================================
-
-    const filteredTasks = useMemo(() => {
-        return tasks.filter((task) => {
-            // Project filter (from store or prop)
+    // --- Pre-filter by project + search + facets ---
+    const projectFilteredTasks = useMemo(() => {
+        return initialTasks.filter(task => {
             if (activeProjectId && task.project_id !== activeProjectId) return false;
-            const matchesSearch =
-                [
-                    task.task_name || task.custom_name || "",
-                    task.recipe_name || "",
-                ].join(" ")
-                    .toLowerCase()
-                    .includes(searchQuery.toLowerCase());
-            const matchesStatus = selectedStatuses.size === 0 || selectedStatuses.has(task.status);
-            return matchesSearch && matchesStatus;
-        });
-    }, [tasks, searchQuery, selectedStatuses, activeProjectId]);
 
-    // ========================================================================
-    // Gantt items (memoized conversion)
-    // ========================================================================
-
-    const ganttItems = useMemo(() => {
-        return filteredTasks
-            .map(taskToGanttItem)
-            .filter(Boolean) as GanttItem[];
-    }, [filteredTasks]);
-
-    // ========================================================================
-    // Gantt groups (by division)
-    // ========================================================================
-
-    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-
-    const ganttGroups: GanttGroup[] = useMemo(() => {
-        const divisionNames = new Set<string>();
-        for (const item of ganttItems) {
-            if (item.groupId) divisionNames.add(item.groupId);
-        }
-
-        // Sort named groups alphabetically, "ungrouped" last
-        const sorted = Array.from(divisionNames).sort((a, b) => {
-            if (a === "__ungrouped__") return 1;
-            if (b === "__ungrouped__") return -1;
-            return a.localeCompare(b);
-        });
-
-        return sorted.map(name => ({
-            id: name,
-            label: name === "__ungrouped__" ? "Sin rubro" : name,
-            isCollapsed: collapsedGroups.has(name),
-        }));
-    }, [ganttItems, collapsedGroups]);
-
-    const handleGroupToggle = useCallback((groupId: string) => {
-        setCollapsedGroups(prev => {
-            const next = new Set(prev);
-            if (next.has(groupId)) {
-                next.delete(groupId);
-            } else {
-                next.add(groupId);
+            if (filters.searchQuery) {
+                const q = filters.searchQuery.toLowerCase();
+                const match = [task.task_name || task.custom_name || "", task.recipe_name || ""]
+                    .join(" ").toLowerCase().includes(q);
+                if (!match) return false;
             }
-            return next;
+
+            const statusFacet = filters.facetValues["status"];
+            if (statusFacet && statusFacet.size > 0 && !statusFacet.has(task.status)) return false;
+
+            return true;
         });
-    }, []);
+    }, [initialTasks, activeProjectId, filters]);
 
-    // ========================================================================
-    // Handlers
-    // ========================================================================
+    // --- Gantt logic (extracted hook) ---
+    const gantt = useConstructionGantt({
+        organizationId,
+        initialTasks,
+        initialDependencies,
+        filteredTasks: projectFilteredTasks,
+        workDays,
+    });
 
-    const handleStatusFilterSelect = (value: string) => {
-        const next = new Set(selectedStatuses);
-        if (next.has(value)) {
-            next.delete(value);
-        } else {
-            next.add(value);
-        }
-        setSelectedStatuses(next);
-    };
+    // --- Delete (standard hook) ---
+    const { handleDelete, DeleteConfirmDialog } = useTableActions<ConstructionTaskView>({
+        onDelete: async (task) => deleteConstructionTask(task.id, task.project_id),
+        entityName: "tarea",
+        entityNamePlural: "tareas",
+    });
 
-
+    // --- Panel handlers ---
     const handleCreate = () => {
         if (!activeProjectId) {
             toast.error("Seleccioná un proyecto en el header para crear una tarea.");
             return;
         }
-        openModal(
-            <ConstructionTaskForm
-                projectId={activeProjectId}
-                organizationId={organizationId}
-                catalogTasks={catalogTasks}
-                units={units}
-            />,
-            {
-                title: "Agregar Tarea",
-                description: "Seleccioná una tarea del catálogo o creá una personalizada.",
-                size: "md",
-            }
-        );
+        openPanel("construction-task-form", {
+            projectId: activeProjectId,
+            organizationId,
+            catalogTasks,
+            units,
+        });
     };
 
     const handleEdit = (task: ConstructionTaskView) => {
-        openModal(
-            <ConstructionTaskForm
-                projectId={task.project_id}
-                organizationId={organizationId}
-                catalogTasks={catalogTasks}
-                units={units}
-                initialData={task}
-            />,
-            {
-                title: "Editar Tarea",
-                description: "Modifica los detalles de la tarea de construcción.",
-                size: "md",
-            }
-        );
-    };
-
-    const handleDelete = (task: ConstructionTaskView) => {
-        setDeletingTask(task);
-    };
-
-    const confirmDelete = () => {
-        if (!deletingTask) return;
-        const taskToDelete = deletingTask;
-
-        // Optimistic: remove from UI immediately
-        setTasks(prev => prev.filter(t => t.id !== taskToDelete.id));
-        setDeletingTask(null);
-        toast.success("Tarea eliminada");
-
-        // Persist in background
-        startTransition(async () => {
-            const result = await deleteConstructionTask(taskToDelete.id, taskToDelete.project_id);
-            if (!result.success) {
-                // Rollback on error
-                setTasks(prev => [...prev, taskToDelete]);
-                toast.error(result.error || "Error al eliminar");
-            }
+        openPanel("construction-task-form", {
+            projectId: task.project_id,
+            organizationId,
+            catalogTasks,
+            units,
+            initialData: task,
         });
     };
 
-    const handleStatusChange = (task: ConstructionTaskView, newStatus: string) => {
-        // Optimistic: update UI immediately
-        const previousStatus = task.status;
-        const previousProgress = task.progress_percent;
-        setTasks(prev =>
-            prev.map(t =>
-                t.id === task.id
-                    ? {
-                        ...t,
-                        status: newStatus as ConstructionTaskStatus,
-                        progress_percent: newStatus === 'completed' ? 100 : t.progress_percent
-                    }
-                    : t
-            )
-        );
+    // --- Columns ---
+    const tableColumns = useMemo(() => getConstructionTaskColumns(), []);
 
-        // Persist in background
-        startTransition(async () => {
-            const result = await updateConstructionTaskStatus(
-                task.id,
-                task.project_id,
-                newStatus as ConstructionTaskStatus
-            );
-            if (!result.success) {
-                // Rollback on error
-                setTasks(prev =>
-                    prev.map(t =>
-                        t.id === task.id
-                            ? { ...t, status: previousStatus, progress_percent: previousProgress }
-                            : t
-                    )
-                );
-                toast.error(result.error || "Error al actualizar");
-            }
-        });
-    };
-
-    // ========================================================================
-    // Dependency propagation (push-forward cascade)
-    // ========================================================================
-
-    /**
-     * When a task's end date changes, check its FS successors.
-     * If the new end date >= successor's start date, push the successor
-     * forward to maintain the constraint. Recursive.
-     * Returns array of {id, originalTask, newStart, newEnd} for all affected tasks.
-     */
-    const propagateDependencies = useCallback((
-        movedTaskId: string,
-        movedTaskNewEnd: Date,
-        currentTasks: ConstructionTaskView[],
-        currentDeps: typeof dependencies,
-        visited: Set<string> = new Set(),
-    ): { id: string; original: ConstructionTaskView; newStartStr: string; newEndStr: string; newDuration: number }[] => {
-        if (visited.has(movedTaskId)) return []; // prevent cycles
-        visited.add(movedTaskId);
-
-        const affected: { id: string; original: ConstructionTaskView; newStartStr: string; newEndStr: string; newDuration: number }[] = [];
-
-        // Find FS dependencies where this task is the predecessor
-        const fsDeps = currentDeps.filter(
-            d => d.predecessor_task_id === movedTaskId && d.type === "FS"
-        );
-
-        for (const dep of fsDeps) {
-            const successor = currentTasks.find(t => t.id === dep.successor_task_id);
-            if (!successor) continue;
-
-            const successorStart = parseDateFromDB(successor.planned_start_date);
-            if (!successorStart) continue;
-
-            // Only push forward, never pull back
-            // FS constraint: successor must start AFTER predecessor ends
-            // So if predecessorEnd >= successorStart, push successor
-            if (movedTaskNewEnd >= successorStart) {
-                const newSuccessorStart = movedTaskNewEnd;
-                const successorEnd = parseDateFromDB(successor.planned_end_date);
-                const duration = successorEnd
-                    ? differenceInCalendarDays(successorEnd, successorStart)
-                    : 0;
-                const newSuccessorEnd = addDays(newSuccessorStart, duration);
-
-                affected.push({
-                    id: successor.id,
-                    original: successor,
-                    newStartStr: formatDateForDB(newSuccessorStart)!,
-                    newEndStr: formatDateForDB(newSuccessorEnd)!,
-                    newDuration: duration + 1,
-                });
-
-                // Recurse: this successor might also push its own successors
-                const cascaded = propagateDependencies(
-                    successor.id,
-                    newSuccessorEnd,
-                    currentTasks,
-                    currentDeps,
-                    visited,
-                );
-                affected.push(...cascaded);
-            }
-        }
-
-        return affected;
-    }, [dependencies]);
-
-    // ========================================================================
-    // Gantt interaction handlers
-    // ========================================================================
-
-    const handleGanttItemClick = (id: string) => {
-        const task = tasks.find(t => t.id === id);
+    // --- Gantt click ---
+    const handleGanttClick = (id: string) => {
+        const task = gantt.handleGanttItemClick(id);
         if (task) handleEdit(task);
     };
-
-    const handleGanttItemMove = useCallback((id: string, newStart: Date, newEnd: Date) => {
-        const original = tasks.find(t => t.id === id);
-        if (!original) return;
-
-        const newStartStr = formatDateForDB(newStart);
-        const newEndStr = formatDateForDB(newEnd);
-        const newDuration = differenceInCalendarDays(newEnd, newStart) + 1;
-
-        // Cascade: find tasks that need to be pushed
-        const cascaded = propagateDependencies(id, newEnd, tasks, dependencies);
-
-        // Optimistic update — moved task + cascaded
-        setTasks(prev => {
-            let updated = prev.map(t => t.id === id ? {
-                ...t,
-                planned_start_date: newStartStr,
-                planned_end_date: newEndStr,
-                duration_in_days: newDuration,
-            } : t);
-
-            for (const c of cascaded) {
-                updated = updated.map(t => t.id === c.id ? {
-                    ...t,
-                    planned_start_date: c.newStartStr,
-                    planned_end_date: c.newEndStr,
-                    duration_in_days: c.newDuration,
-                } : t);
-            }
-
-            return updated;
-        });
-
-        const totalMoved = 1 + cascaded.length;
-        toast.success(
-            totalMoved > 1
-                ? `${totalMoved} tareas actualizadas`
-                : "Fechas actualizadas"
-        );
-
-        // Persist all in parallel
-        const persists = [
-            updateConstructionTask(id, original.project_id, {
-                planned_start_date: newStartStr,
-                planned_end_date: newEndStr,
-            }).then(result => {
-                if (!result.success) {
-                    setTasks(prev => prev.map(t => t.id === id ? original : t));
-                    toast.error(result.error || "Error al actualizar fechas");
-                }
-            }),
-            ...cascaded.map(c =>
-                updateConstructionTask(c.id, c.original.project_id, {
-                    planned_start_date: c.newStartStr,
-                    planned_end_date: c.newEndStr,
-                }).then(result => {
-                    if (!result.success) {
-                        setTasks(prev => prev.map(t => t.id === c.id ? c.original : t));
-                        toast.error(`Error al propagar tarea: ${result.error}`);
-                    }
-                })
-            ),
-        ];
-
-        void Promise.all(persists);
-    }, [tasks, dependencies, propagateDependencies]);
-
-    const handleGanttItemResize = useCallback((id: string, newEnd: Date) => {
-        const original = tasks.find(t => t.id === id);
-        if (!original) return;
-
-        const newEndStr = formatDateForDB(newEnd);
-        const startDate = parseDateFromDB(original.planned_start_date) || newEnd;
-        const newDuration = differenceInCalendarDays(newEnd, startDate) + 1;
-
-        // Cascade: find tasks that need to be pushed
-        const cascaded = propagateDependencies(id, newEnd, tasks, dependencies);
-
-        // Optimistic update — resized task + cascaded
-        setTasks(prev => {
-            let updated = prev.map(t => t.id === id ? {
-                ...t,
-                planned_end_date: newEndStr,
-                duration_in_days: newDuration,
-            } : t);
-
-            for (const c of cascaded) {
-                updated = updated.map(t => t.id === c.id ? {
-                    ...t,
-                    planned_start_date: c.newStartStr,
-                    planned_end_date: c.newEndStr,
-                    duration_in_days: c.newDuration,
-                } : t);
-            }
-
-            return updated;
-        });
-
-        const totalMoved = 1 + cascaded.length;
-        toast.success(
-            totalMoved > 1
-                ? `${totalMoved} tareas actualizadas`
-                : "Duración actualizada"
-        );
-
-        // Persist all in parallel
-        const persists = [
-            updateConstructionTask(id, original.project_id, {
-                planned_end_date: newEndStr,
-            }).then(result => {
-                if (!result.success) {
-                    setTasks(prev => prev.map(t => t.id === id ? original : t));
-                    toast.error(result.error || "Error al actualizar duración");
-                }
-            }),
-            ...cascaded.map(c =>
-                updateConstructionTask(c.id, c.original.project_id, {
-                    planned_start_date: c.newStartStr,
-                    planned_end_date: c.newEndStr,
-                }).then(result => {
-                    if (!result.success) {
-                        setTasks(prev => prev.map(t => t.id === c.id ? c.original : t));
-                        toast.error(`Error al propagar tarea: ${result.error}`);
-                    }
-                })
-            ),
-        ];
-
-        void Promise.all(persists);
-    }, [tasks, dependencies, propagateDependencies]);
-
-    // ========================================================================
-    // Dependency handlers
-    // ========================================================================
-
-    const ganttDependencies: GanttDependency[] = useMemo(() => {
-        return dependencies.map(d => ({
-            id: d.id,
-            fromId: d.predecessor_task_id,
-            toId: d.successor_task_id,
-            type: d.type,
-        }));
-    }, [dependencies]);
-
-    const handleDependencyCreate = useCallback((fromId: string, toId: string, type: GanttDependency["type"]) => {
-        // Optimistic: add temp dependency
-        const tempId = `temp-${Date.now()}`;
-        const optimistic: ConstructionDependencyRow = {
-            id: tempId,
-            predecessor_task_id: fromId,
-            successor_task_id: toId,
-            type,
-            lag_days: 0,
-        };
-        setDependencies(prev => [...prev, optimistic]);
-        toast.success("Dependencia creada");
-
-        // Persist
-        createConstructionDependency(organizationId, fromId, toId, type).then(result => {
-            if (result.success && result.id) {
-                // Replace temp id with real id
-                setDependencies(prev => prev.map(d => d.id === tempId ? { ...d, id: result.id! } : d));
-            } else {
-                // Rollback
-                setDependencies(prev => prev.filter(d => d.id !== tempId));
-                toast.error(result.error || "Error al crear dependencia");
-            }
-        });
-    }, [organizationId]);
-
-    const handleDependencyDelete = useCallback((depId: string) => {
-        const original = dependencies.find(d => d.id === depId);
-        if (!original) return;
-
-        // Optimistic remove
-        setDependencies(prev => prev.filter(d => d.id !== depId));
-        toast.success("Dependencia eliminada");
-
-        // Persist
-        deleteConstructionDependency(depId).then(result => {
-            if (!result.success) {
-                setDependencies(prev => [...prev, original]);
-                toast.error(result.error || "Error al eliminar dependencia");
-            }
-        });
-    }, [dependencies]);
-
-    const handleRowReorder = useCallback((itemId: string, targetItemId: string, position: "before" | "after") => {
-        setTasks(prev => {
-            const itemIndex = prev.findIndex(t => t.id === itemId);
-            const targetIndex = prev.findIndex(t => t.id === targetItemId);
-            if (itemIndex === -1 || targetIndex === -1) return prev;
-
-            const updated = [...prev];
-            const [moved] = updated.splice(itemIndex, 1);
-
-            // Recalculate target index after removal
-            const newTargetIndex = updated.findIndex(t => t.id === targetItemId);
-            const insertAt = position === "before" ? newTargetIndex : newTargetIndex + 1;
-            updated.splice(insertAt, 0, moved);
-
-            return updated;
-        });
-    }, []);
-
-    // ========================================================================
-    // DataTable columns (memoized)
-    // ========================================================================
-
-    const tableColumns = useMemo(() => getConstructionTaskColumns({
-        onEdit: handleEdit,
-        onDelete: handleDelete,
-        onStatusChange: handleStatusChange,
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), []);
-
-    // ========================================================================
-    // View toggle
-    // ========================================================================
-
-    const viewToggle = (
-        <ToolbarTabs
-            value={viewMode}
-            onValueChange={(v) => setViewMode(v as ViewMode)}
-            options={[
-                { value: "gantt", label: "Gantt", icon: GanttChartSquare },
-                { value: "cards", label: "Tarjetas", icon: LayoutGrid },
-                { value: "table", label: "Tabla", icon: List },
-                { value: "timeline", label: "Timeline", icon: Timer, disabled: true },
-            ]}
-        />
-    );
 
     // ========================================================================
     // Render
@@ -638,36 +152,32 @@ export function ConstructionTasksView({
 
     return (
         <>
-            {/* Toolbar */}
-            <Toolbar
-                portalToHeader
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                searchPlaceholder="Buscar tareas..."
-                leftActions={viewToggle}
-                filterContent={
-                    <FacetedFilter
-                        title="Estado"
-                        options={STATUS_FILTER_OPTIONS}
-                        selectedValues={selectedStatuses}
-                        onSelect={handleStatusFilterSelect}
-                        onClear={() => setSelectedStatuses(new Set())}
-                    />
-                }
-                actions={[
-                    {
-                        label: "Agregar Tarea",
-                        icon: Plus,
-                        onClick: handleCreate,
-                    },
-                ]}
-            />
+            {/* Header action (portaled) */}
+            <PageHeaderActionPortal>
+                <Button onClick={handleCreate} size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Agregar Tarea
+                </Button>
+            </PageHeaderActionPortal>
 
-            {/* Content */}
-            {filteredTasks.length === 0 ? (
-                <>
-                    {tasks.length === 0 ? (
-                        <div className="min-h-full flex flex-col">
+            <div className="h-full flex flex-col">
+                {/* Toolbar — display controla Gantt/Tabla/Tarjetas */}
+                <div className="mb-4">
+                    <ToolbarCard
+                        filters={filters}
+                        searchPlaceholder="Buscar tareas..."
+                        display={{
+                            viewMode,
+                            onViewModeChange: (v) => setViewMode(v as ViewMode),
+                            viewModeOptions: VIEW_OPTIONS,
+                        }}
+                    />
+                </div>
+
+                <div className="flex-1 flex flex-col min-h-0">
+                    {/* Empty states */}
+                    {projectFilteredTasks.length === 0 ? (
+                        initialTasks.length === 0 ? (
                             <ViewEmptyState
                                 mode="empty"
                                 icon={ClipboardList}
@@ -676,126 +186,74 @@ export function ConstructionTasksView({
                                 onAction={handleCreate}
                                 actionLabel="Agregar Tarea"
                                 docsPath="/docs/construccion/ejecucion-de-tareas"
+                                totalCount={initialTasks.length}
                             />
-                        </div>
-                    ) : (
-                        <div className="min-h-full flex flex-col">
+                        ) : (
                             <ViewEmptyState
                                 mode="no-results"
                                 icon={ClipboardList}
                                 viewName="tareas de construcción"
                                 filterContext="con los filtros aplicados"
-                                onResetFilters={() => {
-                                    setSearchQuery("");
-                                    setSelectedStatuses(new Set());
-                                }}
+                                onResetFilters={filters.clearAll}
+                                totalCount={initialTasks.length}
                             />
-                        </div>
-                    )}
-                </>
-            ) : (
-                <>
-                    {/* Timeline View (Experimental) — Canvas breakout */}
-                    {viewMode === "timeline" && (
-                        <div className="-mt-6 -mb-20 -mx-2 md:-mx-8 h-[calc(100%+1.5rem+5rem)] overflow-hidden">
-                            {ganttItems.length > 0 ? (
-                                <ExperimentalGanttChart
-                                    items={ganttItems}
-                                    dependencies={ganttDependencies}
-                                    groups={ganttGroups}
-                                    onGroupToggle={handleGroupToggle}
-                                    onItemClick={handleGanttItemClick}
-                                    onItemMove={handleGanttItemMove}
-                                    onItemResize={handleGanttItemResize}
-                                    onDependencyCreate={handleDependencyCreate}
-                                    onDependencyDelete={handleDependencyDelete}
-                                    onRowReorder={handleRowReorder}
-                                    todayLine={true}
-                                    nonWorkDays={nonWorkDays}
-                                />
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                                    Las tareas necesitan fechas planificadas para mostrarse en el Timeline.
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Gantt View */}
-                    {viewMode === "gantt" && (
+                        )
+                    ) : (
                         <>
-                            {ganttItems.length > 0 ? (
-                                <GanttChart
-                                    items={ganttItems}
-                                    dependencies={ganttDependencies}
-                                    groups={ganttGroups}
-                                    onGroupToggle={handleGroupToggle}
-                                    onItemClick={handleGanttItemClick}
-                                    onItemMove={handleGanttItemMove}
-                                    onItemResize={handleGanttItemResize}
-                                    onDependencyCreate={handleDependencyCreate}
-                                    onDependencyDelete={handleDependencyDelete}
-                                    todayLine={true}
-                                    nonWorkDays={nonWorkDays}
+                            {/* Gantt */}
+                            {viewMode === "gantt" && (
+                                gantt.ganttItems.length > 0 ? (
+                                    <GanttChart
+                                        items={gantt.ganttItems}
+                                        dependencies={gantt.ganttDependencies}
+                                        groups={gantt.ganttGroups}
+                                        onGroupToggle={gantt.handleGroupToggle}
+                                        onItemClick={handleGanttClick}
+                                        onItemMove={gantt.handleGanttItemMove}
+                                        onItemResize={gantt.handleGanttItemResize}
+                                        onDependencyCreate={gantt.handleDependencyCreate}
+                                        onDependencyDelete={gantt.handleDependencyDelete}
+                                        todayLine
+                                        nonWorkDays={gantt.nonWorkDays}
+                                    />
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                                        Las tareas necesitan fechas planificadas para mostrarse en el Gantt.
+                                    </div>
+                                )
+                            )}
+
+                            {/* Table + Cards (unified DataTable) */}
+                            {(viewMode === "table" || viewMode === "cards") && (
+                                <DataTable
+                                    columns={tableColumns}
+                                    data={projectFilteredTasks}
+                                    viewMode={viewMode === "cards" ? "grid" : "table"}
+                                    gridClassName="flex flex-col gap-2 pb-8"
+                                    renderGridItem={(row) => (
+                                        <ConstructionTaskCard
+                                            task={row}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDelete}
+                                            onStatusChange={gantt.handleStatusChange}
+                                        />
+                                    )}
+                                    onRowClick={handleEdit}
+                                    pageSize={20}
+                                    showPagination={projectFilteredTasks.length > 20}
+                                    stickyHeader
+                                    enableContextMenu
+                                    onDelete={handleDelete}
+                                    onEdit={handleEdit}
                                 />
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                                    Las tareas necesitan fechas planificadas para mostrarse en el Gantt.
-                                </div>
                             )}
                         </>
                     )}
+                </div>
+            </div>
 
-                    {/* Cards View */}
-                    {viewMode === "cards" && (
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {filteredTasks.map((task) => (
-                                <ConstructionTaskCard
-                                    key={task.id}
-                                    task={task}
-                                    onEdit={handleEdit}
-                                    onDelete={handleDelete}
-                                    onStatusChange={handleStatusChange}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Table View */}
-                    {viewMode === "table" && (
-                        <DataTable
-                            columns={tableColumns}
-                            data={filteredTasks}
-                            onRowClick={handleEdit}
-                            pageSize={20}
-                            showPagination={filteredTasks.length > 20}
-                            stickyHeader
-                        />
-                    )}
-                </>
-            )}
-
-            {/* Delete Confirmation */}
-            <AlertDialog open={!!deletingTask} onOpenChange={() => setDeletingTask(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar tarea?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción eliminará la tarea "{deletingTask?.task_name || deletingTask?.custom_name}".
-                            Esta acción no se puede deshacer.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmDelete}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                            Eliminar
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* Delete dialog (from useTableActions) */}
+            <DeleteConfirmDialog />
         </>
     );
 }

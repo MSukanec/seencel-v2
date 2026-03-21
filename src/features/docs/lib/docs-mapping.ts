@@ -27,6 +27,10 @@ export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
     '/organization/catalog/tasks': { slug: 'catalogo-tecnico/tareas' },
     '/organizacion/catalogo/tareas': { slug: 'catalogo-tecnico/tareas' },
 
+    // Task Detail — Recipe sub-routes (Recetas)
+    '/organization/catalog/task/': { slug: 'catalogo-tecnico/recetas' },
+    '/organizacion/catalogo/tarea/': { slug: 'catalogo-tecnico/recetas' },
+
     // Materials Catalog (Materiales)
     '/organization/catalog/materials': { slug: 'catalogo-tecnico/materiales' },
     '/organizacion/catalogo/materiales': { slug: 'catalogo-tecnico/materiales' },

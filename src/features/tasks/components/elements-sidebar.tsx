@@ -37,7 +37,7 @@ export function ElementsSidebar({
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             result = result.filter(el =>
-                el.name.toLowerCase().includes(query) ||
+                (el.name || '').toLowerCase().includes(query) ||
                 el.code?.toLowerCase().includes(query)
             );
         }
@@ -86,7 +86,7 @@ export function ElementsSidebar({
                 {filteredElements.map((element) => (
                     <ElementItem
                         key={element.id}
-                        name={element.name}
+                        name={element.name || ''}
                         code={element.code ?? undefined}
                         count={parameterCounts[element.id] || 0}
                         isSelected={selectedElementId === element.id}

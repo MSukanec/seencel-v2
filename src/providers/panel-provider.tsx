@@ -394,6 +394,7 @@ function PanelContent({ panel }: { panel: { panelId: string; formId: string; pro
 // Panel Footer — container-managed footer (works in both modes)
 // ============================================================================
 
+
 interface PanelFooterProps {
     config: PanelFooterConfig;
     formId: string;
@@ -495,8 +496,9 @@ function PanelFooter({ config, formId, isSubmitting, onCancel, mode = "modal" }:
     if (mode === "modal") {
         return (
             <div className={cn("flex-none", footerBg, footerPadding, footerBorder)}>
-                <div className="flex items-center justify-between">
+                <div className={cn("flex items-center", config.hideCreateAnother ? "justify-end" : "justify-between")}>
                     {/* Left: Create Another toggle */}
+                    {!config.hideCreateAnother && (
                     <button
                         type="button"
                         onClick={toggleCreateAnother}
@@ -516,6 +518,7 @@ function PanelFooter({ config, formId, isSubmitting, onCancel, mode = "modal" }:
                         </div>
                         <span>Crear otro</span>
                     </button>
+                    )}
 
                     {/* Right: Action buttons */}
                     <div className="flex items-center gap-2">

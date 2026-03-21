@@ -111,7 +111,7 @@ export function TasksDivisionsView({
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(d =>
-                d.name.toLowerCase().includes(query) ||
+                (d.name ?? "").toLowerCase().includes(query) ||
                 (d.description && d.description.toLowerCase().includes(query))
             );
         }
@@ -134,7 +134,7 @@ export function TasksDivisionsView({
         if (!divisionToDelete) return [];
         return allDivisions
             .filter(d => d.id !== divisionToDelete.id)
-            .map(d => ({ id: d.id, name: d.name }));
+            .map(d => ({ id: d.id, name: d.name ?? "" }));
     }, [allDivisions, divisionToDelete]);
 
     // Quick Start Packs for empty state
@@ -387,7 +387,7 @@ export function TasksDivisionsView({
                     setDivisionToDelete(null);
                 }}
                 onConfirm={handleConfirmDelete}
-                itemToDelete={divisionToDelete ? { id: divisionToDelete.id, name: divisionToDelete.name } : null}
+                itemToDelete={divisionToDelete ? { id: divisionToDelete.id, name: divisionToDelete.name ?? "" } : null}
                 replacementOptions={replacementOptions}
                 entityLabel="rubro"
                 title="Eliminar Rubro"

@@ -57,12 +57,12 @@ export function CheckboxGrid<T extends CheckboxGridItem>({
             if (!searchQuery.trim()) return true;
             const query = searchQuery.toLowerCase();
             return (
-                item.name.toLowerCase().includes(query) ||
+                (item.name ?? "").toLowerCase().includes(query) ||
                 item.code?.toLowerCase().includes(query) ||
                 item.description?.toLowerCase().includes(query)
             );
         })
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
 
     // Handle toggle with optimistic UI
     const handleToggle = async (id: string, checked: boolean) => {
