@@ -7,7 +7,10 @@ import { Link, useRouter, usePathname } from "@/i18n/routing";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslations } from "next-intl";
 import { useUser } from "@/stores/user-store";
+import { useOrganizationStore } from "@/stores/organization-store";
 import { useLayoutStore } from "@/stores/layout-store";
+import { PlanBadge } from "@/components/shared/plan-badge";
+import { Button } from "@/components/ui/button";
 import {
     Home,
     Settings,
@@ -40,6 +43,9 @@ export function UserPopover({ onClose }: UserPopoverProps) {
     const avatarUrl = user?.avatar_url || "";
     const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
+    const activeOrgId = useOrganizationStore((state) => state.activeOrgId);
+    const planSlug = useOrganizationStore((state) => state.planSlug);
+
     const handleLogout = async () => {
         await supabase.auth.signOut();
         router.push('/login');
@@ -65,6 +71,32 @@ export function UserPopover({ onClose }: UserPopoverProps) {
             </div>
 
             <Separator />
+
+            {/* Active Organization Plan Info */}
+            {activeOrgId && (
+                <>
+                    <div className="px-3 py-2.5 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] text-muted-foreground font-medium pt-0.5">
+                                Plan actual
+                            </span>
+                            <PlanBadge planSlug={planSlug || 'free'} micro />
+                        </div>
+                        <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs h-8"
+                            onClick={onClose}
+                        >
+                            <Link href="/settings/billing/plans">
+                                Mejorar plan
+                            </Link>
+                        </Button>
+                    </div>
+                    <Separator />
+                </>
+            )}
 
             {/* Settings */}
             <div className="p-1">

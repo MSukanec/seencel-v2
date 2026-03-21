@@ -342,7 +342,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                 <>
                                     {variant === 'public' && (
                                         <Button
-                                            variant="outline"
+                                            variant="default"
                                             size="sm"
                                             asChild
                                             className="mr-2 h-8 gap-2 px-3 text-xs font-medium"
@@ -357,109 +357,99 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                             <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-600 border border-background" />
                                         </Button>
                                     )}
-                                    {/* User Dropdown */}
-                                    <DropdownMenu modal={false}>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="relative h-8 w-8 rounded-full ml-2" suppressHydrationWarning>
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={user?.avatar_url || ""} alt={user?.full_name || "User"} />
-                                                    <AvatarFallback>
-                                                        {user?.full_name
-                                                            ? user.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
-                                                            : "US"}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="w-56" align="end" forceMount>
-                                            <DropdownMenuLabel className="font-normal">
-                                                <div className="flex flex-col space-y-1">
-                                                    <p className="text-sm font-medium leading-none">{user?.full_name || "User"}</p>
-                                                    <p className="text-xs leading-none text-muted-foreground">
-                                                        {user?.email || ""}
-                                                    </p>
-                                                </div>
-                                            </DropdownMenuLabel>
-                                            <DropdownMenuSeparator />
+                                    {/* User Dropdown (Only in App variant) */}
+                                    {variant === 'app' && (
+                                        <DropdownMenu modal={false}>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" className="relative h-8 w-8 rounded-full ml-2" suppressHydrationWarning>
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={user?.avatar_url || ""} alt={user?.full_name || "User"} />
+                                                        <AvatarFallback>
+                                                            {user?.full_name
+                                                                ? user.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+                                                                : "US"}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent className="w-56" align="end" forceMount>
+                                                <DropdownMenuLabel className="font-normal">
+                                                    <div className="flex flex-col space-y-1">
+                                                        <p className="text-sm font-medium leading-none">{user?.full_name || "User"}</p>
+                                                        <p className="text-xs leading-none text-muted-foreground">
+                                                            {user?.email || ""}
+                                                        </p>
+                                                    </div>
+                                                </DropdownMenuLabel>
+                                                <DropdownMenuSeparator />
 
-                                            {/* Public: Show Dashboard/Workspace link */}
-                                            {variant === 'public' && (
                                                 <DropdownMenuItem asChild>
-                                                    <Link href="/hub">{tUser('dashboard')}</Link>
+                                                    <Link href="/settings">{tUser('settings')}</Link>
                                                 </DropdownMenuItem>
-                                            )}
 
-                                            <DropdownMenuItem asChild>
-                                                <Link href="/settings">{tUser('settings')}</Link>
-                                            </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
 
-                                            <DropdownMenuSeparator />
-
-                                            {/* Theme Toggle (Inline Style) */}
-                                            <div className="flex items-center justify-between px-2 py-1.5 select-none">
-                                                <span className="text-sm font-medium leading-none">Tema</span>
-                                                <div className="flex items-center rounded-full border bg-background">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => setTheme("system")}
-                                                        className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", mounted && theme === 'system' && "bg-muted text-foreground")}
-                                                        title="Sistema"
-                                                    >
-                                                        <Monitor className="h-3.5 w-3.5" />
-                                                        <span className="sr-only">System</span>
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => setTheme("light")}
-                                                        className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", mounted && theme === 'light' && "bg-muted text-foreground")}
-                                                        title="Claro"
-                                                    >
-                                                        <Sun className="h-3.5 w-3.5" />
-                                                        <span className="sr-only">Light</span>
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => setTheme("dark")}
-                                                        className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", mounted && theme === 'dark' && "bg-muted text-foreground")}
-                                                        title="Oscuro"
-                                                    >
-                                                        <Moon className="h-3.5 w-3.5" />
-                                                        <span className="sr-only">Dark</span>
-                                                    </Button>
+                                                {/* Theme Toggle (Inline Style) */}
+                                                <div className="flex items-center justify-between px-2 py-1.5 select-none">
+                                                    <span className="text-sm font-medium leading-none">Tema</span>
+                                                    <div className="flex items-center rounded-full border bg-background">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => setTheme("system")}
+                                                            className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", mounted && theme === 'system' && "bg-muted text-foreground")}
+                                                            title="Sistema"
+                                                        >
+                                                            <Monitor className="h-3.5 w-3.5" />
+                                                            <span className="sr-only">System</span>
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => setTheme("light")}
+                                                            className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", mounted && theme === 'light' && "bg-muted text-foreground")}
+                                                            title="Claro"
+                                                        >
+                                                            <Sun className="h-3.5 w-3.5" />
+                                                            <span className="sr-only">Light</span>
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => setTheme("dark")}
+                                                            className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", mounted && theme === 'dark' && "bg-muted text-foreground")}
+                                                            title="Oscuro"
+                                                        >
+                                                            <Moon className="h-3.5 w-3.5" />
+                                                            <span className="sr-only">Dark</span>
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <DropdownMenuSeparator />
+                                                <DropdownMenuSeparator />
 
-                                            {/* App: Show Home and Contact links */}
-                                            {variant === 'app' && (
-                                                <>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href="/">{tUser('home')}</Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href="/contact">Contacto</Link>
-                                                    </DropdownMenuItem>
-                                                </>
-                                            )}
+                                                {/* App: Show Home and Contact links */}
+                                                <DropdownMenuItem asChild>
+                                                    <Link href="/">{tUser('home')}</Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href="/contact">Contacto</Link>
+                                                </DropdownMenuItem>
 
-
-                                            <DropdownMenuItem
-                                                className="text-foreground hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-950/20 data-[highlighted]:text-red-600 cursor-pointer"
-                                                onClick={async () => {
-                                                    const supabase = createClient();
-                                                    await supabase.auth.signOut();
-                                                    router.refresh();
-                                                    router.push('/login');
-                                                }}
-                                            >
-                                                {tUser('logout')}
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                                <DropdownMenuItem
+                                                    className="text-foreground hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-950/20 data-[highlighted]:text-red-600 cursor-pointer"
+                                                    onClick={async () => {
+                                                        const supabase = createClient();
+                                                        await supabase.auth.signOut();
+                                                        router.refresh();
+                                                        router.push('/login');
+                                                    }}
+                                                >
+                                                    {tUser('logout')}
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
                                 </>
                             ) : (
                                 <>

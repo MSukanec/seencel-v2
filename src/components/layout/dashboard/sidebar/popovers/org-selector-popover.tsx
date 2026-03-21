@@ -7,6 +7,7 @@ import { Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLayoutData } from "@/hooks/use-layout-data";
 import { switchOrganization, fetchUserOrganizationsLight } from "@/features/organization/actions";
+import { useRouter } from "@/i18n/routing";
 
 // ============================================================================
 // ORG SELECTOR POPOVER — Content + Logic
@@ -49,6 +50,7 @@ interface OrgSelectorPopoverProps {
 
 export function OrgSelectorPopover({ onClose }: OrgSelectorPopoverProps) {
     const { currentOrg } = useLayoutData();
+    const router = useRouter();
 
     const [orgs, setOrgs] = React.useState<LightOrg[]>(_cachedOrgs ?? []);
     const [orgsLoaded, setOrgsLoaded] = React.useState(!!_cachedOrgs);
@@ -80,8 +82,6 @@ export function OrgSelectorPopover({ onClose }: OrgSelectorPopoverProps) {
         } catch {
             // switchOrganization does a redirect, which throws in Next.js
         }
-        const locale = window.location.pathname.split('/')[1] || 'es';
-        window.location.href = `/${locale}/${locale === 'es' ? 'organizacion' : 'organization'}`;
     };
 
     return (
@@ -136,12 +136,12 @@ export function OrgSelectorPopover({ onClose }: OrgSelectorPopoverProps) {
                 <button
                     onClick={() => {
                         onClose();
-                        window.location.href = '/hub?create=org';
+                        router.push('/settings/organizations');
                     }}
                     className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                 >
                     <Plus className="h-3 w-3 shrink-0" />
-                    Crear organización
+                    Gestionar organizaciones
                 </button>
             </div>
         </div>

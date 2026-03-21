@@ -1,7 +1,7 @@
 "use client";
 
 import { OrganizationPreferences, OrganizationCurrency, OrganizationWallet, Currency, Wallet, OrganizationSubscription } from "@/types/organization";
-import { Coins, Wallet as WalletIcon, Lightbulb, TrendingUp, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
+import { Coins, Wallet as WalletIcon, Lightbulb, TrendingUp, Plus, Pencil, Trash2, ChevronRight, Settings2, ChevronDown, ChevronUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { FormGroup } from "@/components/ui/form-group";
@@ -24,6 +24,7 @@ import type { EconomicIndexType } from "@/features/advanced/types";
 import { PERIODICITY_LABELS } from "@/features/advanced/types";
 import type { IndexTypeFormData } from "@/features/advanced/forms/advanced-index-type-form";
 import { createIndexTypeAction, updateIndexTypeAction, deleteIndexTypeAction } from "@/features/advanced/actions";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 interface FinancesSettingsViewProps {
     preferences?: OrganizationPreferences | null;
@@ -49,6 +50,7 @@ export function FinancesSettingsView({
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [itemToDelete, setItemToDelete] = useState<{ type: 'currency' | 'wallet', id: string } | null>(null);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     // 🚀 OPTIMISTIC UI: Instant visual updates for currencies and wallets
     const [optimisticCurrencies, setOptimisticCurrencies] = useOptimistic(
@@ -228,99 +230,7 @@ export function FinancesSettingsView({
                             />
                         </FormGroup>
 
-                        {/* Estandarización de Moneda */}
-                        <div className="flex flex-row items-center justify-between rounded-lg border p-4 bg-background">
-                            <div className="space-y-0.5">
-                                <div className="text-sm font-medium">Estandarización de Moneda</div>
-                                <div className="text-xs text-muted-foreground">Habilita una moneda de referencia para reportes unificados.</div>
-                            </div>
-                            <Switch
-                                checked={preferences?.use_currency_exchange || false}
-                                onCheckedChange={(val) => handleUpdatePreference('use_currency_exchange', val)}
-                                disabled={isPending}
-                            />
-                        </div>
 
-                        {/* Moneda de Referencia (condicional) */}
-                        {preferences?.use_currency_exchange && (
-                            <div className="animate-in fade-in slide-in-from-top-2 duration-300 pl-4 border-l-2 border-primary/20">
-                                <FormGroup label="Moneda de Referencia">
-                                    <Select
-                                        disabled={isPending}
-                                        value={preferences?.functional_currency_id || preferences?.default_currency_id || undefined}
-                                        onValueChange={(val) => handleUpdatePreference('functional_currency_id', val)}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Selecciona moneda ref" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {availableCurrencies.map(c => (
-                                                <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </FormGroup>
-                            </div>
-                        )}
-
-                        {/* Decimales */}
-                        <FormGroup label="Decimales en Montos" helpText="Cantidad de decimales a mostrar en valores monetarios.">
-                            <Select
-                                disabled={isPending}
-                                value={String(preferences?.currency_decimal_places ?? 2)}
-                                onValueChange={(val) => handleUpdatePreference('currency_decimal_places', parseInt(val, 10))}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Selecciona decimales" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="0">Sin decimales (enteros)</SelectItem>
-                                    <SelectItem value="1">1 decimal</SelectItem>
-                                    <SelectItem value="2">2 decimales (estándar)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
-
-                        {/* Formato de KPIs */}
-                        <div className="flex flex-row items-center justify-between rounded-lg border p-4 bg-background">
-                            <div className="space-y-0.5">
-                                <div className="text-sm font-medium">Formato de KPIs</div>
-                                <div className="text-xs text-muted-foreground">
-                                    Cómo mostrar los números grandes en dashboards.
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="text-xs font-mono text-muted-foreground">
-                                    {preferences?.kpi_compact_format ? "$ 10K" : "$ 10.568"}
-                                </span>
-                                <Switch
-                                    checked={preferences?.kpi_compact_format || false}
-                                    onCheckedChange={(val) => handleUpdatePreference('kpi_compact_format', val)}
-                                    disabled={isPending}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Etiqueta de Impuesto */}
-                        <FormGroup label="Etiqueta de Impuesto" helpText="Nombre del impuesto usado por defecto en cotizaciones (IVA, VAT, etc).">
-                            <Select
-                                disabled={isPending}
-                                value={preferences?.default_tax_label || 'IVA'}
-                                onValueChange={(val) => handleUpdatePreference('default_tax_label', val)}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Selecciona etiqueta" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="IVA">IVA (Impuesto al Valor Agregado)</SelectItem>
-                                    <SelectItem value="VAT">VAT (Value Added Tax)</SelectItem>
-                                    <SelectItem value="Sales Tax">Sales Tax (USA)</SelectItem>
-                                    <SelectItem value="GST">GST (Goods and Services Tax)</SelectItem>
-                                    <SelectItem value="ICMS">ICMS (Brasil)</SelectItem>
-                                    <SelectItem value="Tax">Tax (Genérico)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
                     </div>
                 </SettingsSection>
 
@@ -362,120 +272,212 @@ export function FinancesSettingsView({
                     </div>
                 </SettingsSection>
 
-                {/* ── SECTION 3: INSIGHTS & ALERTAS ────────────── */}
-                <SettingsSection
-                    icon={Lightbulb}
-                    title="Insights & Alertas"
-                    description="Personaliza la sensibilidad de las alertas automáticas del sistema financiero."
-                >
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2 mb-4">
-                            <h4 className="text-sm font-medium">Umbrales de Detección</h4>
-                            {subscription?.plan?.features?.custom_insight_thresholds !== true && (
-                                <FeatureLockBadge
+                {/* ── ADVANCED SETTINGS TOGGLE ─────────────────── */}
+                <div className="flex items-center justify-center pt-4 pb-2">
+                    <button
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        {showAdvanced ? (
+                            <>
+                                Ocultar opciones avanzadas
+                                <ChevronUp className="h-4 w-4" />
+                            </>
+                        ) : (
+                            <>
+                                Mostrar opciones avanzadas
+                                <ChevronDown className="h-4 w-4" />
+                            </>
+                        )}
+                    </button>
+                </div>
+                
+                {/* ── ADVANCED SETTINGS SECTIONS ───────────────── */}
+                {showAdvanced && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                        {/* ── SECTION 3: PREFERENCIAS ─────────────── */}
+                        <SettingsSection
+                            icon={Settings2}
+                            title="Preferencias"
+                            description="Configuraciones generales de visualización y formatos para tu organización."
+                        >
+                            <div className="space-y-6">
+                                {/* Formato de KPIs */}
+                                <div className="flex flex-row items-center justify-between rounded-lg border p-4 bg-background">
+                                    <div className="space-y-0.5">
+                                        <div className="text-sm font-medium">Formato de KPIs</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            Cómo mostrar los números grandes en dashboards.
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-mono text-muted-foreground">
+                                            {preferences?.kpi_compact_format ? "$ 10K" : "$ 10.568"}
+                                        </span>
+                                        <Switch
+                                            checked={preferences?.kpi_compact_format || false}
+                                            onCheckedChange={(val) => handleUpdatePreference('kpi_compact_format', val)}
+                                            disabled={isPending}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Decimales */}
+                                <FormGroup label="Decimales en Montos" helpText="Cantidad de decimales a mostrar en valores monetarios.">
+                                    <Select
+                                        disabled={isPending}
+                                        value={String(preferences?.currency_decimal_places ?? 2)}
+                                        onValueChange={(val) => handleUpdatePreference('currency_decimal_places', parseInt(val, 10))}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Selecciona decimales" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0">Sin decimales (enteros)</SelectItem>
+                                            <SelectItem value="1">1 decimal</SelectItem>
+                                            <SelectItem value="2">2 decimales (estándar)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </FormGroup>
+
+                                {/* Etiqueta de Impuesto */}
+                                <FormGroup label="Etiqueta de Impuesto" helpText="Nombre del impuesto usado por defecto en cotizaciones (IVA, VAT, etc).">
+                                    <Select
+                                        disabled={isPending}
+                                        value={preferences?.default_tax_label || 'IVA'}
+                                        onValueChange={(val) => handleUpdatePreference('default_tax_label', val)}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Selecciona etiqueta" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="IVA">IVA (Impuesto al Valor Agregado)</SelectItem>
+                                            <SelectItem value="VAT">VAT (Value Added Tax)</SelectItem>
+                                            <SelectItem value="Sales Tax">Sales Tax (USA)</SelectItem>
+                                            <SelectItem value="GST">GST (Goods and Services Tax)</SelectItem>
+                                            <SelectItem value="ICMS">ICMS (Brasil)</SelectItem>
+                                            <SelectItem value="Tax">Tax (Genérico)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </FormGroup>
+                            </div>
+                        </SettingsSection>
+
+                        {/* ── SECTION 4: INSIGHTS & ALERTAS ────────────── */}
+                        <SettingsSection
+                            icon={Lightbulb}
+                            title="Insights & Alertas"
+                            description="Personaliza la sensibilidad de las alertas automáticas del sistema financiero."
+                        >
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <h4 className="text-sm font-medium">Umbrales de Detección</h4>
+                                    {subscription?.plan?.features?.custom_insight_thresholds !== true && (
+                                        <FeatureLockBadge
+                                            featureName="Configurar Insights"
+                                            requiredPlan="PRO"
+                                        />
+                                    )}
+                                </div>
+
+                                <FeatureGuard
+                                    isEnabled={subscription?.plan?.features?.custom_insight_thresholds === true}
                                     featureName="Configurar Insights"
                                     requiredPlan="PRO"
-                                />
-                            )}
-                        </div>
+                                    showBadge={false}
+                                    showPopover={false}
+                                >
+                                    <div className="space-y-8">
+                                        {/* Variación Significativa */}
+                                        <div className="space-y-4">
+                                            <div className="space-y-0.5">
+                                                <label className="text-sm font-medium">Variación Significativa ({preferences?.insight_config?.thresholds?.growthSignificant ?? 15}%)</label>
+                                                <p className="text-xs text-muted-foreground">Porcentaje de cambio mensual para considerar una alerta de "Aumento/Ahorro".</p>
+                                            </div>
+                                            <Slider
+                                                defaultValue={[preferences?.insight_config?.thresholds?.growthSignificant ?? 15]}
+                                                max={50} min={5} step={1}
+                                                onValueCommit={(val) => handleUpdateInsightConfig({ thresholds: { ...preferences?.insight_config?.thresholds, growthSignificant: val[0] } })}
+                                                disabled={isPending}
+                                            />
+                                            <div className="flex justify-between text-xs text-muted-foreground">
+                                                <span>5% (Muy sensible)</span>
+                                                <span>50% (Poco sensible)</span>
+                                            </div>
+                                        </div>
 
-                        <FeatureGuard
-                            isEnabled={subscription?.plan?.features?.custom_insight_thresholds === true}
-                            featureName="Configurar Insights"
-                            requiredPlan="PRO"
-                            showBadge={false}
-                            showPopover={false}
-                        >
-                            <div className="space-y-8">
-                                {/* Variación Significativa */}
-                                <div className="space-y-4">
-                                    <div className="space-y-0.5">
-                                        <label className="text-sm font-medium">Variación Significativa ({preferences?.insight_config?.thresholds?.growthSignificant ?? 15}%)</label>
-                                        <p className="text-xs text-muted-foreground">Porcentaje de cambio mensual para considerar una alerta de "Aumento/Ahorro".</p>
+                                        <div className="h-px bg-border" />
+
+                                        {/* Margen de Estabilidad */}
+                                        <div className="space-y-4">
+                                            <div className="space-y-0.5">
+                                                <label className="text-sm font-medium">Margen de Estabilidad ({preferences?.insight_config?.thresholds?.trendStable ?? 4}%)</label>
+                                                <p className="text-xs text-muted-foreground">Cambios menores a este valor se consideran "Estables" y no generan tendencia.</p>
+                                            </div>
+                                            <Slider
+                                                defaultValue={[preferences?.insight_config?.thresholds?.trendStable ?? 4]}
+                                                max={10} min={1} step={0.5}
+                                                onValueCommit={(val) => handleUpdateInsightConfig({ thresholds: { ...preferences?.insight_config?.thresholds, trendStable: val[0] } })}
+                                                disabled={isPending}
+                                            />
+                                        </div>
+
+                                        <div className="h-px bg-border" />
+
+                                        {/* Concentración Pareto */}
+                                        <div className="space-y-4">
+                                            <div className="space-y-0.5">
+                                                <label className="text-sm font-medium">Concentración Pareto ({preferences?.insight_config?.thresholds?.concentrationPareto ?? 80}%)</label>
+                                                <p className="text-xs text-muted-foreground">Porcentaje acumulado para detectar "Alta Concentración" en pocas categorías.</p>
+                                            </div>
+                                            <Slider
+                                                defaultValue={[preferences?.insight_config?.thresholds?.concentrationPareto ?? 80]}
+                                                max={95} min={50} step={5}
+                                                onValueCommit={(val) => handleUpdateInsightConfig({ thresholds: { ...preferences?.insight_config?.thresholds, concentrationPareto: val[0] } })}
+                                                disabled={isPending}
+                                            />
+                                        </div>
+
+                                        <div className="h-px bg-border" />
+
+                                        {/* Umbral de Re-inversión */}
+                                        <div className="space-y-4">
+                                            <div className="space-y-0.5">
+                                                <label className="text-sm font-medium">Umbral de Re-inversión ({preferences?.insight_config?.thresholds?.upsellLiquidity ?? 90}%)</label>
+                                                <p className="text-xs text-muted-foreground">Porcentaje de la unidad pagada para identificar oportunidades de venta.</p>
+                                            </div>
+                                            <Slider
+                                                defaultValue={[preferences?.insight_config?.thresholds?.upsellLiquidity ?? 90]}
+                                                max={100} min={50} step={5}
+                                                onValueCommit={(val) => handleUpdateInsightConfig({ thresholds: { ...preferences?.insight_config?.thresholds, upsellLiquidity: val[0] } })}
+                                                disabled={isPending}
+                                            />
+                                        </div>
+
+                                        <div className="h-px bg-border" />
+
+                                        {/* Riesgo por Exposición */}
+                                        <div className="space-y-4">
+                                            <div className="space-y-0.5">
+                                                <label className="text-sm font-medium">Riesgo por Exposición ({preferences?.insight_config?.thresholds?.cashFlowRisk ?? 80}%)</label>
+                                                <p className="text-xs text-muted-foreground">Porcentaje de saldo pendiente sobre el total para alertar sobre riesgo de cobranza.</p>
+                                            </div>
+                                            <Slider
+                                                defaultValue={[preferences?.insight_config?.thresholds?.cashFlowRisk ?? 80]}
+                                                max={90} min={30} step={5}
+                                                onValueCommit={(val) => handleUpdateInsightConfig({ thresholds: { ...preferences?.insight_config?.thresholds, cashFlowRisk: val[0] } })}
+                                                disabled={isPending}
+                                            />
+                                        </div>
                                     </div>
-                                    <Slider
-                                        defaultValue={[preferences?.insight_config?.thresholds?.growthSignificant ?? 15]}
-                                        max={50} min={5} step={1}
-                                        onValueCommit={(val) => handleUpdateInsightConfig({ thresholds: { ...preferences?.insight_config?.thresholds, growthSignificant: val[0] } })}
-                                        disabled={isPending}
-                                    />
-                                    <div className="flex justify-between text-xs text-muted-foreground">
-                                        <span>5% (Muy sensible)</span>
-                                        <span>50% (Poco sensible)</span>
-                                    </div>
-                                </div>
-
-                                <div className="h-px bg-border" />
-
-                                {/* Margen de Estabilidad */}
-                                <div className="space-y-4">
-                                    <div className="space-y-0.5">
-                                        <label className="text-sm font-medium">Margen de Estabilidad ({preferences?.insight_config?.thresholds?.trendStable ?? 4}%)</label>
-                                        <p className="text-xs text-muted-foreground">Cambios menores a este valor se consideran "Estables" y no generan tendencia.</p>
-                                    </div>
-                                    <Slider
-                                        defaultValue={[preferences?.insight_config?.thresholds?.trendStable ?? 4]}
-                                        max={10} min={1} step={0.5}
-                                        onValueCommit={(val) => handleUpdateInsightConfig({ thresholds: { ...preferences?.insight_config?.thresholds, trendStable: val[0] } })}
-                                        disabled={isPending}
-                                    />
-                                </div>
-
-                                <div className="h-px bg-border" />
-
-                                {/* Concentración Pareto */}
-                                <div className="space-y-4">
-                                    <div className="space-y-0.5">
-                                        <label className="text-sm font-medium">Concentración Pareto ({preferences?.insight_config?.thresholds?.concentrationPareto ?? 80}%)</label>
-                                        <p className="text-xs text-muted-foreground">Porcentaje acumulado para detectar "Alta Concentración" en pocas categorías.</p>
-                                    </div>
-                                    <Slider
-                                        defaultValue={[preferences?.insight_config?.thresholds?.concentrationPareto ?? 80]}
-                                        max={95} min={50} step={5}
-                                        onValueCommit={(val) => handleUpdateInsightConfig({ thresholds: { ...preferences?.insight_config?.thresholds, concentrationPareto: val[0] } })}
-                                        disabled={isPending}
-                                    />
-                                </div>
-
-                                <div className="h-px bg-border" />
-
-                                {/* Umbral de Re-inversión */}
-                                <div className="space-y-4">
-                                    <div className="space-y-0.5">
-                                        <label className="text-sm font-medium">Umbral de Re-inversión ({preferences?.insight_config?.thresholds?.upsellLiquidity ?? 90}%)</label>
-                                        <p className="text-xs text-muted-foreground">Porcentaje de la unidad pagada para identificar oportunidades de venta.</p>
-                                    </div>
-                                    <Slider
-                                        defaultValue={[preferences?.insight_config?.thresholds?.upsellLiquidity ?? 90]}
-                                        max={100} min={50} step={5}
-                                        onValueCommit={(val) => handleUpdateInsightConfig({ thresholds: { ...preferences?.insight_config?.thresholds, upsellLiquidity: val[0] } })}
-                                        disabled={isPending}
-                                    />
-                                </div>
-
-                                <div className="h-px bg-border" />
-
-                                {/* Riesgo por Exposición */}
-                                <div className="space-y-4">
-                                    <div className="space-y-0.5">
-                                        <label className="text-sm font-medium">Riesgo por Exposición ({preferences?.insight_config?.thresholds?.cashFlowRisk ?? 80}%)</label>
-                                        <p className="text-xs text-muted-foreground">Porcentaje de saldo pendiente sobre el total para alertar sobre riesgo de cobranza.</p>
-                                    </div>
-                                    <Slider
-                                        defaultValue={[preferences?.insight_config?.thresholds?.cashFlowRisk ?? 80]}
-                                        max={90} min={30} step={5}
-                                        onValueCommit={(val) => handleUpdateInsightConfig({ thresholds: { ...preferences?.insight_config?.thresholds, cashFlowRisk: val[0] } })}
-                                        disabled={isPending}
-                                    />
-                                </div>
+                                </FeatureGuard>
                             </div>
-                        </FeatureGuard>
+                        </SettingsSection>
+
+                        {/* ── SECTION 5: ÍNDICES ECONÓMICOS ─────────────── */}
+                        <IndicesSection organizationId={organizationId} initialIndexTypes={indexTypes} />
                     </div>
-                </SettingsSection>
-
-                {/* ── SECTION 4: ÍNDICES ECONÓMICOS ─────────────── */}
-                <IndicesSection organizationId={organizationId} initialIndexTypes={indexTypes} />
-
+                )}
             </SettingsSectionContainer>
 
             <DeleteConfirmationDialog
@@ -597,7 +599,18 @@ function IndicesSection({ organizationId, initialIndexTypes }: { organizationId:
                 ]}
             >
                 {indices.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-4">No hay índices configurados aún.</p>
+                    <div className="py-2">
+                        <ViewEmptyState
+                            mode="empty"
+                            icon={TrendingUp}
+                            viewName="Índices configurados"
+                            featureDescription="Los índices económicos te permiten ajustar presupuestos y contratos según la inflación (ej. CAC, ICC)."
+                            actionLabel="Crear Índice"
+                            actionIcon={Plus}
+                            onAction={handleOpenCreate}
+                            totalCount={indices.length}
+                        />
+                    </div>
                 ) : (
                     <div className="space-y-2.5">
                         {indices.map((indexType) => (

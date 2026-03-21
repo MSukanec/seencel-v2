@@ -1,4 +1,4 @@
-import { Link } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
 import { CourseWithDetails } from "@/features/academy/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,11 @@ interface CourseCardProps {
 
 export function CourseCard({ course, className, basePath = '/academy/courses', isEnrolled = false, hasProgress = false, isPurchaseEnabled = true }: CourseCardProps) {
     const { details } = course;
+    const router = useRouter();
+
+    const destination = isEnrolled 
+        ? `/academy/my-courses/${course.slug}` 
+        : `${basePath}/${course.slug}`;
 
     // Format price - show USD explicitly
     const formattedPrice = isPurchaseEnabled
@@ -26,7 +31,11 @@ export function CourseCard({ course, className, basePath = '/academy/courses', i
         : '-';
 
     return (
-        <Card className={cn("overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow", className)}>
+        <Card 
+            variant="island" 
+            className={cn("overflow-hidden flex flex-col h-full cursor-pointer group/card", className)}
+            onClick={() => router.push(destination as any)}
+        >
             <div className="aspect-video w-full bg-muted relative overflow-hidden group">
                 {(course.image_path || details?.image_path) ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -54,13 +63,8 @@ export function CourseCard({ course, className, basePath = '/academy/courses', i
 
             <CardHeader className="p-4 pb-2">
                 <div className="flex justify-between items-start gap-2">
-                    <CardTitle className="text-lg font-semibold line-clamp-2 leading-tight">
-                        <Link
-                            href={`${basePath}/${course.slug}` as any}
-                            className="hover:underline"
-                        >
-                            {course.title}
-                        </Link>
+                    <CardTitle className="text-lg font-semibold line-clamp-2 leading-tight group-hover/card:text-primary transition-colors">
+                        {course.title}
                     </CardTitle>
                 </div>
                 {details?.instructor_name && (
@@ -77,11 +81,14 @@ export function CourseCard({ course, className, basePath = '/academy/courses', i
                 </p>
             </CardContent>
 
-            <CardFooter className="p-4 border-t flex items-center justify-between bg-secondary/5">
+            <CardFooter className="p-4 pt-0 flex items-center justify-between">
                 <div className="font-semibold text-primary">
                     {formattedPrice}
                 </div>
-                <div className="flex gap-2">
+                <div 
+                    className="flex gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                >
                     {isEnrolled && (
                         <Button size="sm" asChild>
                             <Link href={`/academy/my-courses/${course.slug}` as any}>

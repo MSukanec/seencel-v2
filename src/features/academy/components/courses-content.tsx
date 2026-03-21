@@ -34,8 +34,7 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
 
     const hasActiveFilters = filters.hasActiveFilters;
 
-    // ─── Dashboard mode: layout is handled by ContentLayout in page.tsx ───
-    if (isDashboard) {
+    const renderList = () => {
         // Empty — no courses at all
         if (courses.length === 0) {
             return (
@@ -89,6 +88,11 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
                 </Card>
             </div>
         );
+    };
+
+    // ─── Dashboard mode: layout is handled by ContentLayout in page.tsx ───
+    if (isDashboard) {
+        return renderList();
     }
 
     // ─── Public mode: component manages its OWN layout (hero, etc.) ───
@@ -152,32 +156,9 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
                 </section>
             </div>
 
-            {/* Courses List (public) */}
-            <div className="max-w-7xl mx-auto w-full flex flex-col gap-6 p-4 md:p-8">
-                {filteredCourses.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
-                        {filteredCourses.map((course) => (
-                            <CourseCard
-                                key={course.id}
-                                course={course}
-                                basePath={detailRoute}
-                                isEnrolled={enrolledCourseIds.includes(course.id)}
-                                hasProgress={startedCourseIds.includes(course.id)}
-                                isPurchaseEnabled={isPurchaseEnabled}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="rounded-xl border border-dashed p-16 text-center flex flex-col items-center justify-center gap-4 bg-muted/20">
-                        <BookOpen className="w-12 h-12 text-muted-foreground/50" />
-                        <div className="text-muted-foreground text-lg font-medium">
-                            No se encontraron cursos activos.
-                        </div>
-                        <p className="text-muted-foreground text-sm">
-                            Vuelve a intentar más tarde.
-                        </p>
-                    </div>
-                )}
+            {/* Courses List (public, now identical) */}
+            <div className="max-w-7xl mx-auto w-full p-4 md:p-8 pt-4 pb-20">
+                {renderList()}
             </div>
         </div>
     );
