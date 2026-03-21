@@ -102,7 +102,7 @@ export function TeamMembersWidget({ initialData }: WidgetProps) {
                         icon={Users}
                         title="Sin miembros"
                         description="Invitá miembros desde Configuración"
-                        href="/organization/team"
+                        href="/settings/members"
                         actionLabel="Ir a Configuración"
                     />
                 ) : (

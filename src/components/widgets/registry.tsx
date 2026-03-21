@@ -273,7 +273,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         minSpan: { w: 1, h: 1 },
         category: 'general',
         group: 'organization',
-        href: '/organization/team',
+        href: '/settings/members',
     },
 
     'org_storage_overview': {

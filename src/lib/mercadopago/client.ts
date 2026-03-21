@@ -82,7 +82,7 @@ export function validateWebhookSignature(
     }
 
     // Parse x-signature header: ts=xxx,v1=xxx
-    const parts = xSignature.split(',');
+    const parts = xSignature.split(',').map(p => p.trim());
     const tsMatch = parts.find(p => p.startsWith('ts='));
     const v1Match = parts.find(p => p.startsWith('v1='));
 

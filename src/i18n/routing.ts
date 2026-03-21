@@ -221,6 +221,10 @@ export const routing = defineRouting({
             en: "/academy/courses/[slug]"
         },
         // Academy Dashboard (Student)
+        "/academy/overview": {
+            es: "/academia/resumen",
+            en: "/academy/overview"
+        },
         "/academy/my-courses": {
             es: "/academia/mis-cursos",
             en: "/academy/my-courses"

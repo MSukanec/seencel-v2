@@ -14,10 +14,14 @@ interface PageProps {
         slug: string;
         locale: string;
     }>;
+    searchParams: Promise<{
+        lessonId?: string;
+    }>;
 }
 
-export default async function CoursePlayerPage({ params }: PageProps) {
+export default async function CoursePlayerPage({ params, searchParams }: PageProps) {
     const { slug, locale } = await params;
+    const { lessonId } = await searchParams;
     setRequestLocale(locale);
 
     const course = await getCourseBySlug(slug);
@@ -45,8 +49,8 @@ export default async function CoursePlayerPage({ params }: PageProps) {
         [...m.lessons].sort((a, b) => a.sort_index - b.sort_index)
     );
 
-    let targetLessonId = lastViewed?.lesson_id;
-    let targetPosition = lastViewed?.last_position_sec;
+    let targetLessonId = lessonId || lastViewed?.lesson_id;
+    let targetPosition = lessonId && lessonId !== lastViewed?.lesson_id ? 0 : lastViewed?.last_position_sec;
 
     // Check if last viewed is completed
     if (targetLessonId && completedSet.has(targetLessonId)) {

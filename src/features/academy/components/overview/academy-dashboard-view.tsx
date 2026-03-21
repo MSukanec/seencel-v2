@@ -230,7 +230,7 @@ export function AcademyDashboardView({
                             recentLessons.map((lesson) => (
                                 <Link 
                                     key={lesson.lesson_id}
-                                    href={`/academy/courses/${lesson.course_slug}/lessons/${lesson.lesson_id}` as any}
+                                    href={`/academy/my-courses/${lesson.course_slug}/player?lessonId=${lesson.lesson_id}` as any}
                                     className="flex items-start gap-3 p-3 lg:p-4 hover:bg-muted/50 transition-colors rounded-lg group"
                                 >
                                     <div className="mt-0.5 shrink-0 bg-primary/10 p-2 rounded-lg group-hover:bg-primary group-hover:text-primary-foreground text-primary transition-colors">
