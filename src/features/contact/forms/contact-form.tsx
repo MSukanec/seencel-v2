@@ -397,7 +397,7 @@ export function ContactForm({
                     value={formData.categoryIds}
                     onChange={toggleCategory}
                     options={contactCategories.map(c => ({ value: c.id, label: c.name }))}
-                    manageRoute={{ pathname: "/organization/contacts/categories" as any }}
+                    manageRoute={{ pathname: "/organization/contacts/settings" as any }}
                     manageLabel="Gestionar categorías"
                 />
                 <AttachmentChip

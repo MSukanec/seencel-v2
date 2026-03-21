@@ -7,11 +7,16 @@ import { SidebarMode } from '@/types/preferences';
 export type FontSize = 'smaller' | 'small' | 'default' | 'large' | 'larger';
 
 export type LayoutMode = 'default' | 'sidebar';
-export type NavigationContext = 'organization' | 'project' | 'learnings' | 'founders' | 'community' | 'admin' | 'home' | 'settings';
+export type NavigationContext = 'organization' | 'project' | 'learnings' | 'founders' | 'discover' | 'admin' | 'home' | 'settings';
+export type WorkspaceSection = 'overview' | 'catalog' | 'construction' | 'finance' | 'founders';
 
 interface LayoutState {
     layoutMode: LayoutMode;
     activeContext: NavigationContext;
+    /** The visible rail's root context. Prevents rail shuffling when viewing Settings or Admin */
+    activeBaseContext: NavigationContext;
+    /** Active workspace section — determines which sidebar content to show */
+    activeWorkspaceSection: WorkspaceSection;
     activeProjectId: string | null;
     sidebarMode: SidebarMode;
     sidebarProjectAvatars: boolean;
@@ -24,6 +29,8 @@ interface LayoutState {
     actions: {
         setLayoutMode: (mode: LayoutMode) => void;
         setActiveContext: (context: NavigationContext) => void;
+        setActiveBaseContext: (context: NavigationContext) => void;
+        setActiveWorkspaceSection: (section: WorkspaceSection) => void;
         setActiveProjectId: (projectId: string | null) => void;
         setSidebarMode: (mode: SidebarMode) => void;
         setSidebarProjectAvatars: (enabled: boolean) => void;
@@ -39,6 +46,8 @@ export const useLayoutStore = create<LayoutState>()(
         (set) => ({
             layoutMode: 'sidebar',
             activeContext: 'home',
+            activeBaseContext: 'organization',
+            activeWorkspaceSection: 'overview',
             activeProjectId: null,
             sidebarMode: 'docked',
             sidebarProjectAvatars: true,
@@ -48,7 +57,14 @@ export const useLayoutStore = create<LayoutState>()(
             pendingPathname: null,
             actions: {
                 setLayoutMode: (mode) => set({ layoutMode: mode }),
-                setActiveContext: (context) => set({ activeContext: context }),
+                setActiveContext: (context) => {
+                    set({ activeContext: context });
+                    if (context === 'organization' || context === 'learnings' || context === 'discover' || context === 'home') {
+                        set({ activeBaseContext: context });
+                    }
+                },
+                setActiveBaseContext: (context) => set({ activeBaseContext: context }),
+                setActiveWorkspaceSection: (section) => set({ activeWorkspaceSection: section }),
                 setActiveProjectId: (projectId) => set({ activeProjectId: projectId }),
                 setSidebarMode: (mode) => set({ sidebarMode: mode }),
                 setSidebarProjectAvatars: (enabled) => set({ sidebarProjectAvatars: enabled }),
@@ -69,6 +85,8 @@ export const useLayoutStore = create<LayoutState>()(
             partialize: (state) => ({
                 layoutMode: state.layoutMode,
                 activeContext: state.activeContext,
+                activeBaseContext: state.activeBaseContext,
+                activeWorkspaceSection: state.activeWorkspaceSection,
                 activeProjectId: state.activeProjectId,
                 fontSize: state.fontSize,
                 sidebarMode: state.sidebarMode,
@@ -104,3 +122,4 @@ export const useSidebarMode = () => useLayoutStore((state) => state.sidebarMode)
 export const useSidebarProjectAvatars = () => useLayoutStore((state) => state.sidebarProjectAvatars);
 export const useFontSize = () => useLayoutStore((state) => state.fontSize);
 export const usePendingPathname = () => useLayoutStore((state) => state.pendingPathname);
+export const useActiveWorkspaceSection = () => useLayoutStore((state) => state.activeWorkspaceSection);

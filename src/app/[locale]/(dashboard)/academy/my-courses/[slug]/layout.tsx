@@ -1,6 +1,5 @@
 import { getCourseBySlug, getUserEnrollments } from "@/features/academy/student-actions";
 import { notFound, redirect } from "next/navigation";
-import { StudentCourseTabs } from "@/features/academy/components/student-course-tabs";
 import { getAuthUser } from "@/lib/auth";
 import { PageWrapper } from "@/components/layout";
 import { BackButton } from "@/components/shared/back-button";
@@ -33,6 +32,15 @@ export default async function StudentCourseLayout({ children, params }: CourseLa
         redirect(`/academy/courses/${slug}`);
     }
 
+    const routeTabs = [
+        { value: "overview", label: "Visión General", href: `/academy/my-courses/${slug}` },
+        { value: "player", label: "Reproductor", href: `/academy/my-courses/${slug}/player` },
+        { value: "content", label: "Contenido", href: `/academy/my-courses/${slug}/content` },
+        { value: "notes", label: "Apuntes", href: `/academy/my-courses/${slug}/notes` },
+        { value: "forum", label: "Foro", href: `/academy/my-courses/${slug}/forum` },
+        { value: "certificate", label: "Certificado", href: `/academy/my-courses/${slug}/certificate` },
+    ];
+
     return (
         <PageWrapper
             title={course.title}
@@ -40,10 +48,8 @@ export default async function StudentCourseLayout({ children, params }: CourseLa
             backButton={
                 <BackButton fallbackHref="/academy/my-courses" />
             }
+            routeTabs={routeTabs}
         >
-            {/* Course tabs navigation via Portal */}
-            <StudentCourseTabs courseSlug={slug} />
-
             {/* Content */}
             <div className="flex-1 overflow-auto">
                 {children}

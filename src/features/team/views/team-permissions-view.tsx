@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { LucideIcon } from "lucide-react";
 import { ViewEmptyState } from "@/components/shared/empty-state";
+import { PageIntro } from "@/components/layout";
 import { ListItem } from "@/components/shared/list-item";
 
 interface TeamPermissionsViewProps {
@@ -226,6 +227,11 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
 
     return (
         <div className="space-y-6 pb-12">
+            <PageIntro
+                icon={ShieldCheck}
+                title="Roles y Permisos"
+                description="Matriz de control de acceso. Asigná permisos específicos a cada rol de tu organización."
+            />
                 {!hasPermissions && (
                     <div className="flex justify-end">
                         <Button onClick={handleSeed} disabled={isSeeding} variant="outline" size="sm">

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Check, ArrowRight } from "lucide-react";
 import { Link } from "@/i18n/routing";
-import { getPlanConfig } from "@/components/shared/plan-badge";
+import { getPlanConfig, MATERIALS } from "@/components/shared/plan-badge";
 import { PlanCard, PLAN_STATUS_CONFIG } from "./plan-card";
 import type { PlanFlagStatus, PlanPurchaseFlags } from "./plan-card";
 
@@ -212,21 +212,8 @@ export function PlanCardsGrid({
 }
 
 // ============================================================
-// Enterprise Card — Full-width obsidian material with border sheen
+// Enterprise Card — Full-width material with border sheen
 // ============================================================
-
-const ENTERPRISE_MAT = {
-    surface: "linear-gradient(175deg, #1a1a20, #16161c, #1c1c22)",
-    borderColor: "rgba(160,160,210,0.18)",
-    lightColor: "rgba(180,170,220,0.12)",
-    hoverShape: "ellipse 300px 100px",
-    hoverIntensity: 0.7,
-    textHighlight: "#a0a0b8",
-    sheenDuration: 6,
-    sheenColor: "rgba(180,170,220,0.35)",
-    sheenColorDim: "rgba(180,170,220,0.12)",
-    sheenColorFaint: "rgba(180,170,220,0.06)",
-};
 
 const ENTERPRISE_FEATURES = [
     "Proyectos ilimitados",
@@ -242,15 +229,16 @@ function EnterpriseCard({ plan }: { plan: Plan }) {
     const lightRef = useRef<HTMLDivElement>(null);
     const config = getPlanConfig(plan.name);
     const Mark = config.mark;
+    const mat = MATERIALS.enterprise;
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
         if (!plateRef.current || !lightRef.current) return;
         const rect = plateRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        lightRef.current.style.background = `radial-gradient(${ENTERPRISE_MAT.hoverShape} at ${x}px ${y}px, ${ENTERPRISE_MAT.lightColor}, transparent)`;
-        lightRef.current.style.opacity = String(ENTERPRISE_MAT.hoverIntensity);
-    }, []);
+        lightRef.current.style.background = `radial-gradient(${mat.hoverShape} at ${x}px ${y}px, ${mat.lightColor}, transparent)`;
+        lightRef.current.style.opacity = String(mat.hoverIntensity);
+    }, [mat]);
 
     const handleMouseLeave = useCallback(() => {
         if (lightRef.current) lightRef.current.style.opacity = "0";
@@ -261,45 +249,37 @@ function EnterpriseCard({ plan }: { plan: Plan }) {
             ref={plateRef}
             className="relative mt-8 overflow-hidden rounded-xl"
             style={{
-                background: ENTERPRISE_MAT.surface,
-                border: `1px solid ${ENTERPRISE_MAT.borderColor}`,
-                boxShadow: "0 2px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)",
+                background: mat.surface,
+                border: `1px solid ${mat.border}`,
+                boxShadow: [
+                    `inset 0 1px 0 ${mat.bevelLight}`,
+                    `inset 0 -1px 0 ${mat.bevelDark}`,
+                    mat.dropShadow,
+                    ...(mat.innerGlow ? [mat.innerGlow] : []),
+                ].join(", "),
             }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
         >
+            {/* ── Brushed texture ── */}
+            {mat.brushTexture && (
+                <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ backgroundImage: mat.brushTexture }}
+                />
+            )}
+
             {/* ── Border sheens — all 4 edges ── */}
-            <div
-                className="absolute top-0 left-0 right-0 h-[1px] pointer-events-none z-[3]"
-                style={{
-                    background: `linear-gradient(90deg, transparent 0%, transparent 10%, ${ENTERPRISE_MAT.sheenColor} 46%, ${ENTERPRISE_MAT.sheenColorDim} 54%, transparent 90%, transparent 100%)`,
-                    animation: `plan-reflection ${ENTERPRISE_MAT.sheenDuration}s linear infinite`,
-                }}
-            />
-            <div
-                className="absolute bottom-0 left-0 right-0 h-[1px] pointer-events-none z-[3]"
-                style={{
-                    background: `linear-gradient(90deg, transparent 0%, transparent 10%, ${ENTERPRISE_MAT.sheenColorDim} 46%, ${ENTERPRISE_MAT.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
-                    animation: `plan-reflection ${ENTERPRISE_MAT.sheenDuration * 1.3}s linear infinite`,
-                    animationDelay: `${ENTERPRISE_MAT.sheenDuration * 0.5}s`,
-                }}
-            />
-            <div
-                className="absolute top-0 bottom-0 left-0 w-[1px] pointer-events-none z-[3]"
-                style={{
-                    background: `linear-gradient(180deg, transparent 0%, transparent 10%, ${ENTERPRISE_MAT.sheenColorDim} 46%, ${ENTERPRISE_MAT.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
-                    animation: `plan-border-reflection ${ENTERPRISE_MAT.sheenDuration * 1.5}s linear infinite`,
-                    animationDelay: `${ENTERPRISE_MAT.sheenDuration * 0.3}s`,
-                }}
-            />
-            <div
-                className="absolute top-0 bottom-0 right-0 w-[1px] pointer-events-none z-[3]"
-                style={{
-                    background: `linear-gradient(180deg, transparent 0%, transparent 10%, ${ENTERPRISE_MAT.sheenColorDim} 46%, ${ENTERPRISE_MAT.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
-                    animation: `plan-border-reflection ${ENTERPRISE_MAT.sheenDuration * 1.5}s linear infinite`,
-                    animationDelay: `${ENTERPRISE_MAT.sheenDuration * 0.8}s`,
-                }}
-            />
+            {mat.hasSheen && (
+                <div
+                    className="absolute top-0 left-0 right-0 h-[1px] pointer-events-none z-[3]"
+                    style={{
+                        background:
+                            "linear-gradient(90deg, transparent 0%, transparent 10%, rgba(255,255,255,0.25) 46%, rgba(255,255,255,0.08) 54%, transparent 90%, transparent 100%)",
+                        animation: "plan-reflection 12s linear infinite",
+                    }}
+                />
+            )}
 
             {/* ── Mouse-following light ── */}
             <div
@@ -314,15 +294,28 @@ function EnterpriseCard({ plan }: { plan: Plan }) {
                     <div
                         className="p-2.5 rounded-lg"
                         style={{
-                            background: "linear-gradient(135deg, #232328, #28283a)",
-                            border: `1px solid ${ENTERPRISE_MAT.borderColor}`,
+                            background: "rgba(0,0,0,0.15)",
+                            border: `1px solid ${mat.border}`,
                         }}
                     >
-                        <Mark color={ENTERPRISE_MAT.textHighlight} />
+                        <Mark color={mat.markColor} />
                     </div>
                     <div>
-                        <span className="text-lg font-semibold text-foreground">Empresa</span>
-                        <p className="text-sm text-muted-foreground/60">
+                        <span 
+                            className="uppercase font-bold text-[22px] flex items-center gap-3"
+                            style={{
+                                backgroundImage: mat.cutFill,
+                                WebkitBackgroundClip: "text",
+                                backgroundClip: "text",
+                                color: "transparent",
+                                letterSpacing: mat.letterSpacing,
+                                WebkitTextFillColor: "transparent",
+                                textShadow: mat.cutDepth
+                            }}
+                        >
+                            {config.label}
+                        </span>
+                        <p className="text-sm text-white/50 font-medium">
                             Para organizaciones con necesidades avanzadas de personalización, seguridad e integraciones.
                         </p>
                     </div>
@@ -330,11 +323,11 @@ function EnterpriseCard({ plan }: { plan: Plan }) {
                 <Link href="/contact" className="relative z-10">
                     <Button
                         variant="outline"
-                        className="gap-2 cursor-pointer"
+                        className="gap-2 cursor-pointer border-0 font-bold opacity-90 hover:opacity-100 transition-opacity"
                         style={{
-                            borderColor: ENTERPRISE_MAT.borderColor,
-                            color: ENTERPRISE_MAT.textHighlight,
-                            background: "rgba(255,255,255,0.03)",
+                            background: mat.cutFill,
+                            color: "#000",
+                            boxShadow: mat.dropShadow,
                         }}
                     >
                         Contactar Ventas
@@ -344,12 +337,18 @@ function EnterpriseCard({ plan }: { plan: Plan }) {
             </div>
 
             {/* ── Feature chips ── */}
-            <div className="relative z-[5] px-6 pb-5">
-                <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm" style={{ color: ENTERPRISE_MAT.textHighlight, opacity: 0.7 }}>
+            <div 
+                className="relative z-[5] px-6 py-5 mt-2"
+                style={{
+                    background: "rgba(0,0,0,0.25)",
+                    borderTop: "1px solid rgba(255,255,255,0.03)",
+                }}
+            >
+                <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm" style={{ color: mat.markColor, opacity: 0.8 }}>
                     {ENTERPRISE_FEATURES.map((f) => (
-                        <span key={f} className="flex items-center gap-1.5">
-                            <Check className="h-3.5 w-3.5" />
-                            {f}
+                        <span key={f} className="flex items-center gap-2">
+                            <Check className="h-4 w-4 opacity-70" />
+                            <span className="text-white/80 font-medium">{f}</span>
                         </span>
                     ))}
                 </div>

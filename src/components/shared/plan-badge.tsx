@@ -170,7 +170,7 @@ export function getPlanAccentVars(slugOrName?: string | null): Record<string, st
 // MATERIAL SYSTEM
 // ============================================================================
 
-interface Material {
+export interface Material {
     surface: string;
     bevelLight: string;
     bevelDark: string;
@@ -200,7 +200,7 @@ interface Material {
     hoverIntensity: number;
 }
 
-const MATERIALS: Record<PlanSlug, Material> = {
+export const MATERIALS: Record<PlanSlug, Material> = {
     // ── FLAT GRAY PLASTIC — basic, plain, not premium ──
     free: {
         surface: "#3a3a3a",

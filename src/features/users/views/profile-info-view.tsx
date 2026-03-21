@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Camera, UserRound, Receipt } from "lucide-react";
+import { PageIntro } from "@/components/layout";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { FormGroup } from "@/components/ui/form-group";
 import { AvatarManager } from "@/features/users/components/avatar-manager";
@@ -209,7 +210,13 @@ export function ProfileInfoView({ profile, countries, billingProfile }: ProfileI
     }
 
     return (
-        <SettingsSectionContainer>
+        <div className="space-y-6">
+            <PageIntro
+                icon={UserRound}
+                title="Perfil"
+                description="Administrá tu información personal y datos de facturación individuales."
+            />
+            <SettingsSectionContainer>
                 {/* ── Foto de Perfil ── */}
                 <SettingsSection
                     icon={Camera}
@@ -379,5 +386,6 @@ export function ProfileInfoView({ profile, countries, billingProfile }: ProfileI
                     </div>
                 </SettingsSection>
         </SettingsSectionContainer>
+        </div>
     );
 }

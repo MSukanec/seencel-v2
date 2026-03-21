@@ -1,7 +1,7 @@
 "use client";
 
 import { RouteTab } from "@/components/layout";
-import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
+import { PageHeaderTabsPortal } from "@/components/layout/dashboard/header/page-header";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { usePathname, useRouter } from "@/i18n/routing";
@@ -56,7 +56,7 @@ export function TaskDetailTabs() {
     }, [router, tabs]);
 
     return (
-        <DetailContentTabs>
+        <PageHeaderTabsPortal>
             <TabsPrimitive.Root value={activeTab} onValueChange={handleTabChange}>
                 <TabsList>
                     {tabs.map(tab => (
@@ -72,6 +72,6 @@ export function TaskDetailTabs() {
                     ))}
                 </TabsList>
             </TabsPrimitive.Root>
-        </DetailContentTabs>
+        </PageHeaderTabsPortal>
     );
 }

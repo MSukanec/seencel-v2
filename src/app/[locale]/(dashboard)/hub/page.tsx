@@ -2,7 +2,7 @@ import { PageWrapper } from "@/components/layout";
 import { redirect } from "next/navigation";
 import { setRequestLocale } from 'next-intl/server';
 import { getAuthUser } from "@/lib/auth";
-import { getUserProfile, getUserTimezone } from "@/features/users/queries";
+import { getUserProfile } from "@/features/users/queries";
 import { getUserOrganizations, getRecentOrganizationsCount } from "@/features/organization/queries";
 import { getActiveHeroSections } from "@/features/hero-sections/queries";
 import { getRecentPublicCourses } from "@/features/academy/queries";
@@ -24,14 +24,12 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
         { profile },
         { organizations, activeOrgId: orgId },
         heroSlides,
-        userTimezone,
         recentCourses,
         recentOrgsCount
     ] = await Promise.all([
         getUserProfile(authUser.id),
         getUserOrganizations(authUser.id),
         getActiveHeroSections('hub_hero'),
-        getUserTimezone(),
         getRecentPublicCourses(2),
         getRecentOrganizationsCount(30)
     ]);
@@ -49,7 +47,6 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
                 activeOrgName={activeOrgName}
                 activeOrgLogo={activeOrgLogo}
                 heroSlides={heroSlides}
-                userTimezone={userTimezone || undefined}
                 recentCourses={recentCourses}
                 communityOrgsCount={recentOrgsCount + 100}
             />

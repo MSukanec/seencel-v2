@@ -5,7 +5,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { BackButton } from "@/components/shared/back-button";
-import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
 import { LockedBadge } from "@/components/shared/locked-badge";
 import { getProjectById } from "@/features/projects/queries";
 import { getProjectTypes, getProjectModalities } from "@/features/projects/actions";
@@ -80,9 +79,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                     backButton={
                         <BackButton fallbackHref="/organization/projects" />
                     }
-                >
-                    {/* Content Tabs — inside content, not header */}
-                    <DetailContentTabs>
+                    tabs={
                         <TabsList>
                             <TabsTrigger value="general" className="gap-2">
                                 <Settings className="h-3.5 w-3.5" />
@@ -99,7 +96,8 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                                 </TabsTrigger>
                             </LockedBadge>
                         </TabsList>
-                    </DetailContentTabs>
+                    }
+                >
 
                     {/* Perfil Tab */}
                     <TabsContent value="general" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">

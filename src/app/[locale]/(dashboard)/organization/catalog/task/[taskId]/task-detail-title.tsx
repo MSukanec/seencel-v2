@@ -1,9 +1,10 @@
 "use client";
 
 import { usePathname } from "@/i18n/routing";
-import { PageWrapper } from "@/components/layout";
+import { useParams } from "next/navigation";
+import { useMemo } from "react";
+import { PageWrapper, RouteTab } from "@/components/layout";
 import { BackButton } from "@/components/shared/back-button";
-import { TaskDetailTabs } from "./task-detail-tabs";
 
 /**
  * Client layout shell for task detail pages.
@@ -23,9 +24,16 @@ export function TaskDetailShell({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
+    const params = useParams<{ taskId: string }>();
+    const taskId = params.taskId;
 
     // Detect recipe detail routes (/recipe/[uuid] or /receta/[uuid])
     const isRecipeDetail = /\/(recipe|receta)\/[^/]+/.test(pathname);
+
+    const routeTabs: RouteTab[] = useMemo(() => [
+        { value: "general", label: "General", href: `/organization/catalog/task/${taskId}` },
+        { value: "recipe", label: "Recetas", href: `/organization/catalog/task/${taskId}/recipe` },
+    ], [taskId]);
 
     if (isRecipeDetail) {
         // Minimal shell — no header, no tabs. The recipe detail page
@@ -46,8 +54,8 @@ export function TaskDetailShell({
                 <BackButton fallbackHref="/organization/catalog/tasks" />
             }
             parentLabel="Catálogo Técnico"
+            routeTabs={routeTabs}
         >
-            <TaskDetailTabs />
             {children}
         </PageWrapper>
     );

@@ -39,7 +39,7 @@ export function CategoryChip({
     readOnly = false,
     disabled = false,
     className,
-    manageRoute = { pathname: "/organization/contacts/categories" as any },
+    manageRoute = { pathname: "/organization/contacts/settings" as any },
     manageLabel = "Gestionar categorías",
 }: CategoryChipProps) {
     const [open, setOpen] = React.useState(false);

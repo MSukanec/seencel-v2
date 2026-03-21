@@ -28,7 +28,7 @@ export default async function BillingPage() {
         ]);
 
         return (
-            <ContentLayout variant="narrow">
+            <ContentLayout variant="wide">
                 <BillingSettingsView
                     subscription={data.subscription}
                     billingCycles={data.billingCycles}

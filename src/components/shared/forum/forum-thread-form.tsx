@@ -10,7 +10,7 @@ import { usePanel } from "@/stores/panel-store";
 import { MessageSquare } from "lucide-react";
 
 interface ForumThreadFormProps {
-    courseId: string;
+    courseId: string | null;
     categoryId?: string;
     categories?: ForumCategory[];
     onSuccess?: (thread: ForumThread) => void;

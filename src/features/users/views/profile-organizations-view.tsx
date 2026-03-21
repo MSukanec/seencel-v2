@@ -8,6 +8,7 @@
 
 import { Building, Plus } from "lucide-react";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
+import { PageIntro } from "@/components/layout";
 import { OrganizationsList } from "@/features/organization/components/organizations-list";
 import { useRouter } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
@@ -53,7 +54,13 @@ export function ProfileOrganizationsView({ organizations, activeOrgId, currentUs
     };
 
     return (
-        <SettingsSectionContainer>
+        <div className="space-y-6">
+            <PageIntro
+                icon={Building}
+                title="Mis Organizaciones"
+                description="Gestioná los espacios de trabajo a los que pertenecés o creá uno nuevo."
+            />
+            <SettingsSectionContainer>
                 <SettingsSection
                     contentVariant="inset"
                     icon={Building}
@@ -89,5 +96,6 @@ export function ProfileOrganizationsView({ organizations, activeOrgId, currentUs
                     )}
                 </SettingsSection>
         </SettingsSectionContainer>
+        </div>
     );
 }

@@ -19,6 +19,7 @@ import { useRouter, usePathname } from "@/i18n/routing";
 import { updateUserPreferences } from "@/features/users/actions";
 import { TIMEZONES, detectBrowserTimezone } from "@/lib/timezone-data";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
+import { PageIntro } from "@/components/layout";
 import { toast } from "sonner";
 import { useLayoutActions, useFontSize, type FontSize } from "@/stores/layout-store";
 
@@ -75,7 +76,13 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
     };
 
     return (
-        <SettingsSectionContainer>
+        <div className="space-y-6">
+            <PageIntro
+                icon={Monitor}
+                title="Preferencias"
+                description="Personalizá tu experiencia, idioma, zona horaria y apariencia de la aplicación."
+            />
+            <SettingsSectionContainer>
                 {/* ── Idioma ── */}
                 <SettingsSection
                     icon={Languages}
@@ -168,6 +175,7 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
                     </div>
                 </SettingsSection>
         </SettingsSectionContainer>
+        </div>
     );
 }
 

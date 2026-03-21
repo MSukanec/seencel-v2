@@ -17,12 +17,8 @@ import { updateOrganization } from "@/actions/update-organization";
 import { OrganizationLogoUpload } from "./organization-logo-upload";
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
-import {
-    Building2,
-    FileText,
-    Phone,
-    MapPin,
-} from "lucide-react";
+import { Phone, MapPin, Building2, FileText } from "lucide-react";
+import { PageIntro } from "@/components/layout";
 import { OrganizationLocationSection } from "./organization-location-section";
 
 // ── Props ──
@@ -104,7 +100,13 @@ export function OrganizationDetailsForm({ organization }: OrganizationDetailsFor
     };
 
     return (
-        <SettingsSectionContainer>
+        <div className="space-y-6">
+            <PageIntro
+                icon={Building2}
+                title="Visión General"
+                description="Gestioná el perfil público de tu empresa, datos fiscales y ubicación principal."
+            />
+            <SettingsSectionContainer>
 
             {/* ── Logo de la Organización ── */}
             <SettingsSection
@@ -186,5 +188,6 @@ export function OrganizationDetailsForm({ organization }: OrganizationDetailsFor
             </SettingsSection>
 
         </SettingsSectionContainer>
+        </div>
     );
 }

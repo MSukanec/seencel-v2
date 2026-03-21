@@ -3,6 +3,7 @@
 import { HardDrive, Image, Video, FileText, File, FolderOpen, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SettingsSection } from "@/components/shared/settings-section";
+import { PageIntro } from "@/components/layout";
 import { useRouter } from "@/i18n/routing";
 import type { StorageStats } from "@/features/files/queries";
 
@@ -79,12 +80,19 @@ export function FilesSettingsView({ stats, maxStorageMb }: FilesSettingsViewProp
     ];
 
     return (
-        <SettingsSection
-            title="Almacenamiento"
-            description={description}
-            icon={HardDrive}
-            actions={actions}
-        >
+        <div className="space-y-6">
+            <PageIntro
+                icon={HardDrive}
+                title="Almacenamiento"
+                description="Visualizá el consumo de espacio de la organización y el detalle de archivos subidos por tu equipo."
+            />
+            
+            <SettingsSection
+                title="Consumo y Límites"
+                description={description}
+                icon={HardDrive}
+                actions={actions}
+            >
             <div className="space-y-4">
                 {/* Progress bar — only when limited */}
                 {!isUnlimited && (
@@ -163,5 +171,6 @@ export function FilesSettingsView({ stats, maxStorageMb }: FilesSettingsViewProp
                 )}
             </div>
         </SettingsSection>
+        </div>
     );
 }

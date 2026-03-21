@@ -40,6 +40,10 @@ export const routing = defineRouting({
             en: '/settings/billing',
             es: '/configuracion/facturacion'
         },
+        '/settings/billing/plans': {
+            en: '/settings/billing/plans',
+            es: '/configuracion/facturacion/planes'
+        },
         '/settings/notifications': {
             en: '/settings/notifications',
             es: '/configuracion/notificaciones'
@@ -64,17 +68,13 @@ export const routing = defineRouting({
             en: '/settings/activity',
             es: '/configuracion/actividad'
         },
-        '/settings/projects': {
-            en: '/settings/projects',
-            es: '/configuracion/proyectos'
-        },
         '/settings/contacts': {
             en: '/settings/contacts',
             es: '/configuracion/contactos'
         },
-        '/settings/files': {
-            en: '/settings/files',
-            es: '/configuracion/archivos'
+        '/settings/storage': {
+            en: '/settings/storage',
+            es: '/configuracion/almacenamiento'
         },
         '/settings/ai': {
             en: '/settings/ai',
@@ -99,6 +99,10 @@ export const routing = defineRouting({
         '/settings/location': {
             en: '/settings/location',
             es: '/configuracion/ubicacion'
+        },
+        '/founders': {
+            en: '/founders',
+            es: '/fundadores'
         },
         // ===================================
         '/profile': {
@@ -180,9 +184,9 @@ export const routing = defineRouting({
             en: '/organization/contacts',
             es: '/organizacion/contactos'
         },
-        '/organization/contacts/categories': {
-            en: '/organization/contacts/categories',
-            es: '/organizacion/contactos/categorias'
+        '/organization/contacts/settings': {
+            en: '/organization/contacts/settings',
+            es: '/organizacion/contactos/ajustes'
         },
         '/organization/team': {
             en: '/organization/team',
@@ -417,15 +421,14 @@ export const routing = defineRouting({
             en: '/pricing',
             es: '/precios'
         },
-        '/founders': {
-            en: '/founders',
-            es: '/fundadores'
+        '/founders/dashboard': {
+            en: '/founders/dashboard',
+            es: '/fundadores/dashboard'
         },
-        '/founders/program': {
-            en: '/founders/program',
-            es: '/fundadores/programa'
+        '/founders/forum': {
+            en: '/founders/forum',
+            es: '/fundadores/foro'
         },
-
 
         '/checkout': {
             en: '/checkout',
@@ -443,9 +446,9 @@ export const routing = defineRouting({
         '/login': '/login',
         '/signup': '/signup',
         '/forgot-password': '/forgot-password',
-        '/community': {
-            en: '/community',
-            es: '/comunidad'
+        '/discover': {
+            en: '/discover',
+            es: '/descubrir'
         },
         '/onboarding': {
             en: '/onboarding',

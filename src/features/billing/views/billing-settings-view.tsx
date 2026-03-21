@@ -4,12 +4,14 @@ import { OrganizationSubscription, OrganizationBillingCycle } from "@/types/orga
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ContentLayout } from "@/components/layout";
+import { PageIntro } from "@/components/layout";
 import { Receipt } from "lucide-react";
 import { format, type Locale } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
-import { PlanCardsGrid } from "@/features/billing/components/plan-cards-grid";
+import { BillingStatusCards } from "@/features/billing/components/billing-status-cards";
+import { Link } from "@/i18n/routing";
+import { Button } from "@/components/ui/button";
 import type { Plan } from "@/actions/plans";
 import type { PlanPurchaseFlags } from "@/features/billing/components/plan-card";
 import { getPlanDisplayName } from "@/lib/plan-utils";
@@ -39,16 +41,26 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
     const isFree = displayName === 'Esencial' || subscription?.amount === 0;
 
     return (
-        <ContentLayout variant="wide">
             <div className="space-y-6">
-                {/* Plan Cards Grid - Reusable component */}
-                <PlanCardsGrid
+                <PageIntro
+                    icon={Receipt}
+                    title="Facturación y Planes"
+                    description="Gestioná tu suscripción a Seencel, ciclos de facturación y límites de tu plan."
+                    action={
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={"/settings/billing/plans" as any}>
+                                Ver todos los planes
+                            </Link>
+                        </Button>
+                    }
+                />
+                
+                {/* Next/Current Plan Cards (Linear Style) */}
+                <BillingStatusCards
                     plans={plans}
                     currentPlanId={currentPlanId}
                     organizationId={organizationId}
                     isAdmin={isAdmin}
-                    purchaseFlags={purchaseFlags}
-                    isDashboard={true}
                 />
 
                 {/* Subscription info */}
@@ -80,6 +92,5 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
                     </Card>
                 </div>
             </div>
-        </ContentLayout>
     );
 }

@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Pencil, Trash2, Monitor, Building2, Layers, FolderCog } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { PageIntro } from "@/components/layout";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { ListItem, type ListItemContextMenuAction } from "@/components/shared/list-item";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
@@ -43,10 +44,17 @@ export function ProjectsSettingsView({
     initialModalities,
 }: ProjectsSettingsViewProps) {
     return (
-        <SettingsSectionContainer>
-            <TypesSection organizationId={organizationId} initialTypes={initialTypes} />
-            <ModalitiesSection organizationId={organizationId} initialModalities={initialModalities} />
-        </SettingsSectionContainer>
+        <div className="space-y-6">
+            <PageIntro
+                icon={Building2}
+                title="Proyectos"
+                description="Configurá los tipos y modalidades disponibles para clasificar los proyectos de tu organización."
+            />
+            <SettingsSectionContainer>
+                <TypesSection organizationId={organizationId} initialTypes={initialTypes} />
+                <ModalitiesSection organizationId={organizationId} initialModalities={initialModalities} />
+            </SettingsSectionContainer>
+        </div>
     );
 }
 

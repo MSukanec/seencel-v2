@@ -65,10 +65,10 @@ interface ThreadWithCategory extends ForumThread {
 }
 
 // Get all forum categories for a course
-export async function getForumCategories(courseId: string): Promise<ForumCategory[]> {
+export async function getForumCategories(courseId?: string | null): Promise<ForumCategory[]> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
         .schema('community').from('forum_categories')
         .select(`
             id,
@@ -80,8 +80,15 @@ export async function getForumCategories(courseId: string): Promise<ForumCategor
             sort_order,
             is_read_only,
             is_active
-        `)
-        .eq('course_id', courseId)
+        `);
+        
+    if (courseId) {
+        query = query.eq('course_id', courseId);
+    } else {
+        query = query.is('course_id', null);
+    }
+
+    const { data, error } = await query
         .eq('is_active', true)
         .order('sort_order', { ascending: true });
 
@@ -163,15 +170,21 @@ async function getOrCreateCourseCategory(courseId: string): Promise<string> {
 }
 
 // Get threads for a course (from all categories)
-export async function getForumThreads(courseId: string): Promise<ForumThread[]> {
+export async function getForumThreads(courseId?: string | null): Promise<ForumThread[]> {
     const supabase = await createClient();
 
-    // Get ALL categories for this course
-    const { data: categories } = await supabase
+    // Get ALL categories for this course or global context
+    let catQuery = supabase
         .schema('community').from('forum_categories')
-        .select('id, name, slug')
-        .eq('course_id', courseId)
-        .eq('is_active', true);
+        .select('id, name, slug');
+        
+    if (courseId) {
+        catQuery = catQuery.eq('course_id', courseId);
+    } else {
+        catQuery = catQuery.is('course_id', null);
+    }
+
+    const { data: categories } = await catQuery.eq('is_active', true);
 
     if (!categories || categories.length === 0) {
         return [];
@@ -312,7 +325,7 @@ export async function getThreadById(threadId: string): Promise<{
 
 // Create new thread
 export async function createThread(
-    courseId: string,
+    courseId: string | null,
     title: string,
     content: Record<string, unknown>,
     categoryId?: string
@@ -336,7 +349,13 @@ export async function createThread(
     }
 
     try {
-        const targetCategoryId = categoryId || await getOrCreateCourseCategory(courseId);
+        let targetCategoryId = categoryId;
+        if (!targetCategoryId) {
+            if (!courseId) {
+                return { success: false, error: 'Category is required for global threads' };
+            }
+            targetCategoryId = await getOrCreateCourseCategory(courseId);
+        }
 
         // Generate slug from title
         const slug = title
@@ -362,7 +381,8 @@ export async function createThread(
 
         if (error) throw error;
 
-        revalidatePath('/academy');
+        revalidatePath('/academy', 'layout');
+        revalidatePath('/founders', 'layout');
         return { success: true, threadId: data.id };
     } catch (err) {
         console.error('Error creating thread:', err);
@@ -422,7 +442,8 @@ export async function createPost(
         return { success: false, error: 'Failed to create post' };
     }
 
-    revalidatePath('/academy');
+    revalidatePath('/academy', 'layout');
+    revalidatePath('/founders', 'layout');
     return { success: true, postId: data.id };
 }
 
@@ -449,7 +470,8 @@ export async function updatePost(
         return { success: false, error: 'Failed to update post' };
     }
 
-    revalidatePath('/academy');
+    revalidatePath('/academy', 'layout');
+    revalidatePath('/founders', 'layout');
     return { success: true };
 }
 
@@ -473,7 +495,8 @@ export async function deletePost(postId: string): Promise<{ success: boolean; er
         return { success: false, error: 'Failed to delete post' };
     }
 
-    revalidatePath('/academy');
+    revalidatePath('/academy', 'layout');
+    revalidatePath('/founders', 'layout');
     return { success: true };
 }
 
@@ -500,7 +523,8 @@ export async function toggleThreadPin(threadId: string): Promise<{ success: bool
         return { success: false, error: 'Failed to toggle pin' };
     }
 
-    revalidatePath('/academy');
+    revalidatePath('/academy', 'layout');
+    revalidatePath('/founders', 'layout');
     return { success: true };
 }
 
@@ -527,7 +551,8 @@ export async function toggleThreadLock(threadId: string): Promise<{ success: boo
         return { success: false, error: 'Failed to toggle lock' };
     }
 
-    revalidatePath('/academy');
+    revalidatePath('/academy', 'layout');
+    revalidatePath('/founders', 'layout');
     return { success: true };
 }
 
@@ -578,7 +603,27 @@ export async function markAsAnswer(postId: string): Promise<{ success: boolean; 
         return { success: false, error: 'Failed to mark as answer' };
     }
 
-    revalidatePath('/academy');
+    revalidatePath('/academy', 'layout');
+    revalidatePath('/founders', 'layout');
     return { success: true };
+}
+
+// Get user forum contributions count (threads + posts)
+export async function getUserForumContributions(userId: string): Promise<number> {
+    const supabase = await createClient();
+
+    const { count: threadsCount } = await supabase
+        .schema('community').from('forum_threads')
+        .select('*', { count: 'exact', head: true })
+        .eq('author_id', userId)
+        .eq('is_deleted', false);
+
+    const { count: postsCount } = await supabase
+        .schema('community').from('forum_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('author_id', userId)
+        .eq('is_deleted', false);
+
+    return (threadsCount || 0) + (postsCount || 0);
 }
 

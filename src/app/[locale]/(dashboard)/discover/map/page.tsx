@@ -1,5 +1,5 @@
 import { getPublicProjects } from "@/actions/community";
-import { CommunityMap } from "@/features/community/components";
+import { CommunityMap } from "@/features/discover/components";
 import { ContentLayout } from "@/components/layout";
 import { setRequestLocale } from 'next-intl/server';
 

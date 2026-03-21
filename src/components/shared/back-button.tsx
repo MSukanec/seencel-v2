@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "@/i18n/routing";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { PageHeaderButton } from "@/components/layout/dashboard/header/page-header-button";
 
 /**
  * BackButton — Botón que navega al historial anterior del browser.
@@ -26,13 +26,12 @@ export function BackButton({ fallbackHref }: { fallbackHref?: string }) {
     };
 
     return (
-        <Button
-            variant="ghost"
-            size="icon"
-            className="mr-2 cursor-pointer"
+        <PageHeaderButton
+            className="mr-2 -ml-1 cursor-pointer"
             onClick={handleBack}
+            title="Volver atrás"
         >
             <ArrowLeft className="h-4 w-4" />
-        </Button>
+        </PageHeaderButton>
     );
 }

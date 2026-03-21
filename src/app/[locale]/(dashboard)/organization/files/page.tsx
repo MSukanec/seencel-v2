@@ -8,6 +8,7 @@ import { Metadata } from "next";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { FileGallery } from "@/features/files/views/files-gallery-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
+import { FolderOpen } from "lucide-react";
 
 export async function generateMetadata({
     params
@@ -44,7 +45,7 @@ export default async function OrganizationFilesPage() {
         const maxFileSizeMb = planFeatures?.max_file_size_mb ?? 50;
 
         return (
-            <PageWrapper title="Archivos">
+            <PageWrapper title="Archivos" icon={<FolderOpen />}>
                 <ContentLayout variant="wide">
                     <FileGallery
                         files={files}
@@ -58,7 +59,7 @@ export default async function OrganizationFilesPage() {
         );
     } catch (error) {
         return (
-            <PageWrapper title="Archivos">
+            <PageWrapper title="Archivos" icon={<FolderOpen />}>
                 <ContentLayout variant="wide">
                     <div className="h-full w-full flex items-center justify-center">
                         <ErrorDisplay

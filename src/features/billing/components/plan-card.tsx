@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Link } from "@/i18n/routing";
 import type { LucideIcon } from "lucide-react";
-import { getPlanConfig, resolvePlanSlug } from "@/components/shared/plan-badge";
+import { getPlanConfig, resolvePlanSlug, MATERIALS } from "@/components/shared/plan-badge";
 
 // ============================================================
 // Shared plan types
@@ -40,99 +40,6 @@ export const getPlanIcon = (name: string): LucideIcon => {
     if (lower.includes("pro")) return Zap;
     return Sparkles;
 };
-
-// ============================================================
-// Card material system — derived from PlanBadge materials
-// ============================================================
-
-interface CardMaterial {
-    surface: string;
-    borderColor: string;
-    lightColor: string;
-    hoverShape: string;
-    hoverIntensity: number;
-    accentColor: string;
-    iconBg: string;
-    textHighlight: string;
-    /** Whether to show border sheen reflection */
-    hasSheen: boolean;
-    /** Duration of border sheen animation in seconds — lower = more frequent */
-    sheenDuration: number;
-    /** Sheen color — bright (top border highlight) */
-    sheenColor: string;
-    /** Sheen color — dim (secondary borders) */
-    sheenColorDim: string;
-    /** Sheen color — faint (tertiary borders) */
-    sheenColorFaint: string;
-}
-
-const CARD_MATERIALS: Record<string, CardMaterial> = {
-    essential: {
-        surface: "#2a2a2a",
-        borderColor: "rgba(255,255,255,0.06)",
-        lightColor: "rgba(255,255,255,0.06)",
-        hoverShape: "circle 200px",
-        hoverIntensity: 1.0,
-        accentColor: "rgba(255,255,255,0.04)",
-        iconBg: "#3a3a3a",
-        textHighlight: "#a0a0a0",
-        hasSheen: false,
-        sheenDuration: 0,
-        sheenColor: "rgba(255,255,255,0.20)",
-        sheenColorDim: "rgba(255,255,255,0.08)",
-        sheenColorFaint: "rgba(255,255,255,0.03)",
-    },
-    pro: {
-        surface: "#222630",
-        borderColor: "rgba(120,140,200,0.15)",
-        lightColor: "rgba(140,160,220,0.08)",
-        hoverShape: "circle 180px",
-        hoverIntensity: 0.9,
-        accentColor: "rgba(120,140,200,0.08)",
-        iconBg: "linear-gradient(135deg, #2a2e3a, #323850)",
-        textHighlight: "#8898b8",
-        hasSheen: true,
-        sheenDuration: 12,       // base speed
-        sheenColor: "rgba(140,160,220,0.30)",
-        sheenColorDim: "rgba(140,160,220,0.10)",
-        sheenColorFaint: "rgba(140,160,220,0.04)",
-    },
-    teams: {
-        surface: "#262030",
-        borderColor: "rgba(150,120,200,0.15)",
-        lightColor: "rgba(160,135,220,0.10)",
-        hoverShape: "circle 160px",
-        hoverIntensity: 0.85,
-        accentColor: "rgba(150,120,200,0.08)",
-        iconBg: "linear-gradient(135deg, #2e2838, #3a2e48)",
-        textHighlight: "#9878b8",
-        hasSheen: true,
-        sheenDuration: 8,        // 1.5x more frequent
-        sheenColor: "rgba(160,135,220,0.30)",
-        sheenColorDim: "rgba(160,135,220,0.10)",
-        sheenColorFaint: "rgba(160,135,220,0.04)",
-    },
-    enterprise: {
-        surface: "linear-gradient(175deg, #1a1a20, #16161c, #1c1c22)",
-        borderColor: "rgba(160,160,210,0.18)",
-        lightColor: "rgba(180,170,220,0.12)",
-        hoverShape: "ellipse 200px 80px",
-        hoverIntensity: 0.7,
-        accentColor: "rgba(160,155,210,0.10)",
-        iconBg: "linear-gradient(135deg, #232328, #28283a)",
-        textHighlight: "#a0a0b8",
-        hasSheen: true,
-        sheenDuration: 6,        // 2x more frequent
-        sheenColor: "rgba(180,170,220,0.35)",
-        sheenColorDim: "rgba(180,170,220,0.12)",
-        sheenColorFaint: "rgba(180,170,220,0.06)",
-    },
-};
-
-function getCardMaterial(planName: string): CardMaterial {
-    const slug = resolvePlanSlug(planName);
-    return CARD_MATERIALS[slug] || CARD_MATERIALS.essential;
-}
 
 // ============================================================
 // Status override config for non-active plans
@@ -259,7 +166,8 @@ export function PlanCard({
     isAdmin = false,
     showDetailsLink = false,
 }: PlanCardProps) {
-    const mat = getCardMaterial(plan.name);
+    const slug = resolvePlanSlug(plan.name);
+    const mat = MATERIALS[slug];
     const price = getPrice(plan.name, billingPeriod);
     const features = getCardFeatures(plan, billingPeriod);
     const config = getPlanConfig(plan.name);
@@ -294,59 +202,33 @@ export function PlanCard({
             )}
             style={{
                 background: mat.surface,
-                border: `1px solid ${mat.borderColor}`,
-                boxShadow: `0 2px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)`,
+                border: `1px solid ${mat.border}`,
+                boxShadow: [
+                    `inset 0 1px 0 ${mat.bevelLight}`,
+                    `inset 0 -1px 0 ${mat.bevelDark}`,
+                    mat.dropShadow,
+                    ...(mat.innerGlow ? [mat.innerGlow] : []),
+                ].join(", "),
             }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
         >
+            {/* ── Brushed texture (horizontal lines, barely visible) ── */}
+            {mat.brushTexture && (
+                <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ backgroundImage: mat.brushTexture }}
+                />
+            )}
+
             {/* ── Border sheen — reflection running along the top edge ── */}
             {mat.hasSheen && (
                 <div
                     className="absolute top-0 left-0 right-0 h-[1px] pointer-events-none z-[3]"
                     style={{
                         background:
-                            `linear-gradient(90deg, transparent 0%, transparent 10%, ${mat.sheenColor} 46%, ${mat.sheenColorDim} 54%, transparent 90%, transparent 100%)`,
-                        animation: `plan-reflection ${mat.sheenDuration}s linear infinite`,
-                    }}
-                />
-            )}
-
-            {/* ── Border sheen — bottom edge (mirror, dimmer) ── */}
-            {mat.hasSheen && (
-                <div
-                    className="absolute bottom-0 left-0 right-0 h-[1px] pointer-events-none z-[3]"
-                    style={{
-                        background:
-                            `linear-gradient(90deg, transparent 0%, transparent 10%, ${mat.sheenColorDim} 46%, ${mat.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
-                        animation: `plan-reflection ${mat.sheenDuration * 1.3}s linear infinite`,
-                        animationDelay: `${mat.sheenDuration * 0.5}s`,
-                    }}
-                />
-            )}
-
-            {/* ── Border sheen — left edge (vertical) ── */}
-            {mat.hasSheen && (
-                <div
-                    className="absolute top-0 bottom-0 left-0 w-[1px] pointer-events-none z-[3]"
-                    style={{
-                        background:
-                            `linear-gradient(180deg, transparent 0%, transparent 10%, ${mat.sheenColorDim} 46%, ${mat.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
-                        animation: `plan-border-reflection ${mat.sheenDuration * 1.5}s linear infinite`,
-                        animationDelay: `${mat.sheenDuration * 0.3}s`,
-                    }}
-                />
-            )}
-
-            {/* ── Border sheen — right edge (vertical) ── */}
-            {mat.hasSheen && (
-                <div
-                    className="absolute top-0 bottom-0 right-0 w-[1px] pointer-events-none z-[3]"
-                    style={{
-                        background:
-                            `linear-gradient(180deg, transparent 0%, transparent 10%, ${mat.sheenColorDim} 46%, ${mat.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
-                        animation: `plan-border-reflection ${mat.sheenDuration * 1.5}s linear infinite`,
-                        animationDelay: `${mat.sheenDuration * 0.8}s`,
+                            "linear-gradient(90deg, transparent 0%, transparent 10%, rgba(255,255,255,0.25) 46%, rgba(255,255,255,0.08) 54%, transparent 90%, transparent 100%)",
+                        animation: "plan-reflection 12s linear infinite",
                     }}
                 />
             )}
@@ -360,12 +242,12 @@ export function PlanCard({
 
             {/* ── Popular badge ── */}
             {isPopular && !isCurrentPlan && (
-                <div className="absolute top-4 right-4 z-10">
+                <div className="absolute top-4 right-4 z-[10]">
                     <Badge
-                        className="text-xs border-0"
+                        className="text-xs border-0 px-2.5 py-1"
                         style={{
-                            background: mat.accentColor,
-                            color: mat.textHighlight,
+                            background: "rgba(255,255,255,0.08)",
+                            color: "rgba(255,255,255,0.8)",
                             backdropFilter: "blur(4px)",
                         }}
                     >
@@ -375,16 +257,24 @@ export function PlanCard({
             )}
 
             {/* ── Header ── */}
-            <div className="relative z-[5] pt-5 px-5 pb-2">
+            <div className="relative z-[5] pt-6 px-6 pb-2">
                 <div className="flex items-center gap-3 mb-1.5">
-                    <div
-                        className="p-1.5 rounded-lg"
-                        style={{ background: typeof mat.iconBg === 'string' ? mat.iconBg : mat.iconBg }}
+                    <span 
+                        className="uppercase font-bold text-[22px] flex items-center gap-3"
+                        style={{
+                            backgroundImage: mat.cutFill,
+                            WebkitBackgroundClip: "text",
+                            backgroundClip: "text",
+                            color: "transparent",
+                            letterSpacing: mat.letterSpacing,
+                            WebkitTextFillColor: "transparent",
+                            textShadow: mat.cutDepth
+                        }}
                     >
-                        <Mark color={mat.textHighlight} />
-                    </div>
-                    <span className="text-base font-semibold text-foreground">
-                        {getPlanDisplayName(plan.name)}
+                        <span className="flex items-center justify-center -mt-[2px]">
+                            <Mark color={mat.markColor} />
+                        </span>
+                        {config.label}
                     </span>
                 </div>
                 <p className="text-xs text-muted-foreground/60">
@@ -393,42 +283,42 @@ export function PlanCard({
             </div>
 
             {/* ── Price ── */}
-            <div className="relative z-[5] px-5 pb-4">
+            <div className="relative z-[5] px-6 pb-4">
                 {price === 0 ? (
                     <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-bold" style={{ color: mat.textHighlight }}>
+                        <span className="text-3xl font-bold" style={{ color: mat.markColor }}>
                             Gratis
                         </span>
                     </div>
                 ) : (
                     <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-bold" style={{ color: mat.textHighlight }}>
+                        <span className="text-3xl font-bold" style={{ color: mat.markColor }}>
                             US$ {price}
                         </span>
-                        <span className="text-muted-foreground/60 text-sm">/ mes</span>
+                        <span className="text-muted-foreground/60 text-sm font-medium">/ mes</span>
                     </div>
                 )}
             </div>
 
             {/* ── Divider ── */}
             <div
-                className="mx-5 h-px"
+                className="mx-6 h-px opacity-30"
                 style={{
-                    background: `linear-gradient(90deg, transparent, ${mat.borderColor}, transparent)`,
+                    background: `linear-gradient(90deg, transparent, ${mat.markColor}, transparent)`,
                 }}
             />
 
             {/* ── Feature list ── */}
-            <div className="relative z-[5] flex-1 px-5 py-4">
-                <ul className="space-y-2.5 text-sm">
+            <div className="relative z-[5] flex-1 px-6 py-5">
+                <ul className="space-y-3 text-[13.5px]">
                     {features.map((feature) => {
                         const FeatureIcon = feature.icon;
                         return (
                             <li key={feature.label} className="flex items-center gap-2.5">
-                                <FeatureIcon className="h-3.5 w-3.5 shrink-0" style={{ color: mat.textHighlight, opacity: 0.5 }} />
-                                <span>
-                                    <span className="text-muted-foreground/70">{feature.label}:</span>{" "}
-                                    <span className="font-medium text-foreground/90">{feature.value}</span>
+                                <FeatureIcon className="h-4 w-4 shrink-0" style={{ color: mat.markColor, opacity: 0.8 }} />
+                                <span className="text-white/80 font-medium">
+                                    <span className="opacity-70">{feature.label}:</span>{" "}
+                                    <span className="opacity-100">{feature.value}</span>
                                 </span>
                             </li>
                         );
@@ -481,14 +371,14 @@ export function PlanCard({
                 ) : (
                     <Link href={ctaHref as "/checkout"} className="w-full">
                         <Button
-                            className="w-full border-0"
+                            className="w-full border-0 font-bold opacity-90 hover:opacity-100 transition-opacity"
                             variant="outline"
                             style={{
                                 background: isPopular
-                                    ? `linear-gradient(135deg, ${mat.textHighlight}20, ${mat.textHighlight}30)`
+                                    ? mat.cutFill
                                     : "rgba(255,255,255,0.06)",
-                                color: isPopular ? mat.textHighlight : "rgba(255,255,255,0.7)",
-                                borderColor: isPopular ? `${mat.textHighlight}40` : "transparent",
+                                color: isPopular ? "#000" : "rgba(255,255,255,0.7)",
+                                boxShadow: isPopular ? mat.dropShadow : "none",
                             }}
                         >
                             {ctaLabel}

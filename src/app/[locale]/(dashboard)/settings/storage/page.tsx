@@ -8,7 +8,7 @@ import { ErrorDisplay } from "@/components/ui/error-display";
 
 export async function generateMetadata(): Promise<Metadata> {
     return {
-        title: "Ajustes de Archivos | Seencel",
+        title: "Ajustes de Almacenamiento | Seencel",
         description: "Almacenamiento y configuración de archivos",
         robots: "noindex, nofollow",
     };

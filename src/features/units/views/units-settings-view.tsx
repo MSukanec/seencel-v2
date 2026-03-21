@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Plus, Ruler } from "lucide-react";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
+import { PageIntro } from "@/components/layout";
 import { DeleteDialog } from "@/components/shared/forms/general/delete-dialog";
 import { UnitListItem } from "@/components/shared/list-item/items/unit-list-item";
 import { toast } from "sonner";
@@ -97,12 +98,18 @@ export function UnitsSettingsView({
     };
 
     return (
-        <SettingsSectionContainer>
-            <SettingsSection
-                contentVariant="inset"
+        <div className="space-y-6">
+            <PageIntro
                 icon={Ruler}
-                title="Unidades de Medida"
+                title="Unidades"
                 description="Configurá las unidades de medida permitidas para cuantificar recursos y tareas en la organización."
+            />
+            <SettingsSectionContainer>
+                <SettingsSection
+                    contentVariant="inset"
+                    icon={Ruler}
+                    title="Unidades de Medida"
+                    description="Catálogo de unidades disponibles."
                 actions={[
                     { label: "Nueva Unidad", icon: Plus, onClick: handleOpenCreate },
                 ]}
@@ -137,5 +144,6 @@ export function UnitsSettingsView({
                 description={`¿Estás seguro de que querés eliminar "${deletingItem?.name}"? Esta acción no se puede deshacer.`}
             />
         </SettingsSectionContainer>
+        </div>
     );
 }

@@ -26,12 +26,15 @@ interface PageIntroProps {
     description: string;
     /** Optional className for the container */
     className?: string;
+    /** Optional action component to display on the right */
+    action?: React.ReactNode;
 }
 
-export function PageIntro({ icon: Icon, title, description, className }: PageIntroProps) {
+export function PageIntro({ icon: Icon, title, description, className, action }: PageIntroProps) {
     return (
         <div className={cn("mb-8", className)}>
-            <div className="flex items-start gap-4 pb-6">
+            <div className="flex items-start justify-between gap-4 pb-6">
+                <div className="flex items-start gap-4">
                 <div
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10"
                     style={{
@@ -53,6 +56,12 @@ export function PageIntro({ icon: Icon, title, description, className }: PageInt
                         {description}
                     </p>
                 </div>
+                </div>
+                {action && (
+                    <div className="flex shrink-0">
+                        {action}
+                    </div>
+                )}
             </div>
             <Separator />
         </div>

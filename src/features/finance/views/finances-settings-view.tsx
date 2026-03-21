@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useRouter, Link } from "@/i18n/routing";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
+import { PageIntro } from "@/components/layout";
 import { ListItem, type ListItemContextMenuAction } from "@/components/shared/list-item";
 import { usePanel } from "@/stores/panel-store";
 import type { EconomicIndexType } from "@/features/advanced/types";
@@ -182,7 +183,12 @@ export function FinancesSettingsView({
     // ============================================================================
 
     return (
-        <>
+        <div className="space-y-6">
+            <PageIntro
+                icon={Coins}
+                title="Finanzas"
+                description="Administrá monedas, billeteras, índices económicos y alertas financieras de tu organización."
+            />
             <SettingsSectionContainer>
 
                 {/* ── SECTION 1: MONEDAS ────────────────────────── */}
@@ -487,7 +493,7 @@ export function FinancesSettingsView({
                 confirmLabel="Deshabilitar"
                 isDeleting={isPending}
             />
-        </>
+        </div>
     );
 }
 

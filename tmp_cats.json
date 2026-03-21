@@ -1,0 +1,182 @@
+[
+  {
+    "id": "b02714c6-bdb3-4047-906f-ee60f39208f0",
+    "name": "Diseño, Documentación & BIM",
+    "slug": "diseno-documentacion-bim",
+    "description": "Comparte flujos BIM, dudas, estrategias de documentación, estándares gráficos y oportunidades de automatización. Ideal para arquitectos que quieren llevar su trabajo al siguiente nivel.",
+    "icon": "MessageSquare",
+    "color": "#96cc00",
+    "sort_order": 7,
+    "allowed_roles": [
+      "public",
+      "founder",
+      "admin"
+    ],
+    "is_read_only": false,
+    "is_active": true,
+    "created_at": "2025-12-09T19:46:33.345476+00:00",
+    "course_id": null
+  },
+  {
+    "id": "b570f80a-0e88-4022-aed2-c721c5019ade",
+    "name": "Construcción, Obra & Gestión Técnica",
+    "slug": "construccion-obra-gestion-tecnica",
+    "description": "Discusiones orientadas a costos, tareas, parametrización, sistemas constructivos, presupuestos, cómputos, administración de obra y buenas prácticas del sector.",
+    "icon": "MessageSquare",
+    "color": "#96cc00",
+    "sort_order": 6,
+    "allowed_roles": [
+      "public",
+      "founder",
+      "admin"
+    ],
+    "is_read_only": false,
+    "is_active": true,
+    "created_at": "2025-12-09T19:43:31.952706+00:00",
+    "course_id": null
+  },
+  {
+    "id": "dcde7f9c-1aef-45ee-9368-f84ae1707cb8",
+    "name": "Inteligencia Artificial & Automatizaciones",
+    "slug": "inteligencia-artificial-automatizaciones",
+    "description": "Canal dedicado a IA, herramientas inteligentes, prompts, sugerencias automáticas y análisis predictivo. Aquí exploramos cómo potenciar Seencel con capacidades avanzadas.",
+    "icon": "Sparkles",
+    "color": "#96cc00",
+    "sort_order": 10,
+    "allowed_roles": [
+      "public",
+      "founder",
+      "admin"
+    ],
+    "is_read_only": false,
+    "is_active": true,
+    "created_at": "2025-12-09T19:47:48.574533+00:00",
+    "course_id": null
+  },
+  {
+    "id": "0d6a341b-6571-4630-bc98-1f473fffc45a",
+    "name": "Funcionalidades en Beta & Testing Temprano",
+    "slug": "funcionalidades-en-beta-testing-temprano",
+    "description": "Canal exclusivo para probar funciones experimentales, MVPs internos y nuevos módulos antes de su lanzamiento público. Tu feedback directo influye en el refinamiento final.",
+    "icon": "MessageSquare",
+    "color": "#96cc00",
+    "sort_order": 4,
+    "allowed_roles": [
+      "public",
+      "founder",
+      "admin"
+    ],
+    "is_read_only": false,
+    "is_active": true,
+    "created_at": "2025-12-09T19:42:43.053392+00:00",
+    "course_id": null
+  },
+  {
+    "id": "1eadc490-680a-47d5-9188-5774aeaf2e3d",
+    "name": "Ideas & Propuestas de Mejoras",
+    "slug": "ideas-propuestas-de-mejoras",
+    "description": "Comparte propuestas, mejoras, nuevas herramientas y conceptos que te gustaría ver implementados. Un lugar para construir en conjunto la siguiente versión de Seencel.",
+    "icon": "MessageSquare",
+    "color": "#96cc00",
+    "sort_order": 2,
+    "allowed_roles": [
+      "public",
+      "founder",
+      "admin"
+    ],
+    "is_read_only": false,
+    "is_active": true,
+    "created_at": "2025-12-09T19:23:52.817788+00:00",
+    "course_id": null
+  },
+  {
+    "id": "4b3ad98a-329a-4ade-8618-e8543cff0d67",
+    "name": "Reporte de Bugs & Comportamientos Inesperados",
+    "slug": "reporte-de-bugs-comportamientos-inesperados",
+    "description": "Si encontraste un error, un comportamiento extraño o algo que no funciona como debería, repórtalo aquí con el mayor detalle posible. Este espacio nos ayuda a iterar rápido y mejorar la estabilidad general.",
+    "icon": "MessageSquare",
+    "color": "#96cc00",
+    "sort_order": 3,
+    "allowed_roles": [
+      "public",
+      "founder",
+      "admin"
+    ],
+    "is_read_only": false,
+    "is_active": true,
+    "created_at": "2025-12-09T19:42:25.62349+00:00",
+    "course_id": null
+  },
+  {
+    "id": "862176df-a611-4c47-a72b-13d04cd36ce0",
+    "name": "Comunidad & Comunicación Interna",
+    "slug": "comunidad-comunicacion-interna",
+    "description": "Novedades, anuncios, presentaciones, networking y charlas informales. Un espacio social para fundadores, colaboradores y early adopters.",
+    "icon": "MessageSquare",
+    "color": "#96cc00",
+    "sort_order": 9,
+    "allowed_roles": [
+      "public",
+      "founder",
+      "admin"
+    ],
+    "is_read_only": false,
+    "is_active": true,
+    "created_at": "2025-12-09T19:47:11.878879+00:00",
+    "course_id": null
+  },
+  {
+    "id": "a4472585-7c9d-4e32-8af8-6a4de85d86c9",
+    "name": "Workflows Reales & Casos de Uso",
+    "slug": "workflows-reales-casos-de-uso",
+    "description": "Comparte tus procesos reales en obra, estudio o administración. Cómo trabajás hoy, qué herramientas usás, qué pasos repetís y qué te gustaría automatizar con Seencel. Este foro guía decisiones técnicas del equipo.",
+    "icon": "MessageSquare",
+    "color": "#96cc00",
+    "sort_order": 5,
+    "allowed_roles": [
+      "public",
+      "founder",
+      "admin"
+    ],
+    "is_read_only": false,
+    "is_active": true,
+    "created_at": "2025-12-09T19:43:07.576983+00:00",
+    "course_id": null
+  },
+  {
+    "id": "eb786b0e-a8f5-44ad-aa8e-f31d48ee6f5b",
+    "name": "Finanzas, Clientes & Gestión Comercial",
+    "slug": "finanzas-clientes-gestion-comercial",
+    "description": "Temas relacionados a cotizaciones, clientes, seguimiento financiero, pagos, movimientos y todo lo vinculado a la gestión económica dentro de Seencel.",
+    "icon": "MessageSquare",
+    "color": "#96cc00",
+    "sort_order": 8,
+    "allowed_roles": [
+      "public",
+      "founder",
+      "admin"
+    ],
+    "is_read_only": false,
+    "is_active": true,
+    "created_at": "2025-12-09T19:46:54.177068+00:00",
+    "course_id": null
+  },
+  {
+    "id": "f5304a81-3335-4008-8c13-f98459835624",
+    "name": "Roadmap & Dirección del Producto",
+    "slug": "roadmap-direccion-del-producto",
+    "description": "Espacio para debatir la evolución del ecosistema Seencel: prioridades del roadmap, nuevas funcionalidades, módulos estratégicos y decisiones de alto impacto. Aquí definimos juntos hacia dónde avanza la plataforma.",
+    "icon": "MessageSquare",
+    "color": "#96cc00",
+    "sort_order": 1,
+    "allowed_roles": [
+      "public",
+      "founder",
+      "admin"
+    ],
+    "is_read_only": false,
+    "is_active": true,
+    "created_at": "2025-12-09T19:12:35.672819+00:00",
+    "course_id": null
+  }
+]

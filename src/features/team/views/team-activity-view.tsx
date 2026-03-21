@@ -13,6 +13,7 @@ import { getActivityFeedItems } from "@/actions/widget-actions";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { ToolbarCard } from "@/components/shared/toolbar-controls";
 import { ActivityFeedList } from "@/components/shared/activity-feed";
+import { PageIntro } from "@/components/layout";
 import { User, Activity, ListOrdered, ActivitySquare } from "lucide-react";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
@@ -144,6 +145,11 @@ export function TeamActivityView({ logs: initialLogs }: TeamActivityViewProps) {
 
     return (
         <div className="flex flex-col gap-4 w-full">
+            <PageIntro
+                icon={ActivitySquare}
+                title="Actividad"
+                description="Registro detallado de acciones y cambios en tu organización."
+            />
             <ToolbarCard
                 filters={filters}
                 searchPlaceholder="Buscar en actividad..."

@@ -2,36 +2,42 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useLayoutStore, NavigationContext, usePendingPathname } from "@/stores/layout-store";
+import { useLayoutStore, NavigationContext, usePendingPathname, useActiveWorkspaceSection } from "@/stores/layout-store";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { useRouter as useNextRouter } from "next/navigation";
 import { SidebarNavButton } from "./sidebar-button";
 import { SidebarProjectSelector } from "./sidebar-project-selector";
-import { SidebarOrgSelector } from "./sidebar-org-selector";
 import { SidebarAccordionGroups } from "./sidebar-accordion";
 import { SidebarInstallButton } from "./install-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SidebarCommandBarTrigger } from "@/components/layout/dashboard/command-bar";
+
 import {
     ArrowLeft,
     Building,
     EyeOff,
     CalendarDays,
+    Clock,
+    Wrench,
     Users,
     ClipboardList,
     LayoutDashboard,
     UserCircle,
     Shield,
     CreditCard,
+    Compass,
     Settings as SettingsIcon,
     Sliders,
     GraduationCap,
     Sparkles,
+    Package,
+    HardHat,
+    BookOpen,
+    DollarSign,
 } from "lucide-react";
 import { useSidebarNavigation, contextRoutes, type NavItem, type NavSubItem } from "@/hooks/use-sidebar-navigation";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Medal, Clock } from "lucide-react";
+import { Lock, Medal } from "lucide-react";
 import { useAccessContextStore, useIsDualAccess, useAccessMode } from "@/stores/access-context-store";
 import { EXTERNAL_ACTOR_TYPE_LABELS } from "@/features/external-actors/types";
 
@@ -67,6 +73,7 @@ export function SidebarContent({
     const router = useRouter();
     const nativeRouter = useNextRouter();
     const { activeContext, actions, previousPath } = useLayoutStore();
+    const activeWorkspaceSection = useActiveWorkspaceSection();
     const { contexts, contextRoutes, getNavItems, getNavGroups } = useSidebarNavigation();
 
     // Optimistic pathname: use pending (set immediately on click) until real pathname catches up
@@ -107,6 +114,8 @@ export function SidebarContent({
         for (const group of groups) {
             for (const item of group.items) {
                 if (item.children && item.children.length > 0) {
+                    // Skip catalog drill-down when catalog section is active (items rendered flat)
+                    if (activeWorkspaceSection === 'catalog' && item.href.includes('/catalog')) continue;
                     const isOnParent = effectivePathname === item.href;
                     const isOnChild = item.children.some(child => effectivePathname === child.href);
                     const isOnDynamicChild = effectivePathname.startsWith(item.href + '/');
@@ -128,64 +137,14 @@ export function SidebarContent({
         if (pageSubItems) {
             setPageSubItems(null);
         }
-    }, [effectivePathname, drillState]);
+    }, [effectivePathname, drillState, activeWorkspaceSection]);
 
 
     // Animation direction
     const [slideDirection, setSlideDirection] = React.useState<"left" | "right">("right");
 
-    // 1. Sync Context based on URL (Navigation) — uses effectivePathname for instant response
-    React.useEffect(() => {
-        // Project Context → unified under organization
-        if (effectivePathname.includes('/project/')) {
-            if (activeContext !== 'organization') actions.setActiveContext('organization');
-            return;
-        }
-
-        // Admin Context — MUST be before academy to avoid /admin/academy matching /academy
-        if (effectivePathname.includes('/admin')) {
-            if (activeContext !== 'admin') actions.setActiveContext('admin');
-            return;
-        }
-
-        // Learnings Context
-        if (effectivePathname.includes('/academy')) {
-            if (activeContext !== 'learnings') actions.setActiveContext('learnings');
-            return;
-        }
-
-        // Founders Context
-        if (effectivePathname.includes('/founders')) {
-            if (activeContext !== 'founders') actions.setActiveContext('founders');
-            return;
-        }
-
-        // Community Context
-        if (effectivePathname.includes('/community')) {
-            if (activeContext !== 'community') actions.setActiveContext('community');
-            return;
-        }
-
-        // Settings Context — MUST be before organization to avoid /settings/organization matching /organization
-        // Only match top-level /settings, not nested /organization/*/settings sub-routes
-        if (effectivePathname.includes('/settings') && !effectivePathname.includes('/organization')) {
-            if (activeContext !== 'settings') actions.setActiveContext('settings');
-            return;
-        }
-
-        // Organization Context (must be after project and profile checks)
-        if (effectivePathname.includes('/organization')) {
-            if (activeContext !== 'organization') actions.setActiveContext('organization');
-            return;
-        }
-
-        // Hub Context
-        if (effectivePathname.includes('/hub')) {
-            if (activeContext !== 'home') actions.setActiveContext('home');
-            return;
-        }
-
-    }, [effectivePathname, actions, activeContext]);
+    // URL-based synchronization logic (Context and Workspace Section) has been moved to SidebarLayout
+    // so it executes reliably even when this component unmounts (e.g. Academy context where sidebar is hidden).
 
     // Get unified nav groups for accordion rendering
     const navGroups = getNavGroups("organization");
@@ -210,7 +169,15 @@ export function SidebarContent({
                 }
             }
         }
-        if (drillState === 'learnings' || drillState === 'founders' || drillState === 'community') {
+        if (drillState === 'organization' && activeWorkspaceSection === 'founders') {
+            const items = getNavItems('founders');
+            for (const item of items) {
+                if (effectivePathname === item.href || effectivePathname.startsWith(item.href + '/')) {
+                    if (item.href.length > longest.length) longest = item.href;
+                }
+            }
+        }
+        if (drillState === 'learnings' || drillState === 'discover') {
             const items = getNavItems(drillState);
             for (const item of items) {
                 if (effectivePathname === item.href || effectivePathname.startsWith(item.href + '/')) {
@@ -263,10 +230,9 @@ export function SidebarContent({
                     <EyeOff className="h-3 w-3 text-gray-500" />
                 </Badge>
             );
-        } else if (status === 'maintenance') {
             badge = (
                 <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-semantic-warning/10 hover:bg-semantic-warning/20 shadow-none">
-                    <Lock className="h-3 w-3 text-semantic-warning" />
+                    <Wrench className="h-3 w-3 text-semantic-warning" />
                 </Badge>
             );
         } else if (status === 'coming_soon') {
@@ -335,105 +301,143 @@ export function SidebarContent({
         <SidebarTooltipProvider>
             <div className="flex flex-col h-full py-2 bg-sidebar transition-all duration-150 ease-in-out relative w-full">
                 <div className="flex flex-col w-full h-full overflow-hidden">
-                    {/* Header: Project Selector or Context Title */}
-                    {drillState === 'organization' ? (
-                        <div className="w-full px-2 mb-1">
-                            <SidebarProjectSelector isExpanded={isExpanded} />
-                        </div>
-                    ) : (
-                        <div className="w-full px-2 mb-1">
-                            {(() => {
+                    {/* Universal Header: Context or Section Title */}
+                    <div className="w-full px-2 mb-1">
+                        {(() => {
+                            let meta: { icon: React.ElementType; label: string; subtitle: string } | null = null;
+                            if (drillState === 'organization') {
+                                switch (activeWorkspaceSection) {
+                                    case 'overview':
+                                        meta = { icon: LayoutDashboard, label: 'General', subtitle: 'Gestión del espacio' }; break;
+                                    case 'catalog':
+                                        meta = { icon: BookOpen, label: 'Catálogo Técnico', subtitle: 'Recursos y tareas' }; break;
+                                    case 'construction':
+                                        meta = { icon: HardHat, label: 'Construcción', subtitle: 'Ejecución de obras' }; break;
+                                    case 'finance':
+                                        meta = { icon: DollarSign, label: 'Finanzas', subtitle: 'Control económico' }; break;
+                                    case 'founders':
+                                        meta = { icon: Medal, label: 'Fundadores', subtitle: 'Programa exclusivo' }; break;
+                                }
+                            } else {
                                 const contextMeta: Record<string, { icon: React.ElementType; label: string; subtitle: string }> = {
                                     learnings: { icon: GraduationCap, label: 'Academia', subtitle: 'Cursos y formación' },
-                                    founders: { icon: Sparkles, label: 'Fundadores', subtitle: 'Programa exclusivo' },
-                                    community: { icon: Users, label: 'Comunidad', subtitle: 'Red de profesionales' },
+                                    discover: { icon: Compass, label: 'Descubrir', subtitle: 'Explora y conecta' },
                                     admin: { icon: Shield, label: 'Administración', subtitle: 'Panel de control' },
                                     settings: { icon: SettingsIcon, label: 'Configuración', subtitle: 'Cuenta y organización' },
                                 };
-                                const meta = contextMeta[drillState];
-                                if (!meta || !isExpanded) return null;
-                                const Icon = meta.icon;
-                                return (
-                                    <div className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 w-full">
-                                        <div className="h-8 w-8 rounded-full flex items-center justify-center bg-primary/10 shrink-0">
-                                            <Icon className="h-4 w-4 text-primary" />
-                                        </div>
-                                        <div className="flex flex-col items-start flex-1 min-w-0">
-                                            <span className="text-sm font-semibold truncate w-full text-left leading-tight text-sidebar-foreground">
-                                                {meta.label}
-                                            </span>
-                                            <span className="text-[11px] text-muted-foreground leading-tight truncate w-full text-left">
-                                                {meta.subtitle}
-                                            </span>
-                                        </div>
+                                meta = contextMeta[drillState] || null;
+                            }
+
+                            if (!meta || !isExpanded) return null;
+                            const Icon = meta.icon;
+                            return (
+                                <div className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 w-full">
+                                    <div className="h-8 w-8 rounded-full flex items-center justify-center bg-primary/10 shrink-0">
+                                        <Icon className="h-4 w-4 text-primary" />
                                     </div>
-                                );
-                            })()}
-                        </div>
-                    )}
+                                    <div className="flex flex-col items-start flex-1 min-w-0">
+                                        <span className="text-sm font-semibold truncate w-full text-left leading-tight text-sidebar-foreground">
+                                            {meta.label}
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground leading-tight truncate w-full text-left">
+                                            {meta.subtitle}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </div>
 
                     {/* Separator */}
                     <div className="w-8 h-px bg-border/50 mb-2 mx-auto" />
 
                     <ScrollArea className="flex-1 min-h-0" type="scroll">
+                        {/* Project Selector (for Organization context, except Catalog/Founders where it's not strictly needed or could stay) */}
+                        {drillState === 'organization' && activeWorkspaceSection !== 'founders' && (
+                            <div className="w-full px-2 mb-2">
+                                <SidebarProjectSelector isExpanded={isExpanded} />
+                            </div>
+                        )}
+
                         {/* ============================================================ */}
                         {/* ORGANIZATION STATE: Direct navigation buttons */}
                         {/* ============================================================ */}
                         {drillState === "organization" && !pageSubItems && (
-                            <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="organization">
+                            <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key={`organization-${activeWorkspaceSection}`}>
 
-                                {/* Command Bar */}
-                                <SidebarCommandBarTrigger isExpanded={isExpanded} />
+                                {/* === GENERAL SECTION === */}
+                                {activeWorkspaceSection === 'overview' && (
+                                    <>
+                                        {/* Visión General & Planificador */}
+                                        {navGroups
+                                            .filter(g => g.id === 'principal')
+                                            .flatMap(g => g.items)
+                                            .map((item, i) => renderNavItem(item, i))
+                                        }
 
-                                {/* Spacer */}
-                                <div className="h-1" />
+                                        {/* Gestión items (Proyectos, Archivos, Contactos — sin Catálogo Técnico) */}
+                                        {navGroups
+                                            .filter(g => g.id === 'gestion')
+                                            .flatMap(g => g.items)
+                                            .filter(item => !item.href.includes('/catalog'))
+                                            .map((item, i) => renderNavItem(item, i))
+                                        }
+                                    </>
+                                )}
 
-                                {/* Visión General */}
-                                <SidebarNavButton
-                                    icon={LayoutDashboard}
-                                    label="Visión General"
-                                    href="/organization"
-                                    isActive={deepestMatchHref === '/organization'}
-                                    isExpanded={isExpanded}
-                                    onClick={() => {
-                                        actions.setPendingPathname('/organization');
-                                        onLinkClick?.();
-                                    }}
-                                />
+                                {/* === CATALOG SECTION === */}
+                                {activeWorkspaceSection === 'catalog' && (
+                                    <>
+                                        {[
+                                            { title: 'Visión General', href: '/organization/catalog', icon: LayoutDashboard },
+                                            { title: 'Tareas', href: '/organization/catalog/tasks', icon: ClipboardList },
+                                            { title: 'Materiales', href: '/organization/catalog/materials', icon: Package },
+                                            { title: 'Mano de Obra', href: '/organization/catalog/labor', icon: HardHat },
+                                        ].map((item) => (
+                                            <SidebarNavButton
+                                                key={item.href}
+                                                icon={item.icon}
+                                                label={item.title}
+                                                href={item.href}
+                                                isActive={deepestMatchHref === item.href}
+                                                isExpanded={isExpanded}
+                                                onClick={() => {
+                                                    actions.setPendingPathname(item.href);
+                                                    onLinkClick?.();
+                                                }}
+                                            />
+                                        ))}
+                                    </>
+                                )}
 
-                                {/* Planificador */}
-                                <SidebarNavButton
-                                    icon={CalendarDays}
-                                    label="Planificador"
-                                    href="/organization/planner"
-                                    isActive={deepestMatchHref === '/organization/planner'}
-                                    isExpanded={isExpanded}
-                                    onClick={() => {
-                                        actions.setPendingPathname('/organization/planner');
-                                        onLinkClick?.();
-                                    }}
-                                />
+                                {/* === CONSTRUCTION SECTION === */}
+                                {activeWorkspaceSection === 'construction' && (
+                                    <>
+                                        {navGroups
+                                            .filter(g => g.id === 'construccion')
+                                            .flatMap(g => g.items)
+                                            .map((item, i) => renderNavItem(item, i))
+                                        }
+                                    </>
+                                )}
 
-                                {/* Separator */}
-                                <div className="h-px bg-border/30 my-1" />
+                                {/* === FINANCE SECTION === */}
+                                {activeWorkspaceSection === 'finance' && (
+                                    <>
+                                        {navGroups
+                                            .filter(g => g.id === 'finanzas')
+                                            .flatMap(g => g.items)
+                                            .map((item, i) => renderNavItem(item, i))
+                                        }
+                                    </>
+                                )}
 
-                                {/* Gestión items (standalone: Proyectos, Archivos, Contactos) */}
-                                {navGroups
-                                    .filter(g => g.id === 'gestion')
-                                    .flatMap(g => g.items)
-                                    .map((item, i) => renderNavItem(item, i))
-                                }
-
-                                {/* Separator after Contactos */}
-                                <div className="h-px bg-border/30 my-1" />
-
-                                {/* Remaining Nav Groups with Accordion (exclude principal + gestion) */}
-                                <SidebarAccordionGroups
-                                    groups={navGroups.filter(g => g.id !== 'principal' && g.id !== 'gestion')}
-                                    renderItem={renderNavItem}
-                                    isExpanded={isExpanded}
-                                    activePath={deepestMatchHref}
-                                />
+                                {/* === FOUNDERS SECTION === */}
+                                {activeWorkspaceSection === 'founders' && (
+                                    <>
+                                        {getNavItems("founders").map((item, i) => renderNavItem(item, i))}
+                                    </>
+                                )}
                             </nav>
                         )}
 
@@ -492,30 +496,12 @@ export function SidebarContent({
                             </nav>
                         )}
 
-                        {/* FOUNDERS STATE */}
-                        {drillState === "founders" && (
-                            <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="founders">
-                                {getNavItems("founders").map((item, idx) => (
-                                    <SidebarNavButton
-                                        key={idx}
-                                        icon={item.icon}
-                                        label={item.title}
-                                        href={item.href}
-                                        isActive={deepestMatchHref === item.href}
-                                        isExpanded={isExpanded}
-                                        onClick={() => {
-                                            actions.setPendingPathname(item.href);
-                                            onLinkClick?.();
-                                        }}
-                                    />
-                                ))}
-                            </nav>
-                        )}
 
-                        {/* COMMUNITY STATE */}
-                        {drillState === "community" && (
-                            <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="community">
-                                {getNavItems("community").map(renderNavItem)}
+
+                        {/* DISCOVER STATE */}
+                        {drillState === "discover" && (
+                            <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="discover">
+                                {getNavItems("discover").map(renderNavItem)}
                             </nav>
                         )}
 
@@ -604,12 +590,6 @@ export function SidebarContent({
                         </div>
                     )}
 
-                    {/* Org Selector */}
-                    {!isMobile && activeContext === 'organization' && (
-                        <div className="px-2 pb-2 shrink-0">
-                            <SidebarOrgSelector isExpanded={isExpanded} />
-                        </div>
-                    )}
 
                     {/* Access Mode Selector — only when user has dual access */}
                     {!isMobile && drillState === 'organization' && isDualAccess && (

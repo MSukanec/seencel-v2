@@ -4,13 +4,14 @@ import { motion } from "framer-motion";
 import {
     Briefcase,
     GraduationCap,
-    Users,
+    Compass,
     Building,
     ArrowRight,
     Calendar,
     Clock,
     Lock,
     Crown,
+    Wrench,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ import { getStorageUrl } from "@/lib/storage-utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ContentLayout } from "@/components/layout";
 import { HeroCarousel, type HeroSlide } from "@/components/shared/hero-carousel";
 import type { UserProfile } from "@/types/user";
 import type { HeroSection } from "@/features/hero-sections/queries";
@@ -30,7 +32,6 @@ interface HubViewProps {
     activeOrgName?: string;
     activeOrgLogo?: string | null;
     heroSlides?: HeroSection[];
-    userTimezone?: string; // IANA timezone e.g. "America/Argentina/Buenos_Aires"
     recentCourses?: { id: string; slug: string; title: string; status: string; created_at: string }[];
     communityOrgsCount?: number; // New orgs in last 30 days + offset
 }
@@ -55,16 +56,16 @@ export function HubView({
     activeOrgName,
     activeOrgLogo,
     heroSlides = [],
-    userTimezone,
     recentCourses = [],
     communityOrgsCount = 0
 }: HubViewProps) {
     // Feature flags integration - same logic as sidebar
     const { statuses, isAdmin } = useFeatureFlags();
     const { isFounder } = useOrganization();
+    const { actions } = useLayoutStore();
 
     // Helper to compute card status from feature flags
-    const getCardStatus = (flagKey: string): { status: 'active' | 'maintenance' | 'founders' | 'hidden'; disabled: boolean } => {
+    const getCardStatus = (flagKey: string): { status: 'active' | 'maintenance' | 'founders' | 'hidden' | 'coming_soon'; disabled: boolean } => {
         const flag = statuses[flagKey] || 'active';
 
         if (flag === 'hidden') {
@@ -72,6 +73,9 @@ export function HubView({
         }
         if (flag === 'maintenance') {
             return { status: 'maintenance', disabled: !isAdmin };
+        }
+        if (flag === 'coming_soon') {
+            return { status: 'coming_soon', disabled: !isAdmin };
         }
         if (flag === 'founders') {
             return { status: 'founders', disabled: !(isAdmin || isFounder) };
@@ -81,9 +85,8 @@ export function HubView({
 
     // Card statuses based on feature flags
     const workspaceStatus = getCardStatus('context_workspace_enabled');
-    const portalStatus = getCardStatus('context_portal_enabled');
     const academyStatus = getCardStatus('context_academy_enabled');
-    const communityStatus = getCardStatus('context_community_enabled');
+    const discoverStatus = getCardStatus('context_discover_enabled');
 
     // Transform courses to news format
     const academyNews = recentCourses.map(c => ({
@@ -91,10 +94,10 @@ export function HubView({
         date: c.status === 'coming_soon' ? 'Próximamente' : formatRelativeDate(c.created_at)
     }));
 
-    // Community news with real data
-    const communityNews = [
+    // Discover news with real data
+    const discoverNews = [
         { title: `${communityOrgsCount} nuevas organizaciones`, date: "Últimos 30 días" },
-        { title: "Foro de discusión en desarrollo", date: "Próximamente" },
+        { title: "Explorador interactivo de proyectos", date: "Próximamente" },
     ];
 
     // Transform hero sections to HeroSlide format
@@ -116,28 +119,6 @@ export function HubView({
         } : null,
     }));
 
-    const getGreeting = () => {
-        // Use user's timezone if available, otherwise fallback to local time
-        let hour: number;
-        if (userTimezone) {
-            try {
-                const formatter = new Intl.DateTimeFormat('en-US', {
-                    hour: 'numeric',
-                    hour12: false,
-                    timeZone: userTimezone
-                });
-                hour = parseInt(formatter.format(new Date()), 10);
-            } catch {
-                hour = new Date().getHours();
-            }
-        } else {
-            hour = new Date().getHours();
-        }
-
-        if (hour < 12) return "Buenos días";
-        if (hour < 18) return "Buenas tardes";
-        return "Buenas noches";
-    };
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -155,34 +136,12 @@ export function HubView({
     };
 
     return (
-        <div className="h-full w-full bg-gradient-to-br from-background via-muted/10 to-background relative overflow-y-auto overflow-x-hidden">
-            {/* Ambient Background */}
-            <div className="absolute top-0 right-0 -z-10 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl opacity-50 pointer-events-none translate-x-1/3 -translate-y-1/3" />
-            <div className="absolute bottom-0 left-0 -z-10 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl opacity-50 pointer-events-none -translate-x-1/3 translate-y-1/3" />
-
-            <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
-                {/* Header (Greeting) - Now FIRST */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4"
-                >
-                    <div>
-                        <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium mb-1">
-                            <Calendar className="h-4 w-4" />
-                            {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                        </div>
-                        <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
-                            {getGreeting()}, <span className="text-primary">{user?.first_name || 'Arquitecto'}</span>
-                        </h1>
-                        <p className="text-muted-foreground mt-2 text-lg">
-                            Bienvenido a tu centro de control Seencel.
-                        </p>
-                    </div>
-                </motion.div>
-
-                {/* Hero Carousel - Now SECOND (after greeting) */}
+        <ContentLayout 
+            variant="wide" 
+            className="overflow-x-hidden !pb-6"
+        >
+            <div className="space-y-8 w-full">
+                {/* Hero Carousel - Now FIRST */}
                 {slides.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.98 }}
@@ -197,42 +156,27 @@ export function HubView({
                 <motion.div
                     variants={containerVariants}
                     initial="hidden"
-                    animate="visible"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: "-50px" }}
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                 >
-                    {/* Work Card - Conditionally rendered based on workspace flag */}
+                    {/* Work Card */}
                     {workspaceStatus.status !== 'hidden' && (
                         <DashboardCard
                             title="Espacio de Trabajo"
                             description={activeOrgName || "Gestiona tus obras y proyectos"}
-                            icon={Briefcase}
+                            icon={Building}
                             href="/organization"
                             actionLabel={activeOrgId ? "Ir a Obras" : "Crear Organización"}
                             news={[]}
                             variants={itemVariants}
                             status={workspaceStatus.status}
                             disabled={workspaceStatus.disabled}
+                            onClick={() => actions.setActiveContext('organization')}
                         />
                     )}
 
-                    {/* Portal de Clientes Card - between Workspace and Academy */}
-                    {portalStatus.status !== 'hidden' && (
-                        <DashboardCard
-                            title="Portal de Clientes"
-                            description="Accede a tu portal como cliente"
-                            icon={Building}
-                            href="/portal"
-                            actionLabel="Ir a Mi Portal"
-                            news={[
-                                { title: "Tus proyectos y pagos", date: "Disponible" },
-                            ]}
-                            variants={itemVariants}
-                            status={portalStatus.status}
-                            disabled={portalStatus.disabled}
-                        />
-                    )}
-
-                    {/* Academy Card - Conditionally rendered based on academy flag */}
+                    {/* Academy Card */}
                     {academyStatus.status !== 'hidden' && (
                         <DashboardCard
                             title="Academia Seencel"
@@ -244,26 +188,28 @@ export function HubView({
                             variants={itemVariants}
                             status={academyStatus.status}
                             disabled={academyStatus.disabled}
+                            onClick={() => actions.setActiveContext('learnings')}
                         />
                     )}
 
-                    {/* Community Card - Conditionally rendered based on community flag */}
-                    {communityStatus.status !== 'hidden' && (
+                    {/* Discover Card */}
+                    {discoverStatus.status !== 'hidden' && (
                         <DashboardCard
-                            title="Comunidad"
-                            description="Conecta con otros profesionales"
-                            icon={Users}
-                            href="/community"
-                            actionLabel={communityStatus.status === 'active' ? "Ver Comunidad" : "Próximamente"}
-                            news={communityNews}
+                            title="Descubrir"
+                            description="Explora proyectos y conecta"
+                            icon={Compass}
+                            href="/discover"
+                            actionLabel={discoverStatus.status === 'active' ? "Explorar" : "Próximamente"}
+                            news={discoverNews}
                             variants={itemVariants}
-                            status={communityStatus.status}
-                            disabled={communityStatus.disabled}
+                            status={discoverStatus.status}
+                            disabled={discoverStatus.disabled}
+                            onClick={() => actions.setActiveContext('discover')}
                         />
                     )}
                 </motion.div>
             </div>
-        </div>
+        </ContentLayout>
     );
 }
 
@@ -274,6 +220,8 @@ interface NewsItem {
     date: string;
 }
 
+import { useLayoutStore } from "@/stores/layout-store";
+
 interface DashboardCardProps {
     title: string;
     description: string;
@@ -282,8 +230,9 @@ interface DashboardCardProps {
     actionLabel: string;
     news: NewsItem[];
     variants: any;
-    status?: 'active' | 'maintenance' | 'founders' | 'hidden';
+    status?: 'active' | 'maintenance' | 'founders' | 'hidden' | 'coming_soon';
     disabled?: boolean;
+    onClick?: () => void;
 }
 
 function DashboardCard({
@@ -295,17 +244,26 @@ function DashboardCard({
     news,
     variants,
     status = 'active',
-    disabled = false
+    disabled = false,
+    onClick
 }: DashboardCardProps) {
-    const isLocked = disabled || status === 'maintenance' || status === 'founders';
+    const isLocked = disabled || status === 'maintenance' || status === 'founders' || status === 'coming_soon';
 
     // Badge based on status
     const renderBadge = () => {
         if (status === 'maintenance') {
             return (
                 <Badge variant="secondary" className="bg-semantic-warning/10 text-semantic-warning border-semantic-warning/20">
-                    <Lock className="h-3 w-3 mr-1" />
+                    <Wrench className="h-3 w-3 mr-1" />
                     Mantenimiento
+                </Badge>
+            );
+        }
+        if (status === 'coming_soon') {
+            return (
+                <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Próximamente
                 </Badge>
             );
         }
@@ -320,19 +278,14 @@ function DashboardCard({
         return null;
     };
 
-    const CardContentWrapper = () => (
+    const content = (
         <motion.div variants={variants} className="h-full">
-            <Card className={cn(
-                "h-full transition-all duration-300 border-border/50 overflow-hidden relative group",
-                !isLocked && "hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 cursor-pointer",
+            <Card variant="inset" className={cn(
+                "h-full transition-colors duration-300 relative group flex flex-col",
+                !isLocked && "hover:bg-black/25 cursor-pointer",
                 isLocked && "opacity-60 grayscale-[30%]"
             )}>
-                {/* Background Gradient on Hover */}
-                {!isLocked && (
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 bg-gradient-to-tr from-primary to-transparent" />
-                )}
-
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4 pb-2">
                     <div className={cn(
                         "p-2.5 rounded-xl transition-colors",
                         isLocked ? "bg-muted" : "bg-primary/10"
@@ -344,7 +297,7 @@ function DashboardCard({
                     </div>
                     {renderBadge()}
                 </CardHeader>
-                <CardContent className="space-y-4 pt-2">
+                <CardContent className="space-y-4 p-4 pt-2 flex-1 flex flex-col">
                     <div>
                         <CardTitle className="text-xl mb-1">{title}</CardTitle>
                         <CardDescription className="text-base line-clamp-1">
@@ -353,18 +306,20 @@ function DashboardCard({
                     </div>
 
                     {/* News Section inside card */}
-                    <div className="border-t border-border/50 pt-3 space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Novedades</p>
-                        {news.slice(0, 2).map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-sm">
-                                <span className="text-foreground/80 truncate max-w-[70%]">{item.title}</span>
-                                <span className="text-xs text-muted-foreground">{item.date}</span>
-                            </div>
-                        ))}
-                    </div>
+                    {news && news.length > 0 && (
+                        <div className="mt-auto border-t border-border/10 pt-3 space-y-2">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Novedades</p>
+                            {news.slice(0, 2).map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-sm">
+                                    <span className="text-foreground/80 truncate max-w-[70%]">{item.title}</span>
+                                    <span className="text-xs text-muted-foreground">{item.date}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {!isLocked && (
-                        <div className="flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0">
+                        <div className="flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 pt-2">
                             {actionLabel}
                             <ArrowRight className="ml-1 h-3 w-3" />
                         </div>
@@ -375,12 +330,12 @@ function DashboardCard({
     );
 
     if (isLocked) {
-        return <CardContentWrapper />;
+        return content;
     }
 
     return (
-        <Link href={href as any}>
-            <CardContentWrapper />
+        <Link href={href as any} onClick={onClick}>
+            {content}
         </Link>
     );
 }

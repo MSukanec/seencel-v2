@@ -3,7 +3,9 @@
 import { useState, useMemo } from "react";
 import { Plus, Pencil, Trash2, Monitor, Building2, Tags } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { PageIntro } from "@/components/layout";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
+import { BookUser } from "lucide-react";
 import { ListItem, type ListItemContextMenuAction } from "@/components/shared/list-item";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { usePanel } from "@/stores/panel-store";
@@ -69,7 +71,12 @@ export function ContactCategoriesManager({ organizationId, initialCategories }: 
     };
 
     return (
-        <>
+        <div className="space-y-6">
+            <PageIntro
+                icon={BookUser}
+                title="Contactos"
+                description="Administrá la libreta de direcciones y categorías para organizar mejor a tus clientes y proveedores."
+            />
             <SettingsSectionContainer>
                 <SettingsSection
                     contentVariant="inset"
@@ -110,7 +117,7 @@ export function ContactCategoriesManager({ organizationId, initialCategories }: 
                 title="Eliminar Categoría"
                 description="Si eliminás esta categoría, podés elegir otra para reasignar los contactos que la tenían."
             />
-        </>
+        </div>
     );
 }
 

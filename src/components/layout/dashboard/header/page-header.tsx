@@ -34,6 +34,21 @@ export function PageHeaderActionPortal({ children }: { children: React.ReactNode
     return createPortal(children, portalRoot);
 }
 
+// ─── Tabs Portal ─────────────────────────────────
+// Renders tab content into #page-header-tabs via React portal.
+// Use for pages that don't own a PageWrapper (e.g. settings sub-pages).
+export function PageHeaderTabsPortal({ children }: { children: React.ReactNode }) {
+    const [mounted, setMounted] = React.useState(false);
+    React.useEffect(() => { setMounted(true); }, []);
+    if (!mounted) return null;
+    const portalRoot = document.getElementById("page-header-tabs");
+    if (!portalRoot) return null;
+    return createPortal(
+        <PageHeaderTabs>{children}</PageHeaderTabs>,
+        portalRoot
+    );
+}
+
 // ─── Header More Button (private) ─────────────────────────
 function HeaderMoreButton() {
     const [open, setOpen] = React.useState(false);
@@ -78,16 +93,22 @@ interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
     actions?: React.ReactNode
     /** Tab navigation (replaces breadcrumbs in the left zone) */
     tabs?: React.ReactNode
+    /** Route-based tabs — rendered as second line in header */
+    routeTabs?: React.ReactNode
     /** Optional back button (rendered before breadcrumbs) */
     backButton?: React.ReactNode
+    /** Optional page icon — rendered before the title with primary color */
+    icon?: React.ReactElement
 }
 
 export function PageHeader({
     breadcrumbs,
     actions,
     tabs,
+    routeTabs,
     className,
     backButton,
+    icon,
     ...props
 }: PageHeaderProps) {
     return (
@@ -96,46 +117,81 @@ export function PageHeader({
             {...props}
         >
             {/* DESKTOP LAYOUT (Hidden on Mobile) */}
-            <div className="hidden md:block">
+            <div className="hidden md:block relative">
                 <div className="px-8 h-[50px] grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                     {/* Left: Breadcrumb or Tabs */}
-                    <div className="flex items-center gap-0 justify-self-start">
+                    <div className="flex items-center gap-2 justify-self-start">
                         {backButton}
                         {tabs ? (
                             <PageHeaderTabs>{tabs}</PageHeaderTabs>
                         ) : (
-                            breadcrumbs.map((item, index) => {
-                                const isLast = index === breadcrumbs.length - 1;
-                                return (
-                                    <React.Fragment key={index}>
-                                        {index > 0 && (
-                                            <span className="text-sm text-muted-foreground/50 mx-2">/</span>
-                                        )}
-                                        {item.href && !isLast ? (
-                                            <Link
-                                                href={item.href as any}
-                                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                            >
-                                                {item.label}
-                                            </Link>
-                                        ) : (
-                                            <span className={cn(
-                                                "text-sm",
-                                                isLast
-                                                    ? "font-medium text-foreground truncate max-w-[300px]"
-                                                    : "text-muted-foreground"
-                                            )}>
-                                                {item.label}
-                                            </span>
-                                        )}
-                                    </React.Fragment>
-                                );
-                            })
+                            <div className="flex items-center gap-1.5">
+                                {/* Page icon */}
+                                {icon && (
+                                    <span className="text-primary [&>svg]:h-5 [&>svg]:w-5">
+                                        {icon}
+                                    </span>
+                                )}
+                                {breadcrumbs.map((item, index) => {
+                                    const isLast = index === breadcrumbs.length - 1;
+                                    return (
+                                        <React.Fragment key={index}>
+                                            {index > 0 && (
+                                                <span className="text-sm text-muted-foreground/50">/</span>
+                                            )}
+                                            {item.href && !isLast ? (
+                                                <Link
+                                                    href={item.href as any}
+                                                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                                >
+                                                    {item.label}
+                                                </Link>
+                                            ) : (
+                                                <span className={cn(
+                                                    "text-sm truncate max-w-[300px]",
+                                                    isLast ? "font-medium text-foreground" : "text-muted-foreground"
+                                                )}>
+                                                    {item.label}
+                                                </span>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </div>
                         )}
                     </div>
 
-                    {/* Center: Tab portal target */}
-                    <div id="page-header-tabs" className="flex items-center justify-center" />
+                    {/* Center: Portal target for content tabs + Route Tabs */}
+                    <div id="page-header-tabs" className="flex items-start justify-center h-full pt-0">
+                        {/* Route Tabs — Notch design: extends from header top into header body */}
+                        {routeTabs && (
+                            <div 
+                                className="flex items-start relative z-10"
+                                style={{ filter: "drop-shadow(0px 2px 4px rgba(0,0,0,0.3)) drop-shadow(0px 1px 1px rgba(0,0,0,0.2))" }}
+                            >
+                                {/* Left inverted corner */}
+                                <div 
+                                    className="w-3 h-3 relative"
+                                    style={{
+                                        background: 'radial-gradient(circle at 0% 100%, transparent 11.5px, var(--shell) 12px)'
+                                    }}
+                                />
+                                
+                                {/* Notch Body */}
+                                <div className="bg-shell px-2 pb-1.5 pt-1 rounded-b-xl flex items-center justify-center -mx-[0.5px]">
+                                    <PageHeaderTabs>{routeTabs}</PageHeaderTabs>
+                                </div>
+                                
+                                {/* Right inverted corner */}
+                                <div 
+                                    className="w-3 h-3 relative"
+                                    style={{
+                                        background: 'radial-gradient(circle at 100% 100%, transparent 11.5px, var(--shell) 12px)'
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </div>
 
                     {/* Right: Actions */}
                     <div id="page-header-actions" className="flex items-center gap-1.5 justify-self-end">

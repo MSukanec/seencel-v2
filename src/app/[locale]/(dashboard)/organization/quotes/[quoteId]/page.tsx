@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/routing";
 import { FileText, ChevronLeft, Layers } from "lucide-react";
-import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
 
 // Views
 import { QuoteBaseView } from "@/features/quotes/views/quote-base-view";
@@ -135,9 +134,7 @@ export default async function QuoteDetailAppPage({
                         </Button>
                     }
                     parentLabel={quote.quote_type === "change_order" ? quote.parent_contract_name || "Contrato" : "Cotizaciones"}
-                >
-                    {/* Content Tabs — inside content, not header */}
-                    <DetailContentTabs>
+                    tabs={
                         <TabsList>
                             <TabsTrigger value="overview">
                                 Resumen
@@ -162,7 +159,8 @@ export default async function QuoteDetailAppPage({
                                 </TabsTrigger>
                             )}
                         </TabsList>
-                    </DetailContentTabs>
+                    }
+                >
 
                     <TabsContent
                         value="overview"

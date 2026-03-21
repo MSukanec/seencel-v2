@@ -16,6 +16,7 @@ import type { ExternalActorType } from "@/features/external-actors/types";
 
 import { MemberListItem, ListItem } from "@/components/shared/list-item";
 import { ViewEmptyState } from "@/components/shared/empty-state";
+import { PageIntro } from "@/components/layout";
 import { SettingsSection } from "@/components/shared/settings-section";
 import { useContextSidebarOverlay } from "@/stores/sidebar-store";
 import { DocsInlinePanel } from "@/features/docs/components/docs-inline-panel";
@@ -238,7 +239,12 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
     const isCurrentUser = (member: OrganizationMemberDetail) => member.user_id === currentUserId;
 
     return (
-        <>
+        <div className="space-y-6">
+            <PageIntro
+                icon={Users}
+                title="Miembros"
+                description="Administrá los usuarios de tu organización, roles y accesos."
+            />
             <div className="space-y-12 pb-12">
                 {/* Members Section */}
                 <SettingsSection
@@ -638,7 +644,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                     </AlertDialogContent>
                 </AlertDialog>
             </div>
-        </>
+        </div>
     );
 }
 

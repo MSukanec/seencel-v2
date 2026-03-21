@@ -7,7 +7,6 @@ import { PageWrapper, ContentLayout } from "@/components/layout";
 import { Badge } from "@/components/ui/badge";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { BackButton } from "@/components/shared/back-button";
-import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
 import { TasksDetailGeneralView } from "@/features/tasks/views/detail/tasks-detail-general-view";
 import { TasksDetailRecipeView } from "@/features/tasks/views/detail/tasks-detail-recipe-view";
 import { getTaskById, getUnits, getTaskDivisions } from "@/features/tasks/queries";
@@ -93,9 +92,7 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
                         <BackButton fallbackHref="/admin/catalog" />
                     }
                     parentLabel="Admin Catálogo"
-                >
-                    {/* Content Tabs — inside content, not header */}
-                    <DetailContentTabs>
+                    tabs={
                         <TabsList>
                             <TabsTrigger value="general" className="gap-2">
                                 <Settings className="h-3.5 w-3.5" />
@@ -109,7 +106,8 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
                                 </Badge>
                             </TabsTrigger>
                         </TabsList>
-                    </DetailContentTabs>
+                    }
+                >
                     {/* General Tab */}
                     <TabsContent value="general" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">

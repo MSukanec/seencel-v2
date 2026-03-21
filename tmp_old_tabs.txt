@@ -1,0 +1,54 @@
+﻿"use client";
+
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+
+/**
+ * DetailContentTabs ÔÇö Tab bar for detail pages, styled like ToolbarCard.
+ * 
+ * Uses Card variant="inset" (same as ToolbarCard) for a recessed/carved surface.
+ * Tab triggers get the `.cincel-island` class for the raised island effect.
+ * Horizontally centered in the content area.
+ * 
+ * Usage:
+ * ```tsx
+ * <DetailContentTabs>
+ *   <TabsList>
+ *     <TabsTrigger value="general">Perfil</TabsTrigger>
+ *     <TabsTrigger value="location">Ubicaci├│n</TabsTrigger>
+ *   </TabsList>
+ * </DetailContentTabs>
+ * ```
+ */
+export function DetailContentTabs({
+    children,
+    className,
+}: {
+    children: React.ReactNode;
+    className?: string;
+}) {
+    return (
+        <div className={cn("flex justify-center py-3 px-4", className)}>
+            <Card
+                variant="inset"
+                className={cn(
+                    "detail-content-tabs flex items-center gap-1",
+                    // Override TabsList default styles ÔÇö make it transparent, no bg
+                    "[&_[role=tablist]]:bg-transparent [&_[role=tablist]]:border-none [&_[role=tablist]]:shadow-none",
+                    "[&_[role=tablist]]:p-0 [&_[role=tablist]]:gap-1",
+                    "[&_[role=tablist]]:h-auto [&_[role=tablist]]:items-center",
+                    "[&_[role=tablist]]:rounded-none",
+                    // TabTrigger - Base: reset shadcn defaults
+                    "[&_[role=tab]]:relative [&_[role=tab]]:h-auto",
+                    "[&_[role=tab]]:px-3 [&_[role=tab]]:py-1.5 [&_[role=tab]]:text-xs [&_[role=tab]]:font-medium",
+                    "[&_[role=tab]]:text-muted-foreground",
+                    "[&_[role=tab]]:cursor-pointer [&_[role=tab]]:transition-all [&_[role=tab]]:duration-150",
+                    // Active tab inherits cincel-island from CSS below
+                )}
+            >
+                {children}
+            </Card>
+        </div>
+    );
+}

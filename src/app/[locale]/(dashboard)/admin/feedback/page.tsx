@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PageWrapper } from "@/components/layout";
-import { ContentLayout } from "@/components/layout";
+import { PageWrapper, ContentLayout } from "@/components/layout";
+import { MessageCircle } from "lucide-react";
 
 export default async function AdminFeedbackPage() {
     const supabase = await createClient();
@@ -37,7 +37,7 @@ export default async function AdminFeedbackPage() {
     }
 
     return (
-        <PageWrapper title="Feedback">
+        <PageWrapper title="Feedback" icon={<MessageCircle />}>
             <ContentLayout variant="wide">
                 <div className="space-y-6">
                     <Card>

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { Building } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { requireAuthContext } from "@/lib/auth";
-import { PageWrapper, ContentLayout } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { getOrganizationProjects } from "@/features/projects/queries";
 import { getProjectTypes, getProjectModalities } from "@/features/projects/actions";
 import { fetchLastActiveProject } from "@/features/projects/actions";
@@ -40,32 +41,28 @@ export default async function ProjectsPage() {
         const maxActiveProjects = planFeatures?.max_active_projects ?? -1;
 
         return (
-            <PageWrapper title="Proyectos">
-                <ContentLayout variant="wide">
-                    <ProjectsListView
-                        projects={projects}
-                        organizationId={orgId}
-                        lastActiveProjectId={lastActiveProjectId}
-                        maxActiveProjects={maxActiveProjects}
-                        projectTypes={projectTypes}
-                        projectModalities={projectModalities}
-                    />
-                </ContentLayout>
-            </PageWrapper>
+            <ContentLayout variant="wide">
+                <ProjectsListView
+                    projects={projects}
+                    organizationId={orgId}
+                    lastActiveProjectId={lastActiveProjectId}
+                    maxActiveProjects={maxActiveProjects}
+                    projectTypes={projectTypes}
+                    projectModalities={projectModalities}
+                />
+            </ContentLayout>
         );
     } catch (error) {
         return (
-            <PageWrapper title="Proyectos">
-                <ContentLayout variant="wide">
-                    <div className="h-full w-full flex items-center justify-center">
-                        <ErrorDisplay
-                            title="Error al cargar proyectos"
-                            message={error instanceof Error ? error.message : "Error desconocido"}
-                            retryLabel="Reintentar"
-                        />
-                    </div>
-                </ContentLayout>
-            </PageWrapper>
+            <ContentLayout variant="wide">
+                <div className="h-full w-full flex items-center justify-center">
+                    <ErrorDisplay
+                        title="Error al cargar proyectos"
+                        message={error instanceof Error ? error.message : "Error desconocido"}
+                        retryLabel="Reintentar"
+                    />
+                </div>
+            </ContentLayout>
         );
     }
 }

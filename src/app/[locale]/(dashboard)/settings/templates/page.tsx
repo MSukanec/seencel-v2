@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { requireAuthContext } from "@/lib/auth";
 import { getOrganizationProjects } from "@/features/projects/queries";
 import { getOrganizationPdfTheme } from "@/features/organization/actions/pdf-settings";
+import { FileType } from "lucide-react";
+import { PageIntro } from "@/components/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
+import { PageHeaderTabsPortal } from "@/components/layout/dashboard/header/page-header";
 import { BrandPdfTemplates } from "@/features/organization/components/brand/brand-pdf-templates";
 import { ReportsBuilderView } from "@/features/reports/views/reports-builder-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
@@ -32,13 +34,19 @@ export default async function TemplatesPage() {
         const companyInfo = pdfThemeResult.demoData;
 
         return (
-            <Tabs defaultValue="pdf" syncUrl="view" className="h-full flex flex-col">
-                <DetailContentTabs>
+            <div className="h-full flex flex-col space-y-6">
+                <PageIntro
+                    icon={FileType}
+                    title="Plantillas"
+                    description="Personalizá el diseño, colores y membretes de tus documentos PDF y reportes analíticos."
+                />
+                <Tabs defaultValue="pdf" syncUrl="view" className="flex-1 flex flex-col min-h-0">
+                    <PageHeaderTabsPortal>
                     <TabsList>
                         <TabsTrigger value="pdf">Documentos PDF</TabsTrigger>
                         <TabsTrigger value="reports">Informes</TabsTrigger>
                     </TabsList>
-                </DetailContentTabs>
+                </PageHeaderTabsPortal>
 
                 <div className="flex-1 h-full overflow-hidden">
                     <TabsContent value="pdf" className="mt-0 h-full">
@@ -55,7 +63,8 @@ export default async function TemplatesPage() {
                         />
                     </TabsContent>
                 </div>
-            </Tabs>
+                </Tabs>
+            </div>
         );
     } catch (error) {
         console.error("Error loading templates page:", error);

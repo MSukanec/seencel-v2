@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ChevronDown, ArrowLeft, Sparkles, Mail, Bell, Check, MailOpen, Shield } from "lucide-react";
+import { Menu, X, Lock, Wrench, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ChevronDown, ArrowLeft, Sparkles, Mail, Bell, Check, MailOpen, Shield } from "lucide-react";
 import { useSidebarNavigation, NavItem, NavGroup } from "@/hooks/use-sidebar-navigation";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -366,7 +366,7 @@ export function MobileNav() {
                                                 {ctx.disabled ? (
                                                     <Lock className="h-4 w-4 text-muted-foreground mr-2" />
                                                 ) : ctx.status === 'maintenance' ? (
-                                                    <Lock className="h-4 w-4 text-orange-500 mr-2" />
+                                                    <Wrench className="h-4 w-4 text-orange-500 mr-2" />
                                                 ) : (
                                                     <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors mr-2" />
                                                 )}

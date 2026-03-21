@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { FeatureFlag, FlagCategory, updateFeatureFlagStatus } from "@/actions/feature-flags";
-import { Lock, EyeOff, Activity, Clock } from "lucide-react";
+import { Lock, Wrench, EyeOff, Activity, Clock } from "lucide-react";
 import { CategoryTree, CategoryItem } from "@/components/shared/category-tree";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ const FLAG_TRANSLATIONS: Record<string, string> = {
     'context_workspace_enabled': 'Acceso Espacio de Trabajo',
     'context_portal_enabled': 'Acceso Portal de Clientes',
     'context_academy_enabled': 'Acceso Academia',
-    'context_community_enabled': 'Acceso Comunidad',
+    'context_discover_enabled': 'Acceso Descubrir',
     'context_founders_enabled': 'Acceso Fundadores',
     'dashboard_maintenance_mode': 'Acceso a la plataforma',
     'pro_purchases_enabled': 'Habilitar Compra Plan Pro',
@@ -147,7 +147,7 @@ export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFl
                                         </SelectItem>
                                         <SelectItem value="maintenance">
                                             <div className="flex items-center gap-2">
-                                                <Lock className="h-3 w-3 text-orange-500" />
+                                                <Wrench className="h-3 w-3 text-orange-500" />
                                                 <span>Mantenimiento</span>
                                             </div>
                                         </SelectItem>

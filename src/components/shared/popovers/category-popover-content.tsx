@@ -58,7 +58,7 @@ export function CategoryPopoverContent({
     onOpenChange,
     searchPlaceholder = "Buscar categoría...",
     emptyText = "No hay categorías",
-    manageRoute = { pathname: "/organization/contacts/categories" as any },
+    manageRoute = { pathname: "/organization/contacts/settings" as any },
     manageLabel = "Gestionar categorías",
 }: CategoryPopoverContentProps) {
     const router = useRouter();

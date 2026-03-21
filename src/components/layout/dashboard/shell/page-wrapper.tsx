@@ -6,9 +6,7 @@ import { PageHeader, BreadcrumbItem } from "../header/page-header"
 import { MobileHeader } from "../mobile/mobile-header"
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
 import { usePathname, useRouter } from "@/i18n/routing";
-import { DetailContentTabs } from "@/components/shared/detail-content-tabs";
-import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { useSelectedLayoutSegment } from "next/navigation";
 
 // ─── Route Tab Type ─────────────────────────────────────
 export interface RouteTab {
@@ -28,44 +26,55 @@ export interface RouteTab {
 function RouteTabsRenderer({ tabs }: { tabs: RouteTab[] }) {
     const pathname = usePathname();
     const router = useRouter();
+    const segment = useSelectedLayoutSegment();
 
-    // Detect active tab by matching pathname
-    // Sort by href length (longest first) for most-specific matching
+    // Detect active tab 
     const sortedTabs = React.useMemo(() =>
         [...tabs].sort((a, b) => b.href.length - a.href.length),
         [tabs]
     );
 
-    const activeTab = React.useMemo(() => {
-        const match = sortedTabs.find(t => pathname === t.href || pathname.startsWith(t.href + '/'));
-        return match?.value ?? tabs[0]?.value ?? '';
-    }, [pathname, sortedTabs, tabs]);
-
-    const handleTabChange = React.useCallback((value: string) => {
-        const tab = tabs.find(t => t.value === value);
-        if (tab) {
-            router.push(tab.href as any);
+    const activeValue = React.useMemo(() => {
+        // Priority 1: Match by Next.js unlocalized physical segment (bulletproof for i18n dynamic routes)
+        if (segment) {
+            const segmentMatch = tabs.find(t => 
+                t.value === segment || 
+                t.href.endsWith(`/${segment}`)
+            );
+            if (segmentMatch) return segmentMatch.value;
         }
-    }, [tabs, router]);
+
+        // Priority 2: In root layout (segment is null), usually the first tab is the default index
+        if (!segment && tabs.length > 0) {
+            // Priority 3 will handle this safely if the exact pathname matches, but segment=null is a strong signal for base path
+        }
+
+        // Priority 3: Fallback logic using next-intl pathname (can be flaky on deeply dynamic translated routes)
+        const match = sortedTabs.find(t => pathname === t.href || pathname.startsWith(t.href + '/'));
+        
+        // If segment is null and no other match, default to first tab safely
+        return match?.value ?? (!segment ? tabs[0]?.value : '') ?? tabs[0]?.value ?? '';
+    }, [pathname, sortedTabs, tabs, segment]);
 
     return (
-        <DetailContentTabs>
-            <TabsPrimitive.Root value={activeTab} onValueChange={handleTabChange}>
-                <TabsList>
-                    {tabs.map(tab => (
-                        <TabsTrigger
-                            key={tab.value}
-                            value={tab.value}
-                            disabled={tab.disabled}
-                            className={tab.icon ? "gap-2" : undefined}
-                        >
-                            {tab.icon}
-                            {tab.label}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-            </TabsPrimitive.Root>
-        </DetailContentTabs>
+        <div role="tablist">
+            {tabs.map(tab => (
+                <button
+                    key={tab.value}
+                    role="tab"
+                    data-state={activeValue === tab.value ? "active" : "inactive"}
+                    onClick={() => router.push(tab.href as any)}
+                    disabled={tab.disabled}
+                    className={cn(
+                        tab.disabled && "opacity-50 cursor-not-allowed",
+                        tab.icon && "gap-1.5"
+                    )}
+                >
+                    {tab.icon}
+                    {tab.label}
+                </button>
+            ))}
+        </div>
     );
 }
 
@@ -123,10 +132,10 @@ export function PageWrapper({
             ];
         }
 
-        // Sub-page detection: scan sidebar nav for items with children
-        const contextsToSearch: ('organization' | 'admin' | 'settings')[] = (pathname.includes('/settings') && !pathname.includes('/organization'))
+        // Sub-page detection: scan sidebar nav for items with children (or flat items)
+        const contextsToSearch: ('organization' | 'admin' | 'settings')[] = pathname.startsWith('/settings')
             ? ['settings']
-            : pathname.includes('/admin')
+            : pathname.startsWith('/admin')
             ? ['admin']
             : ['organization'];
 
@@ -146,8 +155,20 @@ export function PageWrapper({
                                 { label: matchingChild.title },
                             ];
                         }
-                        // On the parent page itself — show only parent title
-                        if (pathname === item.href) {
+                        // On the parent page itself
+                        if (pathname === item.href || pathname.startsWith(item.href + '/')) {
+                            return [{ label: item.title }];
+                        }
+                    } else {
+                        // FLAT ITEM: No children (e.g., Settings sections)
+                        if (pathname === item.href || pathname.startsWith(item.href + '/')) {
+                            // If a root layout title was passed (e.g. "Configuración") and it's different from the item title, prepend it
+                            if (title && title !== item.title) {
+                                return [
+                                    { label: title },
+                                    { label: item.title }
+                                ];
+                            }
                             return [{ label: item.title }];
                         }
                     }
@@ -181,12 +202,9 @@ export function PageWrapper({
                     tabs={headerTabs}
                     actions={actions}
                     backButton={backButton}
+                    icon={icon}
+                    routeTabs={routeTabs && routeTabs.length > 0 ? <RouteTabsRenderer tabs={routeTabs} /> : undefined}
                 />
-            )}
-
-            {/* Route Tabs — portal to header center */}
-            {routeTabs && routeTabs.length > 0 && (
-                <RouteTabsRenderer tabs={routeTabs} />
             )}
 
             {/* Content area - flex context for children to fill height */}

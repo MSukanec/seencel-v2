@@ -17,8 +17,8 @@ import { PageHeaderActionPortal } from "@/components/layout/dashboard/header/pag
 import { ViewEmptyState } from "@/components/shared/empty-state";
 
 interface ForumContainerProps {
-    courseId: string;
-    courseSlug: string;
+    courseId: string | null;
+    courseSlug?: string;
     categories: ForumCategory[];
     threads: ForumThread[];
     currentUserId?: string;

@@ -9,7 +9,9 @@ import {
     Users,
     Settings,
     FileText,
+    HardDrive,
     CreditCard,
+    Compass,
 
     Hammer,
     HardHat,
@@ -18,6 +20,7 @@ import {
     Wrench,
     MapPin,
     Sparkles,
+    Medal,
     Package,
     CalendarDays,
     FolderOpen,
@@ -31,6 +34,7 @@ import {
     MessageCircle,
     ScrollText,
     MessageSquareText,
+    MessageSquare,
     Layers,
     Zap,
     LayoutGrid,
@@ -95,8 +99,8 @@ const ALL_CONTEXTS: ContextItem[] = [
     // Portal removed — now lives as tab inside project detail page
     // Project removed from top-level sidebar as requested
     { id: 'learnings', label: 'Academia', icon: GraduationCap },
-    { id: 'founders', label: 'Fundadores', icon: Sparkles },
-    { id: 'community', label: 'Comunidad', icon: Users },
+    { id: 'founders', label: 'Fundadores', icon: Medal },
+    { id: 'discover', label: 'Descubrir', icon: Compass },
     { id: 'admin', label: 'Admin', icon: Shield },
 ];
 
@@ -105,8 +109,8 @@ export const contextRoutes: Record<NavigationContext, string> = {
     organization: '/organization',
     project: '/organization/projects',
     learnings: '/academy/overview',
-    founders: '/founders/program',
-    community: '/community',
+    founders: '/founders/dashboard',
+    discover: '/discover',
     admin: '/admin',
     settings: '/settings'
 };
@@ -135,7 +139,7 @@ export function useSidebarNavigation() {
             if (ctx.id === 'organization' || ctx.id === 'project') flagKey = 'context_workspace_enabled';
             if (ctx.id === 'learnings') flagKey = 'context_academy_enabled';
             if (ctx.id === 'founders') flagKey = 'context_founders_enabled';
-            if (ctx.id === 'community') flagKey = 'context_community_enabled';
+            if (ctx.id === 'discover') flagKey = 'context_discover_enabled';
 
             if (!flagKey) return ctx;
 
@@ -264,11 +268,9 @@ export function useSidebarNavigation() {
                     label: 'Espacio de Trabajo',
                     defaultOpen: true,
                     items: [
-                        { title: 'Proyectos', href: '/settings/projects', icon: Building },
-                        { title: 'Contactos', href: '/settings/contacts', icon: BookUser },
-                        { title: 'Archivos', href: '/settings/files', icon: FolderOpen },
-                        { title: 'IA', href: '/settings/ai', icon: Sparkles },
                         { title: 'Finanzas', href: '/settings/finance', icon: DollarSign },
+                        { title: 'Almacenamiento', href: '/settings/storage', icon: HardDrive },
+                        { title: 'IA', href: '/settings/ai', icon: Sparkles },
                         { title: 'Unidades', href: '/settings/units', icon: Ruler },
                         { title: 'Plantillas', href: '/settings/templates', icon: FileType, status: 'maintenance' as const, disabled: !canBypassRestrictions },
                     ],
@@ -362,13 +364,13 @@ export function useSidebarNavigation() {
         // Unified sidebar — all routes under /organization
         // Filtered by memberVisibleModules (from preferences / onboarding)
         const allGroups: NavGroup[] = [
-            // Visión General (standalone)
             {
                 id: 'principal',
                 label: '',
                 standalone: true,
                 items: [
                     getItemStatus('sidebar_overview', { title: 'Visión General', href: '/organization', icon: LayoutDashboard }),
+                    getItemStatus('sidebar_planner', { title: 'Planificador', href: '/organization/planner', icon: CalendarDays }),
                 ].filter((i): i is NavItem => i !== null),
             },
             // Organización (standalone — items sueltos, sin acordeón)
@@ -384,12 +386,6 @@ export function useSidebarNavigation() {
                         title: 'Catálogo Técnico',
                         href: '/organization/catalog',
                         icon: Wrench,
-                        children: [
-                            { title: 'Visión General', href: '/organization/catalog', icon: LayoutGrid },
-                            { title: 'Tareas', href: '/organization/catalog/tasks', icon: ClipboardList },
-                            { title: 'Materiales', href: '/organization/catalog/materials', icon: Package },
-                            { title: 'Mano de Obra', href: '/organization/catalog/labor', icon: HardHat },
-                        ],
                     }),
                 ].filter((i): i is NavItem => i !== null),
             },
@@ -402,20 +398,11 @@ export function useSidebarNavigation() {
                         title: 'Tareas',
                         href: '/organization/construction-tasks',
                         icon: ClipboardList,
-                        children: [
-                            { title: 'Tareas', href: '/organization/construction-tasks', icon: ClipboardList },
-                            { title: 'Catálogo', href: '/organization/construction-tasks/catalog', icon: Wrench },
-                            { title: 'Ajustes', href: '/organization/construction-tasks/settings', icon: Settings },
-                        ],
                     }),
                     getItemStatus('sidebar_sitelog', {
                         title: tSidebar('items.sitelog'),
                         href: '/organization/sitelog',
                         icon: FileText,
-                        children: [
-                            { title: 'Entradas', href: '/organization/sitelog', icon: FileText },
-                            { title: 'Ajustes', href: '/organization/sitelog/settings', icon: Settings },
-                        ],
                     }),
                     getItemStatus('sidebar_materials', { title: 'Materiales', href: '/organization/materials', icon: Package }),
                     getItemStatus('sidebar_labor', { title: 'Mano de Obra', href: '/organization/labor', icon: HardHat }),
@@ -433,11 +420,6 @@ export function useSidebarNavigation() {
                         title: 'Gastos Generales',
                         href: '/organization/general-costs',
                         icon: CreditCard,
-                        children: [
-                            { title: 'Visión General', href: '/organization/general-costs', icon: LayoutGrid },
-                            { title: 'Pagos', href: '/organization/general-costs/payments', icon: Banknote },
-                            { title: 'Conceptos', href: '/organization/general-costs/concepts', icon: Tag }
-                        ],
                     }),
                     getItemStatus('sidebar_quotes', { title: 'Presupuestos', href: '/organization/quotes', icon: FileText }),
                     getItemStatus('sidebar_clients', { title: 'Cobros', href: '/organization/clients', icon: Banknote }),
@@ -463,11 +445,12 @@ export function useSidebarNavigation() {
                 ];
             case 'founders':
                 return [
-                    { title: 'Programa Fundadores', href: '/founders/program', icon: Sparkles },
+                    { title: 'Visión General', href: '/founders/dashboard', icon: Medal },
+                    { title: 'Foro', href: '/founders/forum', icon: MessageSquare },
                 ];
-            case 'community':
+            case 'discover':
                 return [
-                    { title: 'Mapa Seencel', href: '/community/map', icon: MapPin },
+                    { title: 'Mapa Seencel', href: '/discover/map', icon: MapPin },
                 ];
             case 'admin':
                 return getNavGroups('admin').flatMap(g => g.items);

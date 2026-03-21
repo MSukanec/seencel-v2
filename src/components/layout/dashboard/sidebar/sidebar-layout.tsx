@@ -7,7 +7,7 @@ import { UserProfile } from "@/types/user";
 import { useContextSidebarContent, useContextSidebarOverlay } from "@/stores/sidebar-store";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
-import { useSidebarMode, usePendingPathname } from "@/stores/layout-store";
+import { useSidebarMode, usePendingPathname, useLayoutStore } from "@/stores/layout-store";
 import { SidebarToggleButton } from "./sidebar-toggle-button";
 import { usePathname } from "@/i18n/routing";
 
@@ -29,13 +29,57 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
     const { content: contextContent, title: contextTitle, action: contextAction, hasOverlay } = useContextSidebarContent();
     const { popOverlay } = useContextSidebarOverlay();
     const hasContextSidebar = !!contextContent;
+    
     const sidebarMode = useSidebarMode();
+    const { activeContext, actions } = useLayoutStore();
+    
     const pathname = usePathname();
     const pendingPathname = usePendingPathname();
     const effectivePathname = pendingPathname ?? pathname;
 
-    // Settings (and similar) always force sidebar expanded — detected via URL
-    // to avoid deadlock: activeContext syncs inside SidebarContent which doesn't mount when collapsed
+    // 1. Sync Context based on URL (Navigation) — ALWAYS MOUNTED
+    React.useEffect(() => {
+        if (effectivePathname.includes('/project/')) { actions.setActiveContext('organization'); return; }
+        if (effectivePathname.startsWith('/admin')) { actions.setActiveContext('admin'); return; }
+        if (effectivePathname.startsWith('/academy')) { actions.setActiveContext('learnings'); return; }
+        if (effectivePathname.startsWith('/founders')) { actions.setActiveContext('organization'); return; }
+        if (effectivePathname.startsWith('/discover')) { actions.setActiveContext('discover'); return; }
+        if (effectivePathname.startsWith('/settings')) { actions.setActiveContext('settings'); return; }
+        if (effectivePathname.startsWith('/organization')) { actions.setActiveContext('organization'); return; }
+        if (effectivePathname === '/hub' || effectivePathname === '/') { actions.setActiveContext('home'); return; }
+    }, [effectivePathname, actions]);
+
+    // 1b. Sync Workspace Section based on URL
+    React.useEffect(() => {
+        if (!effectivePathname.startsWith('/organization') && !effectivePathname.startsWith('/founders')) return;
+        if (effectivePathname.includes('/project/')) return;
+
+        if (effectivePathname.startsWith('/founders')) {
+            actions.setActiveWorkspaceSection('founders');
+            return;
+        }
+
+        if (effectivePathname.startsWith('/organization/catalog')) {
+            actions.setActiveWorkspaceSection('catalog');
+            return;
+        }
+
+        const constructionPaths = ['/construction-tasks', '/sitelog', '/materials', '/labor', '/subcontracts', '/health'];
+        if (constructionPaths.some(p => effectivePathname.includes(p))) {
+            actions.setActiveWorkspaceSection('construction');
+            return;
+        }
+
+        const financePaths = ['/finance', '/general-costs', '/quotes', '/clients'];
+        if (financePaths.some(p => effectivePathname.includes(p))) {
+            actions.setActiveWorkspaceSection('finance');
+            return;
+        }
+
+        actions.setActiveWorkspaceSection('overview');
+    }, [effectivePathname, actions]);
+
+    // Settings (and similar) always force sidebar expanded
     const forceExpanded = ALWAYS_EXPANDED_PATHS.some(p => effectivePathname.includes(p));
 
     // Hover state for expand-on-hover mode + toggle button visibility
@@ -61,8 +105,11 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
     }, []);
 
     // Determine if sidebar nav panel should be shown
+    // Hide completely for contexts that use ActivityBar navigation exclusively (Academy)
+    const hideSidebar = activeContext === 'learnings';
+    
     // Force expanded for contexts that depend on sidebar navigation (e.g., Settings)
-    const showSidebarNav = forceExpanded || sidebarMode === 'docked' || (sidebarMode === 'expanded_hover' && isHovered);
+    const showSidebarNav = !hideSidebar && (forceExpanded || sidebarMode === 'docked' || (sidebarMode === 'expanded_hover' && isHovered));
 
     // Mounted state to avoid hydration mismatch
     const [mounted, setMounted] = React.useState(false);
@@ -139,7 +186,7 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
                     </div>
 
                     {/* Toggle button — Vercel-style chevron at the edge, visible on sidebar hover */}
-                    <SidebarToggleButton isVisible={sidebarHovered} />
+                    <SidebarToggleButton isVisible={sidebarHovered && !hideSidebar} />
                 </div>
 
                 {/* Main Content — Canvas (encapsulated inset effect) */}

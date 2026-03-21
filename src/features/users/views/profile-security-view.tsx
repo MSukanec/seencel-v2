@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTranslations } from "next-intl";
 import { Loader2, ShieldCheck, LogOut, Monitor } from "lucide-react";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
+import { PageIntro } from "@/components/layout";
 import { TOTPSetup } from "@/features/security/components/totp-setup";
 import { toast } from "sonner";
 import {
@@ -115,7 +116,12 @@ export function ProfileSecurityView() {
     }
 
     return (
-        <>
+        <div className="space-y-6">
+            <PageIntro
+                icon={ShieldCheck}
+                title="Seguridad"
+                description="Protegé tu cuenta, configurá la autenticación de dos factores (2FA) y revisá tus sesiones activas."
+            />
             <SettingsSectionContainer>
                     {/* ── Autenticación de Dos Factores ── */}
                     <SettingsSection
@@ -235,6 +241,6 @@ export function ProfileSecurityView() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </>
+        </div>
     );
 }

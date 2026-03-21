@@ -184,7 +184,7 @@ export function getContactColumns(
                                     onInlineUpdate(contact, { _categoryIds: newIds });
                                 }}
                                 options={contactCategories.map(c => ({ value: c.id, label: c.name }))}
-                                manageRoute={{ pathname: "/organization/contacts/categories" as any }}
+                                manageRoute={{ pathname: "/organization/contacts/settings" as any }}
                                 manageLabel="Gestionar categorías"
                             />
                         </PopoverContent>
