@@ -11,7 +11,7 @@ import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
-import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
+import { ContentLayout } from "@/components/layout/page/content-layout";
 import { useMoney } from "@/hooks/use-money";
 
 import {

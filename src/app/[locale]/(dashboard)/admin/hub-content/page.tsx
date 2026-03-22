@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, Bell } from "lucide-react";
-import { PageWrapper, ContentLayout } from "@/components/layout";
+import { PageWrapper } from "@/components/layout/page/page-wrapper";
+import { ContentLayout } from "@/components/layout/page/content-layout";
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
 import { getAuthUser } from "@/lib/auth";

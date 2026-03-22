@@ -7,167 +7,47 @@ import { UserProfile } from "@/types/user";
 import { useContextSidebarContent, useContextSidebarOverlay } from "@/stores/sidebar-store";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
-import { useSidebarMode, usePendingPathname, useLayoutStore } from "@/stores/layout-store";
+import { useSidebarMode, useLayoutStore } from "@/stores/layout-store";
 import { SidebarToggleButton } from "./sidebar-toggle-button";
-import { usePathname } from "@/i18n/routing";
 
-// URL path segments that ALWAYS force the sidebar expanded
-// (they depend on sidebar navigation for sub-pages)
+import { useSidebarSync } from "./hooks/use-sidebar-sync";
+import { useSidebarHover } from "./hooks/use-sidebar-hover";
+import { useSidebarResize } from "./hooks/use-sidebar-resize";
+
+// Component Constraints
 const ALWAYS_EXPANDED_PATHS = ['/settings'];
+const MIN_WIDTH = 56;
+const COMPACT_THRESHOLD = 120;
+const MAX_WIDTH = 400;
+const DEFAULT_WIDTH = 224;
 
 interface SidebarLayoutProps {
     children: React.ReactNode;
     user?: UserProfile | null;
 }
 
-const MIN_WIDTH = 56; // Minimum sidebar width - same as collapsed left sidebar
-const COMPACT_THRESHOLD = 120; // Below this, show compact mode
-const MAX_WIDTH = 400; // Maximum sidebar width in pixels
-const DEFAULT_WIDTH = 224; // w-56 equivalent
-
 export function SidebarLayout({ children, user }: SidebarLayoutProps) {
+    // 1. Context & Global State Access
     const { content: contextContent, title: contextTitle, action: contextAction, hasOverlay } = useContextSidebarContent();
     const { popOverlay } = useContextSidebarOverlay();
-    const hasContextSidebar = !!contextContent;
-    
+    const { activeContext } = useLayoutStore();
     const sidebarMode = useSidebarMode();
-    const { activeContext, actions } = useLayoutStore();
-    
-    const pathname = usePathname();
-    const pendingPathname = usePendingPathname();
-    const effectivePathname = pendingPathname ?? pathname;
 
-    // 1. Sync Context based on URL (Navigation) — ALWAYS MOUNTED
-    React.useEffect(() => {
-        if (effectivePathname.includes('/project/')) { actions.setActiveContext('organization'); return; }
-        if (effectivePathname.startsWith('/admin')) { actions.setActiveContext('admin'); return; }
-        if (effectivePathname.startsWith('/academy')) { actions.setActiveContext('learnings'); return; }
-        if (effectivePathname.startsWith('/founders')) { actions.setActiveContext('organization'); return; }
-        if (effectivePathname.startsWith('/discover')) { actions.setActiveContext('discover'); return; }
-        if (effectivePathname.startsWith('/settings')) { actions.setActiveContext('settings'); return; }
-        if (effectivePathname.startsWith('/organization')) { actions.setActiveContext('organization'); return; }
-        if (effectivePathname === '/hub' || effectivePathname === '/') { actions.setActiveContext('home'); return; }
-    }, [effectivePathname, actions]);
+    // 2. Extracted World-Class Hooks (SRP)
+    const { effectivePathname } = useSidebarSync();
+    const { isHovered, sidebarHovered, handleMouseEnter, handleMouseLeave } = useSidebarHover();
+    const { sidebarWidth, isResizing, handleMouseDown, sidebarRef } = useSidebarResize(DEFAULT_WIDTH, MIN_WIDTH, MAX_WIDTH);
 
-    // 1b. Sync Workspace Section based on URL
-    React.useEffect(() => {
-        if (!effectivePathname.startsWith('/organization') && !effectivePathname.startsWith('/founders')) return;
-        if (effectivePathname.includes('/project/')) return;
-
-        if (effectivePathname.startsWith('/founders')) {
-            actions.setActiveWorkspaceSection('founders');
-            return;
-        }
-
-        if (effectivePathname.startsWith('/organization/catalog')) {
-            actions.setActiveWorkspaceSection('catalog');
-            return;
-        }
-
-        const constructionPaths = ['/construction-tasks', '/sitelog', '/materials', '/labor', '/subcontracts', '/health'];
-        if (constructionPaths.some(p => effectivePathname.includes(p))) {
-            actions.setActiveWorkspaceSection('construction');
-            return;
-        }
-
-        const financePaths = ['/finance', '/general-costs', '/quotes', '/clients'];
-        if (financePaths.some(p => effectivePathname.includes(p))) {
-            actions.setActiveWorkspaceSection('finance');
-            return;
-        }
-
-        actions.setActiveWorkspaceSection('overview');
-    }, [effectivePathname, actions]);
-
-    // Settings (and similar) always force sidebar expanded
-    const forceExpanded = ALWAYS_EXPANDED_PATHS.some(p => effectivePathname.includes(p));
-
-    // Hover state for expand-on-hover mode + toggle button visibility
-    const [isHovered, setIsHovered] = React.useState(false);
-    const [sidebarHovered, setSidebarHovered] = React.useState(false);
-    const hoverTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const handleMouseEnter = React.useCallback(() => {
-        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-        setSidebarHovered(true);
-        if (sidebarMode === 'expanded_hover') setIsHovered(true);
-    }, [sidebarMode]);
-
-    const handleMouseLeave = React.useCallback(() => {
-        hoverTimerRef.current = setTimeout(() => {
-            setSidebarHovered(false);
-            if (sidebarMode === 'expanded_hover') setIsHovered(false);
-        }, 200);
-    }, [sidebarMode]);
-
-    React.useEffect(() => {
-        return () => { if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current); };
-    }, []);
-
-    // Determine if sidebar nav panel should be shown
-    // Hide completely for contexts that use ActivityBar navigation exclusively (Academy)
+    // 3. Derived UI Render State
+    const hasContextSidebar = !!contextContent;
     const hideSidebar = activeContext === 'learnings';
-    
-    // Force expanded for contexts that depend on sidebar navigation (e.g., Settings)
+    const forceExpanded = ALWAYS_EXPANDED_PATHS.some(p => effectivePathname.includes(p));
     const showSidebarNav = !hideSidebar && (forceExpanded || sidebarMode === 'docked' || (sidebarMode === 'expanded_hover' && isHovered));
-
-    // Mounted state to avoid hydration mismatch
-    const [mounted, setMounted] = React.useState(false);
-
-    // Resizable sidebar state
-    const [sidebarWidth, setSidebarWidth] = React.useState(DEFAULT_WIDTH);
-    const [isResizing, setIsResizing] = React.useState(false);
-    const sidebarRef = React.useRef<HTMLDivElement>(null);
-
-    // Mount and load saved width from localStorage
-    React.useEffect(() => {
-        setMounted(true);
-        const saved = localStorage.getItem('context-sidebar-width');
-        if (saved) {
-            const width = parseInt(saved, 10);
-            if (!isNaN(width) && width >= MIN_WIDTH && width <= MAX_WIDTH) {
-                setSidebarWidth(width);
-            }
-        }
-    }, []);
-
-    // Save width to localStorage (only after mounted)
-    React.useEffect(() => {
-        if (mounted && !isResizing) {
-            localStorage.setItem('context-sidebar-width', String(sidebarWidth));
-        }
-    }, [sidebarWidth, isResizing, mounted]);
-
-    // Handle resize
-    const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
-        e.preventDefault();
-        setIsResizing(true);
-
-        const startX = e.clientX;
-        const startWidth = sidebarWidth;
-
-        const handleMouseMove = (e: MouseEvent) => {
-            // Moving left increases sidebar width, moving right decreases
-            const delta = startX - e.clientX;
-            const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
-            setSidebarWidth(newWidth);
-        };
-
-        const handleMouseUp = () => {
-            setIsResizing(false);
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    }, [sidebarWidth]);
-
-    // Is sidebar compact (less than threshold)?
     const isCompact = sidebarWidth < COMPACT_THRESHOLD;
 
+    // 4. Pure Declarative Render
     return (
-        <div className="h-screen flex flex-col bg-shell overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 bg-shell overflow-hidden">
             <div className="flex flex-1 overflow-hidden relative">
                 {/* Desktop: Activity Bar + Sidebar Detail Panel */}
                 <div
@@ -242,7 +122,6 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
                                 </div>
                             )}
                             <div className="flex-1 overflow-y-auto">
-                                {/* Pass isCompact to children via context or data attribute */}
                                 <div data-compact={isCompact ? "true" : "false"}>
                                     {contextContent}
                                 </div>

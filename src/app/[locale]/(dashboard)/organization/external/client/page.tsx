@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { PageWrapper } from "@/components/layout/dashboard/shell/page-wrapper";
+import { PageWrapper } from "@/components/layout/page/page-wrapper";
 import { LayoutDashboard } from "lucide-react";
 import { ClientOverviewView } from "@/features/clients/views/external/client-overview-view";
 

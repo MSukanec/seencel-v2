@@ -10,7 +10,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
+import { ContentLayout } from "@/components/layout/page/content-layout";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { FacetedFilter } from "@/components/layout/dashboard/toolbar/toolbar-faceted-filter";
 import { DateRangeFilter, type DateRangeFilterValue } from "@/components/layout/dashboard/toolbar/toolbar-date-range-filter";

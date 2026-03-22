@@ -9,7 +9,7 @@ import {
 import { requireAuthContext } from "@/lib/auth";
 import { OrganizationDashboardView } from "@/features/organization/views/organization-dashboard-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { PageWrapper } from "@/components/layout/dashboard/shell/page-wrapper";
+import { PageWrapper } from "@/components/layout/page/page-wrapper";
 import { getTranslations } from "next-intl/server";
 import { Building2 } from "lucide-react";
 

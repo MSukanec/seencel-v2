@@ -1,5 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { PageWrapper } from "@/components/layout/dashboard/shell";
+import { PageWrapper } from "@/components/layout";
 import { Medal } from "lucide-react";
 import { getForumThreads, getUserForumContributions } from "@/actions/forum";
 import { FoundersOverviewView } from "@/features/founders/views/founders-overview-view";

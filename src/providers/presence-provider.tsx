@@ -34,7 +34,7 @@ export function usePresence() {
 
 interface PresenceProviderProps {
     children: ReactNode;
-    userId: string;
+    userId?: string | null;
 }
 
 // Heartbeat interval: 45 seconds

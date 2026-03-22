@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import { ContentLayout } from "@/components/layout/dashboard/shell";
+import { ContentLayout } from "@/components/layout";
 import { ForumThread } from "@/actions/forum";
 
 interface FoundersOverviewViewProps {

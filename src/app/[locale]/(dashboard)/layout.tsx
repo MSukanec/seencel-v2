@@ -1,11 +1,12 @@
 import { getUserProfile, checkUserRoles, checkUserAccessContext } from "@/features/users/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
-import { LayoutSwitcher } from "@/components/layout";
+import { DashboardShell } from "@/components/layout";
 import { getFeatureFlags } from "@/actions/feature-flags";
 import { FeatureFlagsProvider } from "@/providers/feature-flags-provider";
 import { ThemeCustomizationHydrator } from "@/stores/theme-store";
 
 import { OrganizationStoreHydrator } from "@/stores/organization-store";
+import { UserStoreHydrator } from "@/stores/user-store";
 import MaintenancePage from "./maintenance/page";
 import { MemberRemovedOverlay } from "@/features/organization/components/member-removed-overlay";
 import { PendingInvitationChecker } from "@/features/team/components/pending-invitation-checker";
@@ -89,6 +90,7 @@ export default async function DashboardLayout({
     return (
         <>
             {/* Zustand Store Hydrators — Phase 1 instant, Phase 2 lazy */}
+            <UserStoreHydrator user={profile} />
             <OrganizationStoreHydrator
                 activeOrgId={activeOrgId || null}
                 isImpersonating={isImpersonating}
@@ -101,7 +103,7 @@ export default async function DashboardLayout({
             />
             <ThemeCustomizationHydrator />
             <FeatureFlagsProvider flags={flags} isAdmin={isAdmin} isBetaTester={isBetaTester}>
-                <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
+                <DashboardShell user={profile}>
                     {children}
                     {wasRemoved && fallbackOrg && (
                         <MemberRemovedOverlay
@@ -119,7 +121,7 @@ export default async function DashboardLayout({
                             externalActorType={initialAccessContext.externalActorType}
                         />
                     )}
-                </LayoutSwitcher>
+                </DashboardShell>
             </FeatureFlagsProvider>
         </>
     );

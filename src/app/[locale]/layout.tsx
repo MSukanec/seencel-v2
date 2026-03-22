@@ -13,6 +13,7 @@ import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-regis
 import { AcquisitionTracker } from "@/components/shared/acquisition-tracker";
 import { NavigationProgress } from "@/components/shared/navigation-progress";
 import { Suspense } from "react";
+import { QueryProvider } from "@/providers/query-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -93,15 +94,17 @@ export default async function LocaleLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <Suspense fallback={null}>
-              <NavigationProgress />
-            </Suspense>
-            <AcquisitionTracker />
-            {children}
-            <ModalProvider />
-            <PanelProvider />
-            <Toaster />
-            <ServiceWorkerRegistration />
+            <QueryProvider>
+              <Suspense fallback={null}>
+                <NavigationProgress />
+              </Suspense>
+              <AcquisitionTracker />
+              {children}
+              <ModalProvider />
+              <PanelProvider />
+              <Toaster />
+              <ServiceWorkerRegistration />
+            </QueryProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

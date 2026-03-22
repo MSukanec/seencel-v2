@@ -9,12 +9,13 @@ export * from "./dashboard";
 
 // Explicit exports for backward compatibility
 export { Header } from "./public/header";
-export { LayoutSwitcher } from "./dashboard/shell/layout-switcher";
-export { PageWrapper } from "./dashboard/shell/page-wrapper";
-export type { RouteTab } from "./dashboard/shell/page-wrapper";
-export { ContentLayout } from "./dashboard/shell/content-layout";
+export { DashboardShell } from "./dashboard/dashboard-shell";
+export { PageWrapper } from "./page/page-wrapper";
+export type { RouteTab } from "./page/page-wrapper";
+export { ContentLayout } from "./page/content-layout";
+export * from "./page/split-editor-layout";
 export { SidebarLayout } from "./dashboard/sidebar/sidebar-layout";
 
 // Shared dashboard components
 export { PageHeaderActionPortal } from "./dashboard/header/page-header";
-export { PageIntro } from "./dashboard/shell/page-intro";
+export { PageIntro } from "../shared/page-intro";

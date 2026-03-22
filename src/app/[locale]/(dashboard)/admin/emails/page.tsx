@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { PageWrapper } from "@/components/layout/dashboard/shell/page-wrapper";
-import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
+import { PageWrapper } from "@/components/layout/page/page-wrapper";
+import { ContentLayout } from "@/components/layout/page/content-layout";
 import { LayoutTemplate } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmailsPreviewView } from "@/features/admin/views/emails-preview-view";

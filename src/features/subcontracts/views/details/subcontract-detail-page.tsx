@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { Handshake, ChevronLeft } from "lucide-react";
 
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { PageWrapper } from "@/components/layout/dashboard/shell/page-wrapper";
-import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
+import { PageWrapper } from "@/components/layout/page/page-wrapper";
+import { ContentLayout } from "@/components/layout/page/content-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";

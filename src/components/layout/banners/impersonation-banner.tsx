@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useOrganizationStore } from "@/stores/organization-store";
 import { adminExitImpersonation, getAdminOrgList, adminImpersonateOrg } from "@/actions/admin-impersonation-actions";
+import { GlobalBanner } from "./global-banner";
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Shield, LogOut } from "lucide-react";
@@ -61,8 +62,22 @@ export function ImpersonationBanner() {
     }));
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 dark:bg-amber-600 text-amber-950 px-4 py-1.5 flex items-center justify-center gap-3 text-sm font-medium shadow-md">
-            <Shield className="h-4 w-4 shrink-0" />
+        <GlobalBanner
+            variant="warning"
+            icon={Shield}
+            action={
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExit}
+                    disabled={isPending}
+                    className="h-7 bg-amber-400/50 border-amber-600/30 text-amber-950 hover:bg-amber-400/80 hover:text-amber-950 text-xs shadow-none"
+                >
+                    <LogOut className="h-3 w-3 mr-1" />
+                    {isPending ? "Saliendo..." : "Salir"}
+                </Button>
+            }
+        >
             <span className="shrink-0">Modo Soporte —</span>
 
             {orgs.length > 0 ? (
@@ -78,17 +93,6 @@ export function ImpersonationBanner() {
             ) : (
                 <span className="font-semibold">{impersonationOrgName}</span>
             )}
-
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExit}
-                disabled={isPending}
-                className="h-7 bg-amber-400/50 border-amber-600/30 text-amber-950 hover:bg-amber-400/80 hover:text-amber-950 text-xs"
-            >
-                <LogOut className="h-3 w-3 mr-1" />
-                {isPending ? "Saliendo..." : "Salir"}
-            </Button>
-        </div>
+        </GlobalBanner>
     );
 }

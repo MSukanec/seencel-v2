@@ -2,8 +2,8 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { PageHeader, BreadcrumbItem } from "../header/page-header"
-import { MobileHeader } from "../mobile/mobile-header"
+import { PageHeader, BreadcrumbItem } from "../dashboard/header/page-header"
+import { MobileHeader } from "../dashboard/mobile/mobile-header"
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
 import { usePathname, useRouter } from "@/i18n/routing";
 import { useSelectedLayoutSegment } from "next/navigation";

@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getAuthUser } from "@/lib/auth";
 import { redirect } from "@/i18n/routing";
-import { PageWrapper } from "@/components/layout/dashboard/shell/page-wrapper";
+import { PageWrapper } from "@/components/layout/page/page-wrapper";
 import { ContentLayout } from "@/components/layout";
 import { getForumCategories, getForumThreads } from "@/actions/forum";
 import { ForumContainer } from "@/components/shared/forum";

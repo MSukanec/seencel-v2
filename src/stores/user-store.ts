@@ -66,3 +66,17 @@ export function useUserActions() {
 
     return { setUser, clearUser };
 }
+
+// ============================================
+// HYDRATOR (Client Component Wrapper)
+// ============================================
+import React from 'react';
+
+export function UserStoreHydrator({ user }: { user: UserProfile | null }) {
+    React.useEffect(() => {
+        if (user) {
+            useUserStore.getState().setUser(user);
+        }
+    }, [user]);
+    return null;
+}

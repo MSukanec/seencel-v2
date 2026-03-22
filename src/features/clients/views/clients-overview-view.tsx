@@ -24,7 +24,7 @@ import { createMoney } from "@/lib/money/money";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
-import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
+import { ContentLayout } from "@/components/layout/page/content-layout";
 import { DateRangeFilter, type DateRangeFilterValue } from "@/components/layout/dashboard/toolbar/toolbar-date-range-filter";
 import { parseDateFromDB } from "@/lib/timezone-data";
 import { useActiveProjectId } from "@/stores/layout-store";

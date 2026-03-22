@@ -14,7 +14,7 @@ import { ColorSlot } from "@/components/shared/theme-customizer/color-slot";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
+import { ContentLayout } from "@/components/layout/page/content-layout";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { extractColorsFromImage, rgbToOklch } from "@/components/shared/theme-customizer/lib/color-extraction";

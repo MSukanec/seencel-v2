@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 import { Toolbar } from "@/components/layout/dashboard/toolbar";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { ContentLayout } from "@/components/layout/dashboard/shell/content-layout";
+import { ContentLayout } from "@/components/layout/page/content-layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
