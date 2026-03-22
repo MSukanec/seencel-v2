@@ -22,9 +22,10 @@ export type AccessMode = "member" | "external";
 
 // "Viewing As" — admin previewing an external actor's sidebar
 export interface ViewingAsState {
-    userId: string;
-    userName: string;
     actorType: ExternalActorType;
+    isSimulation: boolean;
+    userId?: string;
+    userName?: string;
 }
 
 interface AccessContextState {

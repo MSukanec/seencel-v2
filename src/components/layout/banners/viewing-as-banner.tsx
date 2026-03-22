@@ -29,10 +29,22 @@ export function ViewingAsBanner() {
         useAccessContextStore.getState().clearViewingAs();
     };
 
+    const title = viewingAs.isSimulation
+        ? `Simulador: Portal de ${viewingAs.actorType}`
+        : `Viendo como: ${viewingAs.userName}`;
+        
+    const description = viewingAs.isSimulation
+        ? `Estás previsualizando genéricamente lo que ve un ${viewingAs.actorType} en este proyecto.`
+        : `Estás navegando la plataforma exactamente como lo hace este usuario externo.`;
+
     return (
         <GlobalBanner
             variant="context"
-            icon={Eye}
+            content={{
+                title,
+                description,
+                icon: <Eye className="w-5 h-5 text-[--plan-glow]" />
+            }}
             action={
                 <Button
                     variant="outline"

@@ -399,7 +399,7 @@ export function PlanBadge({
             </span>
         );
         if (!linkToPricing) return microBadge;
-        return <Link href="/pricing" className="no-underline">{microBadge}</Link>;
+        return <Link href="/settings/billing/plans" className="no-underline">{microBadge}</Link>;
     }
 
     // Mouse-as-light: affects both surface glow and text engraving
@@ -556,7 +556,7 @@ export function PlanBadge({
     if (!linkToPricing) return badge;
 
     return (
-        <Link href="/pricing" className="no-underline">
+        <Link href="/settings/billing/plans" className="no-underline">
             {badge}
         </Link>
     );
