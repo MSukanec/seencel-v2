@@ -16,7 +16,7 @@ export async function addExternalActorAction(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("organization_external_actors")
+        .schema('iam').from("organization_external_actors")
         .insert({
             organization_id: input.organization_id,
             user_id: input.user_id,
@@ -54,7 +54,7 @@ export async function updateExternalActorAction(
     if (input.is_active !== undefined) updatePayload.is_active = input.is_active;
 
     const { data, error } = await supabase
-        .from("organization_external_actors")
+        .schema('iam').from("organization_external_actors")
         .update(updatePayload)
         .eq("id", input.id)
         .select()
@@ -77,7 +77,7 @@ export async function removeExternalActorAction(actorId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("organization_external_actors")
+        .schema('iam').from("organization_external_actors")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -120,7 +120,7 @@ export async function checkExternalActorAccess(orgId: string): Promise<{ isActiv
     if (!userData?.id) return { isActive: false };
 
     const { data: actor } = await supabase
-        .from("organization_external_actors")
+        .schema('iam').from("organization_external_actors")
         .select("id, is_active")
         .eq("organization_id", orgId)
         .eq("user_id", userData.id)
