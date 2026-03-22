@@ -51,11 +51,11 @@ const accountantNavigation: NavGroup[] = [
         label: "Portal Contador",
         defaultOpen: true,
         items: [
-            { title: "Dashboard Financiero", href: "/organization/external/accountant", icon: LayoutDashboard, disabled: true },
-            { title: "Ingresos", href: "/organization/external/accountant/income", icon: ArrowDownCircle, disabled: true },
-            { title: "Egresos", href: "/organization/external/accountant/expenses", icon: ArrowUpCircle, disabled: true },
-            { title: "Reportes", href: "/organization/external/accountant/reports", icon: FileChartColumn, disabled: true },
-            { title: "Exportar PDF", href: "/organization/external/accountant/export", icon: FileDown, disabled: true },
+            { title: "Dashboard Financiero", href: "/organization/external/accountant", icon: LayoutDashboard },
+            { title: "Ingresos", href: "/organization/external/accountant/income", icon: ArrowDownCircle },
+            { title: "Egresos", href: "/organization/external/accountant/expenses", icon: ArrowUpCircle },
+            { title: "Reportes", href: "/organization/external/accountant/reports", icon: FileChartColumn },
+            { title: "Exportar PDF", href: "/organization/external/accountant/export", icon: FileDown },
         ],
     },
 ];

@@ -425,7 +425,15 @@ export function useSidebarNavigation() {
                     getItemStatus('sidebar_clients', { title: 'Cobros', href: '/organization/clients', icon: Banknote }),
                 ].filter((i): i is NavItem => i !== null),
             },
-
+            // Portales Externos (MOCKS para Testing)
+            {
+                id: 'portales_externos_mocks',
+                label: 'Portales Externos (Mocks)',
+                items: [
+                    { title: 'Portal Contador', href: '/organization/external/accountant', icon: LayoutDashboard },
+                    { title: 'Portal Cliente', href: '/organization/external/client', icon: LayoutDashboard },
+                ],
+            },
         ];
 
         // Filter by member's visible modules (from onboarding / preferences)
