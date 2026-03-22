@@ -74,9 +74,9 @@ app/[locale]/.../page.tsx
 
 ## 🚨 Reglas de Oro (Resumen Ejecutivo)
 
-1.  **Architecture**: Páginas con múltiples secciones usan `layout.tsx` + sub-rutas reales (sidebar-first).
-2.  **Sidebar-First**: Toda navegación de secciones usa **rutas reales** + **sidebar drill-down** (estilo Vercel). ⛔ PROHIBIDO usar `<Tabs>` inline para secciones de página.
-3.  **Route Tabs (Header)**: Páginas con sub-rutas pueden usar `routeTabs` en `PageWrapper` o `DetailContentTabs` para renderizar tabs en el centro del header. Cada tab navega a una ruta real.
+1.  **Architecture**: Páginas con múltiples secciones utilizan **Tabs**.
+2.  **RAIL Navigation**: ⛔ PROHIBIDO usar submenús, drill-downs o `children` en el Sidebar. El Sidebar es estrictamente Nivel 1. Toda navegación interna de sub-secciones usa **`<Tabs>` en la página**.
+3.  **Route Tabs**: Se recomienda usar `routeTabs` o tabs estándar controladas por estado o ruta.
 4.  **Metadata**: TODA página/sub-página debe exportar `generateMetadata` (con título y robots).
 5.  **Error Handling**: Usar `try/catch` y `<ErrorDisplay>` en el servidor para evitar pantallas blancas.
 6.  **Toolbar**: Usar `ToolbarCard` inline + `PageHeaderActionPortal`. ⛔ NO usar `Toolbar portalToHeader` (legacy).
@@ -180,9 +180,7 @@ graph TD
 
 ## 🧱 2. Implementación de Páginas con Sub-secciones
 
-> **Decisión de Marzo 2026:** Toda navegación de secciones se resuelve con **rutas reales**. Hay dos patrones válidos para mostrar las secciones al usuario:
-> - **Sidebar drill-down** → para features con muchas sub-secciones (Settings, General Costs)
-> - **Route Tabs (header)** → para features con pocas sub-secciones que se benefician de tabs visuales (Tareas+Rubros, Detalle de Curso)
+> **Decisión RAIL Navigation (Marzo 2026):** Toda la navegación en el Sidebar es PLANA (sin sub-menús). El patrón para navegar sub-secciones es mediante **`<Tabs>` dentro de la página** (Header o Content, ej: Curso, Proyectos).
 
 ### Patrón obligatorio:
 
@@ -325,20 +323,16 @@ export default function FeatureTabsLayout({ children }: { children: React.ReactN
 - **Curso (Estudiante)**: `academy/my-courses/[slug]/layout.tsx` — 6 tabs portadas al header
 - **Detalle Proyecto**: `projects/[projectId]/page.tsx` — tabs inline con `DetailContentTabs` (patrón legacy, migrar a rutas)
 
-### 2.2 Sidebar Navigation:
+### 2.2 Sidebar Navigation (RAIL):
 
-En `use-sidebar-navigation.ts`, definir `children` para el item:
+En `use-sidebar-navigation.ts`, configurar el ítem directamente:
 
 ```typescript
 getItemStatus('sidebar_feature', {
     title: 'NombreFeature',
     href: '/organization/feature',
     icon: FeatureIcon,
-    children: [
-        { title: 'Visión General', href: '/organization/feature' },
-        { title: 'Sección 1', href: '/organization/feature/section1' },
-        { title: 'Sección 2', href: '/organization/feature/section2' },
-    ],
+    // ⛔ NO SE PERMITE USAR `children` AQUÍ. Sidebar plano.
 }),
 ```
 
@@ -690,32 +684,9 @@ import { LazyAreaChart as BaseAreaChart } from "@/components/charts/lazy-charts"
 
 > **REGLA**: SIEMPRE usar versiones lazy para charts en dashboards.
 
-### 10.3 Navegación de Secciones
-
-**Patrón DEPRECADO:** `<Tabs>` / `<TabsContent>` con estado local para secciones de página.
-
-**Patrones válidos (OBLIGATORIO):** Rutas reales con una de estas opciones:
-
-```tsx
-// ❌ DEPRECADO - Tabs inline con estado local para secciones
-<Tabs defaultValue="overview">
-    <TabsList>...</TabsList>
-    <TabsContent value="overview">...</TabsContent>
-</Tabs>
-
-// ✅ OPCIÓN A - Sidebar drill-down (muchas secciones)
-// layout.tsx → PageWrapper
-// page.tsx → Sección raíz
-// payments/page.tsx → Sub-sección
-// concepts/page.tsx → Sub-sección
-
-// ✅ OPCIÓN B - Route Tabs en header (pocas secciones, visual)
-// layout.tsx → PageWrapper con routeTabs=[...] o client layout con DetailContentTabs
-// page.tsx → Tab principal
-// divisions/page.tsx → Tab secundaria
-```
-
-> Las tabs de `<Tabs>` solo son válidas para controles DENTRO de una vista (ej: currency selector, toggle de modo), NO para secciones de página.
+**Patrón VÁLIDO y OBLIGATORIO:**
+- Sidebar RAIL (sin `children`)
+- Navegación de sección mediante **`<Tabs>`** u opciones de RouteTabs.
 
 ### 10.4 Data Refresh
 

@@ -169,7 +169,7 @@ Cada tabla debe tener:
 
 ## CAPA 4: FRONTEND — ARQUITECTURA DE PÁGINA
 
-> **Decisión de Marzo 2026:** Tabs en header eliminadas. Sidebar-first + rutas reales.
+> **Decisión RAIL Navigation (Marzo 2026):** Sidebar sin sub-menús (RAIL plano). Uso obligatorio de `<Tabs>` para navegación de secciones de página.
 
 ### 4.1 Estructura de archivos:
 
@@ -190,8 +190,8 @@ app/[locale]/(dashboard)/organization/<feature>/
 - [ ] `generateMetadata({ robots: "noindex, nofollow" })` en cada page
 - [ ] `try/catch` con `ErrorDisplay` para data fetching
 - [ ] Queries paralelas con `Promise.all`
-- [ ] ⛔ NO `<Tabs>` / `<TabsContent>` para secciones de página
-- [ ] Sub-secciones definidas en `use-sidebar-navigation.ts`
+- [ ] ✅ USO de `<Tabs>` / `<TabsContent>` (o `routeTabs`) para las sub-secciones
+- [ ] ⛔ EL SIDEBAR ES PLANO. Prohibido usar `children` de navegación para crear drill-downs en el sidebar.
 - [ ] Rutas en `src/i18n/routing.ts` con ES/EN
 - [ ] Detail pages usan `parentLabel` + `DetailContentTabs`
 

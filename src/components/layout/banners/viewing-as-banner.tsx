@@ -40,11 +40,7 @@ export function ViewingAsBanner() {
     return (
         <GlobalBanner
             variant="context"
-            content={{
-                title,
-                description,
-                icon: <Eye className="w-5 h-5 text-[--plan-glow]" />
-            }}
+            icon={Eye}
             action={
                 <Button
                     variant="outline"

@@ -5,8 +5,9 @@ import { OrganizationMemberDetail, OrganizationInvitation, Role } from "@/featur
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Users, UserPlus, Wrench, BookOpen, UserCheck, Lock } from "lucide-react";
+import { Mail, Users, UserPlus, Wrench, BookOpen, UserCheck, Lock, Play, Briefcase, LineChart } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePanel } from "@/stores/panel-store";
 import { InviteMemberForm } from "@/features/team/forms/team-invite-member-form";
 import { removeMemberAction, updateMemberRoleAction, revokeInvitationAction, resendInvitationAction, removeExternalActorAction, reactivateExternalActorAction } from "@/features/team/actions";
@@ -118,14 +119,22 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
     // External sections: locked for non-owners ("Próximamente")
     const isCurrentUserOwner = currentUserId === ownerId;
 
-    // "View as" handler — sets viewingAs state in access-context-store
     const handleViewAs = (actor: ExternalActorDetail) => {
         useAccessContextStore.getState().setViewingAs({
             userId: actor.user_id,
             userName: actor.user_full_name || actor.user_email || 'Usuario',
             actorType: actor.actor_type as ExternalActorType,
+            isSimulation: false,
         });
         toast.info(`Ahora estás viendo como: ${actor.user_full_name || actor.user_email}`);
+    };
+
+    const handleSimulateRole = (actorType: ExternalActorType) => {
+        useAccessContextStore.getState().setViewingAs({
+            actorType,
+            isSimulation: true,
+        });
+        toast.info(`Modo Simulación iniciado: Portal de ${EXTERNAL_ACTOR_TYPE_LABELS[actorType]?.label || actorType}`);
     };
 
     const handleInvite = () => {
@@ -242,11 +251,20 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         <div className="space-y-6">
             <PageIntro
                 icon={Users}
-                title="Miembros"
-                description="Administrá los usuarios de tu organización, roles y accesos."
+                title="Equipo y Accesos"
+                description="Administrá los usuarios internos, otorga acceso a clientes, invita asesores externos y previsualiza la plataforma desde sus perspectivas."
             />
-            <div className="space-y-12 pb-12">
-                {/* Members Section */}
+            
+            <Tabs defaultValue="members" className="w-full">
+                <TabsList className="mb-6 grid w-full lg:w-[600px] grid-cols-3">
+                    <TabsTrigger value="members">Miembros</TabsTrigger>
+                    <TabsTrigger value="advisors">Asesores Externos</TabsTrigger>
+                    <TabsTrigger value="clients">Clientes</TabsTrigger>
+                </TabsList>
+
+                {/* TAB 1: MIEMBROS */}
+                <TabsContent value="members" className="space-y-12 pb-12 focus-visible:outline-none">
+                    {/* Members Section */}
                 <SettingsSection
                     contentVariant="inset"
                     icon={Users}
@@ -389,6 +407,31 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                         </div>
                     </SettingsSection>
                 )}
+                </TabsContent>
+
+                {/* TAB 2: ASESORES EXTERNOS */}
+                <TabsContent value="advisors" className="space-y-12 pb-12 focus-visible:outline-none">
+                    <SettingsSection
+                        contentVariant="inset"
+                        icon={Play}
+                        title="Simulador: Portal de Contador"
+                        description="Previsualiza la plataforma exactamente como la vería un contador antes de invitarlo. Acceso focalizado a movimientos, comprobantes, facturas de subcontratistas y reportes financieros."
+                    >
+                        <Card className="p-4 flex items-center justify-between gap-4 shadow-sm border-dashed">
+                           <div className="flex items-center gap-3">
+                               <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-md shrink-0">
+                                   <LineChart className="w-5 h-5" />
+                               </div>
+                               <div>
+                                   <p className="text-sm font-semibold">Modo Simulador de Contador</p>
+                                   <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed hidden sm:block">Al activarlo, todo tu sidebar cambiará para reflejar el Portal Externo.</p>
+                               </div>
+                           </div>
+                           <Button variant="outline" size="sm" className="bg-background shrink-0" onClick={() => handleSimulateRole('accountant')}>
+                               Iniciar Simulación
+                           </Button>
+                        </Card>
+                    </SettingsSection>
 
                 {/* ===== COLLABORATORS/ADVISORS SECTION ===== */}
                 <div className="relative">
@@ -556,8 +599,58 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                         </SettingsSection>
                     </div>
                 </div>
+                </TabsContent>
 
-                {/* Edit Role Dialog */}
+                {/* TAB 3: CLIENTES */}
+                <TabsContent value="clients" className="space-y-12 pb-12 focus-visible:outline-none">
+                    <SettingsSection
+                        contentVariant="inset"
+                        icon={Play}
+                        title="Simulador: Portal de Cliente"
+                        description="Previsualiza la plataforma exactamente como la vería tu cliente antes de enviarle una invitación al proyecto. Vista simplificada con presupuestos, avance de tareas y control financiero en tiempo real."
+                    >
+                        <Card className="p-4 flex items-center justify-between gap-4 shadow-sm border-dashed">
+                           <div className="flex items-center gap-3">
+                               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md shrink-0">
+                                   <Briefcase className="w-5 h-5" />
+                               </div>
+                               <div>
+                                   <p className="text-sm font-semibold">Modo Simulador de Cliente</p>
+                                   <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed hidden sm:block">Al activarlo, todo tu menú cambiará para reflejar el Portal Externo del Cliente.</p>
+                               </div>
+                           </div>
+                           <Button variant="outline" size="sm" className="bg-background shrink-0" onClick={() => handleSimulateRole('client')}>
+                               Iniciar Simulación
+                           </Button>
+                        </Card>
+                    </SettingsSection>
+
+                    <SettingsSection
+                        contentVariant="inset"
+                        icon={Briefcase}
+                        title="Clientes"
+                        description="Los clientes no se crean o invitan desde esta pantalla general. Su acceso se gestiona individualmente dentro de cada Proyecto, para garantizar el compartimiento estricto de su información."
+                        actions={[
+                            {
+                                label: "Documentación",
+                                icon: BookOpen,
+                                variant: "secondary",
+                                onClick: () => openDocsOverlay("/docs/equipo/clientes"),
+                            },
+                        ]}
+                    >
+                        <ViewEmptyState
+                            mode="empty"
+                            icon={Lock}
+                            viewName="Lista global de clientes"
+                            featureDescription="Para mantener el principio de mínimo acceso (Least Privilege), las altas de clientes están delegadas al menú 'Portal de Clientes' dentro de la Vista Detalle de cada Proyecto."
+                            actionLabel="Desactivado"
+                        />
+                    </SettingsSection>
+                </TabsContent>
+            </Tabs>
+
+            {/* Edit Role Dialog */}
                 <AlertDialog open={!!memberToEditRole} onOpenChange={(open) => !open && setMemberToEditRole(null)}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
@@ -643,7 +736,6 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-            </div>
         </div>
     );
 }

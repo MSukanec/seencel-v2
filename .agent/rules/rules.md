@@ -144,9 +144,9 @@ Los popovers de selección (billetera, moneda, etc.) usan **Shared Popover Conte
 
 ---
 
-## 4. PÁGINAS — Estructura Obligatoria (Sidebar-First)
+## 4. PÁGINAS — Estructura y Navegación (RAIL Standard)
 
-> **Decisión de Marzo 2026:** Las tabs en header se eliminan. Toda navegación de secciones se resuelve con **rutas reales** + **sidebar drill-down** (como Vercel).
+> **Decisión RAIL Navigation (Marzo 2026):** El sidebar NO permite submenús ni drill-downs. Toda la navegación del sidebar es **Nivel 1 (RAIL)**. Para navegar sub-secciones dentro de un área, se debe **utilizar `<Tabs>` en la página** (ya sea en el header o en la vista, igual que en el reproductor del curso o Proyectos).
 
 ### Patrón para páginas con múltiples secciones:
 
@@ -167,18 +167,13 @@ app/[locale]/(dashboard)/organization/[feature]/
 - `try/catch` con `ErrorDisplay` en toda página con fetch.
 - `ViewEmptyState` de `@/components/shared/empty-state` con 3 modos (`empty`, `no-results`, `context-empty`).
   - ⛔ **NUNCA** usar `EmptyState` de `ui/` ni `DataTableEmptyState` — fueron eliminados.
-  - **Icon Match**: El ícono DEBE coincidir con el del sidebar (`use-sidebar-navigation.ts`).
-  - **Quick Start Packs**: Opcionalmente pasar `quickStartPacks` en `mode="empty"` para templates de inicio rápido.
-  - **Smart Docs Button**: Pasar `docsPath`, el componente verifica `@/lib/docs-registry.ts` antes de mostrar el botón.
-  - **No-results guard**: Solo mostrar `mode="no-results"` con `filters.hasActiveFilters`.
+- **Icon Match**: El ícono DEBE coincidir con el del sidebar.
   - **Fail-safe totalCount**: Siempre pasar `totalCount={allItems.length}` — si `mode="empty"` pero `totalCount > 0`, auto-corrige a `context-empty`.
-  - 📖 **Detalle COMPLETO:** Skill [seencel-ui-patterns](../skills/seencel-ui-patterns/SKILL.md) sección 1
-- ⛔ **PROHIBIDO**: Usar `<Tabs>` / `<TabsContent>` para secciones de página. Las tabs solo son válidas para controles DENTRO de una vista (ej: currency selector).
+- ✅ **USAR TABS**: Es **OBLIGATORIO** usar `<Tabs>` o `routeTabs` para separar contextos y vistas dentro de una página, ya que el sidebar es exclusivo para navegación top-level.
 
-### Sidebar Navigation:
-- Cada página con sub-secciones define `children` en `use-sidebar-navigation.ts`.
-- El sidebar muestra drill-down automático: `← NombrePágina` + lista de sub-páginas.
-- Las rutas deben registrarse en `src/i18n/routing.ts` con ES/EN.
+### Sidebar Navigation (Exclusivo RAIL):
+- El Sidebar debe ser **PLANO**.
+- ⛔ **PROHIBIDO** el uso de `children` (drill-down, chevrons, submenús) en el Sidebar.
 
 ### Header:
 - El header solo contiene: breadcrumb centrado (`Página / SubPágina`), CurrencyModeSelector (si aplica), DocsButton.
@@ -406,8 +401,8 @@ Para vistas de edición inline (nombre, descripción, etc): usar `useAutoSave` d
 
 ### Estructura del sidebar:
 - **Top**: Org selector
-- **Body (scroll)**: Visión General + Planificador (standalone) → Acordeones (GESTIÓN, CONSTRUCCIÓN, FINANZAS) → Items con drill-down
-- **Bottom (fijo)**: Admin + Volver al Hub → Plan badge → Avatar + Notificaciones (inline)
+- **Navegación**: Menú **RAIL** (solo botones principales, sin sub-niveles).
+- **Bottom**: Admin + Volver al Hub → Avatar + Notificaciones
 
 ---
 
