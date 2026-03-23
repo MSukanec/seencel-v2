@@ -3,9 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { requireAuthContext } from "@/lib/auth";
 import { ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { ProjectProfileView } from "@/features/projects/views/details/project-profile-view";
+import { ProjectParticipantsView } from "@/features/projects/views/details/project-participants-view";
 import { getProjectById } from "@/features/projects/queries";
-import { getProjectTypes, getProjectModalities } from "@/features/projects/actions";
+import { getClientRoles, getClients } from "@/features/clients/queries";
+import { getProjectCollaborators } from "@/features/external-actors/project-access-queries";
 
 // ============================================================================
 // Metadata
@@ -21,40 +22,47 @@ export async function generateMetadata({
     const displayName = project?.name || "Proyecto";
 
     return {
-        title: `${displayName} | Proyectos | Seencel`,
-        description: `Detalle del proyecto: ${displayName}`,
+        title: `Participantes | ${displayName} | Seencel`,
+        description: `Participantes del proyecto: ${displayName}`,
         robots: "noindex, nofollow",
     };
 }
 
 // ============================================================================
-// Page Component — Profile Tab
+// Page Component — Participants Tab
 // ============================================================================
 
-interface ProjectDetailPageProps {
+interface ProjectParticipantsPageProps {
     params: Promise<{ projectId: string }>;
 }
 
-export default async function ProjectDetailGeneralPage({ params }: ProjectDetailPageProps) {
+export default async function ProjectParticipantsPage({ params }: ProjectParticipantsPageProps) {
     try {
         const { projectId } = await params;
         const { orgId } = await requireAuthContext();
         if (!orgId) redirect("/");
 
-        const [project, projectTypes, projectModalities] = await Promise.all([
+        const [project, clientRolesResult, clientsResult, collaboratorsResult] = await Promise.all([
             getProjectById(projectId),
-            getProjectTypes(orgId),
-            getProjectModalities(orgId),
+            getClientRoles(orgId),
+            getClients(projectId),
+            getProjectCollaborators(projectId),
         ]);
 
         if (!project) notFound();
 
+        const clientRoles = clientRolesResult?.data || [];
+        const projectClients = clientsResult?.data || [];
+        const projectCollaborators = collaboratorsResult?.data || [];
+
         return (
             <ContentLayout variant="narrow">
-                <ProjectProfileView
-                    project={project}
-                    projectTypes={projectTypes}
-                    projectModalities={projectModalities}
+                <ProjectParticipantsView
+                    projectId={project.id}
+                    organizationId={project.organization_id}
+                    clientRoles={clientRoles}
+                    projectClients={projectClients}
+                    projectCollaborators={projectCollaborators}
                 />
             </ContentLayout>
         );
@@ -62,7 +70,7 @@ export default async function ProjectDetailGeneralPage({ params }: ProjectDetail
         return (
             <div className="h-full w-full flex items-center justify-center">
                 <ErrorDisplay
-                    title="Error al cargar el proyecto"
+                    title="Error al cargar participantes"
                     message={error instanceof Error ? error.message : "Error desconocido"}
                     retryLabel="Reintentar"
                 />

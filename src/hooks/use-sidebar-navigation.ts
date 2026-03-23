@@ -52,7 +52,7 @@ import {
     BookUser,
 } from "lucide-react";
 import { NavigationContext } from "@/stores/layout-store";
-import { useFeatureFlags } from "@/providers/feature-flags-provider";
+import { useEntitlements, type EntitlementKey } from "@/hooks/use-entitlements";
 import { useOrganization } from "@/stores/organization-store";
 import { useAccessContext, useViewingAs, useMemberModules } from "@/stores/access-context-store";
 import { getExternalNavGroups } from "@/config/external-navigation-config";
@@ -75,6 +75,8 @@ export interface NavItem {
     status?: 'maintenance' | 'founders' | 'coming_soon';
     // Drill-down children (sidebar sub-navigation)
     children?: NavSubItem[];
+    // Shadow mode bypass (determines visual dimming for admins vs founders)
+    isShadowMode?: boolean;
 }
 
 export interface NavGroup {
@@ -92,6 +94,7 @@ export interface ContextItem {
     disabled?: boolean;
     hidden?: boolean;
     status?: 'maintenance' | 'founders' | 'coming_soon';
+    isShadowMode?: boolean;
 }
 
 const ALL_CONTEXTS: ContextItem[] = [
@@ -118,115 +121,74 @@ export const contextRoutes: Record<NavigationContext, string> = {
 export function useSidebarNavigation() {
     const tMega = useTranslations('MegaMenu');
     const tSidebar = useTranslations('Sidebar');
-    const { statuses, isAdmin, isBetaTester } = useFeatureFlags();
-    const { isFounder, activeOrgId } = useOrganization();
+    const { check: checkEntitlement } = useEntitlements();
+    const { activeOrgId } = useOrganization();
     const { accessMode, externalActorType } = useAccessContext();
     const viewingAs = useViewingAs();
     const memberVisibleModules = useMemberModules();
 
-    // Combined flag for users who can bypass restrictions (but not see admin panel)
-    const canBypassRestrictions = isAdmin || isBetaTester;
-
     const contexts = useMemo(() => {
         return ALL_CONTEXTS.map(ctx => {
-            // Admin context: Only visible to admins (NOT beta testers)
-            if (ctx.id === 'admin') {
-                return isAdmin ? ctx : null;
-            }
-
-            // Mapping: Context ID -> Feature Flag Key
-            let flagKey = null;
-            if (ctx.id === 'organization' || ctx.id === 'project') flagKey = 'context_workspace_enabled';
-            if (ctx.id === 'learnings') flagKey = 'context_academy_enabled';
-            if (ctx.id === 'founders') flagKey = 'context_founders_enabled';
-            if (ctx.id === 'discover') flagKey = 'context_discover_enabled';
+            let flagKey: string | null = null;
+            if (ctx.id === 'admin') flagKey = 'flag:admin_dashboard'; // Admins actually are tracked via their own logic, but let's map it safely
+            if (ctx.id === 'organization' || ctx.id === 'project') flagKey = 'context:workspace';
+            if (ctx.id === 'learnings') flagKey = 'context:academy';
+            if (ctx.id === 'founders') flagKey = 'context:founders';
+            if (ctx.id === 'discover') flagKey = 'context:discover';
 
             if (!flagKey) return ctx;
 
-            // Get Status (default to active)
-            const status = statuses[flagKey] || 'active';
+            // Use entitlement engine
+            // Custom admin logic: The admin dashboard itself isn't a feature flag, it's just identity.
+            if (ctx.id === 'admin') {
+                const adminEnt = checkEntitlement('flag:hidden'); // Dummy call just to get isAdmin
+                return adminEnt.isShadowMode ? ctx : null; 
+            }
 
-            // Logic:
-            // 1. Hidden — only admins can see hidden items (NOT beta testers)
+            const ent = checkEntitlement(flagKey as EntitlementKey);
+            const status = ent.rawStatus || 'active';
+
+            // 1. Hidden
             if (status === 'hidden') {
-                if (isAdmin) {
-                    return { ...ctx, hidden: true };
+                if (ent.isShadowMode) {
+                    return { ...ctx, hidden: true, isShadowMode: true };
                 }
                 return null;
             }
 
-            // 2. Maintenance
-            if (status === 'maintenance') {
-                // Visually maintenance for everyone (admin/beta sees it too)
-                const maintenanceItem: ContextItem = { ...ctx, status: 'maintenance' };
-
-                if (canBypassRestrictions) {
-                    // Admin/Beta: Clickable (not disabled)
-                    return maintenanceItem;
-                } else {
-                    // User: Blocked
-                    return { ...maintenanceItem, disabled: true };
-                }
+            // 2. Normal execution 
+            if (ent.isAllowed && !ent.isShadowMode) {
+                return { ...ctx, status: status as any, isShadowMode: false };
             }
 
-            // 3. Coming Soon
-            if (status === 'coming_soon') {
-                const comingSoonItem: ContextItem = { ...ctx, status: 'coming_soon' };
-
-                if (canBypassRestrictions) {
-                    return comingSoonItem;
-                } else {
-                    return { ...comingSoonItem, disabled: true };
-                }
+            // 3. Shadow Mode (Visually blocked, logically permitted)
+            if (ent.isShadowMode) {
+                return { ...ctx, status: status as any, isShadowMode: true };
             }
 
-            // 4. Founders
-            if (status === 'founders') {
-                const foundersItem: ContextItem = { ...ctx, status: 'founders' };
-
-                // Allow if Admin OR Beta Tester OR Founder
-                if (canBypassRestrictions || isFounder) {
-                    return foundersItem; // Returns item with status badge, but NOT disabled
-                } else {
-                    return { ...foundersItem, disabled: true };
-                }
-            }
-
-            // 5. Active
-            return ctx;
+            // 4. Blocked
+            return { ...ctx, status: status as any, disabled: true, isShadowMode: false };
         }).filter((ctx): ctx is ContextItem => ctx !== null);
-    }, [statuses, isAdmin, isBetaTester, isFounder, canBypassRestrictions]);
+    }, [checkEntitlement]);
 
     // Helper to compute item status
     const getItemStatus = (flagKey: string, baseItem: NavItem): NavItem | null => {
-        const flag = statuses[flagKey] || 'active';
+        const ent = checkEntitlement(`flag:${flagKey}` as EntitlementKey);
+        const status = ent.rawStatus || 'active';
 
-        if (flag === 'hidden') {
-            // Only admins can see hidden items (NOT beta testers)
-            return isAdmin ? { ...baseItem, hidden: true } : null;
+        if (status === 'hidden') {
+            return ent.isShadowMode ? { ...baseItem, hidden: true, isShadowMode: true } : null;
         }
 
-        if (flag === 'maintenance') {
-            const updated = { ...baseItem, status: 'maintenance' as 'maintenance' };
-            return canBypassRestrictions ? updated : { ...updated, disabled: true };
+        if (ent.isAllowed && !ent.isShadowMode) {
+            return { ...baseItem, status: status as any, isShadowMode: false };
         }
 
-        if (flag === 'coming_soon') {
-            const updated = { ...baseItem, status: 'coming_soon' as 'coming_soon' };
-            return canBypassRestrictions ? updated : { ...updated, disabled: true };
+        if (ent.isShadowMode) {
+            return { ...baseItem, status: status as any, isShadowMode: true };
         }
 
-        if (flag === 'founders') {
-            const updated = { ...baseItem, status: 'founders' as 'founders' };
-            // Allow Admin OR Beta Tester OR Founder
-            if (canBypassRestrictions || isFounder) {
-                return updated;
-            } else {
-                return { ...updated, disabled: true };
-            }
-        }
-
-        return baseItem;
+        return { ...baseItem, status: status as any, disabled: true, isShadowMode: false };
     };
 
 
@@ -257,7 +219,7 @@ export function useSidebarNavigation() {
                     items: [
                         { title: 'General', href: '/settings/organization', icon: Building },
                         { title: 'Miembros', href: '/settings/members', icon: Users },
-                        { title: 'Roles y Permisos', href: '/settings/permissions', icon: Shield },
+                        { title: 'Accesos Externos', href: '/settings/external-access', icon: Shield },
                         { title: 'Facturación', href: '/settings/billing', icon: CreditCard },
                         { title: 'Actividad', href: '/settings/activity', icon: Activity },
                     ],
@@ -272,8 +234,8 @@ export function useSidebarNavigation() {
                         { title: 'Almacenamiento', href: '/settings/storage', icon: HardDrive },
                         { title: 'IA', href: '/settings/ai', icon: Sparkles },
                         { title: 'Unidades', href: '/settings/units', icon: Ruler },
-                        { title: 'Plantillas', href: '/settings/templates', icon: FileType, status: 'maintenance' as const, disabled: !canBypassRestrictions },
-                    ],
+                        getItemStatus('templates', { title: 'Plantillas', href: '/settings/templates', icon: FileType }),
+                    ].filter((i): i is NavItem => i !== null),
                 });
             }
 

@@ -23,11 +23,12 @@ interface SettingsSectionAction {
     variant?: "primary" | "secondary";
     /** Feature guard para bloquear según plan o mantenimiento */
     featureGuard?: {
-        isEnabled: boolean;
-        featureName: string;
+        entitlement?: any; // EntitlementKey
+        fallbackEnabled?: boolean;
+        featureName?: string;
         requiredPlan?: string;
         customMessage?: string;
-        mode?: 'plan' | 'maintenance';
+        mode?: 'plan' | 'maintenance' | 'founders';
     };
 }
 
@@ -110,7 +111,8 @@ export function SettingsSection({
                                 return (
                                     <FeatureGuard
                                         key={action.label}
-                                        isEnabled={action.featureGuard.isEnabled}
+                                        entitlement={action.featureGuard.entitlement}
+                                        fallbackEnabled={action.featureGuard.fallbackEnabled}
                                         featureName={action.featureGuard.featureName}
                                         requiredPlan={action.featureGuard.requiredPlan}
                                         customMessage={action.featureGuard.customMessage}

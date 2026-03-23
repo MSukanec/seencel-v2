@@ -381,7 +381,7 @@ export function FinancesSettingsView({
                                 </div>
 
                                 <FeatureGuard
-                                    isEnabled={subscription?.plan?.features?.custom_insight_thresholds === true}
+                                    fallbackEnabled={subscription?.plan?.features?.custom_insight_thresholds === true}
                                     featureName="Configurar Insights"
                                     requiredPlan="PRO"
                                     showBadge={false}

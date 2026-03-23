@@ -38,7 +38,7 @@ import { useSidebarNavigation, contextRoutes, type NavItem, type NavSubItem } fr
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Lock, Medal } from "lucide-react";
-import { useAccessContextStore, useIsDualAccess, useAccessMode } from "@/stores/access-context-store";
+import { useAccessContextStore, useIsDualAccess, useAccessMode, useViewingAs } from "@/stores/access-context-store";
 import { EXTERNAL_ACTOR_TYPE_LABELS } from "@/features/external-actors/types";
 
 import { SidebarTooltipProvider, SidebarTooltip, type SidebarRestriction } from "./sidebar-tooltip";
@@ -91,6 +91,7 @@ export function SidebarContent({
     const accessMode = useAccessMode();
     const switchMode = useAccessContextStore((s) => s.switchMode);
     const externalActorType = useAccessContextStore((s) => s.externalActorType);
+    const viewingAs = useViewingAs();
 
     const isMobile = mode === "mobile";
     const isExpanded = propIsExpanded ?? true;
@@ -214,6 +215,7 @@ export function SidebarContent({
         const status = item.status;
         const isDisabled = item.disabled;
         const isHidden = item.hidden;
+        const isShadowMode = item.isShadowMode;
         const hasChildren = item.children && item.children.length > 0;
 
         // Badge — chevron for items with children, or status badge
@@ -230,6 +232,7 @@ export function SidebarContent({
                     <EyeOff className="h-3 w-3 text-gray-500" />
                 </Badge>
             );
+        } else if (status === 'maintenance') {
             badge = (
                 <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-semantic-warning/10 hover:bg-semantic-warning/20 shadow-none">
                     <Wrench className="h-3 w-3 text-semantic-warning" />
@@ -273,7 +276,9 @@ export function SidebarContent({
                     }}
                     badge={badge}
                     disabled={isDisabled}
-                    isLocked={!!status || isHidden}
+                    status={status}
+                    isShadowMode={isShadowMode}
+                    hidden={isHidden}
                 />
             </React.Fragment>
         );
@@ -306,17 +311,23 @@ export function SidebarContent({
                         {(() => {
                             let meta: { icon: React.ElementType; label: string; subtitle: string } | null = null;
                             if (drillState === 'organization') {
-                                switch (activeWorkspaceSection) {
-                                    case 'overview':
-                                        meta = { icon: LayoutDashboard, label: 'General', subtitle: 'Gestión del espacio' }; break;
-                                    case 'catalog':
-                                        meta = { icon: BookOpen, label: 'Catálogo Técnico', subtitle: 'Recursos y tareas' }; break;
-                                    case 'construction':
-                                        meta = { icon: HardHat, label: 'Construcción', subtitle: 'Ejecución de obras' }; break;
-                                    case 'finance':
-                                        meta = { icon: DollarSign, label: 'Finanzas', subtitle: 'Control económico' }; break;
-                                    case 'founders':
-                                        meta = { icon: Medal, label: 'Fundadores', subtitle: 'Programa exclusivo' }; break;
+                                // "Viewing As" mode: show external portal label
+                                if (viewingAs) {
+                                    const actorLabel = EXTERNAL_ACTOR_TYPE_LABELS[viewingAs.actorType] || viewingAs.actorType;
+                                    meta = { icon: EyeOff, label: `Portal ${actorLabel}`, subtitle: viewingAs.isSimulation ? 'Modo simulación' : `Viendo como ${viewingAs.userName}` };
+                                } else {
+                                    switch (activeWorkspaceSection) {
+                                        case 'overview':
+                                            meta = { icon: LayoutDashboard, label: 'General', subtitle: 'Gestión del espacio' }; break;
+                                        case 'catalog':
+                                            meta = { icon: BookOpen, label: 'Catálogo Técnico', subtitle: 'Recursos y tareas' }; break;
+                                        case 'construction':
+                                            meta = { icon: HardHat, label: 'Construcción', subtitle: 'Ejecución de obras' }; break;
+                                        case 'finance':
+                                            meta = { icon: DollarSign, label: 'Finanzas', subtitle: 'Control económico' }; break;
+                                        case 'founders':
+                                            meta = { icon: Medal, label: 'Fundadores', subtitle: 'Programa exclusivo' }; break;
+                                    }
                                 }
                             } else {
                                 const contextMeta: Record<string, { icon: React.ElementType; label: string; subtitle: string }> = {
@@ -353,7 +364,7 @@ export function SidebarContent({
 
                     <ScrollArea className="flex-1 min-h-0" type="scroll">
                         {/* Project Selector (for Organization context, except Catalog/Founders where it's not strictly needed or could stay) */}
-                        {drillState === 'organization' && activeWorkspaceSection !== 'founders' && (
+                        {drillState === 'organization' && activeWorkspaceSection !== 'founders' && !viewingAs && (
                             <div className="w-full px-2 mb-2">
                                 <SidebarProjectSelector isExpanded={isExpanded} />
                             </div>
@@ -362,7 +373,14 @@ export function SidebarContent({
                         {/* ============================================================ */}
                         {/* ORGANIZATION STATE: Direct navigation buttons */}
                         {/* ============================================================ */}
-                        {drillState === "organization" && !pageSubItems && (
+                        {/* VIEWING AS MODE: Direct render of external nav groups */}
+                        {drillState === "organization" && viewingAs && !pageSubItems && (
+                            <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="viewing-as">
+                                {navGroups.flatMap(g => g.items).map((item, i) => renderNavItem(item, i))}
+                            </nav>
+                        )}
+
+                        {drillState === "organization" && !viewingAs && !pageSubItems && (
                             <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key={`organization-${activeWorkspaceSection}`}>
 
                                 {/* === GENERAL SECTION === */}

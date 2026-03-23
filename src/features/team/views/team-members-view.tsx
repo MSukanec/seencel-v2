@@ -5,9 +5,8 @@ import { OrganizationMemberDetail, OrganizationInvitation, Role } from "@/featur
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Users, UserPlus, Wrench, BookOpen, UserCheck, Lock, Play, Briefcase, LineChart } from "lucide-react";
+import { Mail, Users, UserPlus, BookOpen } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePanel } from "@/stores/panel-store";
 import { InviteMemberForm } from "@/features/team/forms/team-invite-member-form";
 import { removeMemberAction, updateMemberRoleAction, revokeInvitationAction, resendInvitationAction, removeExternalActorAction, reactivateExternalActorAction } from "@/features/team/actions";
@@ -44,12 +43,9 @@ interface MembersSettingsViewProps {
     ownerId: string | null;
     canInviteMembers: boolean;
     initialSeatStatus: SeatStatus | null;
-    externalActors: ExternalActorDetail[];
-    /** Max external advisors allowed by plan (-1 = unlimited) */
-    maxExternalAdvisors: number;
 }
 
-export function TeamMembersView({ organizationId, planId, members, invitations, roles, currentUserId, ownerId, canInviteMembers, initialSeatStatus, externalActors, maxExternalAdvisors }: MembersSettingsViewProps) {
+export function TeamMembersView({ organizationId, planId, members, invitations, roles, currentUserId, ownerId, canInviteMembers, initialSeatStatus }: MembersSettingsViewProps) {
     const { openPanel } = usePanel();
     const [removedMemberIds, setRemovedMemberIds] = useState<string[]>([]);
     const [removedInvitationIds, setRemovedInvitationIds] = useState<string[]>([]);
@@ -91,7 +87,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         [invitations, removedInvitationIds]
     );
 
-    // Split invitations: member vs external (clients and collaborators excluded)
+    // Split invitations: only members
     const memberInvitations = useMemo(() =>
         activeInvitations.filter(inv => {
             const type = (inv as any).invitation_type;
@@ -99,43 +95,8 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         }),
         [activeInvitations]
     );
-    const advisorInvitations = useMemo(() =>
-        activeInvitations.filter(inv => (inv as any).invitation_type === 'external' && (inv as any).actor_type !== 'client'),
-        [activeInvitations]
-    );
 
-    // External actors: only advisors (clients removed from this view)
-    const advisorActors = useMemo(() =>
-        externalActors.filter(a => ADVISOR_ACTOR_TYPES.includes(a.actor_type as any)),
-        [externalActors]
-    );
-
-    // Advisor capacity: count only ACTIVE advisors (not all)
-    const activeAdvisorCount = advisorActors.filter(a => a.is_active).length;
-    const advisorCount = activeAdvisorCount + advisorInvitations.length;
-    const isAdvisorUnlimited = maxExternalAdvisors === -1;
-    const canAddAdvisor = isAdvisorUnlimited || advisorCount < maxExternalAdvisors;
-
-    // External sections: locked for non-owners ("Próximamente")
     const isCurrentUserOwner = currentUserId === ownerId;
-
-    const handleViewAs = (actor: ExternalActorDetail) => {
-        useAccessContextStore.getState().setViewingAs({
-            userId: actor.user_id,
-            userName: actor.user_full_name || actor.user_email || 'Usuario',
-            actorType: actor.actor_type as ExternalActorType,
-            isSimulation: false,
-        });
-        toast.info(`Ahora estás viendo como: ${actor.user_full_name || actor.user_email}`);
-    };
-
-    const handleSimulateRole = (actorType: ExternalActorType) => {
-        useAccessContextStore.getState().setViewingAs({
-            actorType,
-            isSimulation: true,
-        });
-        toast.info(`Modo Simulación iniciado: Portal de ${EXTERNAL_ACTOR_TYPE_LABELS[actorType]?.label || actorType}`);
-    };
 
     const handleInvite = () => {
         openPanel('team-invite-member-form', {
@@ -251,20 +212,12 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         <div className="space-y-6">
             <PageIntro
                 icon={Users}
-                title="Equipo y Accesos"
-                description="Administrá los usuarios internos, otorga acceso a clientes, invita asesores externos y previsualiza la plataforma desde sus perspectivas."
+                title="Equipo Interno"
+                description="Administrá los usuarios internos de la organización, invitaciones pendientes y roles."
             />
             
-            <Tabs defaultValue="members" className="w-full">
-                <TabsList className="mb-6 grid w-full lg:w-[600px] grid-cols-3">
-                    <TabsTrigger value="members">Miembros</TabsTrigger>
-                    <TabsTrigger value="advisors">Asesores Externos</TabsTrigger>
-                    <TabsTrigger value="clients">Clientes</TabsTrigger>
-                </TabsList>
-
-                {/* TAB 1: MIEMBROS */}
-                <TabsContent value="members" className="space-y-12 pb-12 focus-visible:outline-none">
-                    {/* Members Section */}
+            <div className="space-y-12 pb-12">
+                {/* Members Section */}
                 <SettingsSection
                     contentVariant="inset"
                     icon={Users}
@@ -286,7 +239,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                             icon: UserPlus,
                             onClick: handleInvite,
                             featureGuard: {
-                                isEnabled: canInviteMembers,
+                                fallbackEnabled: canInviteMembers,
                                 featureName: "Invitar Miembros",
                                 requiredPlan: "TEAMS",
                             },
@@ -407,248 +360,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                         </div>
                     </SettingsSection>
                 )}
-                </TabsContent>
-
-                {/* TAB 2: ASESORES EXTERNOS */}
-                <TabsContent value="advisors" className="space-y-12 pb-12 focus-visible:outline-none">
-                    <SettingsSection
-                        contentVariant="inset"
-                        icon={Play}
-                        title="Simulador: Portal de Contador"
-                        description="Previsualiza la plataforma exactamente como la vería un contador antes de invitarlo. Acceso focalizado a movimientos, comprobantes, facturas de subcontratistas y reportes financieros."
-                    >
-                        <Card className="p-4 flex items-center justify-between gap-4 shadow-sm border-dashed">
-                           <div className="flex items-center gap-3">
-                               <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-md shrink-0">
-                                   <LineChart className="w-5 h-5" />
-                               </div>
-                               <div>
-                                   <p className="text-sm font-semibold">Modo Simulador de Contador</p>
-                                   <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed hidden sm:block">Al activarlo, todo tu sidebar cambiará para reflejar el Portal Externo.</p>
-                               </div>
-                           </div>
-                           <Button variant="outline" size="sm" className="bg-background shrink-0" onClick={() => handleSimulateRole('accountant')}>
-                               Iniciar Simulación
-                           </Button>
-                        </Card>
-                    </SettingsSection>
-
-                {/* ===== COLLABORATORS/ADVISORS SECTION ===== */}
-                <div className="relative">
-                    {/* Locked overlay — visual for all, interactive only for owner */}
-                    <div className={`absolute -top-1 -right-1 z-10 flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/80 border border-border/50 shadow-sm backdrop-blur-sm`}>
-                        <Lock className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-[10px] font-medium text-muted-foreground">Próximamente</span>
-                    </div>
-                    <div className={!isCurrentUserOwner ? 'pointer-events-none opacity-50' : 'opacity-75'}>
-                        <SettingsSection
-                            contentVariant="inset"
-                            icon={Wrench}
-                            title="Colaboradores"
-                            description={
-                                <>
-                                    <span>Personas que asesoran o participan en tus proyectos: contadores, directores de obra, subcontratistas, etc. No ocupan asientos del plan.</span>
-                                    <span className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-foreground bg-muted px-2.5 py-1 rounded-full">
-                                        <Wrench className="h-3 w-3" />
-                                        {advisorCount}{isAdvisorUnlimited ? '' : ` / ${maxExternalAdvisors}`} colaboradores{isAdvisorUnlimited ? ' · Ilimitados' : ''}
-                                    </span>
-                                </>
-                            }
-                            actions={[
-                                {
-                                    label: "Agregar Colaborador",
-                                    icon: UserCheck,
-                                    onClick: () => {
-                                        openPanel('team-add-external-form', { organizationId });
-                                    },
-                                    featureGuard: {
-                                        isEnabled: canAddAdvisor,
-                                        featureName: "Agregar más colaboradores",
-                                        requiredPlan: "PRO",
-                                        customMessage: isAdvisorUnlimited
-                                            ? undefined
-                                            : `Alcanzaste el límite de ${maxExternalAdvisors} colaborador${maxExternalAdvisors !== 1 ? 'es' : ''} activo${maxExternalAdvisors !== 1 ? 's' : ''} de tu plan actual (${advisorCount}/${maxExternalAdvisors}). Desactivá un colaborador para liberar un lugar o actualizá tu plan.`,
-                                    },
-                                },
-                                {
-                                    label: "Documentación",
-                                    icon: BookOpen,
-                                    variant: "secondary",
-                                    onClick: () => openDocsOverlay("/docs/equipo/colaboradores"),
-                                },
-                            ]}
-                        >
-                            {(() => {
-                                return (
-                                    <>
-                                        {advisorActors.length === 0 && advisorInvitations.length === 0 ? (
-                                            <ViewEmptyState
-                                                mode="empty"
-                                                icon={Wrench}
-                                                viewName="Colaboradores"
-                                                featureDescription="Los colaboradores son profesionales que participan en tus proyectos: contadores, directores de obra, subcontratistas, etc. No ocupan asientos del plan."
-                                                onAction={() => {
-                                                    openPanel('team-add-external-form', { organizationId });
-                                                }}
-                                                actionLabel="Agregar Colaborador"
-                                                docsPath="/docs/organizacion/equipo"
-                                            />
-                                        ) : (
-                                            <>
-                                                {advisorActors.length > 0 && (
-                                                    <div className="space-y-2">
-                                                        {advisorActors.map((actor) => (
-                                                            <MemberListItem
-                                                                key={actor.id}
-                                                                member={{
-                                                                    id: actor.id,
-                                                                    user_id: actor.user_id,
-                                                                    user_full_name: actor.user_full_name,
-                                                                    user_email: actor.user_email,
-                                                                    user_avatar_url: actor.user_avatar_url,
-                                                                    role_id: '',
-                                                                    role_name: null,
-                                                                    role_type: null,
-                                                                    joined_at: actor.created_at,
-                                                                    is_active: actor.is_active,
-                                                                }}
-                                                                actorTypeLabel={EXTERNAL_ACTOR_TYPE_LABELS[actor.actor_type]?.label || actor.actor_type}
-                                                                isInactive={!actor.is_active}
-                                                                onViewAs={() => handleViewAs(actor)}
-                                                                onToggleActive={() => {
-                                                                    if (actor.is_active) {
-                                                                        startTransition(async () => {
-                                                                            const result = await removeExternalActorAction(organizationId, actor.id);
-                                                                            if (result.success) {
-                                                                                toast.success(`${actor.user_full_name || 'Colaborador'} fue desactivado`);
-                                                                            } else {
-                                                                                toast.error(result.error || "Error al desactivar");
-                                                                            }
-                                                                        });
-                                                                    } else {
-                                                                        startTransition(async () => {
-                                                                            const result = await reactivateExternalActorAction(organizationId, actor.id);
-                                                                            if (result.success) {
-                                                                                toast.success(`${actor.user_full_name || 'Colaborador'} fue reactivado`);
-                                                                            } else {
-                                                                                toast.error(result.error || "Error al reactivar");
-                                                                            }
-                                                                        });
-                                                                    }
-                                                                }}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                {advisorInvitations.length > 0 && (
-                                                    <div className={advisorActors.length > 0 ? "mt-4" : ""}>
-                                                        <p className="text-xs font-medium text-muted-foreground mb-2">Invitaciones pendientes</p>
-                                                        <div className="space-y-2">
-                                                            {advisorInvitations.map((invite) => (
-                                                                <ListItem key={invite.id} variant="row">
-                                                                    <ListItem.Leading>
-                                                                        <div className="h-10 w-10 rounded-full bg-background border flex items-center justify-center text-muted-foreground">
-                                                                            <Mail className="w-5 h-5" />
-                                                                        </div>
-                                                                    </ListItem.Leading>
-                                                                    <ListItem.Content>
-                                                                        <ListItem.Title>{invite.email}</ListItem.Title>
-                                                                        <ListItem.Badges>
-                                                                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
-                                                                                {EXTERNAL_ACTOR_TYPE_LABELS[(invite as any).actor_type]?.label || 'Colaborador'}
-                                                                            </Badge>
-                                                                            <span className="text-xs text-muted-foreground self-center">
-                                                                                Enviado el {new Date(invite.created_at).toLocaleDateString()}
-                                                                            </span>
-                                                                        </ListItem.Badges>
-                                                                    </ListItem.Content>
-                                                                    <ListItem.Trailing className="flex flex-row items-center justify-end">
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                                            disabled={isPending}
-                                                                            onClick={() => {
-                                                                                const inviteId = invite.id;
-                                                                                setRemovedInvitationIds(prev => [...prev, inviteId]);
-                                                                                startTransition(async () => {
-                                                                                    const result = await revokeInvitationAction(organizationId, inviteId);
-                                                                                    if (result.success) {
-                                                                                        toast.success("Invitación revocada");
-                                                                                    } else {
-                                                                                        setRemovedInvitationIds(prev => prev.filter(id => id !== inviteId));
-                                                                                        toast.error(result.error || "Error al revocar");
-                                                                                    }
-                                                                                });
-                                                                            }}
-                                                                        >
-                                                                            Revocar
-                                                                        </Button>
-                                                                    </ListItem.Trailing>
-                                                                </ListItem>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-                                    </>
-                                );
-                            })()}
-                        </SettingsSection>
-                    </div>
-                </div>
-                </TabsContent>
-
-                {/* TAB 3: CLIENTES */}
-                <TabsContent value="clients" className="space-y-12 pb-12 focus-visible:outline-none">
-                    <SettingsSection
-                        contentVariant="inset"
-                        icon={Play}
-                        title="Simulador: Portal de Cliente"
-                        description="Previsualiza la plataforma exactamente como la vería tu cliente antes de enviarle una invitación al proyecto. Vista simplificada con presupuestos, avance de tareas y control financiero en tiempo real."
-                    >
-                        <Card className="p-4 flex items-center justify-between gap-4 shadow-sm border-dashed">
-                           <div className="flex items-center gap-3">
-                               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md shrink-0">
-                                   <Briefcase className="w-5 h-5" />
-                               </div>
-                               <div>
-                                   <p className="text-sm font-semibold">Modo Simulador de Cliente</p>
-                                   <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed hidden sm:block">Al activarlo, todo tu menú cambiará para reflejar el Portal Externo del Cliente.</p>
-                               </div>
-                           </div>
-                           <Button variant="outline" size="sm" className="bg-background shrink-0" onClick={() => handleSimulateRole('client')}>
-                               Iniciar Simulación
-                           </Button>
-                        </Card>
-                    </SettingsSection>
-
-                    <SettingsSection
-                        contentVariant="inset"
-                        icon={Briefcase}
-                        title="Clientes"
-                        description="Los clientes no se crean o invitan desde esta pantalla general. Su acceso se gestiona individualmente dentro de cada Proyecto, para garantizar el compartimiento estricto de su información."
-                        actions={[
-                            {
-                                label: "Documentación",
-                                icon: BookOpen,
-                                variant: "secondary",
-                                onClick: () => openDocsOverlay("/docs/equipo/clientes"),
-                            },
-                        ]}
-                    >
-                        <ViewEmptyState
-                            mode="empty"
-                            icon={Lock}
-                            viewName="Lista global de clientes"
-                            featureDescription="Para mantener el principio de mínimo acceso (Least Privilege), las altas de clientes están delegadas al menú 'Portal de Clientes' dentro de la Vista Detalle de cada Proyecto."
-                            actionLabel="Desactivado"
-                        />
-                    </SettingsSection>
-                </TabsContent>
-            </Tabs>
+            </div>
 
             {/* Edit Role Dialog */}
                 <AlertDialog open={!!memberToEditRole} onOpenChange={(open) => !open && setMemberToEditRole(null)}>

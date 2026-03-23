@@ -86,30 +86,112 @@ Almacenados en columna `features` de tabla `plans`.
 
 ---
 
-## 2. Componente FeatureGuard
+## 2. Sistema de Bloqueo de Features
 
-**Ubicación:** `@/components/ui/feature-guard`
+### 2.1 Entitlements Engine (`@/hooks/use-entitlements`)
+
+El hook `useEntitlements()` evalúa permisos centralmente. Retorna:
+- `isAllowed`: si el usuario tiene acceso
+- `isShadowMode`: si el admin puede bypassear (modo shadow)
+- `reason`: `'plan'` | `'maintenance'` | `'founders'` | `null`
+- `requiredPlan`: plan mínimo requerido
 
 ```tsx
-import { FeatureGuard } from "@/components/ui/feature-guard";
+const { check } = useEntitlements();
+const result = check("custom_project_branding"); // EntitlementKey
 
-<FeatureGuard
-    isEnabled={canCreateBoard}       // Boolean basado en límites del plan
-    featureName="Crear Tablero"
-    requiredPlan="PRO"               // "PRO" | "TEAMS"
->
-    <Button onClick={handleCreate}>Crear Tablero</Button>
-</FeatureGuard>
+// result.isAllowed → false (si el plan no lo permite)
+// result.isShadowMode → true (si es admin, puede bypass)
+// result.reason → 'plan'
+// result.requiredPlan → 'PRO'
 ```
+
+### 2.2 FeatureGuard (`@/components/ui/feature-guard`)
+
+Componente wrapper que bloquea UI basado en permisos del plan. Incluye:
+- **Popover** con info del plan requerido y link a upgrade
+- **Admin bypass** (shadow mode): admins ven contenido grisado pero clickeable con toast de advertencia
+- **Modo mantenimiento**: ícono de wrench + mensaje sin plan badge
+- **Badge overlay**: micro PlanBadge posicionado sobre el elemento bloqueado
+
+```tsx
+import { FeatureGuard, FeatureLockBadge } from "@/components/ui/feature-guard";
+
+// Wrapper — bloquea contenido hijo
+<FeatureGuard
+    entitlement="custom_project_branding"  // Usa EntitlementKey (preferido)
+    featureName="Branding del Proyecto"
+    requiredPlan="PRO"
+>
+    <Button onClick={handleBrand}>Personalizar</Button>
+</FeatureGuard>
+
+// O con fallback booleano (sin entitlement engine)
+<FeatureGuard
+    fallbackEnabled={false}
+    featureName="Apariencia"
+    requiredPlan="PRO"
+>
+    <div>Contenido bloqueado</div>
+</FeatureGuard>
+
+// Badge standalone — solo muestra el badge con popover
+<FeatureLockBadge
+    featureName="Custom Branding"
+    requiredPlan="PRO"
+/>
+```
+
+**Props principales:**
+| Prop | Tipo | Default | Descripción |
+|------|------|---------|-------------|
+| `entitlement` | `EntitlementKey` | — | Key del engine de entitlements |
+| `fallbackEnabled` | `boolean` | — | Boolean manual si no se usa entitlement |
+| `featureName` | `string` | `"Esta función"` | Nombre para el popover |
+| `requiredPlan` | `string` | `"PRO"` | Plan requerido |
+| `showBadge` | `boolean` | `true` | Muestra micro PlanBadge overlay |
+| `showPopover` | `boolean` | `true` | Muestra HoverCard con info |
+| `mode` | `'plan' \| 'maintenance' \| 'founders'` | auto | Modo semántico |
+| `customMessage` | `string` | — | Mensaje custom en el popover |
+
+### 2.3 Route Tabs con Guard
+
+Las `routeTabs` soportan un `guard` que integra `FeatureGuard` automáticamente en el header:
+
+```tsx
+const routeTabs: RouteTab[] = [
+    { value: "general", label: "Perfil", href: "/projects/123" },
+    { value: "appearance", label: "Apariencia", href: "/projects/123/appearance", guard: {
+        fallbackEnabled: false,
+        featureName: "Apariencia del Proyecto",
+        requiredPlan: "PRO",
+    }},
+];
+```
+
+**`RouteTabGuard` props:**
+| Prop | Tipo | Descripción |
+|------|------|-------------|
+| `entitlement` | `EntitlementKey` | Key del engine |
+| `fallbackEnabled` | `boolean` | Fallback manual |
+| `featureName` | `string` | Nombre para popover |
+| `requiredPlan` | `string` | Plan requerido |
+| `customMessage` | `string` | Mensaje custom |
+| `mode` | `'plan' \| 'maintenance' \| 'founders'` | Modo semántico |
+
+### 2.4 Sidebar con FeatureGuard
+
+El sidebar integra `FeatureGuard` automáticamente via `useSidebarNavigation`. Los items de nav con `featureFlag` que mapean a features deshabilitadas se bloquean con el mismo comportamiento (popover, admin bypass, etc.).
 
 ---
 
 ## 3. Proceso para Modificar/Agregar Features
 
-1. **Block UI**: Usar `FeatureGuard` envolviendo el botón/sección
-2. **Update Database**: SQL para actualizar columna `features` en tabla `plans`
-3. **Update Workflow**: Actualizar este archivo con nueva estructura JSON
-4. **Update Pricing**: Actualizar `src/components/global/plans-comparison.tsx`
+1. **Block UI**: Usar `FeatureGuard` envolviendo el botón/sección, o `guard` en `routeTabs`
+2. **Update Database**: SQL para actualizar columna `features` en tabla `plans` (archivos en `/DB`)
+3. **Update Entitlements**: Si se necesita una nueva key, agregarla en `use-entitlements.ts`
+4. **Update Workflow**: Actualizar este archivo con nueva estructura JSON
+5. **Update Pricing**: Actualizar `src/components/global/plans-comparison.tsx`
 
 ---
 
@@ -130,7 +212,8 @@ import { FeatureGuard } from "@/components/ui/feature-guard";
 
 ## Checklist
 
-- [ ] ¿Usado `FeatureGuard` para bloquear UI?
+- [ ] ¿Usado `FeatureGuard` o `routeTab.guard` para bloquear UI?
 - [ ] ¿Actualizado JSON en tabla `plans`?
+- [ ] ¿Actualizado entitlements si es key nueva?
 - [ ] ¿Actualizado este workflow con nueva estructura?
 - [ ] ¿Actualizada página de pricing?

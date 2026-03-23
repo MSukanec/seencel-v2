@@ -12,7 +12,6 @@ import { PageIntro } from "@/components/layout";
 import { OrganizationsList } from "@/features/organization/components/organizations-list";
 import { useRouter } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import { useFeatureFlags } from "@/providers/feature-flags-provider";
 
 interface Organization {
     id: string;
@@ -43,11 +42,6 @@ interface ProfileOrganizationsViewProps {
 export function ProfileOrganizationsView({ organizations, activeOrgId, currentUserId, isAdmin }: ProfileOrganizationsViewProps) {
     const t = useTranslations('Settings.Organization');
     const router = useRouter();
-    const { statuses } = useFeatureFlags();
-
-    // Block creation when workspace context is not active (maintenance, coming_soon, etc.)
-    const workspaceStatus = statuses['context_workspace_enabled'] || 'active';
-    const isWorkspaceEnabled = workspaceStatus === 'active';
 
     const handleCreate = () => {
         router.push({ pathname: '/workspace-setup', query: { new: 'true' } } as any);
@@ -71,14 +65,11 @@ export function ProfileOrganizationsView({ organizations, activeOrgId, currentUs
                             label: "Crear Organización",
                             icon: Plus,
                             onClick: handleCreate,
-                            ...(!isWorkspaceEnabled && {
-                                featureGuard: {
-                                    isEnabled: false,
-                                    featureName: "Crear Organización",
-                                    customMessage: "El espacio de trabajo se encuentra en mantenimiento.",
-                                    mode: 'maintenance' as const,
-                                },
-                            }),
+                            featureGuard: {
+                                entitlement: 'context:workspace',
+                                featureName: "Crear Organización",
+                                customMessage: "El espacio de trabajo se encuentra en mantenimiento.",
+                            },
                         },
                     ]}
                 >

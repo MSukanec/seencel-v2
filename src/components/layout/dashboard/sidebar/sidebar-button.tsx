@@ -3,6 +3,8 @@
 import * as React from "react";
 import { Link, useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
+import { Lock, Wrench, Medal, Clock } from "lucide-react";
+import { toast } from "sonner";
 
 // ============================================================================
 // SIDEBAR NAV BUTTON — Unified navigation button
@@ -31,6 +33,8 @@ interface SidebarNavButtonProps {
     status?: string;
     /** Whether the item is hidden (only visible to admins with muted visual) */
     hidden?: boolean;
+    /** Whether the item is accessed in admin bypass mode */
+    isShadowMode?: boolean;
 }
 
 export function SidebarNavButton({
@@ -47,11 +51,13 @@ export function SidebarNavButton({
     variant = 'nav',
     status,
     hidden,
+    isShadowMode,
 }: SidebarNavButtonProps) {
     const router = useRouter();
     const isCompact = variant === 'compact';
     const hasRestriction = !!status && status !== 'active';
-    const restrictedClass = (isLocked || hasRestriction || hidden) ? "opacity-40 grayscale" : "";
+    const isVisuallyLocked = disabled || isShadowMode || hidden;
+    const restrictedClass = isVisuallyLocked ? "opacity-40 grayscale" : "";
 
     // Prefetch on hover for faster navigation
     const handleMouseEnter = React.useCallback(() => {
@@ -60,16 +66,56 @@ export function SidebarNavButton({
         }
     }, [href, disabled, router]);
 
+    const handleWrapperClick = (e?: React.MouseEvent) => {
+        if (isShadowMode && !disabled) {
+            toast.success("Modo Shadow (Admin)", { description: `Navegando a sección restringida: ${label}` });
+        }
+        if (onClick) onClick();
+    };
+
+    const StatusBadge = () => {
+        if (!hasRestriction || hidden) return null;
+        if (status === 'maintenance') {
+            return (
+                <div className="absolute top-0 right-0 -mt-1 -mr-1 h-3 w-3 rounded-full bg-semantic-warning border border-background shadow-sm flex items-center justify-center pointer-events-none">
+                    <Wrench className="h-[7px] w-[7px] text-background" />
+                </div>
+            );
+        }
+        if (status === 'founders') {
+            return (
+                <div className="absolute top-0 right-0 -mt-1 -mr-1 h-3 w-3 rounded-full bg-slate-400 border border-background shadow-sm flex items-center justify-center pointer-events-none z-10">
+                    <Medal className="h-[7px] w-[7px] text-background" />
+                </div>
+            );
+        }
+        if (status === 'coming_soon') {
+            return (
+                <div className="absolute top-0 right-0 -mt-1 -mr-1 h-3 w-3 rounded-full bg-blue-500 border border-background shadow-sm flex items-center justify-center pointer-events-none z-10">
+                    <Clock className="h-[7px] w-[7px] text-background" />
+                </div>
+            );
+        }
+        return (
+            <div className="absolute top-0 right-0 -mt-1 -mr-1 h-3 w-3 rounded-full bg-primary border border-background flex items-center justify-center pointer-events-none z-10">
+                <Lock className="h-[7px] w-[7px] text-primary-foreground" />
+            </div>
+        );
+    };
+
     // Build the inner visual structure
     const innerContent = isCompact ? (
         <>
             {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-primary" />}
-            <Icon className={cn("h-[18px] w-[18px]", restrictedClass)} />
+            <div className="relative inline-flex items-center justify-center">
+                <Icon className={cn("h-[18px] w-[18px]", restrictedClass)} />
+                <StatusBadge />
+            </div>
             {badge && !isExpanded && <span className="absolute top-1 right-1 z-10">{badge}</span>}
         </>
     ) : (
         <>
-            <div className={cn("w-7 h-7 flex items-center justify-center shrink-0", isActive ? "text-foreground" : "text-muted-foreground/50 group-hover:text-muted-foreground", restrictedClass)}>
+            <div className={cn("relative w-7 h-7 flex items-center justify-center shrink-0", isActive ? "text-foreground" : "text-muted-foreground/50 group-hover:text-muted-foreground", restrictedClass)}>
                 <Icon className="h-3.5 w-3.5" />
             </div>
             <span className={cn("text-[13px] font-medium truncate transition-opacity duration-200 ease-in-out text-left", isExpanded ? "flex-1 opacity-100 ml-1" : "w-0 opacity-0 ml-0", restrictedClass)}>
@@ -84,14 +130,14 @@ export function SidebarNavButton({
         "relative flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 cursor-pointer",
         "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.04]",
         isActive && "text-foreground bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_3px_rgba(0,0,0,0.2)]",
-        disabled && "opacity-40 cursor-not-allowed hover:bg-transparent",
+        isVisuallyLocked && "opacity-40 cursor-not-allowed hover:bg-transparent",
         className
     ) : cn(
         "group relative flex items-center w-full rounded-lg transition-all duration-150 p-0 min-h-[28px]",
         isActive
             ? "bg-white/[0.04] text-foreground border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_3px_rgba(0,0,0,0.25),0_1px_1px_rgba(0,0,0,0.15)]"
             : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/[0.03] border border-transparent",
-        disabled && "cursor-not-allowed hover:bg-transparent hover:text-muted-foreground/60",
+        isVisuallyLocked && "cursor-not-allowed hover:bg-transparent hover:text-muted-foreground/60",
         className
     );
 
@@ -101,14 +147,14 @@ export function SidebarNavButton({
 
     if (href) {
         return (
-            <Link href={href as any} onClick={onClick} onMouseEnter={handleMouseEnter} className={outerClasses}>
+            <Link href={href as any} onClick={handleWrapperClick} onMouseEnter={handleMouseEnter} className={outerClasses}>
                 {innerContent}
             </Link>
         );
     }
 
     return (
-        <button onClick={onClick} className={cn(outerClasses, !isCompact && "w-full text-left")}>
+        <button onClick={handleWrapperClick} className={cn(outerClasses, !isCompact && "w-full text-left")}>
             {innerContent}
         </button>
     );

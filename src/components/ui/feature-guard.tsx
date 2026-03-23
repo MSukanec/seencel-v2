@@ -11,17 +11,21 @@ import {
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import { PlanBadge } from "@/components/shared/plan-badge";
+import { useEntitlements, type EntitlementKey } from "@/hooks/use-entitlements";
+import { toast } from "sonner";
 
 // ============================================================================
 // Types
 // ============================================================================
 
 interface FeatureGuardProps {
-    /** Whether the feature is enabled for the current plan */
-    isEnabled: boolean;
+    /** The entitlement key to check against the Engine */
+    entitlement?: EntitlementKey;
+    /** Fallback boolean if entitlement key is not provided */
+    fallbackEnabled?: boolean;
     /** The name of the feature (for the popover message) */
-    featureName: string;
-    /** The plan required to unlock this feature */
+    featureName?: string;
+    /** The plan required to unlock this feature (defaults to PRO or what entitlement returns) */
     requiredPlan?: string;
     /** The children to render (button, link, etc.) */
     children: React.ReactNode;
@@ -33,8 +37,8 @@ interface FeatureGuardProps {
     upgradeHref?: string;
     /** Optional: Whether to show the hover popover on the children */
     showPopover?: boolean;
-    /** Mode: 'plan' (default) for plan-based locks, 'maintenance' for maintenance locks */
-    mode?: 'plan' | 'maintenance';
+    /** Mode: override semantic mode manually */
+    mode?: 'plan' | 'maintenance' | 'founders';
 }
 
 // ============================================================================
@@ -140,36 +144,66 @@ function MaintenancePopoverContent({
  * Standalone Badge component that shows the lock popover on hover.
  */
 export function FeatureLockBadge({
+    entitlement,
     featureName,
-    requiredPlan = "PRO",
+    requiredPlan,
     customMessage,
-    upgradeHref = "/pricing"
+    upgradeHref = "/pricing",
+    mode
 }: {
+    entitlement?: EntitlementKey;
     featureName: string;
     requiredPlan?: string;
     customMessage?: string;
     upgradeHref?: string;
+    mode?: 'plan' | 'maintenance' | 'founders';
 }) {
     const t = useTranslations('Portal.FeatureGuard');
+    const { check } = useEntitlements();
+
+    let computedRequiredPlan = requiredPlan || "PRO";
+    let computedMode = mode || "plan";
+
+    if (entitlement) {
+        const result = check(entitlement);
+        if (result.requiredPlan) computedRequiredPlan = result.requiredPlan;
+        if (result.reason === 'maintenance') computedMode = 'maintenance';
+        if (result.reason === 'founders') computedMode = 'founders';
+    }
+
+    const isMaintenance = computedMode === 'maintenance';
 
     return (
         <HoverCard openDelay={100} closeDelay={100}>
             <HoverCardTrigger asChild>
                 <span className="cursor-help inline-flex hover:scale-105 transition-transform">
-                    <PlanBadge
-                        planSlug={requiredPlan}
-                        micro
-                        linkToPricing={false}
-                    />
+                    {isMaintenance ? (
+                        <div className="h-5 w-5 rounded-full bg-semantic-warning/20 border border-semantic-warning/30 flex items-center justify-center">
+                            <Wrench className="h-2.5 w-2.5 text-semantic-warning" />
+                        </div>
+                    ) : (
+                        <PlanBadge
+                            planSlug={computedRequiredPlan}
+                            micro
+                            linkToPricing={false}
+                        />
+                    )}
                 </span>
             </HoverCardTrigger>
-            <LockPopoverContent
-                featureName={featureName}
-                requiredPlan={requiredPlan}
-                customMessage={customMessage}
-                upgradeHref={upgradeHref}
-                t={t}
-            />
+            {isMaintenance ? (
+                <MaintenancePopoverContent
+                    featureName={featureName}
+                    customMessage={customMessage}
+                />
+            ) : (
+                <LockPopoverContent
+                    featureName={featureName}
+                    requiredPlan={computedRequiredPlan}
+                    customMessage={customMessage}
+                    upgradeHref={upgradeHref}
+                    t={t}
+                />
+            )}
         </HoverCard>
     );
 }
@@ -187,43 +221,83 @@ export function FeatureLockBadge({
  * - On hover, shows a popover explaining the restriction
  */
 export function FeatureGuard({
-    isEnabled,
-    featureName,
-    requiredPlan = "PRO",
+    entitlement,
+    fallbackEnabled,
+    featureName = "Esta función",
+    requiredPlan,
     children,
     customMessage,
     showBadge = true,
     showPopover = true,
     upgradeHref = "/pricing",
-    mode = "plan",
+    mode,
 }: FeatureGuardProps) {
     const t = useTranslations('Portal.FeatureGuard');
+    const { check, isAdmin } = useEntitlements();
 
-    if (isEnabled) {
-        // Feature is enabled, render children normally
+    // 1. Evaluate entitlement if provided
+    let isAllowed = fallbackEnabled ?? true;
+    let isShadowMode = false;
+    let computedReason = null;
+    let computedRequiredPlan = requiredPlan || "PRO";
+    let computedMode = mode || "plan";
+
+    if (entitlement) {
+        const result = check(entitlement);
+        isAllowed = result.isAllowed;
+        isShadowMode = result.isShadowMode;
+        computedReason = result.reason;
+        if (result.requiredPlan) computedRequiredPlan = result.requiredPlan;
+        
+        if (result.reason === 'maintenance') computedMode = 'maintenance';
+        if (result.reason === 'founders') computedMode = 'founders';
+    } else if (!isAllowed && isAdmin) {
+        // Fallback mode (no entitlement key): admin gets shadow bypass
+        isShadowMode = true;
+    }
+
+    // 2. If allowed and not in shadow mode, render normally
+    if (isAllowed && !isShadowMode) {
         return <>{children}</>;
     }
 
-    const isMaintenance = mode === 'maintenance';
+    const isMaintenance = computedMode === 'maintenance';
 
-    // Disabled content wrapper — w-fit so badge hugs the button
+    const handleShadowClick = (e: React.MouseEvent) => {
+        if (isShadowMode) {
+            toast.warning("Modo Shadow (Admin)", {
+                description: `Evadiendo bloqueo de ${computedReason}. El usuario final lo verá bloqueado.`,
+                duration: 4000
+            });
+            // Let the click propagate to the children!
+        }
+    };
+
+    // Disabled content wrapper
     const disabledContent = (
-        <div className="relative w-fit cursor-not-allowed group">
-            {/* Disabled children */}
-            <div className="pointer-events-none opacity-50 select-none">
+        <div 
+            className="relative w-fit group" 
+            onClick={isShadowMode ? handleShadowClick : undefined}
+        >
+            {/* The children. If shadowMode, they are clickable but look gray. If not, pointer-events-none completely blocks it. */}
+            <div className={cn(
+                "select-none transition-all duration-300",
+                !isShadowMode ? "pointer-events-none opacity-50 grayscale" : "opacity-80 grayscale-[30%] hover:grayscale-0",
+                !isShadowMode && "cursor-not-allowed"
+            )}>
                 {children}
             </div>
 
             {/* Lock badge overlay */}
             {showBadge && (
-                <div className="absolute -top-2 -right-1 group-hover:scale-110 transition-transform">
+                <div className="absolute -top-2 -right-1 group-hover:scale-110 transition-transform pointer-events-none">
                     {isMaintenance ? (
                         <div className="h-5 w-5 rounded-full bg-semantic-warning/20 border border-semantic-warning/30 flex items-center justify-center">
                             <Wrench className="h-2.5 w-2.5 text-semantic-warning" />
                         </div>
                     ) : (
                         <PlanBadge
-                            planSlug={requiredPlan}
+                            planSlug={computedRequiredPlan}
                             micro
                             linkToPricing={false}
                         />
@@ -250,8 +324,8 @@ export function FeatureGuard({
                 />
             ) : (
                 <LockPopoverContent
-                    featureName={featureName}
-                    requiredPlan={requiredPlan}
+                    featureName={featureName!}
+                    requiredPlan={computedRequiredPlan}
                     customMessage={customMessage}
                     upgradeHref={upgradeHref}
                     t={t}

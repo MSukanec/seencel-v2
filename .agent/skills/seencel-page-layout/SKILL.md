@@ -74,9 +74,9 @@ app/[locale]/.../page.tsx
 
 ## 🚨 Reglas de Oro (Resumen Ejecutivo)
 
-1.  **Architecture**: Páginas con múltiples secciones utilizan **Tabs**.
-2.  **RAIL Navigation**: ⛔ PROHIBIDO usar submenús, drill-downs o `children` en el Sidebar. El Sidebar es estrictamente Nivel 1. Toda navegación interna de sub-secciones usa **`<Tabs>` en la página**.
-3.  **Route Tabs**: Se recomienda usar `routeTabs` o tabs estándar controladas por estado o ruta.
+1.  **Architecture**: Páginas con múltiples secciones utilizan **RouteTabs** (cada tab es una página/ruta separada).
+2.  **RAIL Navigation**: ⛔ PROHIBIDO usar submenús, drill-downs o `children` en el Sidebar. El Sidebar es estrictamente Nivel 1.
+3.  **Route Tabs**: Se DEBE usar la prop `routeTabs` en el componente `PageWrapper` (layout) o `DetailContentTabs` en el header del cliente. ⛔ PROHIBIDO usar el componente `<Tabs>` local de shadcn para navegar secciones enteras en el body.
 4.  **Metadata**: TODA página/sub-página debe exportar `generateMetadata` (con título y robots).
 5.  **Error Handling**: Usar `try/catch` y `<ErrorDisplay>` en el servidor para evitar pantallas blancas.
 6.  **Toolbar**: Usar `ToolbarCard` inline + `PageHeaderActionPortal`. ⛔ NO usar `Toolbar portalToHeader` (legacy).
@@ -180,7 +180,7 @@ graph TD
 
 ## 🧱 2. Implementación de Páginas con Sub-secciones
 
-> **Decisión RAIL Navigation (Marzo 2026):** Toda la navegación en el Sidebar es PLANA (sin sub-menús). El patrón para navegar sub-secciones es mediante **`<Tabs>` dentro de la página** (Header o Content, ej: Curso, Proyectos).
+> **Decisión RAIL Navigation (Marzo 2026):** Toda la navegación en el Sidebar es PLANA (sin sub-menús). El patrón OBLIGATORIO para navegar sub-secciones es mediante **Tabs en el Header** (rutas reales conectadas mediante la prop `routeTabs` del `PageWrapper`).
 
 ### Patrón obligatorio:
 
@@ -686,7 +686,7 @@ import { LazyAreaChart as BaseAreaChart } from "@/components/charts/lazy-charts"
 
 **Patrón VÁLIDO y OBLIGATORIO:**
 - Sidebar RAIL (sin `children`)
-- Navegación de sección mediante **`<Tabs>`** u opciones de RouteTabs.
+- Navegación de sección mediante **RouteTabs en el Header** (Layout compartido + Sub-páginas para cada Tab).
 
 ### 10.4 Data Refresh
 

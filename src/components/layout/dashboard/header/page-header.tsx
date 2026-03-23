@@ -194,8 +194,9 @@ export function PageHeader({
                     </div>
 
                     {/* Right: Actions */}
-                    <div id="page-header-actions" className="flex items-center gap-1.5 justify-self-end">
+                    <div className="flex items-center gap-1.5 justify-self-end">
                         {actions}
+                        <div id="page-header-actions" className="flex items-center gap-1.5" />
                         <HeaderMoreButton />
                     </div>
                 </div>

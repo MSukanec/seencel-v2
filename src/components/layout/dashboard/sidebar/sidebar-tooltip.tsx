@@ -3,7 +3,8 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { Medal, Lock, EyeOff, ChevronRight, Clock } from "lucide-react";
+import { flexRender } from "@tanstack/react-table"; // dummy to maintain lines if needed but I'll replace the full chunk.
+import { Medal, Lock, EyeOff, ChevronRight, Clock, Wrench } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -31,7 +32,7 @@ const restrictionConfig = {
         linkClass: "text-slate-400 hover:text-slate-300",
     },
     maintenance: {
-        icon: Lock,
+        icon: Wrench,
         iconClass: "text-semantic-warning",
         bgClass: "bg-semantic-warning/10",
         text: "En mantenimiento. Estará disponible pronto.",

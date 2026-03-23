@@ -58,6 +58,7 @@ interface OrganizationState {
     preferences: OrganizationPreferences | null;
     isFounder: boolean;
     planSlug: string | null;
+    planFeatures: Record<string, any> | null;
 
     // Lists for forms
     wallets: Wallet[];
@@ -120,6 +121,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     preferences: null,
     isFounder: false,
     planSlug: null,
+    planFeatures: null,
     wallets: [],
     projects: [],
     clients: [],
@@ -181,6 +183,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
                     set({
                         isFounder: data.isFounder,
                         planSlug: data.planSlug,
+                        planFeatures: data.planFeatures,
                     });
                 });
             });
@@ -318,6 +321,7 @@ export function OrganizationStoreHydrator({
                         preferences: data.preferences as any,
                         isFounder: data.isFounder,
                         planSlug: data.planSlug,
+                        planFeatures: data.planFeatures,
                         wallets: data.wallets,
                         projects: data.projects,
                         clients: data.clients,
@@ -363,13 +367,14 @@ export function useOrganization() {
     const preferences = useOrganizationStore(state => state.preferences);
     const isFounder = useOrganizationStore(state => state.isFounder);
     const planSlug = useOrganizationStore(state => state.planSlug);
+    const planFeatures = useOrganizationStore(state => state.planFeatures);
     const wallets = useOrganizationStore(state => state.wallets);
     const projects = useOrganizationStore(state => state.projects);
     const clients = useOrganizationStore(state => state.clients);
     const isImpersonating = useOrganizationStore(state => state.isImpersonating);
     const impersonationOrgName = useOrganizationStore(state => state.impersonationOrgName);
 
-    return { activeOrgId, preferences, isFounder, planSlug, wallets, projects, clients, isImpersonating, impersonationOrgName };
+    return { activeOrgId, preferences, isFounder, planSlug, planFeatures, wallets, projects, clients, isImpersonating, impersonationOrgName };
 }
 
 /**

@@ -19,11 +19,12 @@ import { getStorageUrl } from "@/lib/storage-utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import { ContentLayout } from "@/components/layout";
 import { HeroCarousel, type HeroSlide } from "@/components/shared/hero-carousel";
 import type { UserProfile } from "@/types/user";
 import type { HeroSection } from "@/features/hero-sections/queries";
-import { useFeatureFlags } from "@/providers/feature-flags-provider";
+import { useEntitlements, type EntitlementKey } from "@/hooks/use-entitlements";
 import { useOrganization } from "@/stores/organization-store";
 
 interface HubViewProps {
@@ -60,33 +61,30 @@ export function HubView({
     communityOrgsCount = 0
 }: HubViewProps) {
     // Feature flags integration - same logic as sidebar
-    const { statuses, isAdmin } = useFeatureFlags();
+    const { check: checkEntitlement } = useEntitlements();
     const { isFounder } = useOrganization();
     const { actions } = useLayoutStore();
 
-    // Helper to compute card status from feature flags
-    const getCardStatus = (flagKey: string): { status: 'active' | 'maintenance' | 'founders' | 'hidden' | 'coming_soon'; disabled: boolean } => {
-        const flag = statuses[flagKey] || 'active';
+    const getCardStatus = (flagKey: EntitlementKey) => {
+        const result = checkEntitlement(flagKey);
+        
+        const cardStatus = (result.rawStatus as any) || 'hidden';
+        
+        if (result.isShadowMode) {
+            return { status: cardStatus, disabled: false, isShadowMode: true };
+        }
+        
+        if (!result.isAllowed) {
+            return { status: cardStatus, disabled: true, isShadowMode: false };
+        }
 
-        if (flag === 'hidden') {
-            return { status: 'hidden', disabled: !isAdmin };
-        }
-        if (flag === 'maintenance') {
-            return { status: 'maintenance', disabled: !isAdmin };
-        }
-        if (flag === 'coming_soon') {
-            return { status: 'coming_soon', disabled: !isAdmin };
-        }
-        if (flag === 'founders') {
-            return { status: 'founders', disabled: !(isAdmin || isFounder) };
-        }
-        return { status: 'active', disabled: false };
+        return { status: 'active', disabled: false, isShadowMode: false };
     };
 
     // Card statuses based on feature flags
-    const workspaceStatus = getCardStatus('context_workspace_enabled');
-    const academyStatus = getCardStatus('context_academy_enabled');
-    const discoverStatus = getCardStatus('context_discover_enabled');
+    const workspaceStatus = getCardStatus('context:workspace');
+    const academyStatus = getCardStatus('context:academy');
+    const discoverStatus = getCardStatus('context:discover');
 
     // Transform courses to news format
     const academyNews = recentCourses.map(c => ({
@@ -172,6 +170,7 @@ export function HubView({
                             variants={itemVariants}
                             status={workspaceStatus.status}
                             disabled={workspaceStatus.disabled}
+                            isShadowMode={workspaceStatus.isShadowMode}
                             onClick={() => actions.setActiveContext('organization')}
                         />
                     )}
@@ -188,6 +187,7 @@ export function HubView({
                             variants={itemVariants}
                             status={academyStatus.status}
                             disabled={academyStatus.disabled}
+                            isShadowMode={academyStatus.isShadowMode}
                             onClick={() => actions.setActiveContext('learnings')}
                         />
                     )}
@@ -204,6 +204,7 @@ export function HubView({
                             variants={itemVariants}
                             status={discoverStatus.status}
                             disabled={discoverStatus.disabled}
+                            isShadowMode={discoverStatus.isShadowMode}
                             onClick={() => actions.setActiveContext('discover')}
                         />
                     )}
@@ -230,8 +231,9 @@ interface DashboardCardProps {
     actionLabel: string;
     news: NewsItem[];
     variants: any;
-    status?: 'active' | 'maintenance' | 'founders' | 'hidden' | 'coming_soon';
+    status?: any;
     disabled?: boolean;
+    isShadowMode?: boolean;
     onClick?: () => void;
 }
 
@@ -245,9 +247,10 @@ function DashboardCard({
     variants,
     status = 'active',
     disabled = false,
+    isShadowMode = false,
     onClick
 }: DashboardCardProps) {
-    const isLocked = disabled || status === 'maintenance' || status === 'founders' || status === 'coming_soon';
+    const isVisuallyLocked = disabled || isShadowMode || status === 'maintenance' || status === 'founders' || status === 'coming_soon' || status === 'hidden';
 
     // Badge based on status
     const renderBadge = () => {
@@ -282,17 +285,17 @@ function DashboardCard({
         <motion.div variants={variants} className="h-full">
             <Card variant="inset" className={cn(
                 "h-full transition-colors duration-300 relative group flex flex-col",
-                !isLocked && "hover:bg-black/25 cursor-pointer",
-                isLocked && "opacity-60 grayscale-[30%]"
+                !isVisuallyLocked && "hover:bg-black/25 cursor-pointer",
+                isVisuallyLocked && "opacity-60 grayscale-[30%] cursor-not-allowed"
             )}>
                 <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4 pb-2">
                     <div className={cn(
                         "p-2.5 rounded-xl transition-colors",
-                        isLocked ? "bg-muted" : "bg-primary/10"
+                        isVisuallyLocked ? "bg-muted" : "bg-primary/10"
                     )}>
                         <Icon className={cn(
                             "h-6 w-6",
-                            isLocked ? "text-muted-foreground" : "text-primary"
+                            isVisuallyLocked ? "text-muted-foreground" : "text-primary"
                         )} />
                     </div>
                     {renderBadge()}
@@ -318,7 +321,7 @@ function DashboardCard({
                         </div>
                     )}
 
-                    {!isLocked && (
+                    {!isVisuallyLocked && (
                         <div className="flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 pt-2">
                             {actionLabel}
                             <ArrowRight className="ml-1 h-3 w-3" />
@@ -329,12 +332,19 @@ function DashboardCard({
         </motion.div>
     );
 
-    if (isLocked) {
+    const handleWrapperClick = (e?: React.MouseEvent) => {
+        if (isShadowMode) {
+            toast.success("Modo Shadow (Admin)", { description: `Navegando a sección restringida: ${title}` });
+        }
+        if (onClick) onClick();
+    };
+
+    if (disabled) {
         return content;
     }
 
     return (
-        <Link href={href as any} onClick={onClick}>
+        <Link href={href as any} onClick={handleWrapperClick}>
             {content}
         </Link>
     );

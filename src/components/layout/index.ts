@@ -11,7 +11,7 @@ export * from "./dashboard";
 export { Header } from "./public/header";
 export { DashboardShell } from "./dashboard/dashboard-shell";
 export { PageWrapper } from "./page/page-wrapper";
-export type { RouteTab } from "./page/page-wrapper";
+export type { RouteTab, RouteTabGuard } from "./page/page-wrapper";
 export { ContentLayout } from "./page/content-layout";
 export * from "./page/split-editor-layout";
 export { SidebarLayout } from "./dashboard/sidebar/sidebar-layout";

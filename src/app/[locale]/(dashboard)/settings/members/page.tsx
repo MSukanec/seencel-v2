@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ContentLayout } from "@/components/layout";
 import { requireAuthContext } from "@/lib/auth";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
-import { getOrganizationSeatStatus, getExternalActorsForOrg } from "@/features/team/actions";
+import { getOrganizationSeatStatus } from "@/features/team/actions";
 import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { getOrganizationOwnerId } from "@/features/organization/queries";
 import { ErrorDisplay } from "@/components/ui/error-display";
@@ -20,16 +20,14 @@ export default async function MembersPage() {
     try {
         const { orgId, userId } = await requireAuthContext();
 
-        const [data, planFeatures, seatStatusResult, externalActorsResult, ownerId] = await Promise.all([
+        const [data, planFeatures, seatStatusResult, ownerId] = await Promise.all([
             getOrganizationSettingsData(orgId),
             getOrganizationPlanFeatures(orgId),
             getOrganizationSeatStatus(orgId),
-            getExternalActorsForOrg(orgId),
             getOrganizationOwnerId(orgId),
         ]);
 
         const seatStatus = seatStatusResult.success ? seatStatusResult.data ?? null : null;
-        const externalActors = externalActorsResult.success ? externalActorsResult.data ?? [] : [];
 
         const canInviteMembers = planFeatures?.can_invite_members ?? false;
         const maxExternalAdvisors = planFeatures?.max_external_advisors ?? 0;
@@ -47,8 +45,6 @@ export default async function MembersPage() {
                     ownerId={ownerId}
                     canInviteMembers={canInviteMembers}
                     initialSeatStatus={seatStatus}
-                    externalActors={externalActors}
-                    maxExternalAdvisors={maxExternalAdvisors}
                 />
             </ContentLayout>
         );

@@ -345,7 +345,7 @@ export function ProjectAppearanceView({ project, canCustomizeBranding = true }: 
                     onClick: () => { },
                     disabled: true,
                     featureGuard: {
-                        isEnabled: false,
+                        fallbackEnabled: false,
                         featureName: "Personalización de Tema",
                         requiredPlan: "PRO" as const,
                         customMessage: "Esta función estará disponible próximamente. Por ahora podés explorar y experimentar con los colores libremente.",

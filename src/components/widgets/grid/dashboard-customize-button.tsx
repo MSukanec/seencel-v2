@@ -51,7 +51,7 @@ export function DashboardCustomizeButton({ isEnabled = true }: DashboardCustomiz
 
     return (
         <FeatureGuard
-            isEnabled={isEnabled}
+            fallbackEnabled={isEnabled}
             featureName="Personalizar Dashboard"
             requiredPlan="PRO"
         >

@@ -70,7 +70,7 @@ export function SidebarLayout({ children, user }: SidebarLayoutProps) {
                 </div>
 
                 {/* Main Content — Canvas (encapsulated inset effect) */}
-                <main className="flex-1 overflow-hidden flex flex-col min-w-0 bg-background rounded-2xl my-2 mr-2 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(0,0,0,0.2)]">
+                <main className="flex-1 overflow-hidden flex flex-col min-w-0 bg-background rounded-2xl m-2 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(0,0,0,0.2)]">
                     {children}
                 </main>
 

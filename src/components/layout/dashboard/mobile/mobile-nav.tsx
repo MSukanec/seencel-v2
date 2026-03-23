@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Menu, X, Lock, Wrench, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ChevronDown, ArrowLeft, Sparkles, Mail, Bell, Check, MailOpen, Shield } from "lucide-react";
 import { useSidebarNavigation, NavItem, NavGroup } from "@/hooks/use-sidebar-navigation";
-import { useFeatureFlags } from "@/providers/feature-flags-provider";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import { useLayoutStore } from "@/stores/layout-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
@@ -56,7 +56,7 @@ export function MobileNav() {
     const pathname = usePathname();
     const router = useRouter();
     const { contexts, getNavItems, getNavGroups } = useSidebarNavigation();
-    const { isAdmin } = useFeatureFlags();
+    const { isAdmin } = useEntitlements();
     const { actions } = useLayoutStore();
 
     const { theme, setTheme } = useTheme();

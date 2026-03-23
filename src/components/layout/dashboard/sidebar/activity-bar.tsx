@@ -10,9 +10,10 @@ import { SidebarUserButton } from "./sidebar-user-button";
 import { SidebarOrgButton } from "./sidebar-org-button";
 import { SidebarLogoButton } from "./sidebar-logo-button";
 import { SidebarTooltipProvider, SidebarTooltip } from "./sidebar-tooltip";
-import { Building, GraduationCap, Sparkles, Users, Shield, LayoutDashboard, HardHat, DollarSign, BookOpen, Video } from "lucide-react";
-import { useFeatureFlags } from "@/providers/feature-flags-provider";
+import { Building, GraduationCap, Sparkles, Users, Shield, LayoutDashboard, HardHat, DollarSign, BookOpen, Video, Eye } from "lucide-react";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import { usePathname } from "@/i18n/routing";
+import { useViewingAs } from "@/stores/access-context-store";
 
 // ============================================================================
 // ACTIVITY BAR — Persistent vertical icon strip (VS Code / Slack pattern)
@@ -50,7 +51,8 @@ export function ActivityBar({ user }: ActivityBarProps) {
     const pathname = usePathname();
     const { activeContext, activeBaseContext, activeWorkspaceSection, actions } = useLayoutStore();
     const { contexts } = useSidebarNavigation();
-    const { isAdmin } = useFeatureFlags();
+    const { isAdmin } = useEntitlements();
+    const viewingAs = useViewingAs();
 
     // Icon map for each global context
     const contextIcons: Record<string, React.ElementType> = {
@@ -104,6 +106,7 @@ export function ActivityBar({ user }: ActivityBarProps) {
             disabled: ctx.disabled,
             hidden: ctx.hidden,
             status: ctx.status,
+            isShadowMode: ctx.isShadowMode,
         }));
 
     // Find the founders item to render it in the workspace bottom rail
@@ -128,7 +131,20 @@ export function ActivityBar({ user }: ActivityBarProps) {
 
                 {/* Context-aware middle section */}
                 <div className="flex flex-col items-center gap-1 flex-1">
-                    {isInWorkspace ? (
+                    {isInWorkspace && viewingAs ? (
+                        /* Viewing As mode: single portal button */
+                        <SidebarTooltip
+                            label="Portal Externo"
+                            isExpanded={false}
+                        >
+                            <SidebarNavButton
+                                variant="compact"
+                                icon={Eye}
+                                label="Portal"
+                                isActive={true}
+                            />
+                        </SidebarTooltip>
+                    ) : isInWorkspace ? (
                         /* Workspace sections: General, Construcción, Finanzas */
                         WORKSPACE_SECTIONS.map((section) => (
                             <SidebarTooltip
@@ -189,6 +205,7 @@ export function ActivityBar({ user }: ActivityBarProps) {
                                     disabled={item.disabled}
                                     hidden={item.hidden}
                                     status={item.status}
+                                    isShadowMode={item.isShadowMode}
                                     onClick={() => handleContextClick(item.id)}
                                 />
                             </SidebarTooltip>
@@ -197,7 +214,7 @@ export function ActivityBar({ user }: ActivityBarProps) {
                     
                     {/* Bottom of middle section (above separator) */}
                     <div className="mt-auto flex flex-col w-full gap-1">
-                        {isInWorkspace && foundersItem && (
+                        {isInWorkspace && foundersItem && !viewingAs && (
                             <SidebarTooltip 
                                 label={foundersItem.label} 
                                 restriction={foundersItem.hidden ? 'hidden' : (foundersItem.status as any) || undefined}
@@ -212,6 +229,7 @@ export function ActivityBar({ user }: ActivityBarProps) {
                                     disabled={foundersItem.disabled}
                                     hidden={foundersItem.hidden}
                                     status={foundersItem.status}
+                                    isShadowMode={foundersItem.isShadowMode}
                                     onClick={() => handleSectionClick('founders')}
                                 />
                             </SidebarTooltip>

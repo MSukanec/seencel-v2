@@ -129,14 +129,16 @@ export async function fetchOrganizationStoreData(orgId: string) {
 
     // Cross-schema: plans está en billing — fetch separado
     let planSlug: string | null = null;
+    let planFeatures: Record<string, any> | null = null;
     const orgPlanId = (orgResult.data as any)?.plan_id;
     if (orgPlanId) {
         const { data: planData } = await supabase
             .schema('billing').from('plans')
-            .select('slug, name')
+            .select('slug, name, features')
             .eq('id', orgPlanId)
             .single();
         planSlug = planData?.slug || planData?.name || null;
+        planFeatures = planData?.features || null;
     }
 
     // Access context detection
@@ -221,6 +223,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
         preferences: preferences ? { ...preferences } : null,
         isFounder,
         planSlug,
+        planFeatures,
         decimalPlaces: preferences?.currency_decimal_places ?? 2,
         kpiCompactFormat: preferences?.kpi_compact_format ?? false,
         defaultCurrencyId: preferences?.default_currency_id || currencies[0]?.id,

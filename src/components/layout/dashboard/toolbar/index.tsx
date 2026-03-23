@@ -56,6 +56,14 @@ export interface ToolbarProps<TData> {
     table?: Table<TData>;
     globalFilter?: string;
     setGlobalFilter?: (value: string) => void;
+    featureGuard?: {
+        entitlement?: any;
+        fallbackEnabled?: boolean;
+        featureName?: string;
+        requiredPlan?: string;
+        customMessage?: string;
+        mode?: 'plan' | 'maintenance' | 'founders';
+    };
     facetedFilters?: {
         columnId: string;
         title: string;
@@ -361,7 +369,7 @@ export function Toolbar<TData>({
         if (!primaryAction) return null;
 
         const Icon = primaryAction.icon ? primaryAction.icon : Plus;
-        const isLocked = primaryAction.featureGuard && !primaryAction.featureGuard.isEnabled;
+        const isLocked = primaryAction.featureGuard && (primaryAction.featureGuard.fallbackEnabled === false);
 
         // FAB button component
         const FABButton = ({ locked, onClick }: { locked: boolean; onClick?: () => void }) => (
@@ -407,14 +415,23 @@ export function Toolbar<TData>({
                         <SheetContent side="bottom" className="rounded-t-3xl outline-none">
                             <SheetHeader className="mb-4 text-left px-6 pt-6">
                                 <SheetTitle className="flex items-center gap-3">
-                                    <PlanBadge
-                                        planSlug={primaryAction.featureGuard?.requiredPlan || "PRO"}
-                                        compact
-                                        showIcon
-                                        showLabel={false}
-                                        linkToPricing={false}
-                                    />
-                                    Función Bloqueada
+                                    <FeatureGuard
+                                        entitlement={primaryAction.featureGuard?.entitlement}
+                                        fallbackEnabled={primaryAction.featureGuard?.fallbackEnabled}
+                                        featureName={primaryAction.featureGuard?.featureName}
+                                        requiredPlan={primaryAction.featureGuard?.requiredPlan}
+                                        customMessage={primaryAction.featureGuard?.customMessage}
+                                        mode={primaryAction.featureGuard?.mode}
+                                    >
+                                        <PlanBadge
+                                            planSlug={primaryAction.featureGuard?.requiredPlan || "PRO"}
+                                            compact
+                                            showIcon
+                                            showLabel={false}
+                                            linkToPricing={false}
+                                        />
+                                        Función Bloqueada
+                                    </FeatureGuard>
                                 </SheetTitle>
                             </SheetHeader>
                             <div className="px-6 pb-8 space-y-4">
@@ -456,7 +473,7 @@ export function Toolbar<TData>({
                         {isLocked && <Lock className="ml-auto h-3 w-3" style={{ color: 'var(--plan-pro)' }} />}
                     </DropdownMenuItem>
                     {resolvedActions!.slice(1).map((action, idx) => {
-                        const actionLocked = action.featureGuard && !action.featureGuard.isEnabled;
+                        const actionLocked = action.featureGuard && (action.featureGuard.fallbackEnabled === false);
                         return (
                             <DropdownMenuItem
                                 key={idx}

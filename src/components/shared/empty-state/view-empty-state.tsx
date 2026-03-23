@@ -487,7 +487,7 @@ export function ViewEmptyState({
                     (hasPacks || hasSteps) ? "mt-5" : "mt-6",
                     "animate-in slide-in-from-bottom-2 fade-in duration-500 delay-150"
                 )}>
-                    {/* Row 1: Primary + Secondary action buttons */}
+                    {/* Action buttons + Documentation in same row */}
                     <div className="flex items-center gap-2">
                         {onAction && actionLabel && (
                             <Button onClick={onAction} size="sm">
@@ -515,12 +515,10 @@ export function ViewEmptyState({
                                 Ver todos
                             </Button>
                         )}
+                        {docsPath && hasDocsForPath(docsPath) && (
+                            <DocsButton docsPath={docsPath} />
+                        )}
                     </div>
-
-                    {/* Row 2: Documentation button */}
-                    {docsPath && hasDocsForPath(docsPath) && (
-                        <DocsButton docsPath={docsPath} />
-                    )}
                 </div>
             )}
         </div>

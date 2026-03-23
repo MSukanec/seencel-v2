@@ -146,9 +146,9 @@ Los popovers de selección (billetera, moneda, etc.) usan **Shared Popover Conte
 
 ## 4. PÁGINAS — Estructura y Navegación (RAIL Standard)
 
-> **Decisión RAIL Navigation (Marzo 2026):** El sidebar NO permite submenús ni drill-downs. Toda la navegación del sidebar es **Nivel 1 (RAIL)**. Para navegar sub-secciones dentro de un área, se debe **utilizar `<Tabs>` en la página** (ya sea en el header o en la vista, igual que en el reproductor del curso o Proyectos).
+> **Decisión RAIL Navigation (Marzo 2026):** El sidebar NO permite submenús ni drill-downs. Toda la navegación del sidebar es **Nivel 1 (RAIL)**. Para navegar sub-secciones dentro de un área, se debe **utilizar Tabs en el Header de la página** (usando la prop `routeTabs` del componente `PageWrapper` en el `layout.tsx`, o `DetailContentTabs`, igual que en el reproductor del curso o Proyectos).
 
-### Patrón para páginas con múltiples secciones:
+### Patrón para páginas con múltiples secciones (RouteTabs):
 
 ```
 app/[locale]/(dashboard)/organization/[feature]/
@@ -169,7 +169,7 @@ app/[locale]/(dashboard)/organization/[feature]/
   - ⛔ **NUNCA** usar `EmptyState` de `ui/` ni `DataTableEmptyState` — fueron eliminados.
 - **Icon Match**: El ícono DEBE coincidir con el del sidebar.
   - **Fail-safe totalCount**: Siempre pasar `totalCount={allItems.length}` — si `mode="empty"` pero `totalCount > 0`, auto-corrige a `context-empty`.
-- ✅ **USAR TABS**: Es **OBLIGATORIO** usar `<Tabs>` o `routeTabs` para separar contextos y vistas dentro de una página, ya que el sidebar es exclusivo para navegación top-level.
+- ✅ **USAR TABS EN HEADER**: Es **OBLIGATORIO** usar `routeTabs` (en el `PageWrapper` del layout compartido) o `DetailContentTabs` para separar secciones dentro de una página. Los `<Tabs>` inline en el "body" están **PROHIBIDOS** para navegación principal; solo sirven para controles menores dentro de una vista específica.
 
 ### Sidebar Navigation (Exclusivo RAIL):
 - El Sidebar debe ser **PLANO**.
@@ -403,6 +403,66 @@ Para vistas de edición inline (nombre, descripción, etc): usar `useAutoSave` d
 - **Top**: Org selector
 - **Navegación**: Menú **RAIL** (solo botones principales, sin sub-niveles).
 - **Bottom**: Admin + Volver al Hub → Avatar + Notificaciones
+
+---
+
+## 12.7. FEATURE GUARD — Bloqueo de Features por Plan
+
+> **Decisión de Marzo 2026:** `LockedBadge` es **LEGACY**. Todo bloqueo de features usa `FeatureGuard` con soporte de entitlements, admin bypass (shadow mode), y popover informativo.
+
+### Componentes:
+
+| Componente | Import | Uso |
+|-----------|--------|-----|
+| `FeatureGuard` | `@/components/ui/feature-guard` | Wrapper que bloquea contenido hijo |
+| `FeatureLockBadge` | `@/components/ui/feature-guard` | Badge standalone con popover |
+| `useEntitlements` | `@/hooks/use-entitlements` | Engine central de permisos por plan |
+
+### Cómo usarlo:
+
+```tsx
+// ✅ Wrapping content (botones, secciones, etc.)
+<FeatureGuard
+    entitlement="custom_project_branding"   // EntitlementKey (preferido)
+    featureName="Branding del Proyecto"
+    requiredPlan="PRO"
+>
+    <Button>Personalizar</Button>
+</FeatureGuard>
+
+// ✅ Fallback booleano (sin entitlement engine)
+<FeatureGuard fallbackEnabled={false} featureName="Apariencia" requiredPlan="PRO">
+    <div>Contenido bloqueado</div>
+</FeatureGuard>
+```
+
+### Route Tabs con Guard:
+
+Las `routeTabs` soportan un `guard` que muestra popover + bloqueo automáticamente:
+
+```tsx
+const routeTabs: RouteTab[] = [
+    { value: "general", label: "Perfil", href: `/projects/${id}` },
+    { value: "appearance", label: "Apariencia", href: `/projects/${id}/appearance`, guard: {
+        fallbackEnabled: false,
+        featureName: "Apariencia del Proyecto",
+        requiredPlan: "PRO",
+    }},
+];
+```
+
+### Comportamiento:
+- **Plan bloqueado**: Contenido grisado + opacity + popover con info del plan + link a upgrade
+- **Admin bypass (Shadow Mode)**: Admins ven contenido grisado pero **clickeable** con toast de advertencia
+- **Mantenimiento**: Ícono wrench + mensaje sin plan badge
+- **Badge overlay**: Micro `PlanBadge` posicionado sobre el elemento bloqueado
+
+### Prohibiciones:
+- ⛔ **NUNCA** usar `LockedBadge` de `@/components/shared/locked-badge` — es legacy
+- ⛔ **NUNCA** usar `disabled: true` en `routeTabs` para bloquear features — usar `guard`
+- ⛔ **NUNCA** crear popovers custom para bloqueo de plan — usar `FeatureGuard`
+
+📖 **Detalle completo:** Workflow [plan-features](.agent/workflows/plan-features.md)
 
 ---
 

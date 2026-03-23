@@ -60,9 +60,9 @@ export const routing = defineRouting({
             en: '/settings/members',
             es: '/configuracion/miembros'
         },
-        '/settings/permissions': {
-            en: '/settings/permissions',
-            es: '/configuracion/permisos'
+        '/settings/members/permissions': {
+            en: '/settings/members/permissions',
+            es: '/configuracion/miembros/permisos'
         },
         '/settings/activity': {
             en: '/settings/activity',
@@ -75,6 +75,18 @@ export const routing = defineRouting({
         '/settings/storage': {
             en: '/settings/storage',
             es: '/configuracion/almacenamiento'
+        },
+        '/settings/external-access': {
+            en: '/settings/external-access',
+            es: '/configuracion/accesos-externos'
+        },
+        '/settings/external-access/clients': {
+            en: '/settings/external-access/clients',
+            es: '/configuracion/accesos-externos/clientes'
+        },
+        '/settings/external-access/advisors': {
+            en: '/settings/external-access/advisors',
+            es: '/configuracion/accesos-externos/asesores'
         },
         '/settings/ai': {
             en: '/settings/ai',
@@ -158,9 +170,9 @@ export const routing = defineRouting({
             en: '/organization/settings/members',
             es: '/organizacion/configuracion/miembros'
         },
-        '/organization/settings/permissions': {
-            en: '/organization/settings/permissions',
-            es: '/organizacion/configuracion/permisos'
+        '/organization/settings/members/permissions': {
+            en: '/organization/settings/members/permissions',
+            es: '/organizacion/configuracion/miembros/permisos'
         },
         '/organization/settings/location': {
             en: '/organization/settings/location',

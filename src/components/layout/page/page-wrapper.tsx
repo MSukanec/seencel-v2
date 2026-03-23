@@ -7,8 +7,25 @@ import { MobileHeader } from "../dashboard/mobile/mobile-header"
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
 import { usePathname, useRouter } from "@/i18n/routing";
 import { useSelectedLayoutSegment } from "next/navigation";
+import { FeatureGuard } from "@/components/ui/feature-guard";
+import type { EntitlementKey } from "@/hooks/use-entitlements";
 
 // ─── Route Tab Type ─────────────────────────────────────
+export interface RouteTabGuard {
+    /** Entitlement key to check against the Engine */
+    entitlement?: EntitlementKey;
+    /** Fallback boolean if entitlement key is not provided */
+    fallbackEnabled?: boolean;
+    /** Feature name for the popover message */
+    featureName: string;
+    /** Plan required to unlock */
+    requiredPlan?: string;
+    /** Custom message for the popover */
+    customMessage?: string;
+    /** Mode override: plan | maintenance | founders */
+    mode?: 'plan' | 'maintenance' | 'founders';
+}
+
 export interface RouteTab {
     /** Unique tab identifier */
     value: string
@@ -20,6 +37,8 @@ export interface RouteTab {
     icon?: React.ReactElement
     /** Disabled state */
     disabled?: boolean
+    /** Optional FeatureGuard config — shows popover on hover when locked */
+    guard?: RouteTabGuard
 }
 
 // ─── Route Tabs Renderer (internal) ─────────────────────
@@ -58,22 +77,46 @@ function RouteTabsRenderer({ tabs }: { tabs: RouteTab[] }) {
 
     return (
         <div role="tablist">
-            {tabs.map(tab => (
-                <button
-                    key={tab.value}
-                    role="tab"
-                    data-state={activeValue === tab.value ? "active" : "inactive"}
-                    onClick={() => router.push(tab.href as any)}
-                    disabled={tab.disabled}
-                    className={cn(
-                        tab.disabled && "opacity-50 cursor-not-allowed",
-                        tab.icon && "gap-1.5"
-                    )}
-                >
-                    {tab.icon}
-                    {tab.label}
-                </button>
-            ))}
+            {tabs.map(tab => {
+                const isActive = activeValue === tab.value;
+                const isDisabled = tab.disabled;
+
+                const tabButton = (
+                    <button
+                        key={tab.value}
+                        role="tab"
+                        data-state={isActive ? "active" : "inactive"}
+                        onClick={() => router.push(tab.href as any)}
+                        disabled={isDisabled}
+                        className={cn(
+                            isDisabled && "opacity-50 cursor-not-allowed",
+                            tab.icon && "gap-1.5"
+                        )}
+                    >
+                        {tab.icon}
+                        {tab.label}
+                    </button>
+                );
+
+                // If guard is defined, wrap with FeatureGuard
+                if (tab.guard) {
+                    return (
+                        <FeatureGuard
+                            key={tab.value}
+                            entitlement={tab.guard.entitlement}
+                            fallbackEnabled={tab.guard.fallbackEnabled}
+                            featureName={tab.guard.featureName}
+                            requiredPlan={tab.guard.requiredPlan}
+                            customMessage={tab.guard.customMessage}
+                            mode={tab.guard.mode}
+                        >
+                            {tabButton}
+                        </FeatureGuard>
+                    );
+                }
+
+                return tabButton;
+            })}
         </div>
     );
 }
@@ -190,7 +233,7 @@ export function PageWrapper({
             <MobileHeader
                 title={title}
                 icon={icon}
-                tabs={tabs}
+                tabs={routeTabs && routeTabs.length > 0 ? <RouteTabsRenderer tabs={routeTabs} /> : tabs}
                 actions={actions}
                 user={user}
             />

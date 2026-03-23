@@ -67,7 +67,7 @@ export function getStandardToolbarActions(options: StandardToolbarActionsOptions
             icon: FileText,
             onClick: options.onExportPDF ?? (() => { }),
             featureGuard: {
-                isEnabled: options.canExportPDF ?? false,
+                fallbackEnabled: options.canExportPDF ?? false,
                 featureName: "Exportar PDF",
                 requiredPlan: "PRO",
             },

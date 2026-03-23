@@ -52,14 +52,12 @@ export interface ToolbarAction {
     allowInReadOnly?: boolean
     /** Optional feature guard for plan-gated actions */
     featureGuard?: {
-        /** Whether the feature is enabled (user has access) */
-        isEnabled: boolean
-        /** Name of the feature being guarded */
-        featureName: string
-        /** Required plan to access the feature */
-        requiredPlan?: "PRO" | "ENTERPRISE"
-        /** Custom message to show when blocked */
-        customMessage?: string
+        entitlement?: any;
+        fallbackEnabled?: boolean;
+        featureName?: string;
+        requiredPlan?: string;
+        customMessage?: string;
+        mode?: 'plan' | 'maintenance' | 'founders';
     }
 }
 
@@ -78,7 +76,7 @@ function ToolbarSplitButton({
     className,
 }: ToolbarSplitButtonProps) {
     const Icon = mainAction.icon
-    const isGuarded = mainAction.featureGuard && !mainAction.featureGuard.isEnabled
+    const isGuarded = mainAction.featureGuard && (mainAction.featureGuard.fallbackEnabled === false); // fallback logic
 
     // Wrapper component for FeatureGuard
     const MainButton = (
@@ -96,10 +94,12 @@ function ToolbarSplitButton({
     // Wrap with FeatureGuard if needed
     const GuardedMainButton = mainAction.featureGuard ? (
         <FeatureGuard
-            isEnabled={mainAction.featureGuard.isEnabled}
+            entitlement={mainAction.featureGuard.entitlement}
+            fallbackEnabled={mainAction.featureGuard.fallbackEnabled}
             featureName={mainAction.featureGuard.featureName}
             requiredPlan={mainAction.featureGuard.requiredPlan}
             customMessage={mainAction.featureGuard.customMessage}
+            mode={mainAction.featureGuard.mode}
         >
             {MainButton}
         </FeatureGuard>
